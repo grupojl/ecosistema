@@ -1,0 +1,20 @@
+Pendiente (fuera de este scaffold, ver notas en el código):
+  - Confirmar con real-back si CollaboratorPermissions ya tiene campos
+    específicos de e-commerce, o si por ahora solo distinguimos OWNER/COLLABORATOR.
+  - Conectar pasarela-pagos cuando corresponda (Order.paymentIntentId ya existe).
+  - StorefrontSettings (slug/dominio público) si se necesita resolución pública fuera del dashboard.
+
+
+integrar storefront a dashboard(-l ver si storefront maneja sus propios clientes en base a la organización y si se loguean con firebase)
+configurar bien los sistemas para que trabajen en railway, (-l generar el diagrama mvp + acomodar proyecto en Claude para dejarlo mas simple)
+que no consuma redis(ahorrar guita)(-l)
+empezar a pulir(probsr storefront en local y ver lo qque falta)
+
+
+PROBLEMAS CON EL BACK DE ORGANIZACIONES, SIMPLIFICAR ARQUITECTURA A LO QUE PLANTEAMOS
+FIJARSE SI SIMPLIFICAR CONFIG A ORGANIZACIONES + DASHBOARD SOLO FRONT + QUE TOME BIEN LA ORGANIZACION
+- que la uuid sea dinamico en la sotrefront
+- ver como loguea 
+- dejar todo separado en base al diagrama
+- ver de que empecemos a usar solo un package json
+- ver si hay código obsoleto, hacer análisis de seguridad(pulir)

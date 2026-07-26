@@ -1,0 +1,345 @@
+================================================================================
+  SPRINTS — ECOSISTEMA REAL
+  Objetivo: 2 backends + 3 frontends
+  real-back (core) · real-ecommerce-back (dominio) · real-front · real-dashboard-front · real-ecommerce-front
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SPRINT 0 — BUGS PRODUCTIVOS
+  Duración: 1 semana
+  Bloqueos: ninguno — arrancar ahora
+  ⚠ El race condition de stock y el CORS abierto están en producción hoy.
+    Este sprint no espera a ninguna reestructura.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ real-ecommerce-back ] — BACKEND
+
+  [FIX] Race condition en checkout (overselling)
+        Reemplazar el patrón read-check-update en reserveWithinTransaction
+        por un updateMany atómico con condición WHERE quantity_available -
+        quantity_reserved >= n. Verificar que count === 1 antes de proceder
+        con la creación de la orden. Si count === 0, lanzar InsufficientStockError.
+
+  [FIX] Rate limiting en rutas @Public()
+        Agregar ThrottlerModule al AppModule. Aplicar límite de 30 req/min
+        por IP en los endpoints de escritura públicos:
+        POST /ecommerce/public/:orgId/activity
+        POST /ecommerce/public/:orgId/cart
+        GET  /ecommerce/public/:orgId/cart/:cartId
+
+  [FIX] Agregar Helmet
+        Importar y registrar Helmet en main.ts, igual que en real-config-back.
+        Copiar la configuración existente de config-back.
+
+[ real-back ] — BACKEND
+
+  [FIX] CORS con wildcard + credentials
+        Eliminar el fallback origin: '*' cuando ALLOWED_ORIGINS está vacío.
+        Si la variable de entorno está ausente o vacía, lanzar un Error en
+        bootstrap() y no arrancar el servidor. Credentials: true con wildcard
+        es una vulnerabilidad CORS activa.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SPRINT 1 — FUSIONAR CONFIG → REAL-BACK
+  Duración: 2 semanas
+  Bloqueos: ninguno (corre en paralelo con S2)
+  ⚠ real-config-back ya tiene OrganizationsClientService con Redis cache.
+    Al fusionar, ese cliente desaparece — real-back accede a Prisma directo.
+    Mantener real-config-back encendido con header X-Deprecated hasta S3.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ real-back ] — BACKEND
+
+  [MIGRATE] Copiar módulos de config-back como carpetas internas
+            src/config-themes/
+            src/config-flags/
+            src/config-quotas/
+            src/config-secrets/   (incluye CryptoService con AES-256-GCM)
+            src/config-templates/
+            src/config-webhooks/  (incluye webhook-delivery.processor.ts)
+            src/config-audit/
+            src/config-cache/     (incluye RedisService/RedisModule)
+
+  [MIGRATE] Agregar tablas de config al schema.prisma de real-back
+            Escribir manualmente los modelos (NO copiar migration.sql):
+            - FeatureFlag
+            - Quota
+            - ConfigSecret
+            - ConfigTheme
+            - ConfigTemplate
+            - ConfigWebhook
+            - WebhookDelivery
+            - ConfigAuditLog
+            Ejecutar: npx prisma migrate dev --name add_config_modules
+
+  [MIGRATE] Registrar todos los módulos nuevos en AppModule
+
+  [REFACTOR] Eliminar OrganizationsClientService dentro de los módulos
+             copiados — ya no hace falta llamar a una URL externa porque
+             estamos en el mismo proceso. Reemplazar por inyección directa
+             de PrismaService donde sea necesario.
+
+  [REFACTOR] Reemplazar permisos booleanos de dominio en Collaborator
+             Los campos canCreateListings, canViewListings, canEditListings,
+             canDeleteListings, canViewStats, canManageLeads, canManageCollaborators
+             son conceptos de real estate dentro del servicio de identidad.
+             Reemplazar por columna JSONB genérica:
+               ALTER TABLE collaborators ADD COLUMN permissions JSONB DEFAULT '{}';
+             Migrar los valores actuales al nuevo campo.
+             Eliminar las columnas booleanas en la misma migración.
+
+  [FIX] Agregar Helmet y ThrottlerModule al AppModule de real-back
+        (copiar configuración de real-config-back)
+
+[ real-config-back ] — BACKEND
+
+  [DEPRECATE] Agregar en main.ts un interceptor global que inyecte el header
+              X-Deprecated: true en todas las respuestas, con mensaje apuntando
+              a la nueva URL de real-back. Mantener el servicio encendido
+              hasta que los fronts actualicen sus variables de entorno en S3.
+
+[ real-front ] — FRONTEND
+
+  [REFACTOR] Actualizar lib/config-client.ts y lib/config-api.ts
+             Cambiar NEXT_PUBLIC_CONFIG_URL → NEXT_PUBLIC_API_URL
+             en todas las llamadas a endpoints de configuración.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SPRINT 2 — ABSORBER DASHBOARD-BACK → ECOMMERCE-BACK
+  Duración: 2 semanas
+  Bloqueos: ninguno (corre en paralelo con S1)
+  ⚠ real-dashboard-back tiene tabla organizations propia con User/AuditLog.
+    Zona y Propiedad se migran a ecommerce-back usando organizationId como
+    referencia externa (string), sin tabla organizations local nueva.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ real-ecommerce-back ] — BACKEND
+
+  [MIGRATE] Agregar módulo properties/ al schema.prisma
+            Modelos a escribir manualmente:
+            - Zona (campos: id, nombre, ciudad, provincia, descripcion,
+                    isActive, organizationId String, createdAt, updatedAt)
+            - Propiedad (campos: id, titulo, descripcion, tipo TipoPropiedad,
+                         operacion TipoOperacion, precio Decimal, moneda,
+                         superficie, ambientes, banos, dormitorios, direccion,
+                         organizationId String, zonaId, isActive, createdAt, updatedAt)
+            - PropiedadImagen (id, url, orden, alt, propiedadId, createdAt)
+            - Enums: TipoPropiedad, TipoOperacion
+            organizationId es un String (FK externa, sin relación Prisma a tabla local).
+            Ejecutar: npx prisma migrate dev --name add_properties_module
+
+  [MIGRATE] Copiar PropertiesModule desde real-dashboard-back
+            src/properties/properties.controller.ts
+            src/properties/properties.service.ts
+            src/properties/properties.module.ts
+            src/properties/dto/  (create-propiedad.dto.ts, update-propiedad.dto.ts)
+            src/zonas/           (mismo patrón)
+
+  [REFACTOR] Reemplazar TenantGuard de dashboard-back
+             El guard original consultaba tabla users local. El nuevo debe
+             usar el OrganizationsClientService que ya existe en ecommerce-back
+             (con cache Redis). No crear un nuevo guard, reutilizar el existente.
+
+  [FEAT] Exponer rutas públicas de propiedades para el storefront
+         GET /ecommerce/public/:organizationId/properties
+         GET /ecommerce/public/:organizationId/properties/:id
+         GET /ecommerce/public/:organizationId/zonas
+         Decorar con @Public() — sin auth, igual que catálogo.
+
+  [MIGRATE] Script de migración de datos entre bases de datos
+            Exportar zonas y propiedades desde la DB de real-dashboard-back
+            e importarlas a la DB de real-ecommerce-back manteniendo los IDs.
+            Validar integridad referencial antes de apagar dashboard-back.
+
+[ real-dashboard-back ] — BACKEND
+
+  [DELETE] Apagar el servicio una vez validado que:
+           1. Los datos de zonas y propiedades están en ecommerce-back
+           2. real-dashboard-front apunta a las nuevas URLs
+           3. No hay tráfico en los logs de dashboard-back por 24hs
+           Eliminar el repositorio/servicio del deploy.
+
+[ real-ecommerce-front ] — FRONTEND
+
+  [FEAT] Si el storefront muestra propiedades:
+         Agregar lib/ecommerce/properties.ts con ecommerceFetch al nuevo
+         endpoint público GET /ecommerce/public/:orgId/properties
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SPRINT 3 — PAQUETES COMPARTIDOS + TANSTACK EN FRONTS
+  Duración: 2 semanas
+  Bloqueos: requiere S1 completo y S2 completo
+  ⚠ Sin paquetes compartidos, real-front y real-dashboard-front van a divergir.
+    Este sprint cierra la deuda más cara de los fronts y apaga config-back.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ @real/auth-client ] — PAQUETE COMPARTIDO (packages/auth-client)
+
+  [SHARED] Extraer desde real-front a packages/auth-client/:
+           - FirebaseAuthProvider y AuthProvider
+           - useAuth hook
+           - apiFetch con retry automático en 401 y force-refresh de token
+           - Refresh proactivo del token a los 55 minutos
+           - AppError tipado por código (AUTH, FORBIDDEN, NOT_FOUND, etc.)
+           - getIdToken helper
+
+  [SHARED] Tipar correctamente — eliminar todos los 'as any' y ': any'
+           real-front tiene 5 ocurrencias, real-dashboard-front tiene 8.
+           Ninguna es justificada en código de auth.
+
+[ @real/ui ] — PAQUETE COMPARTIDO (packages/ui)
+
+  [SHARED] Extraer componentes compartidos a packages/ui/:
+           - ThemeProvider
+           - PageHeader
+           - EmptyState
+           - LoadingState
+           - Pagination
+           - Componentes shadcn/ui base re-exportados
+
+[ real-front ] — FRONTEND
+
+  [REFACTOR] Reemplazar los 25 useEffect de fetching por TanStack Query
+             Prioridad de conversión:
+             1. pages de collaborators (listado + invitar + revocar)
+             2. pages de api-keys (listado + crear + revocar)
+             3. page de profile (getMe + updateProfile)
+             Patrón: useQuery para lecturas, useMutation para escrituras,
+             invalidateQueries en onSuccess de cada mutation.
+
+  [REFACTOR] Consumir @real/auth-client y @real/ui
+             Eliminar context/auth-context.tsx y features/auth/context/auth-context.tsx
+             locales — reemplazar por import desde @real/auth-client.
+
+  [DELETE] Apagar real-config-back
+           Asegurarse de que todas las referencias a NEXT_PUBLIC_CONFIG_URL
+           ya apuntan a NEXT_PUBLIC_API_URL (hecho en S1).
+           Retirar la variable NEXT_PUBLIC_CONFIG_URL del .env.
+
+[ real-dashboard-front ] — FRONTEND
+
+  [REFACTOR] Reemplazar los 14 useEffect de fetching por TanStack Query
+             Prioridad de conversión:
+             1. Páginas de configuración (flags, quotas, tema, webhooks)
+             2. Páginas de zonas
+             3. Dashboard principal
+
+  [REFACTOR] Actualizar todas las referencias de configuración
+             para apuntar a real-back (resultado de S1).
+             Eliminar NEXT_PUBLIC_CONFIG_URL del .env.
+
+  [FEAT] Agregar páginas de gestión de propiedades y zonas
+         Consumiendo los nuevos endpoints de real-ecommerce-back (S2).
+         /dashboard/propiedades — listado con filtros por zona y tipo
+         /dashboard/propiedades/nueva — formulario de alta
+         /dashboard/zonas — CRUD de zonas
+
+  [REFACTOR] Consumir @real/auth-client y @real/ui
+
+[ real-ecommerce-front ] — FRONTEND
+
+  [REFACTOR] Reemplazar los 6 useEffect de fetching por TanStack Query
+             En las páginas de categorías y productos donde aplique.
+             Las páginas SSG/ISR (generateStaticParams) quedan con fetch
+             nativo de Next.js — TanStack Query solo para client-side.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SPRINT 4 — TESTS Y OBSERVABILIDAD
+  Duración: 1 semana
+  Bloqueos: requiere S1, S2 y S3 completos
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ real-back (fusionado) ] — BACKEND
+
+  [TEST] Tests de integración para módulos de config fusionados
+         - config-themes: crear, leer, actualizar, eliminar tema
+         - config-flags: toggle de flag, lectura por sistema
+         - config-secrets: cifrado AES-256-GCM, descifrado, expiración
+         - config-quotas: incremento, reset, límite excedido
+
+  [TEST] Tests del nuevo modelo de permisos JSONB en Collaborator
+         - Invitar colaborador: verificar que permissions JSONB se guarda
+         - Leer permisos: verificar que el TenantGuard los expone correctamente
+         - Revocar: verificar cascade
+
+  [TEST] Cobertura mínima 85% en paths críticos
+         auth/, collaborators/, organizations/, config-secrets/
+
+[ real-ecommerce-back (fusionado) ] — BACKEND
+
+  [TEST] Test del checkout atómico — caso principal
+         Flujo completo: crear carrito → agregar ítem → checkout → verificar
+         que quantityReserved se incrementa y el carrito queda CONVERTED.
+
+  [TEST] Test del checkout atómico — concurrencia
+         Simular dos requests simultáneos sobre el último ítem en stock.
+         Verificar que solo uno tiene éxito y el otro recibe 409 Conflict.
+
+  [TEST] Tests del módulo de propiedades migrado
+         CRUD de zonas y propiedades. Rutas públicas sin auth.
+
+[ Observabilidad — ambos backends ] — INFRA
+
+  [FEAT] OpenTelemetry básico en real-back y real-ecommerce-back
+         Instalar: @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node
+         Instrumentar automáticamente: HTTP requests, Prisma queries, Redis.
+         Exportar a consola en dev, a collector en producción.
+
+  [FEAT] Health endpoint con detalle en real-ecommerce-back
+         GET /health debe devolver estado de DB (Prisma ping) y Redis.
+         Real-back ya lo tiene — replicar el mismo patrón.
+
+
+================================================================================
+  RESUMEN DE DEPENDENCIAS
+================================================================================
+
+  S0  →  sin dependencias (arrancar ahora)
+  S1  →  sin dependencias (paralelo con S2)
+  S2  →  sin dependencias (paralelo con S1)
+  S3  →  requiere S1 + S2 completos
+  S4  →  requiere S1 + S2 + S3 completos
+
+
+================================================================================
+  ESTADO FINAL DEL ECOSISTEMA
+================================================================================
+
+  BACKENDS (2):
+  ├── real-back          → identidad + config + permisos (JSONB)
+  └── real-ecommerce-back → catálogo + stock + clientes + órdenes + propiedades
+
+  FRONTENDS (3):
+  ├── real-front              → dueños: orgs, miembros, API keys, auditoría
+  ├── real-dashboard-front    → colaboradores: propiedades, zonas, catálogo, dashboard
+  └── real-ecommerce-front    → storefront público (SSG/ISR, sin auth)
+
+  SERVICIOS ELIMINADOS:
+  ├── real-config-back    → absorbido en real-back (S1)
+  └── real-dashboard-back → absorbido en real-ecommerce-back (S2)
+
+  PAQUETES COMPARTIDOS:
+  ├── packages/auth-client  → auth Firebase, apiFetch, AppError
+  └── packages/ui           → componentes shadcn base, layout
+
+================================================================================
+
+proyectos en base a front y back con la nueva actualizacionBackend (2 servicios)
+
+real-back — identidad, organizaciones, memberships, invitaciones, API keys, afiliados, auditoría, config (temas, flags, secretos, quotas, templates, webhooks)
+real-ecommerce-back — catálogo, stock, clientes, órdenes, carrito, actividad, propiedades, zonas
+
+Frontend (3 apps)
+
+HHHH
+acomodar config en org, bajo una carpeta de config para que quede definido bien el modulo
+
+
+real-front — para dueños: crear org, gestionar miembros, API keys, auditoría, configuración
+real-dashboard-front — para colaboradores: gestionar propiedades, zonas, catálogo, stock, órdenes, dashboard operativo
+real-ecommerce-front — storefront público: listado de productos y propiedades, checkout, seguimiento de orden

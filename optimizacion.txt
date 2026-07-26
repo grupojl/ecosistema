@@ -1,0 +1,28 @@
+Backend: organizaciones+config y storefront-back — de acuerdo, con una condición
+La fusión de config dentro de organizaciones es exactamente lo que te sugerí: config no tiene entidad propia suficiente para justificar un servicio, y su consumidor natural es el mismo core de identidad. Queda un core (quién es, a qué org pertenece, qué puede hacer, cómo está configurado) y un dominio (la lógica de la tienda). Esa frontera es limpia y estable: el core cambia poco, el dominio cambia todo el tiempo. Dos servicios con velocidades de cambio distintas es una separación que sí paga.
+La condición: storefront-back tiene que dejar de duplicar Organization. Hoy real-ecommerce-back tiene su propia tabla organizations con enabledProducts y systemSettings. Si el core pasa a ser la única fuente de verdad, en ecommerce-back la organización debe quedar reducida a un organizationId (string) como referencia, sin tabla propia — o como mucho una tabla espejo mínima (id, slug) tratada explícitamente como cache. Si no hacés esto, la simplificación es cosmética: seguís con el problema de sincronización que era la razón principal para consolidar.
+
+
+Frontend: 3 apps separadas por audiencia — correcto, es la decisión más defendible
+Tu razonamiento es sólido y va más allá de lo técnico:
+
+organizaciones-front (dueños): superficie de administración sensible — memberships, API keys, billing eventual, toggles de productos.
+dashboard-front (colaboradores del ecommerce): operación diaria de la tienda. Que sea una app separada significa que un colaborador ni siquiera tiene el código de las pantallas de administración en su bundle. Eso es defensa en profundidad real, no solo RBAC en rutas.
+storefront (público): sin auth, SEO, SSG. Obvio que separado.
+
+El trade-off que aceptás: duplicación potencial entre organizaciones-front y dashboard-front (auth con Firebase, contexto de org activa, componentes shadcn, cliente HTTP). La mitigación es tu pnpm workspace: paquetes compartidos tipo @real/ui, @real/auth-client, @real/api-client. Si no hacés eso, en 6 meses vas a tener dos implementaciones divergentes del mismo interceptor de axios y del mismo AuthContext, y los bugs se arreglan dos veces.
+Un detalle de runtime que no desaparece
+Dashboard-front (colaboradores) va a pegarle a storefront-back para operar la tienda, y storefront-back tiene que validar la membership contra organizaciones-back. Ese hop de red entre los dos backs sigue existiendo — con 2 servicios es aceptable, pero metele cache en Redis con TTL corto (60-120s) sobre la respuesta de membership/permisos. Es la diferencia entre un core que aguanta y uno que se convierte en cuello de botella de toda la operación de la tienda.
+Resumen de mi opinión
+DecisiónVeredictoFusionar config → organizaciones-backCorrecto, sin reservasBorrar dashboard-backCorrecto si resolvés dónde vive el dominio Zona/PropiedadStorefront-back como único back de dominioCorrecto, pero eliminando su tabla organizations duplicada3 fronts por audienciaCorrecto — la separación dueños/colaboradores es un argumento de seguridad, no solo de UX
+
+
+·························
+
+
+Por qué no llega a 10 — el 1.5 que falta
+No es un problema del diseño destino, sino de tres riesgos de ejecución que si no los cerrás, la nota real baja:
+
+La tabla organizations duplicada en storefront-back (-0.7). Es el punto que te marqué antes y sigue siendo el mayor riesgo. Si al fusionar dejás la copia local de Organization con sus propios enabledProducts y systemSettings, no simplificaste el ecosistema — solo redujiste el número de repos. La decisión vale 8.5 asumiendo que storefront-back queda con organizationId como referencia y valida contra el core. Si eso no pasa, es un 6.
+Storefront-back se vuelve un servicio grande (-0.5). Va a contener catálogo + stock + clientes + propiedades + eventualmente órdenes. Está bien que sea un solo servicio, pero adentro necesita fronteras de módulo estrictas (tu estructura DDD por módulo: catalog/, inventory/, customers/, realestate/) con reglas de import que impidan que stock manipule clientes directamente. Un monolito de dominio sin disciplina interna es el próximo problema que vas a querer "simplificar" en 2 años.
+Duplicación entre los dos fronts autenticados (-0.3). organizaciones-front y dashboard-front van a compartir auth Firebase, contexto de org, cliente HTTP y design system. Sin paquetes compartidos en el workspace (@real/auth-client, @real/ui, @real/api-client), la separación por audiencia te cuesta mantenimiento doble.

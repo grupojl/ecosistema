@@ -1,0 +1,5 @@
+Get-ChildItem -Directory | Where-Object { $_.Name -like "real*" } | ForEach-Object { npx repomix $_.FullName --output "$($_.Name).xml" }
+
+
+
+Get-ChildItem -Filter "*.xml" | Copy-Item -Destination ".\repomix\"

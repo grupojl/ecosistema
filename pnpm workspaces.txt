@@ -1,0 +1,143 @@
+# Migración a pnpm workspaces
+
+## Archivos a colocar en `welver/` (raíz)
+
+```
+welver/
+├── package.json          ← nuevo
+├── pnpm-workspace.yaml   ← nuevo
+├── .npmrc                ← nuevo (reemplaza los .npmrc individuales si existen)
+├── realsass-sass-front/
+├── realsass-dashboard-front/
+├── real-ecommerce-front/
+├── realsass-sass-back/
+└── realsass-ecommerce-back/
+```
+
+---
+
+## Paso 1 — Colocar los 3 archivos en `welver/`
+
+Copiar `package.json`, `pnpm-workspace.yaml` y `.npmrc` en la raíz `welver/`.
+
+---
+
+## Paso 2 — Actualizar `package.json` de cada front
+
+En cada proyecto de frontend, reemplazar las versiones de las dependencias
+del catalog por `"catalog:"`:
+
+### Ejemplo — `realsass-sass-front/package.json`
+
+**Antes:**
+```json
+{
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "next": "16.1.6",
+    "firebase": "^12.11.0"
+  }
+}
+```
+
+**Después:**
+```json
+{
+  "dependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "next": "catalog:",
+    "firebase": "catalog:"
+  }
+}
+```
+
+Hacer lo mismo con **todas** las dependencias que estén en el catalog del
+`pnpm-workspace.yaml`. Las que no estén en el catalog quedan con su versión normal.
+
+---
+
+## Paso 3 — Instalar desde la raíz
+
+```bash
+cd welver
+pnpm install
+```
+
+pnpm lee el `pnpm-workspace.yaml`, resuelve las versiones del catalog,
+y genera un único `pnpm-lock.yaml` en `welver/`.
+
+---
+
+## Paso 4 — Verificar que todo arranca
+
+```bash
+# Arrancar un proyecto específico
+pnpm dev:sass
+pnpm dev:dashboard
+pnpm dev:store
+
+# O todos juntos
+pnpm dev
+```
+
+---
+
+## Comandos útiles post-migración
+
+```bash
+# Ver dependencias desactualizadas en todo el ecosistema
+pnpm update:check
+
+# Auditar vulnerabilidades en todos los proyectos
+pnpm audit
+
+# Actualizar una dependencia en todos los proyectos
+pnpm update --recursive react
+
+# Instalar una dependencia en un solo proyecto
+pnpm --filter realsass-dashboard-front add zustand
+
+# Instalar en todos los frontends
+pnpm --filter "./realsass-*" --filter "./real-ecommerce-front" add sonner
+```
+
+---
+
+## Railway — sin cambios necesarios
+
+Cada servicio en Railway sigue apuntando a su subcarpeta.
+El deploy ya funciona porque Railway detecta el `package.json` de cada app.
+
+Si querés optimizarlo, podés agregar un `railway.json` en cada app:
+
+```json
+{
+  "$schema": "https://railway.app/railway-schema.json",
+  "build": {
+    "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter realsass-dashboard-front build"
+  },
+  "deploy": {
+    "startCommand": "pnpm --filter realsass-dashboard-front start"
+  }
+}
+```
+
+Esto le dice a Railway que instale desde la raíz del monorepo y luego
+buildee solo ese proyecto.
+
+---
+
+## ¿Qué no cambia?
+
+- Las variables de entorno de cada proyecto en Railway — igual que antes
+- La estructura de carpetas de cada app — sin tocar
+- Los archivos de código fuente — sin tocar
+- Los Dockerfiles — no se usan en Railway con Nixpacks
+
+## ¿Qué sí cambia?
+
+- `pnpm install` ahora se corre desde `welver/`, no desde cada subcarpeta
+- Hay un único `pnpm-lock.yaml` en la raíz (los lockfiles individuales desaparecen)
+- Versiones de dependencias comunes controladas en un solo lugar

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "output": {
+    "filePath": "ecosistema-infra.xml",
+    "style": "xml",
+    "compress": true,
+    "showLineNumbers": false,
+    "removeComments": false,
+    "removeEmptyLines": true,
+    "topFilesLength": 5,
+    "instructionFilePath": "repomix.instructions.md"
+  },
+  "include": [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "tsconfig.base.json",
+    "docker-compose.yml",
+    ".npmrc",
+
+    "packages/*/package.json",
+    "packages/*/tsconfig.json",
+
+    "realsass-sass-back/package.json",
+    "realsass-sass-back/tsconfig.json",
+    "realsass-sass-back/tsconfig.build.json",
+    "realsass-sass-back/nest-cli.json",
+    "realsass-sass-back/prisma/schema.prisma",
+
+    "realsass-ecommerce-back/package.json",
+    "realsass-ecommerce-back/tsconfig.json",
+    "realsass-ecommerce-back/tsconfig.build.json",
+    "realsass-ecommerce-back/nest-cli.json",
+    "realsass-ecommerce-back/prisma/schema.prisma",
+
+    "realsass-sass-front/package.json",
+    "realsass-sass-front/tsconfig.json",
+    "realsass-sass-front/next.config.mjs",
+
+    "realsass-dashboard-front/package.json",
+    "realsass-dashboard-front/tsconfig.json",
+    "realsass-dashboard-front/next.config.mjs",
+
+    "real-ecommerce-front/package.json",
+    "real-ecommerce-front/tsconfig.json",
+    "real-ecommerce-front/next.config.mjs"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/.git/**",
+      "**/*.log",
+      "**/*.xml",
+      "**/*.lock",
+      "**/public/**",
+      "**/prisma/migrations/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
