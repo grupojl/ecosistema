@@ -1,0 +1,46 @@
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { ConfigSecretsService } from './config-secrets.service';
+import { CreateSecretDto } from './dto/create-secret.dto';
+import { Tenant } from '../common/decorators/tenant.decorator';
+import type { TenantContext } from '../common/guards/tenant.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { TenantGuard } from '../common/guards/tenant.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { StepUpGuard } from '../common/guards/step-up.guard';
+import { IsString } from 'class-validator';
+
+class RotateSecretDto {
+  @IsString()
+  value: string;
+}
+
+@Controller('config/secrets')
+@UseGuards(TenantGuard, RolesGuard)
+@Roles('OWNER')
+export class ConfigSecretsController {
+  constructor(private readonly svc: ConfigSecretsService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  create(@Tenant() t: TenantContext, @Body() dto: CreateSecretDto, @Req() req: Request) {
+    return this.svc.create(t.organizationId, t.userId, dto, req.ip);
+  }
+
+  @Get()
+  list(@Tenant() t: TenantContext) {
+    return this.svc.list(t.organizationId);
+  }
+
+  @Post(':id/rotate')
+  @UseGuards(StepUpGuard)
+  rotate(@Tenant() t: TenantContext, @Param('id') id: string, @Body() dto: RotateSecretDto, @Req() req: Request) {
+    return this.svc.rotate(t.organizationId, t.userId, id, dto.value, req.ip);
+  }
+
+  @Delete(':id')
+  @UseGuards(StepUpGuard)
+  revoke(@Tenant() t: TenantContext, @Param('id') id: string, @Req() req: Request) {
+    return this.svc.revoke(t.organizationId, t.userId, id, req.ip);
+  }
+}

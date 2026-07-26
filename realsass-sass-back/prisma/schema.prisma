@@ -1,0 +1,298 @@
+// =============================================================================
+// prisma/schema.prisma — real-back (post S1)
+// Modelos originales: User, Organization, Collaborator, Invitation, AffiliateData
+// Modelos nuevos (fusión de real-config-back): ThemeConfig, SecretConfig,
+//   FeatureFlag, ContentTemplate, QuotaConfig, WebhookEndpoint,
+//   WebhookDeliveryLog, ConfigAuditLog
+// Migración de permisos: columnas booleanas → permissions JSONB en Collaborator
+// =============================================================================
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums originales ─────────────────────────────────────────────────────────
+
+enum CollaboratorStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+}
+
+// ─── Modelos originales ───────────────────────────────────────────────────────
+
+model User {
+  id             String  @id @default(uuid())
+  firebaseUid    String  @unique
+  email          String  @unique
+  isOwner        Boolean @default(false)
+  isAffiliate    Boolean @default(false)
+  affiliateCode  String? @unique
+  referredByCode String?
+  displayName    String?
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization?
+  affiliateData  AffiliateData?
+  collaborations Collaborator[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  name        String?
+  description String?
+  logoUrl     String?
+  website     String?
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collaborators Collaborator[]
+
+  slug            String?  @unique        // ← AGREGAR
+  enabledProducts Json     @default("{}") // ← AGREGAR
+
+  // Relaciones con módulos de config (fusión S1)
+  themes        ThemeConfig[]
+  secrets       SecretConfig[]
+  flags         FeatureFlag[]
+  templates     ContentTemplate[]
+  quotas        QuotaConfig[]
+  webhooks      WebhookEndpoint[]
+  configAudit   ConfigAuditLog[]
+
+  @@map("organizations")
+}
+
+model Collaborator {
+  id             String             @id @default(uuid())
+  organizationId String
+  userId         String?
+  email          String
+  status         CollaboratorStatus @default(PENDING)
+
+  // S1: permisos granulares migrados a JSONB
+  // Las columnas booleanas (canViewListings, etc.) fueron eliminadas.
+  // Estructura esperada: { canViewListings, canCreateListings, canEditListings,
+  //   canDeleteListings, canViewStats, canManageLeads, canManageCollaborators }
+  // Owner siempre recibe permisos completos desde el servicio — no se guarda en DB.
+  permissions Json @default("{}")
+
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+  updatedAt  DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invitation   Invitation?
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("collaborators")
+}
+
+model Invitation {
+  id             String    @id @default(uuid())
+  collaboratorId String    @unique
+  token          String    @unique @default(uuid())
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+}
+
+model AffiliateData {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  balance       Decimal  @default(0) @db.Decimal(10, 2)
+  referralCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("affiliate_data")
+}
+
+// ─── Módulos de config (fusión desde real-config-back — S1) ──────────────────
+
+model ThemeConfig {
+  id              String   @id @default(uuid())
+  organizationId  String?
+  name            String
+  isActive        Boolean  @default(false)
+  isSystemDefault Boolean  @default(false)
+  primaryColor    String   @default("#000000")
+  secondaryColor  String   @default("#ffffff")
+  accentColor     String?
+  fontFamily      String   @default("DM Sans")
+  borderRadius    String   @default("0.75rem")
+  logoUrl         String?
+  faviconUrl      String?
+  darkMode        Boolean  @default(false)
+  customCSS       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("theme_configs")
+}
+
+model SecretConfig {
+  id             String    @id @default(uuid())
+  organizationId String
+  key            String
+  valueEncrypted String
+  valueIv        String
+  valueTag       String
+  keyPrefix      String
+  description    String?
+  systemTarget   String    @default("all")
+  isActive       Boolean   @default(true)
+  rotatedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("secret_configs")
+}
+
+model FeatureFlag {
+  id                String   @id @default(uuid())
+  organizationId    String?
+  key               String
+  enabled           Boolean  @default(false)
+  description       String?
+  systemTarget      String   @default("all")
+  rolloutPercentage Int      @default(100)
+  conditions        Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("feature_flags")
+}
+
+model ContentTemplate {
+  id              String   @id @default(uuid())
+  organizationId  String?
+  key             String
+  name            String
+  content         String
+  category        String   @default("email")
+  systemTarget    String   @default("all")
+  isSystemDefault Boolean  @default(false)
+  variables       Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("content_templates")
+}
+
+model QuotaConfig {
+  id             String    @id @default(uuid())
+  organizationId String
+  resource       String
+  limit          Int
+  currentUsage   Int       @default(0)
+  alertAt        Int       @default(80)
+  resetAt        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, resource])
+  @@index([organizationId])
+  @@map("quota_configs")
+}
+
+model WebhookEndpoint {
+  id              String    @id @default(uuid())
+  organizationId  String
+  url             String
+  events          Json      @default("[]")
+  secretHash      String
+  secretPrefix    String
+  isActive        Boolean   @default(true)
+  description     String?
+  lastTriggeredAt DateTime?
+  failureCount    Int       @default(0)
+  retryPolicy     Json      @default("{\"maxAttempts\":3,\"backoffMs\":1000}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveryLogs  WebhookDeliveryLog[]
+
+  @@index([organizationId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDeliveryLog {
+  id         String   @id @default(uuid())
+  webhookId  String
+  event      String
+  statusCode Int?
+  success    Boolean
+  duration   Int?
+  attempt    Int      @default(1)
+  error      String?
+  createdAt  DateTime @default(now())
+
+  webhook WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@map("webhook_delivery_logs")
+}
+
+model ConfigAuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?
+  userId         String?
+  configType     String
+  configKey      String?
+  action         String
+  previousValue  String?
+  newValue       String?
+  diff           Json?
+  reason         String?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([configType])
+  @@map("config_audit_logs")
+}

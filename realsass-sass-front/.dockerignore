@@ -1,0 +1,40 @@
+# Dependencies — se reinstalan en el build
+node_modules
+.pnpm-store
+
+# Next.js build output — se regenera
+.next
+out
+
+# Entornos locales — NUNCA al contenedor
+.env
+.env.local
+.env.*.local
+
+# Dev tools
+.git
+.gitignore
+*.md
+README*
+CHANGELOG*
+
+# CI/CD
+.github
+Dockerfile*
+.dockerignore
+railway.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage
+
+x.sh
+real-front.xml
