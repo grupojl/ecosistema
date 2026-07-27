@@ -16,14 +16,14 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "pnpm --filter realsass-sass-front run build"
+  "pnpm --filter realsass-dashboard-front run build"
 ]
 
 [phases.postbuild]
 cmds = [
-  "cp -r realsass-sass-front/.next/static realsass-sass-front/.next/standalone/.next/static",
-  "cp -r realsass-sass-front/public realsass-sass-front/.next/standalone/public"
+  "cp -r realsass-dashboard-front/.next/static realsass-dashboard-front/.next/standalone/.next/static",
+  "cp -r realsass-dashboard-front/public realsass-dashboard-front/.next/standalone/public"
 ]
 
 [start]
-cmd = "node realsass-sass-front/.next/standalone/server.js"
+cmd = "node realsass-dashboard-front/.next/standalone/server.js"

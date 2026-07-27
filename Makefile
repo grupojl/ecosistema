@@ -11,8 +11,8 @@ endif
 	1 2 3 4 5 \
 	r \
 	x \
-	g g1 g2 g3 g4 g5 \
-	git-empty git-empty1 git-empty2 git-empty3 git-empty4 git-empty5 \
+	g \
+	git-empty \
 	dev install help
 
 # -----------------------------------------------------------------
@@ -64,7 +64,7 @@ r:
 	@npx repomix --config repomix.config.json
 	@echo "=== Generando ecosistema-infra.xml... ==="
 	@npx repomix --config repomix.infra.config.json
-	@echo "=== Listo — ecosistema.xml y ecosistema-infra.xml actualizados ==="
+	@echo "=== Listo ==="
 
 # -----------------------------------------------------------------
 # X — ejecuta bash x.sh (el script activo en la raíz)
@@ -75,82 +75,26 @@ x:
 	@bash x.sh
 
 # -----------------------------------------------------------------
-# GIT — timestamp automático como mensaje de commit
+# GIT — monorepo: un solo repo en la raíz
 # -----------------------------------------------------------------
 TIMESTAMP := $(shell date '+%Y-%m-%d %H:%M:%S')
 
-# g — commit + push en TODOS con timestamp
 g:
-	@echo "=== Git: add + commit + push en todos los proyectos ==="
-	@for dir in real-ecommerce-front realsass-dashboard-front realsass-ecommerce-back realsass-sass-back realsass-sass-front; do \
-		if [ ! -d "$$dir/.git" ]; then echo "[✗] $$dir: sin .git — saltando"; continue; fi; \
-		echo "[→] $$dir..."; \
-		cd $$dir && git add . && \
-		{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] $$dir: pusheado" \
-		  || echo "[!] $$dir: sin cambios o ya pusheado"; }; \
-		cd ..; \
-	done
-
-# g individuales
-g1:
-	@echo "=== Git: real-ecommerce-front ==="
-	@cd real-ecommerce-front && git add . && \
-	{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] pusheado" \
-	  || echo "[!] sin cambios"; }
-
-g2:
-	@echo "=== Git: realsass-dashboard-front ==="
-	@cd realsass-dashboard-front && git add . && \
-	{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] pusheado" \
-	  || echo "[!] sin cambios"; }
-
-g3:
-	@echo "=== Git: realsass-ecommerce-back ==="
-	@cd realsass-ecommerce-back && git add . && \
-	{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] pusheado" \
-	  || echo "[!] sin cambios"; }
-
-g4:
-	@echo "=== Git: realsass-sass-back ==="
-	@cd realsass-sass-back && git add . && \
-	{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] pusheado" \
-	  || echo "[!] sin cambios"; }
-
-g5:
-	@echo "=== Git: realsass-sass-front ==="
-	@cd realsass-sass-front && git add . && \
-	{ git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && git push origin main && echo "[✓] pusheado" \
-	  || echo "[!] sin cambios"; }
+	@echo "=== Git: add + commit + push (monorepo raíz) ==="
+	@git add .
+	@git commit -m "chore: $(TIMESTAMP)" 2>/dev/null && \
+		git push origin main && \
+		echo "[✓] pusheado" || \
+		echo "[!] sin cambios"
 
 # -----------------------------------------------------------------
 # GIT EMPTY — fuerza redeploy Railway
 # -----------------------------------------------------------------
-define _empty_commit
-	@if [ ! -d "$(1)/.git" ]; then \
-		echo "[✗] $(1): no tiene .git — saltando"; \
-	else \
-		cd $(1) && git commit --allow-empty -m "chore: redeploy $(TIMESTAMP)" && git push origin main && echo "[✓] $(1): push enviado"; \
-	fi
-endef
-
 git-empty:
-	@echo "=== Empty commit en todos → fuerza redeploy Railway ==="
-	$(call _empty_commit,real-ecommerce-front)
-	$(call _empty_commit,realsass-dashboard-front)
-	$(call _empty_commit,realsass-ecommerce-back)
-	$(call _empty_commit,realsass-sass-back)
-	$(call _empty_commit,realsass-sass-front)
-
-git-empty1:
-	$(call _empty_commit,real-ecommerce-front)
-git-empty2:
-	$(call _empty_commit,realsass-dashboard-front)
-git-empty3:
-	$(call _empty_commit,realsass-ecommerce-back)
-git-empty4:
-	$(call _empty_commit,realsass-sass-back)
-git-empty5:
-	$(call _empty_commit,realsass-sass-front)
+	@echo "=== Empty commit → fuerza redeploy Railway ==="
+	@git commit --allow-empty -m "chore: redeploy $(TIMESTAMP)"
+	@git push origin main
+	@echo "[✓] Redeploy disparado"
 
 # -----------------------------------------------------------------
 # HELP
@@ -172,9 +116,6 @@ help:
 	@echo "  make r     → genera ecosistema.xml + ecosistema-infra.xml"
 	@echo "  make x     → ejecuta x.sh (script activo en la raíz)"
 	@echo ""
-	@echo "  make g     → git add + commit timestamp + push en TODOS"
-	@echo "  make g1-5  → git push en proyecto individual"
-	@echo ""
-	@echo "  make git-empty    → empty commit en TODOS (redeploy Railway)"
-	@echo "  make git-empty1-5 → empty commit en proyecto individual"
+	@echo "  make g     → git add + commit timestamp + push (monorepo)"
+	@echo "  make git-empty → empty commit (fuerza redeploy Railway)"
 	@echo "================================================="
