@@ -1,3 +1,20 @@
+1. Crear proyecto en railway.app → conectar grupojl/ecosistema
+
+2. Agregar 5 servicios — para cada uno configurar en Settings → Source:
+
+Servicio	Root Directory
+realsass-sass-back	/realsass-sass-back
+realsass-ecommerce-back	/realsass-ecommerce-back
+realsass-sass-front	/realsass-sass-front
+realsass-dashboard-front	/realsass-dashboard-front
+real-ecommerce-front	/real-ecommerce-front
+
+3. Variables de entorno — cada servicio necesita las suyas (DATABASE_URL, REDIS_URL, FIREBASE_, etc.)
+
+4. Deploy — Railway detecta el railway.json de cada subcarpeta y sabe cómo buildear.
+
+
+
 Pendiente (fuera de este scaffold, ver notas en el código):
   - Confirmar con real-back si CollaboratorPermissions ya tiene campos
     específicos de e-commerce, o si por ahora solo distinguimos OWNER/COLLABORATOR.

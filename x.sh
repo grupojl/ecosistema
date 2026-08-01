@@ -1,118 +1,280 @@
 #!/usr/bin/env bash
-# setup-railway.sh
-# Configura todos los servicios del monorepo para Railway
-# Elimina configs viejas y crea las nuevas adaptadas al monorepo
-# Corre desde welver/
+# fix-monorepo-dockerfiles.sh
+# Ejecutar desde la RAÍZ del monorepo (welver/)
+# Reescribe Dockerfiles para build context = raíz monorepo
+# Actualiza railway.json de cada servicio con dockerfilePath correcto
 
 set -euo pipefail
 
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; NC='\033[0m'
-log() { echo -e "${BLUE}[→]${NC} $1"; }
-ok()  { echo -e "${GREEN}[✓]${NC} $1"; }
+echo "═══════════════════════════════════════════════════════"
+echo " fix-monorepo-dockerfiles.sh — build context = raíz"
+echo "═══════════════════════════════════════════════════════"
 
-# =============================================================================
-# 1. LIMPIAR configs viejas
-# =============================================================================
-log "Eliminando configs viejas..."
-
-rm -f realsass-sass-back/Dockerfile
-rm -f realsass-sass-back/railway.json
-rm -f realsass-sass-front/nixpacks.toml
-rm -f realsass-sass-front/railway.json
-rm -f realsass-ecommerce-back/railway.json
-rm -f realsass-dashboard-front/railway.json
-rm -f real-ecommerce-front/railway.json
-
-ok "Configs viejas eliminadas"
-
-# =============================================================================
-# 2. railway.json RAÍZ
-# Railway lee este archivo para saber que es un monorepo
-# =============================================================================
-log "Creando railway.json raíz..."
-cat > railway.json << 'EOF'
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "deploy": {
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
-  }
-}
-EOF
-ok "railway.json raíz listo"
-
-# =============================================================================
-# 3. realsass-sass-back — NestJS con Prisma (Dockerfile)
-# =============================================================================
-log "Configurando realsass-sass-back..."
-
-cat > realsass-sass-back/Dockerfile << 'EOF'
+# ─────────────────────────────────────────────────────────
+# 1. realsass-sass-back — Dockerfile
+# ─────────────────────────────────────────────────────────
+echo "[1/5] Reescribiendo realsass-sass-back/Dockerfile..."
+cat > realsass-sass-back/Dockerfile << 'DOCKERFILE'
 # syntax=docker/dockerfile:1.7
-# =============================================================================
-# realsass-sass-back — Monorepo build
-# Contexto: raíz de welver/ (Railway usa el repo completo)
-# =============================================================================
+# Build context: raíz del monorepo (welver/)
 
-# ── Stage 1: deps ────────────────────────────────────────────────────────────
+# ── Stage 1: deps ─────────────────────────────────────────
 FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 
-# Archivos del workspace (raíz del monorepo)
-COPY package.json pnpm-workspace.yaml .npmrc ./
-COPY packages/ ./packages/
+# Archivos de workspace y lock — necesarios para resolver el catalog
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 
-# package.json de todos los workspaces para que pnpm resuelva el catalog
-COPY realsass-sass-back/package.json      ./realsass-sass-back/
-COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-COPY realsass-sass-front/package.json     ./realsass-sass-front/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
-COPY real-ecommerce-front/package.json    ./real-ecommerce-front/
+# Solo los package.json de los workspaces que necesita este servicio
+COPY packages/auth-client/package.json ./packages/auth-client/
+COPY packages/ui/package.json          ./packages/ui/
+COPY packages/trpc/package.json        ./packages/trpc/
+COPY realsass-sass-back/package.json   ./realsass-sass-back/
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# ── Stage 2: builder ─────────────────────────────────────────────────────────
+# ── Stage 2: builder ──────────────────────────────────────
 FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 
 ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
 ENV DATABASE_URL=$DATABASE_URL
 ENV NODE_ENV=development
 
-# Copiar workspace completo
 COPY --from=deps /app/node_modules         ./node_modules
 COPY --from=deps /app/packages             ./packages
-COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml ./
 COPY realsass-sass-back/                   ./realsass-sass-back/
+COPY packages/                             ./packages/
 
-# Generar Prisma client y buildear
 WORKDIR /app/realsass-sass-back
-RUN pnpm exec prisma generate
-RUN pnpm run build
+RUN pnpm prisma generate && pnpm run build
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
 
-# ── Stage 3: runner ──────────────────────────────────────────────────────────
+# ── Stage 3: runner ───────────────────────────────────────
 FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
 WORKDIR /app
-
 ENV NODE_ENV=production
 ENV PORT=3000
-
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                    ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
-
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]
-EOF
+DOCKERFILE
 
-cat > realsass-sass-back/railway.json << 'EOF'
+# ─────────────────────────────────────────────────────────
+# 2. realsass-ecommerce-back — Dockerfile
+# ─────────────────────────────────────────────────────────
+echo "[2/5] Reescribiendo realsass-ecommerce-back/Dockerfile..."
+cat > realsass-ecommerce-back/Dockerfile << 'DOCKERFILE'
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
+
+# ── Stage 1: deps ─────────────────────────────────────────
+FROM node:22-alpine AS deps
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-client/package.json    ./packages/auth-client/
+COPY packages/ui/package.json             ./packages/ui/
+COPY packages/trpc/package.json           ./packages/trpc/
+COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ── Stage 2: builder ──────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV DATABASE_URL=$DATABASE_URL
+ENV NODE_ENV=development
+
+COPY --from=deps /app/node_modules            ./node_modules
+COPY package.json pnpm-workspace.yaml ./
+COPY realsass-ecommerce-back/                 ./realsass-ecommerce-back/
+COPY packages/                                ./packages/
+
+WORKDIR /app/realsass-ecommerce-back
+RUN pnpm prisma generate && pnpm run build
+RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
+
+# ── Stage 3: runner ───────────────────────────────────────
+FROM node:22-alpine AS runner
+RUN apk add --no-cache dumb-init
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
+USER nestjs
+EXPOSE 3000
+CMD ["dumb-init", "node", "dist/src/main"]
+DOCKERFILE
+
+# ─────────────────────────────────────────────────────────
+# 3. realsass-dashboard-front — Dockerfile
+# ─────────────────────────────────────────────────────────
+echo "[3/5] Reescribiendo realsass-dashboard-front/Dockerfile..."
+cat > realsass-dashboard-front/Dockerfile << 'DOCKERFILE'
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
+
+# ── Stage 1: deps ─────────────────────────────────────────
+FROM node:22-alpine AS deps
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-client/package.json       ./packages/auth-client/
+COPY packages/ui/package.json                ./packages/ui/
+COPY packages/trpc/package.json              ./packages/trpc/
+COPY realsass-dashboard-front/package.json   ./realsass-dashboard-front/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ── Stage 2: builder ──────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_REAL_BACK_URL
+ARG NEXT_PUBLIC_ECOMMERCE_API_URL
+ARG NEXT_PUBLIC_STORE_FRONT_URL
+
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
+ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
+ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=deps /app/node_modules              ./node_modules
+COPY package.json pnpm-workspace.yaml ./
+COPY packages/                                  ./packages/
+COPY realsass-dashboard-front/                  ./realsass-dashboard-front/
+
+WORKDIR /app/realsass-dashboard-front
+RUN pnpm run build
+
+# ── Stage 3: runner ───────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public                ./public
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone      ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static          ./.next/static
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]
+DOCKERFILE
+
+# ─────────────────────────────────────────────────────────
+# 4. realsass-sass-front — Dockerfile
+# ─────────────────────────────────────────────────────────
+echo "[4/5] Reescribiendo realsass-sass-front/Dockerfile..."
+cat > realsass-sass-front/Dockerfile << 'DOCKERFILE'
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
+
+# ── Stage 1: deps ─────────────────────────────────────────
+FROM node:22-alpine AS deps
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-client/package.json    ./packages/auth-client/
+COPY packages/ui/package.json             ./packages/ui/
+COPY packages/trpc/package.json           ./packages/trpc/
+COPY realsass-sass-front/package.json     ./realsass-sass-front/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ── Stage 2: builder ──────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_DASHBOARD_API_URL
+ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL
+ARG NEXT_PUBLIC_CONFIG_API_URL
+
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL
+ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
+ENV NEXT_PUBLIC_CONFIG_API_URL=$NEXT_PUBLIC_CONFIG_API_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=deps /app/node_modules          ./node_modules
+COPY package.json pnpm-workspace.yaml ./
+COPY packages/                              ./packages/
+COPY realsass-sass-front/                   ./realsass-sass-front/
+
+WORKDIR /app/realsass-sass-front
+RUN pnpm run build
+
+# ── Stage 3: runner ───────────────────────────────────────
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public                ./public
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone      ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static          ./.next/static
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]
+DOCKERFILE
+
+# ─────────────────────────────────────────────────────────
+# 5. Actualizar railway.json de cada servicio
+#    dockerfilePath apunta desde la raíz del monorepo
+# ─────────────────────────────────────────────────────────
+echo "[5/5] Actualizando railway.json de cada servicio..."
+
+cat > realsass-sass-back/railway.json << 'JSON'
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
@@ -124,73 +286,9 @@ cat > realsass-sass-back/railway.json << 'EOF'
     "restartPolicyMaxRetries": 3
   }
 }
-EOF
+JSON
 
-ok "realsass-sass-back listo"
-
-# =============================================================================
-# 4. realsass-ecommerce-back — NestJS con Prisma (Dockerfile)
-# =============================================================================
-log "Configurando realsass-ecommerce-back..."
-
-cat > realsass-ecommerce-back/Dockerfile << 'EOF'
-# syntax=docker/dockerfile:1.7
-# =============================================================================
-# realsass-ecommerce-back — Monorepo build
-# =============================================================================
-
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY package.json pnpm-workspace.yaml .npmrc ./
-COPY packages/ ./packages/
-COPY realsass-sass-back/package.json      ./realsass-sass-back/
-COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-COPY realsass-sass-front/package.json     ./realsass-sass-front/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
-COPY real-ecommerce-front/package.json    ./real-ecommerce-front/
-
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-
-COPY --from=deps /app/node_modules         ./node_modules
-COPY --from=deps /app/packages             ./packages
-COPY package.json pnpm-workspace.yaml .npmrc ./
-COPY realsass-ecommerce-back/              ./realsass-ecommerce-back/
-
-WORKDIR /app/realsass-ecommerce-back
-RUN pnpm exec prisma generate
-RUN pnpm run build
-RUN test -f dist/src/main.js || test -f dist/main.js || (echo "ERROR: build no generado" && exit 1)
-
-FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3001
-
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
-
-USER nestjs
-EXPOSE 3001
-CMD ["dumb-init", "node", "dist/src/main"]
-EOF
-
-cat > realsass-ecommerce-back/railway.json << 'EOF'
+cat > realsass-ecommerce-back/railway.json << 'JSON'
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
@@ -202,196 +300,54 @@ cat > realsass-ecommerce-back/railway.json << 'EOF'
     "restartPolicyMaxRetries": 3
   }
 }
-EOF
+JSON
 
-ok "realsass-ecommerce-back listo"
-
-# =============================================================================
-# 5. realsass-sass-front — Next.js (Nixpacks)
-# =============================================================================
-log "Configurando realsass-sass-front..."
-
-cat > realsass-sass-front/nixpacks.toml << 'EOF'
-[variables]
-NIXPACKS_NODE_VERSION = "22"
-NODE_ENV = "production"
-HOSTNAME = "0.0.0.0"
-PORT = "3000"
-
-[phases.setup]
-nixPkgs = ["nodejs_22"]
-
-[phases.install]
-cmds = [
-  "corepack enable",
-  "corepack prepare pnpm@latest --activate",
-  "pnpm install --frozen-lockfile --ignore-scripts"
-]
-
-[phases.build]
-cmds = [
-  "pnpm --filter realsass-sass-front run build"
-]
-
-[phases.postbuild]
-cmds = [
-  "cp -r realsass-sass-front/.next/static realsass-sass-front/.next/standalone/.next/static",
-  "cp -r realsass-sass-front/public realsass-sass-front/.next/standalone/public"
-]
-
-[start]
-cmd = "node realsass-sass-front/.next/standalone/server.js"
-EOF
-
-cat > realsass-sass-front/railway.json << 'EOF'
+cat > realsass-dashboard-front/railway.json << 'JSON'
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "realsass-dashboard-front/Dockerfile"
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
 }
-EOF
+JSON
 
-ok "realsass-sass-front listo"
-
-# =============================================================================
-# 6. realsass-dashboard-front — Next.js (Nixpacks)
-# =============================================================================
-log "Configurando realsass-dashboard-front..."
-
-cat > realsass-dashboard-front/nixpacks.toml << 'EOF'
-[variables]
-NIXPACKS_NODE_VERSION = "22"
-NODE_ENV = "production"
-HOSTNAME = "0.0.0.0"
-PORT = "3000"
-
-[phases.setup]
-nixPkgs = ["nodejs_22"]
-
-[phases.install]
-cmds = [
-  "corepack enable",
-  "corepack prepare pnpm@latest --activate",
-  "pnpm install --frozen-lockfile --ignore-scripts"
-]
-
-[phases.build]
-cmds = [
-  "pnpm --filter realsass-dashboard-front run build"
-]
-
-[phases.postbuild]
-cmds = [
-  "cp -r realsass-dashboard-front/.next/static realsass-dashboard-front/.next/standalone/.next/static",
-  "cp -r realsass-dashboard-front/public realsass-dashboard-front/.next/standalone/public"
-]
-
-[start]
-cmd = "node realsass-dashboard-front/.next/standalone/server.js"
-EOF
-
-cat > realsass-dashboard-front/railway.json << 'EOF'
+cat > realsass-sass-front/railway.json << 'JSON'
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "realsass-sass-front/Dockerfile"
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
 }
-EOF
-
-ok "realsass-dashboard-front listo"
-
-# =============================================================================
-# 7. real-ecommerce-front — Next.js (Nixpacks)
-# =============================================================================
-log "Configurando real-ecommerce-front..."
-
-cat > real-ecommerce-front/nixpacks.toml << 'EOF'
-[variables]
-NIXPACKS_NODE_VERSION = "22"
-NODE_ENV = "production"
-HOSTNAME = "0.0.0.0"
-PORT = "3000"
-
-[phases.setup]
-nixPkgs = ["nodejs_22"]
-
-[phases.install]
-cmds = [
-  "corepack enable",
-  "corepack prepare pnpm@latest --activate",
-  "pnpm install --frozen-lockfile --ignore-scripts"
-]
-
-[phases.build]
-cmds = [
-  "pnpm --filter real-ecommerce-front run build"
-]
-
-[phases.postbuild]
-cmds = [
-  "cp -r real-ecommerce-front/.next/static real-ecommerce-front/.next/standalone/.next/static",
-  "cp -r real-ecommerce-front/public real-ecommerce-front/.next/standalone/public"
-]
-
-[start]
-cmd = "node real-ecommerce-front/.next/standalone/server.js"
-EOF
-
-cat > real-ecommerce-front/railway.json << 'EOF'
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3
-  }
-}
-EOF
-
-ok "real-ecommerce-front listo"
-
-# =============================================================================
-# 8. pnpm-lock.yaml en la raíz (Railway lo necesita para --frozen-lockfile)
-# =============================================================================
-log "Regenerando pnpm-lock.yaml..."
-pnpm install --ignore-scripts
-ok "pnpm-lock.yaml regenerado"
+JSON
 
 echo ""
-echo "================================================================"
-echo "  RAILWAY CONFIGURADO"
-echo "================================================================"
+echo "═══════════════════════════════════════════════════════"
+echo " ✓ Listo"
+echo "═══════════════════════════════════════════════════════"
 echo ""
-echo "  Próximos pasos en Railway dashboard:"
+echo " PASO CRÍTICO EN RAILWAY:"
+echo " Para cada servicio, ir a Settings → Source → Root Directory"
+echo " y dejarlo en BLANCO (raíz del monorepo)."
 echo ""
-echo "  1. Crear un proyecto nuevo en railway.app"
-echo "  2. Conectar el repo grupojl/ecosistema"
-echo "  3. Agregar 5 servicios — uno por cada app:"
+echo " Si estaba seteado a 'realsass-sass-back/', cambiarlo a ''."
+echo " Esto es lo que permite que el build context sea el monorepo completo."
 echo ""
-echo "     Servicio              Root Directory"
-echo "     ─────────────────     ──────────────────────────"
-echo "     realsass-sass-back    /realsass-sass-back"
-echo "     realsass-ecom-back    /realsass-ecommerce-back"
-echo "     realsass-sass-front   /realsass-sass-front"
-echo "     realsass-dashboard    /realsass-dashboard-front"
-echo "     real-ecommerce-front  /real-ecommerce-front"
-echo ""
-echo "  4. Agregar variables de entorno a cada servicio"
-echo "  5. Deploy"
-echo ""
-echo "  IMPORTANTE: en Railway, cada servicio necesita"
-echo "  'Root Directory' apuntando a su subcarpeta."
-echo "  Railway va a usar el railway.json de esa subcarpeta."
-echo ""
+echo " Archivos modificados:"
+echo "   realsass-sass-back/Dockerfile"
+echo "   realsass-sass-back/railway.json"
+echo "   realsass-ecommerce-back/Dockerfile"
+echo "   realsass-ecommerce-back/railway.json"
+echo "   realsass-dashboard-front/Dockerfile"
+echo "   realsass-dashboard-front/railway.json"
+echo "   realsass-sass-front/Dockerfile"
+echo "   realsass-sass-front/railway.json"
