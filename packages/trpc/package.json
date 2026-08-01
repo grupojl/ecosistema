@@ -5,7 +5,22 @@
   "description": "Contratos tRPC compartidos — routers, tipos, contexto (S1/S2)",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": { "build": "tsc --noEmit", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@trpc/server": "catalog:", "superjson": "catalog:", "zod": "catalog:" },
-  "devDependencies": { "typescript": "catalog:", "@types/node": "catalog:" }
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@trpc/server": "catalog:",
+    "superjson": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  }
 }

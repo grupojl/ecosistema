@@ -1,22 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/config/constants';
-import { getQuotas, updateQuotaLimit } from '../services/quotas.service';
+import { trpc } from '@/lib/trpc/client';
 
-export function useQuotas(orgId: string | null) {
-  return useQuery({
-    queryKey: [...QUERY_KEYS.configQuotas, orgId],
-    queryFn:  () => getQuotas(orgId!),
-    enabled:  !!orgId,
-    staleTime: 1000 * 10,
-    refetchInterval: 1000 * 30,
+export function useQuotas(organizationId?: string | null) {
+  return trpc.configQuotas.list.useQuery(undefined, {
+    enabled:         !!organizationId,
+    staleTime:       30_000,
+    refetchInterval: 30_000,
   });
 }
 
 export function useUpdateQuotaLimit() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ resource, limit, orgId }: { resource: string; limit: number; orgId: string }) =>
-      updateQuotaLimit(resource, limit, orgId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.configQuotas }),
+  const utils = trpc.useUtils();
+  return trpc.configQuotas.updateLimit.useMutation({
+    onSuccess: () => { void utils.configQuotas.list.invalidate(); },
   });
 }

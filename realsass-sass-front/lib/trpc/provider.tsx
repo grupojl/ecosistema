@@ -1,9 +1,3 @@
-/**
- * lib/trpc/provider.tsx
- *
- * TrpcProvider para realsass-sass-front.
- * Usa useAuth de @/context/auth-context (el contexto existente del front).
- */
 'use client';
 
 import { useState }                         from 'react';
@@ -12,7 +6,7 @@ import { trpc, createTrpcClient }           from './client';
 import { useAuth }                          from '@/context/auth-context';
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, organizationId } = useAuth();
 
   const [queryClient] = useState(() =>
     new QueryClient({
@@ -29,6 +23,7 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   const [trpcClient] = useState(() =>
     createTrpcClient(
       () => firebaseUser?.getIdToken() ?? Promise.resolve(null),
+      () => organizationId ?? null,
     ),
   );
 

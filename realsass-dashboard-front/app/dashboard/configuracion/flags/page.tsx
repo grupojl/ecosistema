@@ -55,7 +55,7 @@ export default function FlagsPage() {
 
   const FlagRow = ({ flag }: { flag: FeatureFlag }) => {
     const isGlobal   = !flag.organizationId;
-    const isPending  = updateMutation.isPending && updateMutation.variables?.key === flag.key;
+    const isPending  = updateMutation.isPending && updateMutation.variables?.flagId === flag.id;
 
     return (
       <div className={cn(

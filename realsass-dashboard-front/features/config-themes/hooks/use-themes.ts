@@ -1,40 +1,30 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/config/constants';
-import { getThemes, createTheme, activateTheme, deleteTheme } from '../services/themes.service';
-import type { CreateThemeInput } from '@/features/config/types';
+import { trpc } from '@/lib/trpc/client';
 
-export function useThemes(orgId: string | null) {
-  return useQuery({
-    queryKey: [...QUERY_KEYS.configThemes, orgId],
-    queryFn:  () => getThemes(orgId!),
-    enabled:  !!orgId,
-    staleTime: 1000 * 60 * 5,
-  });
-}
-
-export function useCreateTheme() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ data, orgId }: { data: CreateThemeInput; orgId: string }) =>
-      createTheme(data, orgId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.configThemes }),
+export function useThemes(organizationId?: string | null) {
+  return trpc.configThemes.list.useQuery(undefined, {
+    enabled: !!organizationId,
   });
 }
 
 export function useActivateTheme() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, orgId }: { id: string; orgId: string }) =>
-      activateTheme(id, orgId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.configThemes }),
+  const utils = trpc.useUtils();
+  return trpc.configThemes.activate.useMutation({
+    onSuccess: () => { void utils.configThemes.list.invalidate(); },
+  });
+}
+
+export function useCreateTheme() {
+  const utils = trpc.useUtils();
+  return trpc.configThemes.update.useMutation({
+    onSuccess: () => { void utils.configThemes.list.invalidate(); },
   });
 }
 
 export function useDeleteTheme() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, orgId }: { id: string; orgId: string }) =>
-      deleteTheme(id, orgId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.configThemes }),
-  });
+  return {
+    mutateAsync: async (_themeId: string) => {
+      throw new Error('configThemes.delete no implementado en el router aún');
+    },
+    isPending: false,
+  };
 }

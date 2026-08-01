@@ -1,106 +1,93 @@
 /**
  * hooks/use-config.ts
  *
- * Reemplaza lib/config-api para el flujo del owner.
- * Usado actualmente en app/profile/config/page.tsx.
- *
- * Requiere x-organization-id header — el TrpcProvider lo inyecta
- * automáticamente cuando el owner está en el contexto de su org.
- *
- * NOTA: Para pasar organizationId al header tRPC desde este front,
- * el TrpcProvider necesita leerlo del perfil del usuario.
- * Ver lib/trpc/provider.tsx — extender getOrganizationId si es necesario.
+ * Hooks de configuracion para realsass-sass-front.
+ * Usa TanStack Query + REST (lib/config-api.ts).
+ * El cliente tRPC del sass-front se usa solo para auth y organizations.
  */
-import { trpc } from '@/lib/trpc/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getFeatureFlags, updateFeatureFlag,
+  getQuotas, updateQuotaLimit,
+  getThemes, activateTheme,
+  getTemplates,
+  getWebhooks,
+} from '@/lib/config-api';
 
-// ── Feature Flags ─────────────────────────────────────────────────────────────
+// ── Feature Flags ─────────────────────────────────────────────────────────
 
-export function useFeatureFlags() {
-  return trpc.configFlags.list.useQuery(undefined, {
-    staleTime:       30_000,
-    refetchInterval: 60_000,
+export function useFeatureFlags(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['config-flags', organizationId],
+    queryFn:  () => getFeatureFlags(organizationId!),
+    enabled:  !!organizationId,
+    staleTime: 30_000,
   });
 }
 
-export function useUpdateFeatureFlag() {
-  const utils = trpc.useUtils();
-  return trpc.configFlags.update.useMutation({
-    onMutate: async (variables) => {
-      await utils.configFlags.list.cancel();
-      const previous = utils.configFlags.list.getData();
-      utils.configFlags.list.setData(undefined, (old: any) => {
-        if (!old) return old;
-        const list = Array.isArray(old) ? old : old?.data ?? [];
-        const updated = list.map((f: any) =>
-          f.key === variables.flagId
-            ? { ...f, ...(variables.enabled !== undefined && { enabled: variables.enabled }) }
-            : f,
-        );
-        return Array.isArray(old) ? updated : { ...old, data: updated };
-      });
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previous !== undefined) {
-        utils.configFlags.list.setData(undefined, context.previous);
-      }
-    },
-    onSettled: () => void utils.configFlags.list.invalidate(),
+export function useUpdateFeatureFlag(organizationId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
+      updateFeatureFlag(organizationId!, key, enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-flags', organizationId] }),
   });
 }
 
-// ── Quotas ────────────────────────────────────────────────────────────────────
+// ── Quotas ────────────────────────────────────────────────────────────────
 
-export function useQuotas() {
-  return trpc.configQuotas.list.useQuery(undefined, {
-    staleTime:       30_000,
-    refetchInterval: 30_000,
+export function useQuotas(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['config-quotas', organizationId],
+    queryFn:  () => getQuotas(organizationId!),
+    enabled:  !!organizationId,
+    staleTime: 30_000,
   });
 }
 
-export function useUpdateQuotaLimit() {
-  const utils = trpc.useUtils();
-  return trpc.configQuotas.updateLimit.useMutation({
-    onSuccess: () => void utils.configQuotas.list.invalidate(),
+export function useUpdateQuotaLimit(organizationId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ resource, limit }: { resource: string; limit: number }) =>
+      updateQuotaLimit(organizationId!, resource, limit),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-quotas', organizationId] }),
   });
 }
 
-// ── Themes ────────────────────────────────────────────────────────────────────
+// ── Themes ────────────────────────────────────────────────────────────────
 
-export function useThemes() {
-  return trpc.configThemes.list.useQuery(undefined);
-}
-
-export function useActivateTheme() {
-  const utils = trpc.useUtils();
-  return trpc.configThemes.activate.useMutation({
-    onSuccess: () => void utils.configThemes.list.invalidate(),
+export function useThemes(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['config-themes', organizationId],
+    queryFn:  () => getThemes(organizationId!),
+    enabled:  !!organizationId,
   });
 }
 
-// ── Webhooks ──────────────────────────────────────────────────────────────────
-
-export function useWebhooks() {
-  return trpc.configWebhooks.list.useQuery(undefined);
-}
-
-export function useCreateWebhook() {
-  const utils = trpc.useUtils();
-  return trpc.configWebhooks.create.useMutation({
-    onSuccess: () => void utils.configWebhooks.list.invalidate(),
+export function useActivateTheme(organizationId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (themeId: string) => activateTheme(organizationId!, themeId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-themes', organizationId] }),
   });
 }
 
-export function useDeleteWebhook() {
-  const utils = trpc.useUtils();
-  return trpc.configWebhooks.remove.useMutation({
-    onSuccess: () => void utils.configWebhooks.list.invalidate(),
+// ── Templates ─────────────────────────────────────────────────────────────
+
+export function useTemplates(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['config-templates', organizationId],
+    queryFn:  () => getTemplates(organizationId!),
+    enabled:  !!organizationId,
   });
 }
 
-export function useWebhookLogs(webhookId: string | null | undefined) {
-  return trpc.configWebhooks.getLogs.useQuery(
-    { webhookId: webhookId!, take: 50 },
-    { enabled: !!webhookId },
-  );
+// ── Webhooks ──────────────────────────────────────────────────────────────
+
+export function useWebhooks(organizationId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['config-webhooks', organizationId],
+    queryFn:  () => getWebhooks(organizationId!),
+    enabled:  !!organizationId,
+  });
 }

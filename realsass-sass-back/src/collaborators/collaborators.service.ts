@@ -29,7 +29,7 @@ function parsePermissions(raw: unknown) {
     canManageCollaborators: typeof p.canManageCollaborators === 'boolean' ? p.canManageCollaborators : DEFAULT_PERMISSIONS.canManageCollaborators,
   };
 }
-function buildPermissionsPatch(current, dto) {
+function buildPermissionsPatch(current: unknown, dto: any) {
   const base = parsePermissions(current);
   return {
     canViewListings:        dto.canViewListings        !== undefined ? dto.canViewListings        : base.canViewListings,

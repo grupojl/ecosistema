@@ -2,18 +2,26 @@
 
 import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink }   from '@trpc/client';
-import type { AnyRouter }  from '@trpc/server';
+import type { AppRouter }  from './router-type';
 
-export const trpc = createTRPCReact<AnyRouter>();
+export const trpc = createTRPCReact<AppRouter>();
 
-export function createTrpcClient(getToken: () => Promise<string | null>) {
+export function createTrpcClient(
+  getToken:          () => Promise<string | null>,
+  getOrganizationId: () => string | null = () => null,
+) {
+  const base = process.env['NEXT_PUBLIC_API_URL'] ?? '';
   return trpc.createClient({
     links: [
       httpBatchLink({
-        url: `${process.env['NEXT_PUBLIC_API_URL']}/trpc`,
+        url: `${base}/trpc`,
         async headers() {
           const token = await getToken();
-          return token ? { Authorization: `Bearer ${token}` } : {};
+          const orgId = getOrganizationId();
+          return {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(orgId  ? { 'x-organization-id': orgId }      : {}),
+          };
         },
       }),
     ],
