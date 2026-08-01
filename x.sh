@@ -4,23 +4,24 @@ echo "=== Ejecutando x.sh ==="
 node << 'JSEOF'
 const fs = require('fs');
 
-const files = [
-  'realsass-sass-back/src/common/decorators/current-user.decorator.ts',
-  'realsass-sass-back/src/common/guards/tenant.guard.ts',
-  'realsass-sass-back/src/config-secrets/crypto.service.ts',
-  'realsass-sass-back/src/trpc/trpc.ts',
-  'realsass-sass-back/src/trpc/app-router.ts',
-  'realsass-sass-back/src/users/types/organization-access.types.ts',
-];
+const f = 'realsass-sass-back/src/users/dto/select-role.dto.ts';
+const fixed = `import { IsEnum, IsNotEmpty } from 'class-validator';
 
-for (const f of files) {
-  let src = fs.readFileSync(f, 'utf8');
-  const fixed = src.replace(/^( +)([a-zA-Z][a-zA-Z0-9]*)!:/gm, '$1$2:');
-  if (fixed !== src) {
-    fs.writeFileSync(f, fixed);
-    console.log('fixed:', f);
-  }
+export enum UserRole {
+  OWNER = 'owner',
+  AFFILIATE = 'affiliate',
 }
+
+export class SelectRoleDto {
+  @IsEnum(UserRole, {
+    message: 'El rol debe ser "owner" o "affiliate"',
+  })
+  @IsNotEmpty()
+  role!: UserRole;
+}
+`;
+fs.writeFileSync(f, fixed);
+console.log('fixed: select-role.dto.ts');
 console.log('done');
 JSEOF
 

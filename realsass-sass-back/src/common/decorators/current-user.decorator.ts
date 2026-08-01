@@ -1,9 +1,9 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export interface CurrentUserPayload {
-  uid!: string;
-  email!: string;
-  emailVerified!: boolean;
+  uid: string;
+  email: string;
+  emailVerified: boolean;
 }
 
 /**

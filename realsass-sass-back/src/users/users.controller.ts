@@ -27,9 +27,9 @@ export class UsersController {
   @Patch('select-role')
   @HttpCode(HttpStatus.OK)
   async selectRole(
-    @CurrentUser('uid') uid: string,
+    @CurrentUser() user: CurrentUserPayload,
     @Body() selectRoleDto: SelectRoleDto,
   ) {
-    return this.usersService.selectRole(uid, selectRoleDto);
+    return this.usersService.selectRole(user.uid, selectRoleDto);
   }
 }

@@ -5,9 +5,9 @@ import { Prisma } from '../../generated/prisma';
 export interface ConfigAuditParams {
   organizationId?: string;
   userId?:         string;
-  configType!: string;
+  configType: string;
   configKey?:      string;
-  action!: string;
+  action: string;
   previousValue?:  string;
   newValue?:       string;
   diff?:           Record<string, unknown>;
