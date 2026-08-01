@@ -8,7 +8,7 @@ import {
 export class InviteCollaboratorDto {
   @IsEmail({}, { message: 'El email debe ser válido' })
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   // Permisos — todos opcionales (default en el modelo)
   @IsBoolean() @IsOptional() canViewListings?: boolean;

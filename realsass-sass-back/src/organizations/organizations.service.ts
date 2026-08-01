@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()

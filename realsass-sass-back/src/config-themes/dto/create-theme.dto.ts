@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsBoolean, MaxLength, IsHexColor } from 'class-va
 
 export class CreateThemeDto {
   @IsString() @MaxLength(80)
-  name: string;
+  name!: string;
 
   @IsHexColor() @IsOptional()
   primaryColor?: string;

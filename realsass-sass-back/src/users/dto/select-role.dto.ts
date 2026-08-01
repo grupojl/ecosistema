@@ -10,5 +10,5 @@ export class SelectRoleDto {
     message: 'El rol debe ser "owner" o "affiliate"',
   })
   @IsNotEmpty()
-  role: UserRole;
+  role!: UserRole;
 }

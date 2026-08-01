@@ -73,7 +73,7 @@ export class FirebaseAuthGuard implements CanActivate {
 
       return true;
     } catch (error) {
-      this.logger.warn(`Token inválido: ${error.message}`);
+      this.logger.warn(`Token inválido: ${(error as Error).message}`);
       throw new UnauthorizedException('Token de Firebase inválido o expirado');
     }
   }

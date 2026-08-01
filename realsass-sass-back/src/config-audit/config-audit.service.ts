@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma';
 
 export interface ConfigAuditParams {
   organizationId?: string;
   userId?:         string;
-  configType:      string;
+  configType!: string;
   configKey?:      string;
-  action:          string;
+  action!: string;
   previousValue?:  string;
   newValue?:       string;
   diff?:           Record<string, unknown>;

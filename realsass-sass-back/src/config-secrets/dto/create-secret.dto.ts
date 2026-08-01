@@ -2,10 +2,10 @@ import { IsString, IsOptional, MaxLength, IsIn, IsDateString } from 'class-valid
 
 export class CreateSecretDto {
   @IsString() @MaxLength(100)
-  key: string;
+  key!: string;
 
   @IsString()
-  value: string;
+  value!: string;
 
   @IsString() @IsOptional() @MaxLength(300)
   description?: string;

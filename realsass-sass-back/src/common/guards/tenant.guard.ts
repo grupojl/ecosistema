@@ -5,20 +5,20 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CollaboratorPermissions {
-  canViewListings:        boolean;
-  canCreateListings:      boolean;
-  canEditListings:        boolean;
-  canDeleteListings:      boolean;
-  canViewStats:           boolean;
-  canManageLeads:         boolean;
+  canViewListings: boolean;
+  canCreateListings: boolean;
+  canEditListings: boolean;
+  canDeleteListings: boolean;
+  canViewStats: boolean;
+  canManageLeads: boolean;
   canManageCollaborators: boolean;
 }
 
 export interface TenantContext {
-  userId:         string;
+  userId: string;
   organizationId: string;
-  role:           'OWNER' | 'COLLABORATOR';
-  permissions:    CollaboratorPermissions;
+  role: 'OWNER' | 'COLLABORATOR';
+  permissions: CollaboratorPermissions;
 }
 
 const FULL_PERMISSIONS: CollaboratorPermissions = {

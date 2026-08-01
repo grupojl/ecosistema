@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrganizationsService } from '../organizations/organizations.service';
-import { CollaboratorStatus } from '@prisma/client';
+import { CollaboratorStatus } from '../../generated/prisma';
 import { FULL_COLLABORATOR_PERMISSIONS } from './types/organization-access.types';
 
 describe('UsersService.getOrganizationAccess', () => {

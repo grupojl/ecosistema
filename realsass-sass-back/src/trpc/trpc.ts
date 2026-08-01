@@ -22,10 +22,10 @@ import type { Request } from 'express';
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 export interface TrpcContext {
-  req:            Request;
-  uid:            string | null;
+  req: Request;
+  uid: string | null;
   organizationId: string | null;
-  role:           'OWNER' | 'COLLABORATOR' | null;
+  role: 'OWNER' | 'COLLABORATOR' | null;
 }
 
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {

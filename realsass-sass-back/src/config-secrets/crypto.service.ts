@@ -5,9 +5,9 @@ const ALGORITHM = 'aes-256-gcm';
 
 export interface EncryptedPayload {
   encrypted: string;
-  iv:        string;
-  tag:       string;
-  prefix:    string;
+  iv: string;
+  tag: string;
+  prefix: string;
 }
 
 @Injectable()

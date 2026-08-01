@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { InviteCollaboratorDto } from './dto/invite-collaborator.dto';
 import { UpdateCollaboratorDto } from './dto/update-collaborator.dto';
-import { CollaboratorStatus } from '@prisma/client';
+import { CollaboratorStatus } from '../../generated/prisma';
 
 // ── Helpers permisos JSONB ────────────────────────────────────────────────────
 const DEFAULT_PERMISSIONS = {

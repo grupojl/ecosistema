@@ -9,7 +9,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 
 class UpdateLimitDto {
   @IsInt() @Min(-1)
-  limit: number;
+  limit!: number;
 }
 
 @Controller('config/quotas')

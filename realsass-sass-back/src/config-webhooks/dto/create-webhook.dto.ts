@@ -2,10 +2,10 @@ import { IsUrl, IsArray, IsString, ArrayNotEmpty, MaxLength, IsOptional } from '
 
 export class CreateWebhookDto {
   @IsUrl()
-  url: string;
+  url!: string;
 
   @IsArray() @ArrayNotEmpty() @IsString({ each: true })
-  events: string[];
+  events!: string[];
 
   @IsString() @MaxLength(200) @IsOptional()
   description?: string;

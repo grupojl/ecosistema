@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 // Importa el adaptador de PostgreSQL
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../generated/prisma';
 // Importa el driver pg (node-postgres)
 import * as pg from 'pg';
 

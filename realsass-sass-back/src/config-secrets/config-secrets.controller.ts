@@ -12,7 +12,7 @@ import { IsString } from 'class-validator';
 
 class RotateSecretDto {
   @IsString()
-  value: string;
+  value!: string;
 }
 
 @Controller('config/secrets')

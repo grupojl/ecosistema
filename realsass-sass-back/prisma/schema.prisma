@@ -8,6 +8,7 @@
 // =============================================================================
 
 generator client {
+  output     = "../generated/prisma"
   provider   = "prisma-client-js"
   engineType = "client"
 }

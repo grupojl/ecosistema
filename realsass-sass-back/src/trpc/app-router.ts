@@ -38,16 +38,16 @@ import type { ConfigAuditService }        from '../config-audit/config-audit.ser
 import type { ConfigSecretsService }      from '../config-secrets/config-secrets.service';
 
 export interface AppRouterDeps {
-  usersService:        UsersService;
-  authService:         AuthService;
-  orgsService:         OrganizationsService;
+  usersService: UsersService;
+  authService: AuthService;
+  orgsService: OrganizationsService;
   collaboratorsService: CollaboratorsService;
-  flagsService:        ConfigFlagsService;
-  quotasService:       ConfigQuotasService;
-  themesService:       ConfigThemesService;
-  webhooksService:     ConfigWebhooksService;
-  auditService:        ConfigAuditService;
-  secretsService:      ConfigSecretsService;
+  flagsService: ConfigFlagsService;
+  quotasService: ConfigQuotasService;
+  themesService: ConfigThemesService;
+  webhooksService: ConfigWebhooksService;
+  auditService: ConfigAuditService;
+  secretsService: ConfigSecretsService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {

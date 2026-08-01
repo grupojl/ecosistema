@@ -2,13 +2,13 @@ import { IsString, IsOptional, IsArray, IsIn, MaxLength } from 'class-validator'
 
 export class CreateTemplateDto {
   @IsString() @MaxLength(100)
-  key: string;
+  key!: string;
 
   @IsString() @MaxLength(100)
-  name: string;
+  name!: string;
 
   @IsString()
-  content: string;
+  content!: string;
 
   @IsIn(['email', 'chat', 'notification', 'ui']) @IsOptional()
   category?: string;
