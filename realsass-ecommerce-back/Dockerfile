@@ -5,10 +5,12 @@ FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY realsass-ecommerce-back/.npmrc ./.npmrc
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY realsass-ecommerce-back/package.json              ./realsass-ecommerce-back/
+RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
@@ -21,8 +23,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-workspace.yaml ./
 COPY realsass-ecommerce-back/                          ./realsass-ecommerce-back/
 COPY packages/                         ./packages/
-RUN /app/node_modules/.bin/prisma generate --schema=/app/realsass-ecommerce-back/prisma/schema.prisma
 WORKDIR /app/realsass-ecommerce-back
+RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
 RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
 

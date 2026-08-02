@@ -9,6 +9,7 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY realsass-dashboard-front/package.json              ./realsass-dashboard-front/
+RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
