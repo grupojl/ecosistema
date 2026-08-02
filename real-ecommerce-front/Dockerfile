@@ -33,11 +33,13 @@ ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PATH="/app/node_modules/.bin:$PATH"
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY real-ecommerce-front/                          ./real-ecommerce-front/
-RUN pnpm --filter real-ecommerce-front run build
+WORKDIR /app/real-ecommerce-front
+RUN next build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
