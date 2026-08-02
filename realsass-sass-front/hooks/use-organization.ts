@@ -1,12 +1,3 @@
-/**
- * hooks/use-organization.ts
- *
- * Reemplaza las llamadas a:
- *   updateMyOrganization(uid, dto) → trpc.organizations.update
- *
- * La org del usuario se obtiene desde el perfil (auth.me)
- * que ya incluye el campo organization completo.
- */
 import { trpc } from '@/lib/trpc/client';
 
 export function useMyOrganization() {

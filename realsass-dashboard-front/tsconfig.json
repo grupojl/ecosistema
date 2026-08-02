@@ -36,7 +36,15 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "../realsass-sass-back/src/collaborators/dto",
+    "../realsass-sass-back/src/config-secrets/dto",
+    "../realsass-sass-back/src/config-quotas",
+    "../realsass-sass-back/src/config-themes",
+    "../realsass-sass-back/src/config-webhooks/dto",
+    "../realsass-sass-back/src/config-templates/dto",
+    "../realsass-sass-back/src/users/dto",
+    "../realsass-sass-back/src/auth/dto"
   ],
   "extends": "../tsconfig.base.json"
 }

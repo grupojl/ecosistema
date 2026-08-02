@@ -1,93 +1,61 @@
-/**
- * hooks/use-config.ts
- *
- * Hooks de configuracion para realsass-sass-front.
- * Usa TanStack Query + REST (lib/config-api.ts).
- * El cliente tRPC del sass-front se usa solo para auth y organizations.
- */
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  getFeatureFlags, updateFeatureFlag,
-  getQuotas, updateQuotaLimit,
-  getThemes, activateTheme,
-  getTemplates,
-  getWebhooks,
-} from '@/lib/config-api';
+import { trpc } from '@/lib/trpc/client';
 
 // ── Feature Flags ─────────────────────────────────────────────────────────
-
-export function useFeatureFlags(organizationId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['config-flags', organizationId],
-    queryFn:  () => getFeatureFlags(organizationId!),
-    enabled:  !!organizationId,
-    staleTime: 30_000,
+export function useFeatureFlags() {
+  return trpc.configFlags.list.useQuery(undefined, {
+    staleTime: 30_000, refetchInterval: 60_000,
   });
 }
-
-export function useUpdateFeatureFlag(organizationId: string | null | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
-      updateFeatureFlag(organizationId!, key, enabled),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-flags', organizationId] }),
+export function useUpdateFeatureFlag() {
+  const utils = trpc.useUtils();
+  return trpc.configFlags.update.useMutation({
+    onSettled: () => { void utils.configFlags.list.invalidate(); },
   });
 }
 
 // ── Quotas ────────────────────────────────────────────────────────────────
-
-export function useQuotas(organizationId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['config-quotas', organizationId],
-    queryFn:  () => getQuotas(organizationId!),
-    enabled:  !!organizationId,
-    staleTime: 30_000,
+export function useQuotas() {
+  return trpc.configQuotas.list.useQuery(undefined, {
+    staleTime: 30_000, refetchInterval: 30_000,
   });
 }
-
-export function useUpdateQuotaLimit(organizationId: string | null | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ resource, limit }: { resource: string; limit: number }) =>
-      updateQuotaLimit(organizationId!, resource, limit),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-quotas', organizationId] }),
+export function useUpdateQuotaLimit() {
+  const utils = trpc.useUtils();
+  return trpc.configQuotas.updateLimit.useMutation({
+    onSuccess: () => { void utils.configQuotas.list.invalidate(); },
   });
 }
 
 // ── Themes ────────────────────────────────────────────────────────────────
-
-export function useThemes(organizationId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['config-themes', organizationId],
-    queryFn:  () => getThemes(organizationId!),
-    enabled:  !!organizationId,
-  });
+export function useThemes() {
+  return trpc.configThemes.list.useQuery(undefined);
 }
-
-export function useActivateTheme(organizationId: string | null | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (themeId: string) => activateTheme(organizationId!, themeId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['config-themes', organizationId] }),
-  });
-}
-
-// ── Templates ─────────────────────────────────────────────────────────────
-
-export function useTemplates(organizationId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['config-templates', organizationId],
-    queryFn:  () => getTemplates(organizationId!),
-    enabled:  !!organizationId,
+export function useActivateTheme() {
+  const utils = trpc.useUtils();
+  return trpc.configThemes.activate.useMutation({
+    onSuccess: () => { void utils.configThemes.list.invalidate(); },
   });
 }
 
 // ── Webhooks ──────────────────────────────────────────────────────────────
-
-export function useWebhooks(organizationId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['config-webhooks', organizationId],
-    queryFn:  () => getWebhooks(organizationId!),
-    enabled:  !!organizationId,
+export function useWebhooks() {
+  return trpc.configWebhooks.list.useQuery(undefined);
+}
+export function useCreateWebhook() {
+  const utils = trpc.useUtils();
+  return trpc.configWebhooks.create.useMutation({
+    onSuccess: () => { void utils.configWebhooks.list.invalidate(); },
   });
+}
+export function useDeleteWebhook() {
+  const utils = trpc.useUtils();
+  return trpc.configWebhooks.remove.useMutation({
+    onSuccess: () => { void utils.configWebhooks.list.invalidate(); },
+  });
+}
+export function useWebhookLogs(webhookId: string | null | undefined) {
+  return trpc.configWebhooks.getLogs.useQuery(
+    { webhookId: webhookId!, take: 50 },
+    { enabled: !!webhookId },
+  );
 }

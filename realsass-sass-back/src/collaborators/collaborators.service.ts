@@ -6,8 +6,26 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { InviteCollaboratorDto } from './dto/invite-collaborator.dto';
-import { UpdateCollaboratorDto } from './dto/update-collaborator.dto';
+// Interfaces puras — sin class-validator, compatibles con Next.js type-check
+interface InviteCollaboratorDto {
+  email: string;
+  canViewListings?: boolean;
+  canCreateListings?: boolean;
+  canEditListings?: boolean;
+  canDeleteListings?: boolean;
+  canViewStats?: boolean;
+  canManageLeads?: boolean;
+  canManageCollaborators?: boolean;
+}
+interface UpdateCollaboratorDto {
+  canViewListings?: boolean;
+  canCreateListings?: boolean;
+  canEditListings?: boolean;
+  canDeleteListings?: boolean;
+  canViewStats?: boolean;
+  canManageLeads?: boolean;
+  canManageCollaborators?: boolean;
+}
 import { CollaboratorStatus } from '../../generated/prisma';
 
 // ── Helpers permisos JSONB ────────────────────────────────────────────────────
