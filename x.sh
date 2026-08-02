@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
-echo "=== Fix: Dockerfiles con PATH explícito al node_modules raíz ==="
+echo "=== Fix: frontends con ruta absoluta a next ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
-
-// ── FRONTENDS ────────────────────────────────────────────────────────────────
-// El problema: pnpm --filter corre el script en la subcarpeta
-// pero next está en /app/node_modules/.bin, no en /app/realsass-sass-front/node_modules/.bin
-// Fix: agregar /app/node_modules/.bin al PATH antes de correr el build
 
 const frontends = [
   {
@@ -78,13 +73,12 @@ WORKDIR /app
 ${argLines}
 ${envLines}
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PATH="/app/node_modules/.bin:$PATH"
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY ${name}/                          ./${name}/
 WORKDIR /app/${name}
-RUN next build
+RUN /app/node_modules/.bin/next build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -103,102 +97,7 @@ CMD ["node", "server.js"]
   console.log(`✓ ${name}/Dockerfile`);
 }
 
-// ── BACKENDS ─────────────────────────────────────────────────────────────────
-// Fix: usar PATH explícito para prisma y nest
-
-fs.writeFileSync('realsass-sass-back/Dockerfile', `# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo (welver/)
-
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-back/package.json   ./realsass-sass-back/
-RUN pnpm install --frozen-lockfile
-
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ENV PATH="/app/node_modules/.bin:$PATH"
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules         ./node_modules
-COPY --from=deps /app/packages             ./packages
-COPY package.json pnpm-workspace.yaml      ./
-COPY realsass-sass-back/                   ./realsass-sass-back/
-COPY packages/                             ./packages/
-WORKDIR /app/realsass-sass-back
-RUN prisma generate
-RUN nest build
-RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
-
-FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                    ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
-USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "node", "dist/src/main"]
-`);
-console.log('✓ realsass-sass-back/Dockerfile');
-
-fs.writeFileSync('realsass-ecommerce-back/Dockerfile', `# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo (welver/)
-
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json    ./packages/auth-client/
-COPY packages/ui/package.json             ./packages/ui/
-COPY packages/trpc/package.json           ./packages/trpc/
-COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-RUN pnpm install --frozen-lockfile
-
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ENV PATH="/app/node_modules/.bin:$PATH"
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules            ./node_modules
-COPY --from=deps /app/packages                ./packages
-COPY package.json pnpm-workspace.yaml         ./
-COPY realsass-ecommerce-back/                 ./realsass-ecommerce-back/
-COPY packages/                                ./packages/
-WORKDIR /app/realsass-ecommerce-back
-RUN prisma generate
-RUN nest build
-RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
-
-FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
-USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "node", "dist/src/main"]
-`);
-console.log('✓ realsass-ecommerce-back/Dockerfile');
-
-console.log('\n✓ Todos los Dockerfiles actualizados con PATH explícito');
+console.log('\n✓ Listo');
 JSEOF
 
 echo "✓ Listo"

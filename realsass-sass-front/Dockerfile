@@ -35,13 +35,12 @@ ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL
 ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
 ENV NEXT_PUBLIC_CONFIG_API_URL=$NEXT_PUBLIC_CONFIG_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PATH="/app/node_modules/.bin:$PATH"
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY realsass-sass-front/                          ./realsass-sass-front/
 WORKDIR /app/realsass-sass-front
-RUN next build
+RUN /app/node_modules/.bin/next build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
