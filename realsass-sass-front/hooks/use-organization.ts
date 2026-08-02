@@ -1,9 +1,7 @@
 import { trpc } from '@/lib/trpc/client';
 
 export function useMyOrganization() {
-  return trpc.organizations.me.useQuery(undefined, {
-    staleTime: 60_000,
-  });
+  return trpc.organizations.me.useQuery(undefined, { staleTime: 60_000 });
 }
 
 export function useUpdateOrganization() {

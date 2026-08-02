@@ -1,6 +1,5 @@
 import { trpc } from '@/lib/trpc/client';
 
-// ── Feature Flags ─────────────────────────────────────────────────────────
 export function useFeatureFlags() {
   return trpc.configFlags.list.useQuery(undefined, {
     staleTime: 30_000, refetchInterval: 60_000,
@@ -13,7 +12,6 @@ export function useUpdateFeatureFlag() {
   });
 }
 
-// ── Quotas ────────────────────────────────────────────────────────────────
 export function useQuotas() {
   return trpc.configQuotas.list.useQuery(undefined, {
     staleTime: 30_000, refetchInterval: 30_000,
@@ -26,7 +24,6 @@ export function useUpdateQuotaLimit() {
   });
 }
 
-// ── Themes ────────────────────────────────────────────────────────────────
 export function useThemes() {
   return trpc.configThemes.list.useQuery(undefined);
 }
@@ -37,7 +34,6 @@ export function useActivateTheme() {
   });
 }
 
-// ── Webhooks ──────────────────────────────────────────────────────────────
 export function useWebhooks() {
   return trpc.configWebhooks.list.useQuery(undefined);
 }

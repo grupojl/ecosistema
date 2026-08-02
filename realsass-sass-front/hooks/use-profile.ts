@@ -1,9 +1,7 @@
 import { trpc } from '@/lib/trpc/client';
 
 export function useProfile() {
-  return trpc.auth.me.useQuery(undefined, {
-    staleTime: 60_000,
-  });
+  return trpc.auth.me.useQuery(undefined, { staleTime: 60_000 });
 }
 
 export function useSyncUser() {
