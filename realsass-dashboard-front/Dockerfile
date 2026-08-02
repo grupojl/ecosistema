@@ -9,7 +9,7 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY realsass-dashboard-front/package.json              ./realsass-dashboard-front/
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate

@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-echo "=== Fix: Dockerfiles monorepo — PATH y node_modules ==="
+echo "=== Fix definitivo: Dockerfiles monorepo ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
-// ── BACKENDS: el problema es que pnpm run build en la subcarpeta
-// no encuentra prisma porque node_modules está en /app (raíz), no en /app/realsass-sass-back
-// Fix: usar npx o pnpm --filter desde la raíz
+// ── BACKENDS ──────────────────────────────────────────────────────────────────
+// Fix: quitar --ignore-scripts para que prisma y nest se linkeen correctamente
 
-// realsass-sass-back/Dockerfile
 fs.writeFileSync('realsass-sass-back/Dockerfile', `# syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 
@@ -20,7 +18,7 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY realsass-sass-back/package.json   ./realsass-sass-back/
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -33,7 +31,7 @@ COPY --from=deps /app/packages             ./packages
 COPY package.json pnpm-workspace.yaml      ./
 COPY realsass-sass-back/                   ./realsass-sass-back/
 COPY packages/                             ./packages/
-RUN ./node_modules/.bin/prisma generate --schema=realsass-sass-back/prisma/schema.prisma
+RUN pnpm --filter realsass-sass-back exec prisma generate
 RUN pnpm --filter realsass-sass-back run build
 RUN test -f realsass-sass-back/dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
 
@@ -53,7 +51,6 @@ CMD ["dumb-init", "node", "dist/src/main"]
 `);
 console.log('✓ realsass-sass-back/Dockerfile');
 
-// realsass-ecommerce-back/Dockerfile
 fs.writeFileSync('realsass-ecommerce-back/Dockerfile', `# syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 
@@ -65,7 +62,7 @@ COPY packages/auth-client/package.json    ./packages/auth-client/
 COPY packages/ui/package.json             ./packages/ui/
 COPY packages/trpc/package.json           ./packages/trpc/
 COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -78,7 +75,7 @@ COPY --from=deps /app/packages                ./packages
 COPY package.json pnpm-workspace.yaml         ./
 COPY realsass-ecommerce-back/                 ./realsass-ecommerce-back/
 COPY packages/                                ./packages/
-RUN ./node_modules/.bin/prisma generate --schema=realsass-ecommerce-back/prisma/schema.prisma
+RUN pnpm --filter realsass-ecommerce-back exec prisma generate
 RUN pnpm --filter realsass-ecommerce-back run build
 RUN test -f realsass-ecommerce-back/dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
 
@@ -98,8 +95,9 @@ CMD ["dumb-init", "node", "dist/src/main"]
 `);
 console.log('✓ realsass-ecommerce-back/Dockerfile');
 
-// ── FRONTENDS: next not found porque node_modules está en raíz
-// Fix: usar pnpm --filter desde la raíz en vez de cambiar WORKDIR
+// ── FRONTENDS ────────────────────────────────────────────────────────────────
+// Fix: quitar --ignore-scripts para que next se linkee
+// pnpm con workspace instala next en node_modules raíz y crea symlink en .bin
 
 const frontends = [
   {
@@ -162,7 +160,7 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY ${name}/package.json              ./${name}/
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
