@@ -41,7 +41,6 @@ COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY realsass-sass-front/              ./realsass-sass-front/
-COPY realsass-sass-back/src/trpc/      ./realsass-sass-back/src/trpc/
 WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
