@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-echo "=== Fix: realsass-sass-front/Dockerfile para monorepo ==="
+echo "=== Creando real-ecommerce-front/Dockerfile ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
-fs.writeFileSync('realsass-sass-front/Dockerfile', [
+fs.writeFileSync('real-ecommerce-front/Dockerfile', [
   "# syntax=docker/dockerfile:1.7",
   "# Build context: raíz del monorepo (welver/)",
   "",
@@ -17,7 +17,7 @@ fs.writeFileSync('realsass-sass-front/Dockerfile', [
   "COPY packages/auth-client/package.json ./packages/auth-client/",
   "COPY packages/ui/package.json          ./packages/ui/",
   "COPY packages/trpc/package.json        ./packages/trpc/",
-  "COPY realsass-sass-front/package.json  ./realsass-sass-front/",
+  "COPY real-ecommerce-front/package.json ./real-ecommerce-front/",
   "",
   "RUN pnpm install --frozen-lockfile --ignore-scripts",
   "",
@@ -26,35 +26,33 @@ fs.writeFileSync('realsass-sass-front/Dockerfile', [
   "RUN corepack enable && corepack prepare pnpm@10.11.1 --activate",
   "WORKDIR /app",
   "",
+  "ARG NEXT_PUBLIC_ECOMMERCE_API_URL",
+  "ARG NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID",
+  "ARG NEXT_PUBLIC_REAL_BACK_URL",
   "ARG NEXT_PUBLIC_FIREBASE_API_KEY",
   "ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
   "ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID",
   "ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
   "ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
   "ARG NEXT_PUBLIC_FIREBASE_APP_ID",
-  "ARG NEXT_PUBLIC_API_URL",
-  "ARG NEXT_PUBLIC_DASHBOARD_API_URL",
-  "ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL",
-  "ARG NEXT_PUBLIC_CONFIG_API_URL",
   "",
+  "ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL",
+  "ENV NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID=$NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID",
+  "ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL",
   "ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY",
   "ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
   "ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID",
   "ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
   "ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
   "ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID",
-  "ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL",
-  "ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL",
-  "ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL",
-  "ENV NEXT_PUBLIC_CONFIG_API_URL=$NEXT_PUBLIC_CONFIG_API_URL",
   "ENV NEXT_TELEMETRY_DISABLED=1",
   "",
   "COPY --from=deps /app/node_modules     ./node_modules",
   "COPY package.json pnpm-workspace.yaml ./",
   "COPY packages/                         ./packages/",
-  "COPY realsass-sass-front/              ./realsass-sass-front/",
+  "COPY real-ecommerce-front/             ./real-ecommerce-front/",
   "",
-  "WORKDIR /app/realsass-sass-front",
+  "WORKDIR /app/real-ecommerce-front",
   "RUN pnpm run build",
   "",
   "# ── Stage 3: runner ────────────────────────────────────────────────────────",
@@ -67,32 +65,29 @@ fs.writeFileSync('realsass-sass-front/Dockerfile', [
   "",
   "RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs",
   "",
-  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone ./",
-  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static     ./.next/static",
-  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public           ./public",
+  "COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/.next/standalone ./",
+  "COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/.next/static     ./.next/static",
+  "COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/public           ./public",
   "",
   "USER nextjs",
   "EXPOSE 3000",
   "CMD [\"node\", \"server.js\"]",
 ].join('\n'));
-console.log('✓ realsass-sass-front/Dockerfile reescrito para monorepo');
+console.log('✓ real-ecommerce-front/Dockerfile creado');
 
-// Verificar que los otros Dockerfiles también tienen el patrón correcto
-const toCheck = [
-  'realsass-sass-back/Dockerfile',
-  'realsass-ecommerce-back/Dockerfile',
-  'realsass-dashboard-front/Dockerfile',
-];
-for (const f of toCheck) {
-  if (fs.existsSync(f)) {
-    const src = fs.readFileSync(f, 'utf8');
-    if (src.includes('pnpm-workspace.yaml')) {
-      console.log('✓', f, '— OK (copia pnpm-workspace.yaml)');
-    } else {
-      console.log('⚠', f, '— NO copia pnpm-workspace.yaml');
-    }
+// railway.json
+fs.writeFileSync('real-ecommerce-front/railway.json', JSON.stringify({
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "real-ecommerce-front/Dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
   }
-}
+}, null, 2) + '\n');
+console.log('✓ real-ecommerce-front/railway.json creado');
 JSEOF
 
 echo "✓ Listo"
