@@ -1,36 +1,98 @@
 #!/usr/bin/env bash
-echo "=== Fix: dockerfilePath relativo a raiz del monorepo ==="
+echo "=== Fix: realsass-sass-front/Dockerfile para monorepo ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
-const services = {
-  'realsass-sass-back': 'realsass-sass-back/Dockerfile',
-  'realsass-ecommerce-back': 'realsass-ecommerce-back/Dockerfile',
-  'realsass-sass-front': 'realsass-sass-front/Dockerfile',
-  'realsass-dashboard-front': 'realsass-dashboard-front/Dockerfile',
-};
+fs.writeFileSync('realsass-sass-front/Dockerfile', [
+  "# syntax=docker/dockerfile:1.7",
+  "# Build context: raíz del monorepo (welver/)",
+  "",
+  "# ── Stage 1: deps ─────────────────────────────────────────────────────────",
+  "FROM node:22-alpine AS deps",
+  "RUN corepack enable && corepack prepare pnpm@10.11.1 --activate",
+  "WORKDIR /app",
+  "",
+  "COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./",
+  "COPY packages/auth-client/package.json ./packages/auth-client/",
+  "COPY packages/ui/package.json          ./packages/ui/",
+  "COPY packages/trpc/package.json        ./packages/trpc/",
+  "COPY realsass-sass-front/package.json  ./realsass-sass-front/",
+  "",
+  "RUN pnpm install --frozen-lockfile --ignore-scripts",
+  "",
+  "# ── Stage 2: builder ───────────────────────────────────────────────────────",
+  "FROM node:22-alpine AS builder",
+  "RUN corepack enable && corepack prepare pnpm@10.11.1 --activate",
+  "WORKDIR /app",
+  "",
+  "ARG NEXT_PUBLIC_FIREBASE_API_KEY",
+  "ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+  "ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "ARG NEXT_PUBLIC_FIREBASE_APP_ID",
+  "ARG NEXT_PUBLIC_API_URL",
+  "ARG NEXT_PUBLIC_DASHBOARD_API_URL",
+  "ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL",
+  "ARG NEXT_PUBLIC_CONFIG_API_URL",
+  "",
+  "ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY",
+  "ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+  "ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID",
+  "ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL",
+  "ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL",
+  "ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL",
+  "ENV NEXT_PUBLIC_CONFIG_API_URL=$NEXT_PUBLIC_CONFIG_API_URL",
+  "ENV NEXT_TELEMETRY_DISABLED=1",
+  "",
+  "COPY --from=deps /app/node_modules     ./node_modules",
+  "COPY package.json pnpm-workspace.yaml ./",
+  "COPY packages/                         ./packages/",
+  "COPY realsass-sass-front/              ./realsass-sass-front/",
+  "",
+  "WORKDIR /app/realsass-sass-front",
+  "RUN pnpm run build",
+  "",
+  "# ── Stage 3: runner ────────────────────────────────────────────────────────",
+  "FROM node:22-alpine AS runner",
+  "WORKDIR /app",
+  "ENV NODE_ENV=production",
+  "ENV NEXT_TELEMETRY_DISABLED=1",
+  "ENV PORT=3000",
+  "ENV HOSTNAME=0.0.0.0",
+  "",
+  "RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs",
+  "",
+  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone ./",
+  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static     ./.next/static",
+  "COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public           ./public",
+  "",
+  "USER nextjs",
+  "EXPOSE 3000",
+  "CMD [\"node\", \"server.js\"]",
+].join('\n'));
+console.log('✓ realsass-sass-front/Dockerfile reescrito para monorepo');
 
-for (const [svc, dockerfilePath] of Object.entries(services)) {
-  const railwayJson = {
-    "$schema": "https://railway.com/railway.schema.json",
-    "build": {
-      "builder": "DOCKERFILE",
-      "dockerfilePath": dockerfilePath
-    },
-    "deploy": {
-      "restartPolicyType": "ON_FAILURE",
-      "restartPolicyMaxRetries": 3
+// Verificar que los otros Dockerfiles también tienen el patrón correcto
+const toCheck = [
+  'realsass-sass-back/Dockerfile',
+  'realsass-ecommerce-back/Dockerfile',
+  'realsass-dashboard-front/Dockerfile',
+];
+for (const f of toCheck) {
+  if (fs.existsSync(f)) {
+    const src = fs.readFileSync(f, 'utf8');
+    if (src.includes('pnpm-workspace.yaml')) {
+      console.log('✓', f, '— OK (copia pnpm-workspace.yaml)');
+    } else {
+      console.log('⚠', f, '— NO copia pnpm-workspace.yaml');
     }
-  };
-  fs.writeFileSync(`${svc}/railway.json`, JSON.stringify(railwayJson, null, 2) + '\n');
-  console.log(`✓ ${svc}/railway.json → dockerfilePath: ${dockerfilePath}`);
+  }
 }
-
-console.log('\n✓ Listo');
-console.log('\nEn Railway UI para cada servicio:');
-console.log('  Settings → Build → Builder → Dockerfile');
-console.log('  Dockerfile Path → (dejar vacío, lo lee del railway.json)');
 JSEOF
 
 echo "✓ Listo"
