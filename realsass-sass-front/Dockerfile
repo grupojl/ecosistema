@@ -8,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-front/package.json              ./realsass-sass-front/
+COPY realsass-sass-front/package.json  ./realsass-sass-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
@@ -40,7 +40,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
-COPY realsass-sass-front/                          ./realsass-sass-front/
+COPY realsass-sass-front/              ./realsass-sass-front/
+COPY realsass-sass-back/src/trpc/      ./realsass-sass-back/src/trpc/
 WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
