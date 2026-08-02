@@ -35,6 +35,7 @@ ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SEN
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
+COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY real-ecommerce-front/                          ./real-ecommerce-front/

@@ -37,6 +37,7 @@ ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
 ENV NEXT_PUBLIC_CONFIG_API_URL=$NEXT_PUBLIC_CONFIG_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
+COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
 COPY realsass-sass-front/                          ./realsass-sass-front/
