@@ -11,11 +11,7 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() =>
     new QueryClient({
       defaultOptions: {
-        queries: {
-          staleTime:            60_000,
-          retry:                1,
-          refetchOnWindowFocus: false,
-        },
+        queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
       },
     }),
   );
@@ -27,7 +23,7 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+    <trpc.Provider client={trpcClient as any} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
