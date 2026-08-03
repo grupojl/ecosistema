@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { createTRPCReact } from '@trpc/react-query';
@@ -11,7 +12,7 @@ export function createTrpcClient(
   getOrganizationId: () => string | null,
 ) {
   const base = process.env['NEXT_PUBLIC_REAL_BACK_URL'] ?? '';
-  return trpc.createClient({
+  return (trpc as any).createClient({
     links: [
       httpBatchLink({
         url: `${base}/api/v1/trpc`,
