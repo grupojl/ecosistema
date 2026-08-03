@@ -26,6 +26,9 @@ COPY packages/                         ./packages/
 WORKDIR /app/realsass-ecommerce-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
+# Debug: mostrar qué se generó
+RUN echo "=== dist contents ===" && ls -la dist/ && echo "=== dist/src ===" && ls -la dist/src/ 2>/dev/null || echo "no dist/src"
+RUN echo "=== generated ===" && ls -la generated/ 2>/dev/null || echo "no generated"
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
@@ -33,11 +36,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist              ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/generated         ./generated
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma            ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json      ./package.json
+# Copiar dist completo
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
+# Copiar generated/prisma en el path correcto relativo a dist/src
+# dist/src/prisma.service.js hace require('../../generated/prisma')
+# desde /app/dist/src → sube 2 niveles → /app/generated/prisma
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/generated    ./generated
+# node_modules para dependencias runtime
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]
