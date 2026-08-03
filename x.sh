@@ -1,79 +1,48 @@
 #!/usr/bin/env bash
-echo "=== Fix: client.ts sass-front con cast any ==="
+echo "=== Fix: provider.tsx sass-front sin organizationId ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
-fs.writeFileSync('realsass-sass-front/lib/trpc/client.ts', [
-  "/* eslint-disable @typescript-eslint/no-explicit-any */",
+fs.writeFileSync('realsass-sass-front/lib/trpc/provider.tsx', [
   "'use client';",
   "",
-  "import { createTRPCReact } from '@trpc/react-query';",
-  "import { httpBatchLink }   from '@trpc/client';",
-  "import type { AppRouter }  from './router-type';",
+  "import { useState }                         from 'react';",
+  "import { QueryClient, QueryClientProvider } from '@tanstack/react-query';",
+  "import { trpc, createTrpcClient }           from './client';",
+  "import { useAuth }                          from '@/context/auth-context';",
   "",
-  "export const trpc = createTRPCReact<AppRouter>();",
+  "export function TrpcProvider({ children }: { children: React.ReactNode }) {",
+  "  const { firebaseUser } = useAuth();",
   "",
-  "export function createTrpcClient(",
-  "  getToken:          () => Promise<string | null>,",
-  "  getOrganizationId: () => string | null = () => null,",
-  ") {",
-  "  const base = process.env['NEXT_PUBLIC_API_URL'] ?? '';",
-  "  return (trpc as any).createClient({",
-  "    links: [",
-  "      httpBatchLink({",
-  "        url: `${base}/trpc`,",
-  "        async headers() {",
-  "          const token = await getToken();",
-  "          const orgId = getOrganizationId();",
-  "          return {",
-  "            ...(token ? { Authorization: `Bearer ${token}` } : {}),",
-  "            ...(orgId  ? { 'x-organization-id': orgId }      : {}),",
-  "          };",
+  "  const [queryClient] = useState(() =>",
+  "    new QueryClient({",
+  "      defaultOptions: {",
+  "        queries: {",
+  "          staleTime:            60_000,",
+  "          retry:                1,",
+  "          refetchOnWindowFocus: false,",
   "        },",
-  "      }),",
-  "    ],",
-  "  });",
+  "      },",
+  "    }),",
+  "  );",
+  "",
+  "  const [trpcClient] = useState(() =>",
+  "    createTrpcClient(",
+  "      () => firebaseUser?.getIdToken() ?? Promise.resolve(null),",
+  "    ),",
+  "  );",
+  "",
+  "  return (",
+  "    <trpc.Provider client={trpcClient} queryClient={queryClient}>",
+  "      <QueryClientProvider client={queryClient}>",
+  "        {children}",
+  "      </QueryClientProvider>",
+  "    </trpc.Provider>",
+  "  );",
   "}",
 ].join('\n'));
-console.log('✓ sass-front/lib/trpc/client.ts — createClient con cast any');
-
-// Mismo fix para dashboard-front
-fs.writeFileSync('realsass-dashboard-front/lib/trpc/client.ts', [
-  "/* eslint-disable @typescript-eslint/no-explicit-any */",
-  "'use client';",
-  "",
-  "import { createTRPCReact } from '@trpc/react-query';",
-  "import { httpBatchLink }   from '@trpc/client';",
-  "import type { AppRouter }  from './router-type';",
-  "",
-  "export const trpc = createTRPCReact<AppRouter>();",
-  "",
-  "export function createTrpcClient(",
-  "  getToken:          () => Promise<string | null>,",
-  "  getOrganizationId: () => string | null,",
-  ") {",
-  "  const base = process.env['NEXT_PUBLIC_REAL_BACK_URL'] ?? '';",
-  "  return (trpc as any).createClient({",
-  "    links: [",
-  "      httpBatchLink({",
-  "        url: `${base}/api/v1/trpc`,",
-  "        async headers() {",
-  "          const token = await getToken();",
-  "          const orgId = getOrganizationId();",
-  "          return {",
-  "            ...(token ? { Authorization: `Bearer ${token}` } : {}),",
-  "            ...(orgId  ? { 'x-organization-id': orgId }      : {}),",
-  "          };",
-  "        },",
-  "      }),",
-  "    ],",
-  "  });",
-  "}",
-].join('\n'));
-console.log('✓ dashboard-front/lib/trpc/client.ts — createClient con cast any');
-
-console.log('\n✓ Listo');
+console.log('✓ sass-front/lib/trpc/provider.tsx — sin organizationId');
 JSEOF
 
 echo "✓ Listo"

@@ -6,7 +6,7 @@ import { trpc, createTrpcClient }           from './client';
 import { useAuth }                          from '@/context/auth-context';
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {
-  const { firebaseUser, organizationId } = useAuth();
+  const { firebaseUser } = useAuth();
 
   const [queryClient] = useState(() =>
     new QueryClient({
@@ -23,7 +23,6 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   const [trpcClient] = useState(() =>
     createTrpcClient(
       () => firebaseUser?.getIdToken() ?? Promise.resolve(null),
-      () => organizationId ?? null,
     ),
   );
 
