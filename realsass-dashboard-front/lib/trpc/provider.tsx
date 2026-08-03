@@ -1,44 +1,36 @@
-/**
- * lib/trpc/provider.tsx
- *
- * TrpcProvider — envuelve la app con QueryClientProvider + trpc.Provider.
- * Reutiliza el QueryClient existente si ya hay uno en el árbol.
- * getIdToken y activeOrganizationId vienen del useAuth hook existente.
- */
 'use client';
 
-import { useState }                          from 'react';
+import { useState, type ReactNode }          from 'react';
 import { QueryClient, QueryClientProvider }  from '@tanstack/react-query';
-import { trpc, createTrpcClient }            from './client';
-import { useAuth }                           from '@/features/auth/hooks/use-auth';
+import { trpc, makeTrpcClient }              from './client';
+import { useAuth }                           from '@/context/auth-context';
 
-export function TrpcProvider({ children }: { children: React.ReactNode }) {
-  const { getIdToken, organizationId } = useAuth();
+export function TrpcProvider({ children }: { children: ReactNode }) {
+  const { firebaseUser, organizationId } = useAuth();
 
-  const [queryClient] = useState(() =>
-    new QueryClient({
-      defaultOptions: {
-        queries: {
-          staleTime:            30_000,
-          retry:                1,
-          refetchOnWindowFocus: false,
-        },
-      },
-    }),
-  );
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
+    },
+  }));
+
+  const url = `${process.env['NEXT_PUBLIC_REAL_BACK_URL'] ?? ''}/api/v1/trpc`;
 
   const [trpcClient] = useState(() =>
-    createTrpcClient(
-      () => getIdToken(),
+    (trpc as any).createClient(makeTrpcClient(
+      url,
+      () => firebaseUser?.getIdToken() ?? Promise.resolve(null),
       () => organizationId ?? null,
-    ),
+    )),
   );
 
+  const TrpcProviderComponent = (trpc as any).Provider;
+
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+    <TrpcProviderComponent client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
-    </trpc.Provider>
+    </TrpcProviderComponent>
   );
 }

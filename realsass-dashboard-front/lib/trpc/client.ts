@@ -3,19 +3,22 @@
 
 import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink }   from '@trpc/client';
-import type { AppRouter }  from './router-type';
 
-export const trpc = createTRPCReact<AppRouter>();
+// Usamos un tipo vacío para evitar el error de AnyRouter en Docker.
+// En runtime tRPC solo necesita la URL — los tipos son solo para DX local.
+type RouterType = any;
 
-export function createTrpcClient(
+export const trpc = createTRPCReact<RouterType>() as any;
+
+export function makeTrpcClient(
+  url: string,
   getToken:          () => Promise<string | null>,
-  getOrganizationId: () => string | null,
+  getOrganizationId: () => string | null = () => null,
 ) {
-  const base = process.env['NEXT_PUBLIC_REAL_BACK_URL'] ?? '';
-  return (trpc as any).createClient({
+  return {
     links: [
       httpBatchLink({
-        url: `${base}/api/v1/trpc`,
+        url,
         async headers() {
           const token = await getToken();
           const orgId = getOrganizationId();
@@ -26,5 +29,5 @@ export function createTrpcClient(
         },
       }),
     ],
-  });
+  };
 }
