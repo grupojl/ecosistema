@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
-# cache-bust: 2026-08-03-v5
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -9,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
+COPY realsass-dashboard-front/package.json              ./realsass-dashboard-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
@@ -35,11 +34,11 @@ ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
 ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
 ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules    ./node_modules
-COPY tsconfig.base.json               ./tsconfig.base.json
+COPY --from=deps /app/node_modules ./node_modules
+COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
-COPY packages/                        ./packages/
-COPY realsass-dashboard-front/        ./realsass-dashboard-front/
+COPY packages/                         ./packages/
+COPY realsass-dashboard-front/                          ./realsass-dashboard-front/
 WORKDIR /app/realsass-dashboard-front
 RUN /app/node_modules/.bin/next build
 
@@ -50,15 +49,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json                              ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml                      ./pnpm-workspace.yaml
-COPY --from=builder --chown=nextjs:nodejs /app/packages                                 ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next           ./realsass-dashboard-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public          ./realsass-dashboard-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json    ./realsass-dashboard-front/package.json
-RUN ls -la node_modules/.bin/next && echo "next encontrado OK"
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules              ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json             ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml      ./pnpm-workspace.yaml
+COPY --from=builder --chown=nextjs:nodejs /app/packages                 ./packages
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next            ./realsass-dashboard-front/.next
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public           ./realsass-dashboard-front/public
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json     ./realsass-dashboard-front/package.json
 USER nextjs
 EXPOSE 3000
 WORKDIR /app/realsass-dashboard-front
-CMD ["../node_modules/.bin/next", "start"]
+CMD ["/app/node_modules/.bin/next", "start"]
