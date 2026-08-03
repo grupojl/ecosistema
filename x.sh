@@ -1,48 +1,12 @@
 #!/usr/bin/env bash
-echo "=== Fix: frontends sin standalone — usar next start ==="
+echo "=== Fix: dashboard-front Dockerfile con next start explícito ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
-const frontends = [
-  {
-    name: 'realsass-dashboard-front',
-    envArgs: [
-      'NEXT_PUBLIC_FIREBASE_API_KEY','NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-      'NEXT_PUBLIC_FIREBASE_PROJECT_ID','NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-      'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID','NEXT_PUBLIC_FIREBASE_APP_ID',
-      'NEXT_PUBLIC_REAL_BACK_URL','NEXT_PUBLIC_ECOMMERCE_API_URL','NEXT_PUBLIC_STORE_FRONT_URL',
-    ],
-  },
-  {
-    name: 'realsass-sass-front',
-    envArgs: [
-      'NEXT_PUBLIC_FIREBASE_API_KEY','NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-      'NEXT_PUBLIC_FIREBASE_PROJECT_ID','NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-      'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID','NEXT_PUBLIC_FIREBASE_APP_ID',
-      'NEXT_PUBLIC_API_URL','NEXT_PUBLIC_DASHBOARD_API_URL',
-      'NEXT_PUBLIC_DASHBOARD_FRONT_URL','NEXT_PUBLIC_CONFIG_API_URL',
-    ],
-  },
-  {
-    name: 'real-ecommerce-front',
-    envArgs: [
-      'NEXT_PUBLIC_ECOMMERCE_API_URL','NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID',
-      'NEXT_PUBLIC_REAL_BACK_URL','NEXT_PUBLIC_FIREBASE_API_KEY',
-      'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN','NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-      'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET','NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-      'NEXT_PUBLIC_FIREBASE_APP_ID',
-    ],
-  },
-];
-
-for (const { name, envArgs } of frontends) {
-  const argLines = envArgs.map(e => `ARG ${e}`).join('\n');
-  const envLines = envArgs.map(e => `ENV ${e}=$${e}`).join('\n');
-
-  fs.writeFileSync(`${name}/Dockerfile`, `# syntax=docker/dockerfile:1.7
+fs.writeFileSync('realsass-dashboard-front/Dockerfile', `# syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
-# cache-bust: 2026-08-03-v4
+# cache-bust: 2026-08-03-v5
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -51,58 +15,61 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY ${name}/package.json              ./${name}/
+COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
-${argLines}
-${envLines}
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_REAL_BACK_URL
+ARG NEXT_PUBLIC_ECOMMERCE_API_URL
+ARG NEXT_PUBLIC_STORE_FRONT_URL
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
+ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
+ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
+COPY --from=deps /app/node_modules    ./node_modules
+COPY tsconfig.base.json               ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
-COPY packages/                         ./packages/
-COPY ${name}/                          ./${name}/
-WORKDIR /app/${name}
+COPY packages/                        ./packages/
+COPY realsass-dashboard-front/        ./realsass-dashboard-front/
+WORKDIR /app/realsass-dashboard-front
 RUN /app/node_modules/.bin/next build
 
 FROM node:22-alpine AS runner
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-# Copiar todo lo necesario para next start
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json             ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml      ./pnpm-workspace.yaml
-COPY --from=builder --chown=nextjs:nodejs /app/packages                 ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/${name}/.next            ./${name}/.next
-COPY --from=builder --chown=nextjs:nodejs /app/${name}/public           ./${name}/public
-COPY --from=builder --chown=nextjs:nodejs /app/${name}/package.json     ./${name}/package.json
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                              ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json                              ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml                      ./pnpm-workspace.yaml
+COPY --from=builder --chown=nextjs:nodejs /app/packages                                 ./packages
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next           ./realsass-dashboard-front/.next
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public          ./realsass-dashboard-front/public
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json    ./realsass-dashboard-front/package.json
+RUN ls -la node_modules/.bin/next && echo "next encontrado OK"
 USER nextjs
 EXPOSE 3000
-WORKDIR /app/${name}
-CMD ["node_modules/.bin/next", "start"]
+WORKDIR /app/realsass-dashboard-front
+CMD ["../node_modules/.bin/next", "start"]
 `);
-  console.log(`✓ ${name}/Dockerfile — next start en vez de standalone`);
-}
-
-// Quitar output: standalone de los next.config.mjs
-for (const { name } of frontends) {
-  const configPath = `${name}/next.config.mjs`;
-  let config = fs.readFileSync(configPath, 'utf8');
-  config = config.replace(/\s*output:\s*['"]standalone['"]\s*,?\n?/g, '\n');
-  fs.writeFileSync(configPath, config);
-  console.log(`✓ ${name}/next.config.mjs — output standalone removido`);
-}
-
-console.log('\n✓ Listo');
+console.log('✓ realsass-dashboard-front/Dockerfile — next start con node_modules raíz');
 JSEOF
 
 echo "✓ Listo"
