@@ -1,12 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { trpc } from '@/lib/trpc/client';
-
 const t = trpc as any;
 
 export function useFeatureFlags() {
-  return t.configFlags.list.useQuery(undefined, {
-    staleTime: 30_000, refetchInterval: 60_000,
-  });
+  return t.configFlags.list.useQuery(undefined, { staleTime: 30_000, refetchInterval: 60_000 });
 }
 export function useUpdateFeatureFlag() {
   const utils = t.useUtils();
@@ -14,11 +11,8 @@ export function useUpdateFeatureFlag() {
     onSettled: () => { void utils.configFlags.list.invalidate(); },
   });
 }
-
 export function useQuotas() {
-  return t.configQuotas.list.useQuery(undefined, {
-    staleTime: 30_000, refetchInterval: 30_000,
-  });
+  return t.configQuotas.list.useQuery(undefined, { staleTime: 30_000 });
 }
 export function useUpdateQuotaLimit() {
   const utils = t.useUtils();
@@ -26,7 +20,6 @@ export function useUpdateQuotaLimit() {
     onSuccess: () => { void utils.configQuotas.list.invalidate(); },
   });
 }
-
 export function useThemes() {
   return t.configThemes.list.useQuery(undefined);
 }
@@ -36,7 +29,6 @@ export function useActivateTheme() {
     onSuccess: () => { void utils.configThemes.list.invalidate(); },
   });
 }
-
 export function useWebhooks() {
   return t.configWebhooks.list.useQuery(undefined);
 }

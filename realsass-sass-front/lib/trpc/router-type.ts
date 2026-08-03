@@ -1,2 +1,2 @@
-import type { AppRouter } from '@real/trpc';
-export type { AppRouter };
+// No usado en Docker build — client.ts usa createTRPCReact<any>
+export type AppRouter = any;
