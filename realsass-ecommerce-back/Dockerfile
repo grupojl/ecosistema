@@ -33,10 +33,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist              ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/generated         ./generated
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json      ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]

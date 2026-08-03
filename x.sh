@@ -1,9 +1,34 @@
 #!/usr/bin/env bash
-echo "=== Fix definitivo: backends deploy paths ==="
+echo "=== Fix: revertir Prisma output custom → @prisma/client ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
 
+// Revertir schema.prisma — quitar output custom
+// Cada backend tendrá su propio @prisma/client en node_modules
+// pnpm con shamefully-hoist los diferencia por el hash del schema
+
+for (const name of ['realsass-sass-back', 'realsass-ecommerce-back']) {
+  const schemaPath = `${name}/prisma/schema.prisma`;
+  let schema = fs.readFileSync(schemaPath, 'utf8');
+
+  // Quitar la línea output = "../generated/prisma"
+  schema = schema.replace(/\s*output\s*=\s*"\.\.\/generated\/prisma"\n?/g, '\n');
+  fs.writeFileSync(schemaPath, schema);
+  console.log(`✓ ${schemaPath} — output custom removido`);
+}
+
+// Revertir prisma.service.ts de ambos backends — importar desde @prisma/client
+for (const name of ['realsass-sass-back', 'realsass-ecommerce-back']) {
+  const svcPath = `${name}/src/prisma/prisma.service.ts`;
+  let svc = fs.readFileSync(svcPath, 'utf8');
+  svc = svc.replace(/from '\.\.\/\.\.\/generated\/prisma'/g, "from '@prisma/client'");
+  svc = svc.replace(/from '\.\/generated\/prisma'/g, "from '@prisma/client'");
+  fs.writeFileSync(svcPath, svc);
+  console.log(`✓ ${svcPath} — importa desde @prisma/client`);
+}
+
+// Actualizar Dockerfiles — quitar COPY generated, usar @prisma/client del hoisting
 const backendDockerfile = (name) => `# syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 
@@ -39,44 +64,20 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/dist              ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/generated         ./generated
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/package.json      ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/dist         ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/prisma       ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/package.json ./package.json
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]
 `;
 
-// sass-back: genera dist/src/main.js — path correcto
 fs.writeFileSync('realsass-sass-back/Dockerfile', backendDockerfile('realsass-sass-back'));
 console.log('✓ realsass-sass-back/Dockerfile');
 
-// ecommerce-back: nest-cli.json sin entryFile → genera dist/main.js no dist/src/main.js
-// Agregar entryFile al nest-cli.json para que genere en dist/src/main
-const ecommerceNestCli = {
-  "$schema": "https://json.schemastore.org/nest-cli",
-  "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
-  "entryFile": "src/main",
-  "compilerOptions": {
-    "deleteOutDir": true
-  }
-};
-fs.writeFileSync(
-  'realsass-ecommerce-back/nest-cli.json',
-  JSON.stringify(ecommerceNestCli, null, 2) + '\n'
-);
-console.log('✓ realsass-ecommerce-back/nest-cli.json — entryFile: src/main');
-
 fs.writeFileSync('realsass-ecommerce-back/Dockerfile', backendDockerfile('realsass-ecommerce-back'));
 console.log('✓ realsass-ecommerce-back/Dockerfile');
-
-// El problema de generated/prisma:
-// En runner WORKDIR=/app, dist está en /app/dist/src/prisma.service.js
-// que hace require('../../generated/prisma')
-// → /app/dist/src → ../../ → /app/generated/prisma ✓ correcto
-// Copiamos generated a /app/generated → debería funcionar
 
 console.log('\n✓ Listo');
 JSEOF
