@@ -1,16 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { trpc } from '@/lib/trpc/client';
 
+const t = trpc as any;
+
 export function useProfile() {
-  return trpc.auth.me.useQuery(undefined, { staleTime: 60_000 });
+  return t.auth.me.useQuery(undefined, { staleTime: 60_000 });
 }
 
 export function useSyncUser() {
-  return trpc.auth.sync.useMutation({});
+  return t.auth.sync.useMutation({});
 }
 
 export function useSelectRole() {
-  const utils = trpc.useUtils();
-  return trpc.auth.selectRole.useMutation({
+  const utils = t.useUtils();
+  return t.auth.selectRole.useMutation({
     onSuccess: () => { void utils.auth.me.invalidate(); },
   });
 }
