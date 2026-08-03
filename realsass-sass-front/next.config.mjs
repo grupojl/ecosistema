@@ -1,7 +1,7 @@
 // next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+
 
   async headers() {
     const isDev = process.env.NODE_ENV === 'development'
