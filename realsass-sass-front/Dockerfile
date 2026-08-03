@@ -8,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-front/package.json  ./realsass-sass-front/
+COPY realsass-sass-front/package.json              ./realsass-sass-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
@@ -40,7 +40,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
-COPY realsass-sass-front/              ./realsass-sass-front/
+COPY realsass-sass-front/                          ./realsass-sass-front/
 WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
@@ -51,9 +51,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static     ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public           ./public
+# El standalone incluye server.js pero necesita next en node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone      ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static          ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public                ./public
+# Copiar node_modules completo para que next esté disponible en runtime
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                  ./node_modules
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

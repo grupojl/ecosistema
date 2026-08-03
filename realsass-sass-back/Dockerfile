@@ -26,7 +26,6 @@ COPY packages/                         ./packages/
 WORKDIR /app/realsass-sass-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
-RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js no generado" && exit 1)
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
@@ -34,10 +33,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist              ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/generated         ./generated
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules              ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma            ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json      ./package.json
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]

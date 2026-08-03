@@ -49,9 +49,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static     ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public           ./public
+# El standalone incluye server.js pero necesita next en node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone      ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static          ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public                ./public
+# Copiar node_modules completo para que next esté disponible en runtime
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                  ./node_modules
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
