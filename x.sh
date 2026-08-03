@@ -1,35 +1,69 @@
 #!/usr/bin/env bash
-echo "=== Fix: reemplazar todos los imports de generated/prisma ==="
+echo "=== Fix: dashboard-front runner con node_modules ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
-const path = require('path');
 
-function fixImports(dir) {
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const e of entries) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === 'node_modules' || e.name === 'dist' || e.name === 'generated') continue;
-      fixImports(full);
-      continue;
-    }
-    if (!e.name.endsWith('.ts')) continue;
-    let src = fs.readFileSync(full, 'utf8');
-    if (!src.includes('generated/prisma')) continue;
-    const fixed = src.replace(/from ['"]\.\.\/\.\.\/generated\/prisma['"]/g, "from '@prisma/client'")
-                     .replace(/from ['"]\.\/generated\/prisma['"]/g, "from '@prisma/client'")
-                     .replace(/from ['"]\.\.\/generated\/prisma['"]/g, "from '@prisma/client'");
-    if (fixed !== src) {
-      fs.writeFileSync(full, fixed);
-      console.log('✓ fixed:', full);
-    }
-  }
-}
+fs.writeFileSync('realsass-dashboard-front/Dockerfile', `# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
 
-fixImports('realsass-sass-back/src');
-fixImports('realsass-ecommerce-back/src');
-console.log('done');
+FROM node:22-alpine AS deps
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-client/package.json ./packages/auth-client/
+COPY packages/ui/package.json          ./packages/ui/
+COPY packages/trpc/package.json        ./packages/trpc/
+COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
+RUN echo "shamefully-hoist=true" >> .npmrc
+RUN pnpm install --frozen-lockfile
+
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+WORKDIR /app
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_REAL_BACK_URL
+ARG NEXT_PUBLIC_ECOMMERCE_API_URL
+ARG NEXT_PUBLIC_STORE_FRONT_URL
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
+ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
+ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY tsconfig.base.json            ./tsconfig.base.json
+COPY package.json pnpm-workspace.yaml ./
+COPY packages/                         ./packages/
+COPY realsass-dashboard-front/         ./realsass-dashboard-front/
+WORKDIR /app/realsass-dashboard-front
+RUN /app/node_modules/.bin/next build
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static     ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public           ./public
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                              ./node_modules
+USER nextjs
+EXPOSE 3000
+CMD ["node", "server.js"]
+`);
+console.log('✓ realsass-dashboard-front/Dockerfile — node_modules en runner');
 JSEOF
 
 echo "✓ Listo"

@@ -8,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-dashboard-front/package.json              ./realsass-dashboard-front/
+COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
@@ -38,7 +38,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/                         ./packages/
-COPY realsass-dashboard-front/                          ./realsass-dashboard-front/
+COPY realsass-dashboard-front/         ./realsass-dashboard-front/
 WORKDIR /app/realsass-dashboard-front
 RUN /app/node_modules/.bin/next build
 
@@ -49,12 +49,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-# El standalone incluye server.js pero necesita next en node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone      ./
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static          ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public                ./public
-# Copiar node_modules completo para que next esté disponible en runtime
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                  ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static     ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public           ./public
+COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                              ./node_modules
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
