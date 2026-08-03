@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "=== Fix: backends deploy — paths correctos ==="
+echo "=== Fix definitivo: backends deploy paths ==="
 
 node - << 'JSEOF'
 const fs = require('fs');
@@ -32,9 +32,6 @@ COPY packages/                         ./packages/
 WORKDIR /app/${name}
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
-# Debug: mostrar qué se generó
-RUN echo "=== dist contents ===" && ls -la dist/ && echo "=== dist/src ===" && ls -la dist/src/ 2>/dev/null || echo "no dist/src"
-RUN echo "=== generated ===" && ls -la generated/ 2>/dev/null || echo "no generated"
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
@@ -42,25 +39,44 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-# Copiar dist completo
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/dist         ./dist
-# Copiar generated/prisma en el path correcto relativo a dist/src
-# dist/src/prisma.service.js hace require('../../generated/prisma')
-# desde /app/dist/src → sube 2 niveles → /app/generated/prisma
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/generated    ./generated
-# node_modules para dependencias runtime
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/${name}/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/dist              ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/generated         ./generated
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules              ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/${name}/package.json      ./package.json
 USER nestjs
 EXPOSE 3000
 CMD ["dumb-init", "node", "dist/src/main"]
 `;
 
+// sass-back: genera dist/src/main.js — path correcto
 fs.writeFileSync('realsass-sass-back/Dockerfile', backendDockerfile('realsass-sass-back'));
 console.log('✓ realsass-sass-back/Dockerfile');
 
+// ecommerce-back: nest-cli.json sin entryFile → genera dist/main.js no dist/src/main.js
+// Agregar entryFile al nest-cli.json para que genere en dist/src/main
+const ecommerceNestCli = {
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "entryFile": "src/main",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+};
+fs.writeFileSync(
+  'realsass-ecommerce-back/nest-cli.json',
+  JSON.stringify(ecommerceNestCli, null, 2) + '\n'
+);
+console.log('✓ realsass-ecommerce-back/nest-cli.json — entryFile: src/main');
+
 fs.writeFileSync('realsass-ecommerce-back/Dockerfile', backendDockerfile('realsass-ecommerce-back'));
 console.log('✓ realsass-ecommerce-back/Dockerfile');
+
+// El problema de generated/prisma:
+// En runner WORKDIR=/app, dist está en /app/dist/src/prisma.service.js
+// que hace require('../../generated/prisma')
+// → /app/dist/src → ../../ → /app/generated/prisma ✓ correcto
+// Copiamos generated a /app/generated → debería funcionar
 
 console.log('\n✓ Listo');
 JSEOF
