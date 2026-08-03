@@ -26,7 +26,7 @@ interface UpdateCollaboratorDto {
   canManageLeads?: boolean;
   canManageCollaborators?: boolean;
 }
-import { CollaboratorStatus } from '../../generated/prisma';
+import { CollaboratorStatus } from '@prisma/client';
 
 // ── Helpers permisos JSONB ────────────────────────────────────────────────────
 const DEFAULT_PERMISSIONS = {
