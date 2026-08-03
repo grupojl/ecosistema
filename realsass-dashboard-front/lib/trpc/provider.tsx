@@ -3,7 +3,7 @@
 import { useState, type ReactNode }          from 'react';
 import { QueryClient, QueryClientProvider }  from '@tanstack/react-query';
 import { trpc, makeTrpcClient }              from './client';
-import { useAuth }                           from '@/context/auth-context';
+import { useAuth }                           from '@/features/auth/context/auth-context';
 
 export function TrpcProvider({ children }: { children: ReactNode }) {
   const { firebaseUser, organizationId } = useAuth();

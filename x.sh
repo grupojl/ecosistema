@@ -1,81 +1,60 @@
 #!/usr/bin/env bash
-echo "=== Fix: dashboard-front sin standalone ==="
+set -euo pipefail
 
-node - << 'JSEOF'
-const fs = require('fs');
+# fix-dashboard-trpc-provider-import.sh
+# Corrige el import roto en realsass-dashboard-front/lib/trpc/provider.tsx
+# Bug: importa '@/context/auth-context' (patrón de sass-front) en vez de
+# '@/features/auth/context/auth-context' (patrón real de dashboard-front).
+#
+# Ejecutar desde la raíz del monorepo (welver/).
 
-// Quitar output standalone del next.config.mjs
-let config = fs.readFileSync('realsass-dashboard-front/next.config.mjs', 'utf8');
-config = config.replace(/\s*output:\s*['"]standalone['"]\s*,?\n?/g, '\n');
-fs.writeFileSync('realsass-dashboard-front/next.config.mjs', config);
-console.log('✓ next.config.mjs — output standalone removido');
+REPO_ROOT="$(pwd)"
+TARGET_APP="realsass-dashboard-front"
+TARGET_FILE="${TARGET_APP}/lib/trpc/provider.tsx"
 
-// Dockerfile con next start
-fs.writeFileSync('realsass-dashboard-front/Dockerfile', `# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo (welver/)
-# cache-bust: 2026-08-03-v6
+if [ ! -f "$TARGET_FILE" ]; then
+  echo "ERROR: no se encontró $TARGET_FILE. Ejecutá este script desde la raíz del monorepo." >&2
+  exit 1
+fi
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+echo "== Antes =="
+grep -n "@/context/auth-context" "$TARGET_FILE" || echo "(sin coincidencias — revisar manualmente el contenido del import)"
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG NEXT_PUBLIC_FIREBASE_API_KEY
-ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ARG NEXT_PUBLIC_FIREBASE_APP_ID
-ARG NEXT_PUBLIC_REAL_BACK_URL
-ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-ARG NEXT_PUBLIC_STORE_FRONT_URL
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
-ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
-ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules    ./node_modules
-COPY tsconfig.base.json               ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/                        ./packages/
-COPY realsass-dashboard-front/        ./realsass-dashboard-front/
-WORKDIR /app/realsass-dashboard-front
-RUN /app/node_modules/.bin/next build
+# Reemplazo del import roto
+sed -i.bak "s|@/context/auth-context|@/features/auth/context/auth-context|g" "$TARGET_FILE"
+rm -f "${TARGET_FILE}.bak"
 
-FROM node:22-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules                              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json                              ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml                      ./pnpm-workspace.yaml
-COPY --from=builder --chown=nextjs:nodejs /app/packages                                 ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next           ./realsass-dashboard-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public          ./realsass-dashboard-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json    ./realsass-dashboard-front/package.json
-USER nextjs
-EXPOSE 3000
-WORKDIR /app/realsass-dashboard-front
-CMD ["/app/node_modules/.bin/next", "start"]
-`);
-console.log('✓ realsass-dashboard-front/Dockerfile — next start');
-JSEOF
+echo ""
+echo "== Después =="
+grep -n "@/features/auth/context/auth-context" "$TARGET_FILE" || echo "(no se aplicó el reemplazo — revisar el archivo manualmente)"
 
-echo "✓ Listo"
+# Verificación: buscar otros archivos en dashboard-front que repitan el mismo
+# patrón roto (mismo bug copiado en otro lado).
+echo ""
+echo "== Buscando otras referencias rotas a '@/context/auth-context' en ${TARGET_APP} =="
+OTHER_HITS=$(grep -rl "@/context/auth-context" "${TARGET_APP}" --include="*.ts" --include="*.tsx" || true)
+
+if [ -n "${OTHER_HITS}" ]; then
+  echo "Se encontraron más referencias rotas:"
+  echo "${OTHER_HITS}"
+  echo ""
+  echo "Corrigiendo automáticamente..."
+  while IFS= read -r f; do
+    sed -i.bak "s|@/context/auth-context|@/features/auth/context/auth-context|g" "$f"
+    rm -f "${f}.bak"
+    echo "  fixed: $f"
+  done <<< "${OTHER_HITS}"
+else
+  echo "No se encontraron más referencias rotas."
+fi
+
+# Verificación: confirmar que el archivo destino del import realmente existe.
+AUTH_CTX_FILE="${TARGET_APP}/features/auth/context/auth-context.tsx"
+if [ ! -f "$AUTH_CTX_FILE" ]; then
+  echo ""
+  echo "ADVERTENCIA: ${AUTH_CTX_FILE} no existe en el filesystem actual."
+  echo "Verificá manualmente la ruta real del AuthProvider en ${TARGET_APP}/features/auth/."
+fi
+
+echo ""
+echo "Listo. Corré 'pnpm --filter ${TARGET_APP} typecheck' o el build de Docker de nuevo para confirmar."

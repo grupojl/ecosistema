@@ -472,6 +472,7 @@ realsass-sass-front/
   lib/
     trpc/
       client.ts
+      router-type.ts
     api.ts
     config-api.ts
     config-client.ts
@@ -518,14 +519,6 @@ export interface AppError { code: AppErrorCode; message: string; status?: number
 }
 </file>
 
-<file path="packages/auth-client/tsconfig.json">
-{
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": { "target": "ES2017", "lib": ["dom","dom.iterable","esnext"], "module": "esnext", "moduleResolution": "bundler", "jsx": "react-jsx", "noEmit": true },
-  "include": ["src/**/*"], "exclude": ["node_modules"]
-}
-</file>
-
 <file path="packages/trpc/src/server/context.ts">
 export interface TRPCContext { userId?: string; organizationId?: string; user?: unknown }
 export function createContext(): TRPCContext
@@ -536,32 +529,6 @@ import { initTRPC } from '@trpc/server'
 import superjson from 'superjson'
 import type { TRPCContext } from './context'
 const t = initTRPC.context<TRPCContext>().create(
-</file>
-
-<file path="packages/trpc/src/index.ts">
-// @real/trpc — implementación completa en S1/S2
-</file>
-
-<file path="packages/trpc/package.json">
-{
-  "name": "@real/trpc",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Contratos tRPC compartidos — routers, tipos, contexto (S1/S2)",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "scripts": { "build": "tsc --noEmit", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@trpc/server": "catalog:", "superjson": "catalog:", "zod": "catalog:" },
-  "devDependencies": { "typescript": "catalog:", "@types/node": "catalog:" }
-}
-</file>
-
-<file path="packages/trpc/tsconfig.json">
-{
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": { "target": "ES2023", "module": "esnext", "moduleResolution": "bundler", "noEmit": true },
-  "include": ["src/**/*"], "exclude": ["node_modules"]
-}
 </file>
 
 <file path="packages/ui/src/utils/cn.ts">
@@ -593,14 +560,6 @@ export function cn(...inputs: ClassValue[]): string
   },
   "devDependencies": { "typescript": "catalog:", "@types/react": "catalog:" },
   "peerDependencies": { "react": ">=19.0.0", "react-dom": ">=19.0.0" }
-}
-</file>
-
-<file path="packages/ui/tsconfig.json">
-{
-  "extends": "../tsconfig.base.json",
-  "compilerOptions": { "target": "ES2017", "lib": ["dom","dom.iterable","esnext"], "module": "esnext", "moduleResolution": "bundler", "jsx": "react-jsx", "noEmit": true },
-  "include": ["src/**/*"], "exclude": ["node_modules"]
 }
 </file>
 
@@ -1619,16 +1578,11 @@ getTracking(trackingNumber: string): Promise<any>
 }
 </file>
 
-<file path="real-ecommerce-front/next.config.mjs">
-/** @type {import('next').NextConfig} */
-</file>
-
 <file path="real-ecommerce-front/package.json">
 {
   "name": "real-ecommerce-front",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -1784,23 +1738,6 @@ export default function CampañasPage()
 import { MessageSquare } from 'lucide-react';
 ⋮----
 export default function ChatIAPage()
-</file>
-
-<file path="realsass-dashboard-front/app/dashboard/configuracion/flags/page.tsx">
-import { AlertCircle, ToggleLeft, Globe, Loader2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
-import { toast } from 'sonner';
-import { useAuth } from '@/features/auth/hooks/use-auth';
-import { useFlags, useUpdateFlag } from '@/features/config-flags/hooks';
-import type { FeatureFlag } from '@/features/config/types';
-import { cn } from '@/lib/utils';
-⋮----
-const handleToggle = async (flag: FeatureFlag) =>
-⋮----
-if (!organizationId || !flag.organizationId) return; // flags globales son readonly
-⋮----
-<div className=
 </file>
 
 <file path="realsass-dashboard-front/app/dashboard/configuracion/quotas/page.tsx">
@@ -2433,39 +2370,6 @@ const dismiss = () => dispatch(
 function useToast()
 </file>
 
-<file path="realsass-dashboard-front/lib/trpc/client.ts">
-/**
- * lib/trpc/client.ts
- *
- * Cliente tRPC para realsass-dashboard-front.
- * Conecta con real-back en /api/v1/trpc.
- *
- * Headers por request:
- *   Authorization: Bearer <token Firebase>
- *   x-organization-id: <organizationId activo>
- */
-⋮----
-import { createTRPCReact }  from '@trpc/react-query';
-import { httpBatchLink }    from '@trpc/client';
-import type { AppRouter } from './router-type';
-⋮----
-export function createTrpcClient(
-  getToken:          () => Promise<string | null>,
-  getOrganizationId: () => string | null,
-)
-⋮----
-async headers()
-</file>
-
-<file path="realsass-dashboard-front/lib/trpc/router-type.ts">
-/**
- * lib/trpc/router-type.ts
- *
- * Re-exporta el tipo AppRouter desde realsass-sass-back.
- * Solo tipos — cero runtime. TypeScript lo resuelve en compile time.
- */
-</file>
-
 <file path="realsass-dashboard-front/lib/api-client.ts">
 // lib/api-client.ts
 // Dos helpers HTTP — uno por backend.
@@ -2615,21 +2519,11 @@ export interface FilterParams {
 }
 </file>
 
-<file path="realsass-dashboard-front/next.config.mjs">
-/** @type {import('next').NextConfig} */
-⋮----
-// Fuerza revalidación en cada request para páginas dinámicas
-headers: async ()
-⋮----
-// Los chunks de JS/CSS sí pueden cachearse porque Next les cambia el hash
-</file>
-
 <file path="realsass-dashboard-front/package.json">
 {
   "name": "realsass-dashboard-front",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -2710,298 +2604,10 @@ headers: async ()
 }
 </file>
 
-<file path="realsass-dashboard-front/tsconfig.json">
-{
-  "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "target": "ES6",
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
-  "extends": "../tsconfig.base.json"
-}
-</file>
-
-<file path="realsass-ecommerce-back/prisma/schema.prisma">
-// prisma/schema.prisma — real-ecommerce-back
-// Ver detalle de decisiones en el mensaje que acompañó este script.
-generator client {
-  provider   = "prisma-client-js"
-  engineType = "client"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
-model Category {
-  id             String    @id @default(uuid())
-  organizationId String    @map("organization_id")
-  name           String
-  handle         String
-  description    String?
-  isActive       Boolean   @default(true) @map("is_active")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  products       Product[]
-
-  @@unique([organizationId, handle])
-  @@index([organizationId])
-  @@map("categories")
-}
-
-enum ProductStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-model Product {
-  id             String        @id @default(uuid())
-  organizationId String        @map("organization_id")
-  categoryId     String?       @map("category_id")
-  name           String
-  handle         String
-  description    String?
-  status         ProductStatus @default(DRAFT)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  category       Category?        @relation(fields: [categoryId], references: [id])
-  variants       ProductVariant[]
-
-  @@unique([organizationId, handle])
-  @@index([organizationId, status])
-  @@map("products")
-}
-
-model ProductVariant {
-  id             String   @id @default(uuid())
-  productId      String   @map("product_id")
-  organizationId String   @map("organization_id")
-  sku            String
-  title          String
-  priceCents     Int      @map("price_cents")
-  currency       String   @default("USD")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  inventory      InventoryItem?
-  cartItems      CartItem[]
-  orderItems     OrderItem[]
-
-  @@unique([organizationId, sku])
-  @@index([productId])
-  @@map("product_variants")
-}
-
-model InventoryItem {
-  id                String   @id @default(uuid())
-  variantId         String   @unique @map("variant_id")
-  organizationId    String   @map("organization_id")
-  quantityAvailable Int      @default(0) @map("quantity_available")
-  quantityReserved  Int      @default(0) @map("quantity_reserved")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@map("inventory_items")
-}
-
-model StoreCustomer {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  email          String
-  displayName    String?  @map("display_name")
-  phone          String?
-  isGuest        Boolean  @default(true) @map("is_guest")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  addresses      CustomerAddress[]
-  carts          Cart[]
-  orders         Order[]
-  activityEvents CustomerActivityEvent[]
-
-  @@unique([organizationId, email])
-  @@index([organizationId])
-  @@map("store_customers")
-}
-
-model CustomerAddress {
-  id         String  @id @default(uuid())
-  customerId String  @map("customer_id")
-  label      String?
-  line1      String
-  line2      String?
-  city       String
-  province   String?
-  postalCode String? @map("postal_code")
-  country    String
-  isDefault  Boolean @default(false) @map("is_default")
-  customer   StoreCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@index([customerId])
-  @@map("customer_addresses")
-}
-
-enum ActivityEventType {
-  PRODUCT_VIEW
-  CART_ADD
-  CART_REMOVE
-  CHECKOUT_STARTED
-  ORDER_COMPLETED
-}
-
-model CustomerActivityEvent {
-  id             String            @id @default(uuid())
-  organizationId String            @map("organization_id")
-  customerId     String?           @map("customer_id")
-  sessionId      String            @map("session_id")
-  eventType      ActivityEventType @map("event_type")
-  payload        Json              @default("{}")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  customer       StoreCustomer? @relation(fields: [customerId], references: [id])
-
-  @@index([organizationId, createdAt])
-  @@index([sessionId])
-  @@map("customer_activity_events")
-}
-
-enum CartStatus {
-  ACTIVE
-  CONVERTED
-  ABANDONED
-}
-
-model Cart {
-  id             String     @id @default(uuid())
-  organizationId String     @map("organization_id")
-  customerId     String?    @map("customer_id")
-  sessionId      String     @map("session_id")
-  status         CartStatus @default(ACTIVE)
-  currency       String     @default("USD")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
-  customer       StoreCustomer? @relation(fields: [customerId], references: [id])
-  items          CartItem[]
-  order          Order?
-
-  @@index([organizationId, status])
-  @@index([sessionId])
-  @@index([customerId])
-  @@map("carts")
-}
-
-model CartItem {
-  id                     String @id @default(uuid())
-  cartId                 String @map("cart_id")
-  variantId              String @map("variant_id")
-  quantity               Int
-  unitPriceCentsSnapshot Int    @map("unit_price_cents_snapshot")
-  cart                   Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  variant                ProductVariant @relation(fields: [variantId], references: [id])
-
-  @@unique([cartId, variantId])
-  @@map("cart_items")
-}
-
-enum OrderStatus {
-  PENDING_PAYMENT
-  PAID
-  FULFILLING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  REFUNDED
-}
-
-model Order {
-  id              String      @id @default(uuid())
-  organizationId  String      @map("organization_id")
-  customerId      String      @map("customer_id")
-  cartId          String      @unique @map("cart_id")
-  status          OrderStatus @default(PENDING_PAYMENT)
-  currency        String
-  subtotalCents   Int         @map("subtotal_cents")
-  shippingCents   Int         @default(0) @map("shipping_cents")
-  totalCents      Int         @map("total_cents")
-  paymentIntentId String?     @map("payment_intent_id")
-  shippingAddress Json        @map("shipping_address")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  customer        StoreCustomer      @relation(fields: [customerId], references: [id])
-  cart            Cart               @relation(fields: [cartId], references: [id])
-  items           OrderItem[]
-  statusHistory   OrderStatusEvent[]
-
-  @@index([organizationId, status])
-  @@index([customerId])
-  @@index([paymentIntentId])
-  @@map("orders")
-}
-
-model OrderItem {
-  id                     String @id @default(uuid())
-  orderId                String @map("order_id")
-  variantId              String @map("variant_id")
-  quantity               Int
-  unitPriceCentsSnapshot Int    @map("unit_price_cents_snapshot")
-  order                  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  variant                ProductVariant @relation(fields: [variantId], references: [id])
-
-  @@map("order_items")
-}
-
-model OrderStatusEvent {
-  id         String       @id @default(uuid())
-  orderId    String       @map("order_id")
-  fromStatus OrderStatus? @map("from_status")
-  toStatus   OrderStatus  @map("to_status")
-  reason     String?
-  createdAt  DateTime     @default(now()) @map("created_at")
-  order      Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@map("order_status_events")
-}
-</file>
-
 <file path="realsass-ecommerce-back/src/activity/dto/log-event.dto.ts">
 import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
 ⋮----
-export class LogEventDto
+export class LogEventDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/activity/activity.controller.ts">
@@ -3010,7 +2616,7 @@ import { ActivityService } from './activity.service';
 import { LogEventDto } from './dto/log-event.dto';
 import { Public } from '../common/decorators/public.decorator';
 ⋮----
-export class ActivityController
+export class ActivityController {
 ⋮----
 constructor(private readonly activityService: ActivityService)
 ⋮----
@@ -3022,33 +2628,13 @@ import { Module } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { ActivityController } from './activity.controller';
 ⋮----
-export class ActivityModule
-</file>
-
-<file path="realsass-ecommerce-back/src/activity/activity.service.ts">
-import { Prisma } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-⋮----
-export class ActivityService
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-// Append-only — no hay update ni delete. Errores acá no deben tumbar el
-// flujo de compra: quien llama debe tratar esto como best-effort.
-async log(
-    organizationId: string,
-    sessionId: string,
-    eventType: string,
-    customerId?: string,
-    payload: Record<string, unknown> = {},
-)
+export class ActivityModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/cart/dto/add-item.dto.ts">
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 ⋮----
-export class AddItemDto
+export class AddItemDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/cart/cart.controller.ts">
@@ -3057,7 +2643,7 @@ import { CartService } from './cart.service';
 import { AddItemDto } from './dto/add-item.dto';
 import { Public } from '../common/decorators/public.decorator';
 ⋮----
-export class CartController
+export class CartController {
 ⋮----
 constructor(private readonly cartService: CartService)
 ⋮----
@@ -3078,7 +2664,7 @@ import { CartService } from './cart.service';
 import { CartController } from './cart.controller';
 import { ActivityModule } from '../activity/activity.module';
 ⋮----
-export class CartModule
+export class CartModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/cart/cart.service.ts">
@@ -3086,7 +2672,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 ⋮----
-export class CartService
+export class CartService {
 ⋮----
 constructor(
 ⋮----
@@ -3103,15 +2689,15 @@ async getCart(organizationId: string, cartId: string)
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 ⋮----
-class CreateVariantDto
+class CreateVariantDto {
 ⋮----
-export class CreateProductDto
+export class CreateProductDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/catalog/dto/update-product.dto.ts">
 import { IsIn, IsOptional, IsString } from 'class-validator';
 ⋮----
-export class UpdateProductDto
+export class UpdateProductDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/catalog/catalog.controller.ts">
@@ -3127,7 +2713,7 @@ import type { TenantContext } from '../common/types/tenant-context';
 ⋮----
 // Admin — requiere Firebase + x-organization-id (FirebaseAuthGuard es global).
 ⋮----
-export class CatalogController
+export class CatalogController {
 ⋮----
 constructor(private readonly catalogService: CatalogService)
 ⋮----
@@ -3144,7 +2730,7 @@ import { CatalogService } from './catalog.service';
 import { CatalogController } from './catalog.controller';
 import { PublicCatalogController } from './public-catalog.controller';
 ⋮----
-export class CatalogModule
+export class CatalogModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/catalog/catalog.service.ts">
@@ -3153,7 +2739,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 ⋮----
-export class CatalogService
+export class CatalogService {
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -3179,7 +2765,7 @@ import { Public } from '../common/decorators/public.decorator';
 // TODO: cuando exista StorefrontSettings, validar acá que la organización
 // tenga el storefront publicado antes de exponer el catálogo.
 ⋮----
-export class PublicCatalogController
+export class PublicCatalogController {
 ⋮----
 constructor(private readonly catalogService: CatalogService)
 ⋮----
@@ -3223,7 +2809,7 @@ import { Reflector } from '@nestjs/core';
 ⋮----
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 ⋮----
-export class FirebaseAuthGuard implements CanActivate
+export class FirebaseAuthGuard implements CanActivate {
 ⋮----
 constructor(private readonly reflector: Reflector)
 ⋮----
@@ -3238,7 +2824,7 @@ import { Reflector } from '@nestjs/core';
 import type { TenantContext, TenantRole } from '../types/tenant-context';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 ⋮----
-export class RolesGuard implements CanActivate
+export class RolesGuard implements CanActivate {
 ⋮----
 constructor(private readonly reflector: Reflector)
 ⋮----
@@ -3262,7 +2848,7 @@ import type { TenantContext } from '../types/tenant-context';
  * Este servicio NO tiene tabla local de users/memberships.
  */
 ⋮----
-export class TenantGuard implements CanActivate
+export class TenantGuard implements CanActivate {
 ⋮----
 constructor(private readonly orgsClient: OrganizationsClientService)
 ⋮----
@@ -3274,7 +2860,7 @@ private extractToken(req:
 <file path="realsass-ecommerce-back/src/customers/dto/identify-customer.dto.ts">
 import { IsEmail, IsOptional, IsString } from 'class-validator';
 ⋮----
-export class IdentifyCustomerDto
+export class IdentifyCustomerDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/customers/customers.controller.ts">
@@ -3283,7 +2869,7 @@ import { CustomersService } from './customers.service';
 import { IdentifyCustomerDto } from './dto/identify-customer.dto';
 import { Public } from '../common/decorators/public.decorator';
 ⋮----
-export class CustomersController
+export class CustomersController {
 ⋮----
 constructor(private readonly customersService: CustomersService)
 ⋮----
@@ -3295,14 +2881,14 @@ import { Module } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CustomersController } from './customers.controller';
 ⋮----
-export class CustomersModule
+export class CustomersModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/customers/customers.service.ts">
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 ⋮----
-export class CustomersService
+export class CustomersService {
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -3319,7 +2905,7 @@ async findById(organizationId: string, customerId: string)
 <file path="realsass-ecommerce-back/src/inventory/dto/update-stock.dto.ts">
 import { IsInt, Min } from 'class-validator';
 ⋮----
-export class UpdateStockDto
+export class UpdateStockDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/inventory/inventory.controller.ts">
@@ -3332,7 +2918,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Tenant } from '../common/decorators/tenant.decorator';
 import type { TenantContext } from '../common/types/tenant-context';
 ⋮----
-export class InventoryController
+export class InventoryController {
 ⋮----
 constructor(private readonly inventoryService: InventoryService)
 ⋮----
@@ -3344,58 +2930,16 @@ import { Module } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { InventoryController } from './inventory.controller';
 ⋮----
-export class InventoryModule
-</file>
-
-<file path="realsass-ecommerce-back/src/inventory/inventory.service.ts">
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { InsufficientStockError } from './errors/insufficient-stock.error';
-⋮----
-export class InventoryService
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-async setStock(organizationId: string, variantId: string, quantityAvailable: number)
-⋮----
-/**
-   * Reserva stock de forma ATÓMICA dentro de una transacción Prisma existente.
-   *
-   * Usa $executeRaw con una condición WHERE columna-vs-columna para evitar
-   * overselling bajo concurrencia. El UPDATE adquiere el row lock en Postgres
-   * y evalúa la condición de stock de forma atómica — no hay ventana de
-   * tiempo entre el check y el write como en el patrón read-check-update.
-   *
-   * Si rowsAffected === 0: la condición no se cumplió (stock insuficiente).
-   * Se hace un SELECT de diagnóstico solo en el path de error para devolver
-   * un mensaje informativo sin pagar ese costo en el path feliz.
-   */
-async reserveWithinTransaction(
-    tx: Prisma.TransactionClient,
-    variantId: string,
-    sku: string,
-    quantity: number,
-): Promise<void>
-⋮----
-// UPDATE atómico: solo actualiza si (quantity_available - quantity_reserved) >= quantity
-⋮----
-// Path de error (frío): leer stock actual solo para el mensaje.
-⋮----
-async releaseWithinTransaction(
-    tx: Prisma.TransactionClient,
-    variantId: string,
-    quantity: number,
-): Promise<void>
+export class InventoryModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/orders/dto/checkout.dto.ts">
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 ⋮----
-class ShippingAddressDto
+class ShippingAddressDto {
 ⋮----
-export class CheckoutDto
+export class CheckoutDto {
 </file>
 
 <file path="realsass-ecommerce-back/src/orders/checkout.controller.ts">
@@ -3406,7 +2950,7 @@ import { Public } from '../common/decorators/public.decorator';
 ⋮----
 // Público — el cliente final finaliza la compra. Sin Firebase.
 ⋮----
-export class CheckoutController
+export class CheckoutController {
 ⋮----
 constructor(private readonly ordersService: OrdersService)
 ⋮----
@@ -3424,7 +2968,7 @@ import type { TenantContext } from '../common/types/tenant-context';
 ⋮----
 // Admin — el dueño de la org revisa órdenes desde el dashboard.
 ⋮----
-export class OrdersController
+export class OrdersController {
 ⋮----
 constructor(private readonly ordersService: OrdersService)
 ⋮----
@@ -3441,7 +2985,7 @@ import { CheckoutController } from './checkout.controller';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ActivityModule } from '../activity/activity.module';
 ⋮----
-export class OrdersModule
+export class OrdersModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/orders/orders.service.ts">
@@ -3451,7 +2995,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { ActivityService } from '../activity/activity.service';
 import { CheckoutDto } from './dto/checkout.dto';
 ⋮----
-export class OrdersService
+export class OrdersService {
 ⋮----
 constructor(
 ⋮----
@@ -3493,7 +3037,7 @@ import { Global, Module } from '@nestjs/common';
 import { RedisModule } from '../redis/redis.module';
 import { OrganizationsClientService } from './organizations-client.service';
 ⋮----
-export class OrganizationsClientModule
+export class OrganizationsClientModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/organizations-client/organizations-client.service.ts">
@@ -3519,7 +3063,7 @@ import type { OrganizationAccessResult } from './types/organization-access.types
  * cualquiera que ya conozca ese microservicio reconoce este al toque.
  */
 ⋮----
-export class OrganizationsClientService
+export class OrganizationsClientService {
 ⋮----
 constructor(private readonly redis: RedisService)
 ⋮----
@@ -3541,28 +3085,14 @@ private async fetchFromOrganizationsService(
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 ⋮----
-export class PrismaModule
-</file>
-
-<file path="realsass-ecommerce-back/src/prisma/prisma.service.ts">
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
-⋮----
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy
-⋮----
-constructor()
-⋮----
-async onModuleInit(): Promise<void>
-⋮----
-async onModuleDestroy(): Promise<void>
+export class PrismaModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/redis/redis.module.ts">
 import { Global, Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 ⋮----
-export class RedisModule
+export class RedisModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/redis/redis.service.ts">
@@ -3574,7 +3104,7 @@ import Redis from 'ioredis';
 // get() siempre devuelve null (cache-miss), set()/del() no hacen nada.
 // Útil en fase de prueba cuando todavía no hay Redis provisionado para este servicio.
 ⋮----
-export class RedisService implements OnModuleInit, OnModuleDestroy
+export class RedisService implements OnModuleInit, OnModuleDestroy {
 ⋮----
 onModuleInit(): void
 ⋮----
@@ -3604,7 +3134,7 @@ import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { StoreService } from './store.service';
 import { Public } from '../common/decorators/public.decorator';
 ⋮----
-export class StoreController
+export class StoreController {
 ⋮----
 constructor(private readonly storeService: StoreService)
 ⋮----
@@ -3616,7 +3146,7 @@ import { Module } from '@nestjs/common';
 import { StoreController } from './store.controller';
 import { StoreService } from './store.service';
 ⋮----
-export class StoreModule
+export class StoreModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/store/store.service.ts">
@@ -3632,7 +3162,7 @@ export interface StoreInfo {
   ecommerceEnabled: boolean;
 }
 ⋮----
-export class StoreService
+export class StoreService {
 ⋮----
 /**
    * Resuelve un slug al contexto de tienda consultando realsass-sass-back.
@@ -3694,7 +3224,7 @@ import { CustomersModule }                  from '../customers/customers.module'
 import { CartModule }                       from '../cart/cart.module';
 import { OrganizationsClientModule }        from '../organizations-client/organizations-client.module';
 ⋮----
-export class TrpcService
+export class TrpcService {
 ⋮----
 constructor(
     private readonly catalog:   CatalogService,
@@ -3723,7 +3253,7 @@ async applyTenantContext(req: Request, _res: Response, next: NextFunction): Prom
 ⋮----
 // Sin acceso — adminProcedure rechazará con FORBIDDEN
 ⋮----
-export class TrpcModule implements NestModule
+export class TrpcModule implements NestModule {
 ⋮----
 constructor(private readonly trpcService: TrpcService)
 ⋮----
@@ -3767,7 +3297,7 @@ ttl: 60_000, // 1 minuto en ms
 // FirebaseAuthGuard primero — si la ruta es @Public() pasa directo.
 // ThrottlerGuard segundo — limita por IP independientemente de auth.
 ⋮----
-export class AppModule
+export class AppModule {}
 </file>
 
 <file path="realsass-ecommerce-back/src/app.service.ts">
@@ -3798,23 +3328,11 @@ async function bootstrap(): Promise<void>
 // el wildcard + credentials es inaceptable porque maneja tokens de identidad.
 </file>
 
-<file path="realsass-ecommerce-back/nest-cli.json">
-{
-  "$schema": "https://json.schemastore.org/nest-cli",
-  "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
-  "compilerOptions": {
-    "deleteOutDir": true
-  }
-}
-</file>
-
 <file path="realsass-ecommerce-back/package.json">
 {
   "name": "realsass-ecommerce-back",
   "version": "0.0.1",
   "private": true,
-  "packageManager": "pnpm@10.11.1",
   "license": "UNLICENSED",
   "scripts": {
     "build": "prisma generate && nest build",
@@ -3857,7 +3375,7 @@ async function bootstrap(): Promise<void>
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
-    "swagger-ui-express": "^5.0.1",
+    "swagger-ui-express": "catalog:",
     "zod": "catalog:",
     "@real/trpc": "workspace:*"
   },
@@ -3920,339 +3438,6 @@ async function bootstrap(): Promise<void>
     "prisma.config.ts",
     "prisma/**"
   ]
-}
-</file>
-
-<file path="realsass-ecommerce-back/tsconfig.json">
-{
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": [
-      "node"
-    ]
-  },
-  "extends": "../tsconfig.base.json"
-}
-</file>
-
-<file path="realsass-sass-back/prisma/schema.prisma">
-// =============================================================================
-// prisma/schema.prisma — real-back (post S1)
-// Modelos originales: User, Organization, Collaborator, Invitation, AffiliateData
-// Modelos nuevos (fusión de real-config-back): ThemeConfig, SecretConfig,
-//   FeatureFlag, ContentTemplate, QuotaConfig, WebhookEndpoint,
-//   WebhookDeliveryLog, ConfigAuditLog
-// Migración de permisos: columnas booleanas → permissions JSONB en Collaborator
-// =============================================================================
-
-generator client {
-  provider   = "prisma-client-js"
-  engineType = "client"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
-// ─── Enums originales ─────────────────────────────────────────────────────────
-
-enum CollaboratorStatus {
-  PENDING
-  ACTIVE
-  REMOVED
-}
-
-// ─── Modelos originales ───────────────────────────────────────────────────────
-
-model User {
-  id             String  @id @default(uuid())
-  firebaseUid    String  @unique
-  email          String  @unique
-  isOwner        Boolean @default(false)
-  isAffiliate    Boolean @default(false)
-  affiliateCode  String? @unique
-  referredByCode String?
-  displayName    String?
-  avatarUrl      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization   Organization?
-  affiliateData  AffiliateData?
-  collaborations Collaborator[]
-
-  @@map("users")
-}
-
-model Organization {
-  id          String  @id @default(uuid())
-  userId      String  @unique
-  name        String?
-  description String?
-  logoUrl     String?
-  website     String?
-  phone       String?
-  address     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collaborators Collaborator[]
-
-  slug            String?  @unique        // ← AGREGAR
-  enabledProducts Json     @default("{}") // ← AGREGAR
-
-  // Relaciones con módulos de config (fusión S1)
-  themes        ThemeConfig[]
-  secrets       SecretConfig[]
-  flags         FeatureFlag[]
-  templates     ContentTemplate[]
-  quotas        QuotaConfig[]
-  webhooks      WebhookEndpoint[]
-  configAudit   ConfigAuditLog[]
-
-  @@map("organizations")
-}
-
-model Collaborator {
-  id             String             @id @default(uuid())
-  organizationId String
-  userId         String?
-  email          String
-  status         CollaboratorStatus @default(PENDING)
-
-  // S1: permisos granulares migrados a JSONB
-  // Las columnas booleanas (canViewListings, etc.) fueron eliminadas.
-  // Estructura esperada: { canViewListings, canCreateListings, canEditListings,
-  //   canDeleteListings, canViewStats, canManageLeads, canManageCollaborators }
-  // Owner siempre recibe permisos completos desde el servicio — no se guarda en DB.
-  permissions Json @default("{}")
-
-  invitedAt  DateTime  @default(now())
-  acceptedAt DateTime?
-  updatedAt  DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  invitation   Invitation?
-
-  @@unique([organizationId, email])
-  @@index([organizationId])
-  @@index([userId])
-  @@map("collaborators")
-}
-
-model Invitation {
-  id             String    @id @default(uuid())
-  collaboratorId String    @unique
-  token          String    @unique @default(uuid())
-  expiresAt      DateTime
-  usedAt         DateTime?
-  createdAt      DateTime  @default(now())
-
-  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
-
-  @@map("invitations")
-}
-
-model AffiliateData {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  balance       Decimal  @default(0) @db.Decimal(10, 2)
-  referralCount Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("affiliate_data")
-}
-
-// ─── Módulos de config (fusión desde real-config-back — S1) ──────────────────
-
-model ThemeConfig {
-  id              String   @id @default(uuid())
-  organizationId  String?
-  name            String
-  isActive        Boolean  @default(false)
-  isSystemDefault Boolean  @default(false)
-  primaryColor    String   @default("#000000")
-  secondaryColor  String   @default("#ffffff")
-  accentColor     String?
-  fontFamily      String   @default("DM Sans")
-  borderRadius    String   @default("0.75rem")
-  logoUrl         String?
-  faviconUrl      String?
-  darkMode        Boolean  @default(false)
-  customCSS       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
-  @@map("theme_configs")
-}
-
-model SecretConfig {
-  id             String    @id @default(uuid())
-  organizationId String
-  key            String
-  valueEncrypted String
-  valueIv        String
-  valueTag       String
-  keyPrefix      String
-  description    String?
-  systemTarget   String    @default("all")
-  isActive       Boolean   @default(true)
-  rotatedAt      DateTime?
-  expiresAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, key])
-  @@index([organizationId])
-  @@map("secret_configs")
-}
-
-model FeatureFlag {
-  id                String   @id @default(uuid())
-  organizationId    String?
-  key               String
-  enabled           Boolean  @default(false)
-  description       String?
-  systemTarget      String   @default("all")
-  rolloutPercentage Int      @default(100)
-  conditions        Json     @default("{}")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, key])
-  @@index([organizationId])
-  @@map("feature_flags")
-}
-
-model ContentTemplate {
-  id              String   @id @default(uuid())
-  organizationId  String?
-  key             String
-  name            String
-  content         String
-  category        String   @default("email")
-  systemTarget    String   @default("all")
-  isSystemDefault Boolean  @default(false)
-  variables       Json     @default("[]")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, key])
-  @@index([organizationId])
-  @@map("content_templates")
-}
-
-model QuotaConfig {
-  id             String    @id @default(uuid())
-  organizationId String
-  resource       String
-  limit          Int
-  currentUsage   Int       @default(0)
-  alertAt        Int       @default(80)
-  resetAt        DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, resource])
-  @@index([organizationId])
-  @@map("quota_configs")
-}
-
-model WebhookEndpoint {
-  id              String    @id @default(uuid())
-  organizationId  String
-  url             String
-  events          Json      @default("[]")
-  secretHash      String
-  secretPrefix    String
-  isActive        Boolean   @default(true)
-  description     String?
-  lastTriggeredAt DateTime?
-  failureCount    Int       @default(0)
-  retryPolicy     Json      @default("{\"maxAttempts\":3,\"backoffMs\":1000}")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  deliveryLogs  WebhookDeliveryLog[]
-
-  @@index([organizationId])
-  @@map("webhook_endpoints")
-}
-
-model WebhookDeliveryLog {
-  id         String   @id @default(uuid())
-  webhookId  String
-  event      String
-  statusCode Int?
-  success    Boolean
-  duration   Int?
-  attempt    Int      @default(1)
-  error      String?
-  createdAt  DateTime @default(now())
-
-  webhook WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-
-  @@index([webhookId])
-  @@map("webhook_delivery_logs")
-}
-
-model ConfigAuditLog {
-  id             String   @id @default(uuid())
-  organizationId String?
-  userId         String?
-  configType     String
-  configKey      String?
-  action         String
-  previousValue  String?
-  newValue       String?
-  diff           Json?
-  reason         String?
-  ipAddress      String?
-  createdAt      DateTime @default(now())
-
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId, createdAt])
-  @@index([configType])
-  @@map("config_audit_logs")
 }
 </file>
 
@@ -4367,7 +3552,7 @@ import { UsersService } from '../users/users.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 ⋮----
-export class AuthController
+export class AuthController {
 ⋮----
 constructor(
 ⋮----
@@ -4451,7 +3636,7 @@ import { UsersService } from '../users/users.service';
 import { AffiliatesService } from '../affiliate/affiliate.service';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 ⋮----
-export class AuthService
+export class AuthService {
 ⋮----
 constructor(
 ⋮----
@@ -4483,19 +3668,6 @@ async generateCustomToken(firebaseIdToken: string): Promise<
 // 2. Verificar que el usuario existe en nuestra DB y tiene acceso al dashboard
 ⋮----
 // 3. Generar customToken con Firebase Admin
-</file>
-
-<file path="realsass-sass-back/src/collaborators/dto/invite-collaborator.dto.ts">
-import {
-  IsEmail,
-  IsBoolean,
-  IsOptional,
-  IsNotEmpty,
-} from 'class-validator';
-⋮----
-export class InviteCollaboratorDto {
-⋮----
-// Permisos — todos opcionales (default en el modelo)
 </file>
 
 <file path="realsass-sass-back/src/collaborators/dto/update-collaborator.dto.ts">
@@ -4583,118 +3755,6 @@ import { CollaboratorsService } from './collaborators.service';
 export class CollaboratorsModule
 </file>
 
-<file path="realsass-sass-back/src/collaborators/collaborators.service.ts">
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { InviteCollaboratorDto } from './dto/invite-collaborator.dto';
-import { UpdateCollaboratorDto } from './dto/update-collaborator.dto';
-import { CollaboratorStatus } from '@prisma/client';
-⋮----
-// ── Helpers permisos JSONB ────────────────────────────────────────────────────
-⋮----
-function parsePermissions(raw: unknown)
-function buildPermissionsPatch(current, dto)
-// ─────────────────────────────────────────────────────────────────────────────
-⋮----
-// Días que dura el link de invitación
-⋮----
-export class CollaboratorsService
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-// ─── Helpers privados ──────────────────────────────────────────────────────
-⋮----
-/** Verifica que el usuario sea owner de la org y retorna la org */
-private async getOrgForOwner(firebaseUid: string)
-⋮----
-// ─── Endpoints ─────────────────────────────────────────────────────────────
-⋮----
-/**
-   * GET /organizations/me/collaborators
-   * Lista todos los colaboradores de la organización del owner.
-   */
-async listCollaborators(firebaseUid: string)
-⋮----
-/**
-   * POST /organizations/me/collaborators
-   * Invita un nuevo colaborador por email y genera token de invitación.
-   */
-async inviteCollaborator(firebaseUid: string, dto: InviteCollaboratorDto)
-⋮----
-// No puede invitarse a sí mismo
-⋮----
-// Verificar si ya existe una invitación activa o activo para ese email
-⋮----
-// Si estaba REMOVED, lo reactivamos con nueva invitación
-⋮----
-// Crear colaborador + invitación en transacción
-⋮----
-// Construir el link de aceptación (el frontend lo muestra o lo envía por mail)
-⋮----
-inviteLink,           // el frontend puede copiar este link o enviarlo por mail
-⋮----
-/**
-   * PATCH /organizations/me/collaborators/:id
-   * Actualiza permisos de un colaborador.
-   */
-async updateCollaborator(
-    firebaseUid: string,
-    collaboratorId: string,
-    dto: UpdateCollaboratorDto,
-)
-⋮----
-/**
-   * DELETE /organizations/me/collaborators/:id
-   * Remueve un colaborador (soft delete: status = REMOVED).
-   */
-async removeCollaborator(firebaseUid: string, collaboratorId: string)
-⋮----
-/**
-   * GET /invitations/:token
-   * Obtiene info de una invitación por token (ruta pública).
-   * El frontend la usa para mostrar la pantalla de aceptar antes de loguear.
-   */
-async getInvitationInfo(token: string)
-⋮----
-/**
-   * POST /invitations/:token/accept
-   * El colaborador autenticado acepta la invitación.
-   * Verifica que el email del token coincida con el del usuario logueado.
-   */
-async acceptInvitation(token: string, firebaseUid: string)
-⋮----
-// El email del usuario autenticado debe coincidir con el de la invitación
-⋮----
-// Activar colaborador
-</file>
-
-<file path="realsass-sass-back/src/common/decorators/current-user.decorator.ts">
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-⋮----
-export interface CurrentUserPayload {
-  uid: string;
-  email: string;
-  emailVerified: boolean;
-}
-⋮----
-/**
- * Extrae el usuario autenticado del request.
- *
- * Uso:
- *   @Get('profile')
- *   getProfile(@CurrentUser() user: CurrentUserPayload) { ... }
- *
- *   @Get('uid-only')
- *   getUid(@CurrentUser('uid') uid: string) { ... }
- */
-</file>
-
 <file path="realsass-sass-back/src/common/decorators/roles.decorator.ts">
 import { SetMetadata } from '@nestjs/common';
 ⋮----
@@ -4711,48 +3771,9 @@ import type { TenantContext } from '../guards/tenant.guard';
 <file path="realsass-sass-back/src/common/exceptions/quota-exceeded.exception.ts">
 import { HttpException, HttpStatus } from '@nestjs/common';
 ⋮----
-export class QuotaExceededException extends HttpException
+export class QuotaExceededException extends HttpException {
 ⋮----
 constructor(resource: string, limit: number, current: number)
-</file>
-
-<file path="realsass-sass-back/src/common/guards/firebase-auth.guard.ts">
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-  Logger,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
-⋮----
-/**
- * Decorador para marcar rutas como públicas (sin auth)
- * Uso: @Public() en controller o handler
- */
-import { SetMetadata } from '@nestjs/common';
-export const Public = ()
-⋮----
-export class FirebaseAuthGuard implements CanActivate {
-⋮----
-constructor(
-    private readonly reflector: Reflector,
-    private readonly configService: ConfigService,
-)
-⋮----
-// Inicializar Firebase Admin SDK (singleton)
-⋮----
-// Reemplaza \\n escapados del .env
-⋮----
-async canActivate(context: ExecutionContext): Promise<boolean>
-⋮----
-// Verificar si la ruta es pública
-⋮----
-// Inyectar el usuario decodificado en el request
-⋮----
-private extractTokenFromHeader(request: Request): string | undefined
 </file>
 
 <file path="realsass-sass-back/src/common/guards/roles.guard.ts">
@@ -4761,7 +3782,7 @@ import { Reflector } from '@nestjs/core';
 import type { TenantContext } from './tenant.guard';
 import { ROLES_KEY, type TenantRole } from '../decorators/roles.decorator';
 ⋮----
-export class RolesGuard implements CanActivate
+export class RolesGuard implements CanActivate {
 ⋮----
 constructor(private readonly reflector: Reflector)
 ⋮----
@@ -4771,50 +3792,9 @@ canActivate(ctx: ExecutionContext): boolean
 <file path="realsass-sass-back/src/common/guards/step-up.guard.ts">
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 ⋮----
-export class StepUpGuard implements CanActivate
+export class StepUpGuard implements CanActivate {
 ⋮----
 async canActivate(ctx: ExecutionContext): Promise<boolean>
-</file>
-
-<file path="realsass-sass-back/src/common/guards/tenant.guard.ts">
-import {
-  CanActivate, ExecutionContext, ForbiddenException,
-  Injectable, UnauthorizedException,
-} from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-⋮----
-export interface CollaboratorPermissions {
-  canViewListings:        boolean;
-  canCreateListings:      boolean;
-  canEditListings:        boolean;
-  canDeleteListings:      boolean;
-  canViewStats:           boolean;
-  canManageLeads:         boolean;
-  canManageCollaborators: boolean;
-}
-⋮----
-export interface TenantContext {
-  userId:         string;
-  organizationId: string;
-  role:           'OWNER' | 'COLLABORATOR';
-  permissions:    CollaboratorPermissions;
-}
-⋮----
-/**
- * Resuelve TenantContext leyendo Prisma directo.
- * S1: reemplaza el patrón HTTP hacia OrganizationsClientService — ahora
- * estamos en el mismo proceso, no tiene sentido llamar a sí mismo por HTTP.
- */
-⋮----
-export class TenantGuard implements CanActivate
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-async canActivate(ctx: ExecutionContext): Promise<boolean>
-⋮----
-// Caso 1: OWNER de esa org
-⋮----
-// Caso 2: COLLABORATOR activo
 </file>
 
 <file path="realsass-sass-back/src/config-audit/config-audit.controller.ts">
@@ -4829,7 +3809,7 @@ import { TenantGuard } from '../common/guards/tenant.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 ⋮----
-export class ConfigAuditController
+export class ConfigAuditController {
 ⋮----
 constructor(private readonly svc: ConfigAuditService)
 ⋮----
@@ -4847,53 +3827,21 @@ import { Module } from '@nestjs/common';
 import { ConfigAuditService } from './config-audit.service';
 import { ConfigAuditController } from './config-audit.controller';
 ⋮----
-export class ConfigAuditModule
-</file>
-
-<file path="realsass-sass-back/src/config-audit/config-audit.service.ts">
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-⋮----
-export interface ConfigAuditParams {
-  organizationId?: string;
-  userId?:         string;
-  configType:      string;
-  configKey?:      string;
-  action:          string;
-  previousValue?:  string;
-  newValue?:       string;
-  diff?:           Record<string, unknown>;
-  reason?:         string;
-  ipAddress?:      string;
-}
-⋮----
-export class ConfigAuditService
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-log(params: ConfigAuditParams): void
-⋮----
-async getByOrg(
-    organizationId: string,
-    filters: { configType?: string; from?: Date; to?: Date; userId?: string },
-    take = 50,
-    skip = 0,
-)
+export class ConfigAuditModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-cache/config-cache.module.ts">
 import { Module } from '@nestjs/common';
 import { ConfigCacheService } from './config-cache.service';
 ⋮----
-export class ConfigCacheModule
+export class ConfigCacheModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-cache/config-cache.service.ts">
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 ⋮----
-export class ConfigCacheService
+export class ConfigCacheService {
 ⋮----
 constructor(private readonly redis: RedisService)
 ⋮----
@@ -4909,7 +3857,7 @@ async del(orgId: string, tipo: string, k?: string): Promise<void>
 <file path="realsass-sass-back/src/config-flags/dto/update-flag.dto.ts">
 import { IsBoolean, IsOptional, IsInt, Min, Max, IsObject, IsString, MaxLength } from 'class-validator';
 ⋮----
-export class UpdateFlagDto
+export class UpdateFlagDto {
 </file>
 
 <file path="realsass-sass-back/src/config-flags/config-flags.controller.ts">
@@ -4922,7 +3870,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 ⋮----
-export class ConfigFlagsController
+export class ConfigFlagsController {
 ⋮----
 constructor(private readonly svc: ConfigFlagsService)
 ⋮----
@@ -4938,7 +3886,7 @@ import { ConfigFlagsService } from './config-flags.service';
 import { ConfigCacheModule } from '../config-cache/config-cache.module';
 import { ConfigAuditModule } from '../config-audit/config-audit.module';
 ⋮----
-export class ConfigFlagsModule
+export class ConfigFlagsModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-flags/config-flags.service.ts">
@@ -4949,7 +3897,7 @@ import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UpdateFlagDto } from './dto/update-flag.dto';
 ⋮----
-export class ConfigFlagsService
+export class ConfigFlagsService {
 ⋮----
 constructor(
 ⋮----
@@ -4960,27 +3908,6 @@ async list(organizationId: string)
 async update(organizationId: string, userId: string, id: string, dto: UpdateFlagDto)
 </file>
 
-<file path="realsass-sass-back/src/config-quotas/config-quotas.controller.ts">
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
-import { ConfigQuotasService } from './config-quotas.service';
-import { IsInt, Min } from 'class-validator';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/guards/tenant.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-⋮----
-class UpdateLimitDto
-⋮----
-export class ConfigQuotasController
-⋮----
-constructor(private readonly svc: ConfigQuotasService)
-⋮----
-list(@Tenant() t: TenantContext)
-⋮----
-updateLimit(@Tenant() t: TenantContext, @Param('resource') resource: string, @Body() dto: UpdateLimitDto)
-</file>
-
 <file path="realsass-sass-back/src/config-quotas/config-quotas.module.ts">
 import { Module } from '@nestjs/common';
 import { ConfigQuotasController } from './config-quotas.controller';
@@ -4988,7 +3915,7 @@ import { ConfigQuotasService } from './config-quotas.service';
 import { ConfigCacheModule } from '../config-cache/config-cache.module';
 import { ConfigAuditModule } from '../config-audit/config-audit.module';
 ⋮----
-export class ConfigQuotasModule
+export class ConfigQuotasModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-quotas/config-quotas.service.ts">
@@ -4999,7 +3926,7 @@ import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { QuotaExceededException } from '../common/exceptions/quota-exceeded.exception';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 ⋮----
-export class ConfigQuotasService
+export class ConfigQuotasService {
 ⋮----
 constructor(
 ⋮----
@@ -5012,40 +3939,6 @@ async increment(organizationId: string, resource: string, delta = 1)
 async updateLimit(organizationId: string, userId: string, resource: string, limit: number)
 </file>
 
-<file path="realsass-sass-back/src/config-secrets/dto/create-secret.dto.ts">
-import { IsString, IsOptional, MaxLength, IsIn, IsDateString } from 'class-validator';
-⋮----
-export class CreateSecretDto
-</file>
-
-<file path="realsass-sass-back/src/config-secrets/config-secrets.controller.ts">
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common';
-import type { Request } from 'express';
-import { ConfigSecretsService } from './config-secrets.service';
-import { CreateSecretDto } from './dto/create-secret.dto';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/guards/tenant.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { StepUpGuard } from '../common/guards/step-up.guard';
-import { IsString } from 'class-validator';
-⋮----
-class RotateSecretDto
-⋮----
-export class ConfigSecretsController
-⋮----
-constructor(private readonly svc: ConfigSecretsService)
-⋮----
-create(@Tenant() t: TenantContext, @Body() dto: CreateSecretDto, @Req() req: Request)
-⋮----
-list(@Tenant() t: TenantContext)
-⋮----
-rotate(@Tenant() t: TenantContext, @Param('id') id: string, @Body() dto: RotateSecretDto, @Req() req: Request)
-⋮----
-revoke(@Tenant() t: TenantContext, @Param('id') id: string, @Req() req: Request)
-</file>
-
 <file path="realsass-sass-back/src/config-secrets/config-secrets.module.ts">
 import { Module } from '@nestjs/common';
 import { ConfigSecretsController } from './config-secrets.controller';
@@ -5053,7 +3946,7 @@ import { ConfigSecretsService } from './config-secrets.service';
 import { CryptoService } from './crypto.service';
 import { ConfigAuditModule } from '../config-audit/config-audit.module';
 ⋮----
-export class ConfigSecretsModule
+export class ConfigSecretsModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-secrets/config-secrets.service.ts">
@@ -5065,7 +3958,7 @@ import { CryptoService } from './crypto.service';
 import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { CreateSecretDto } from './dto/create-secret.dto';
 ⋮----
-export class ConfigSecretsService
+export class ConfigSecretsService {
 ⋮----
 constructor(
 ⋮----
@@ -5080,31 +3973,6 @@ async revoke(organizationId: string, userId: string, id: string, ip?: string)
 async resolve(organizationId: string, key: string): Promise<
 </file>
 
-<file path="realsass-sass-back/src/config-secrets/crypto.service.ts">
-import { Injectable } from '@nestjs/common';
-⋮----
-export interface EncryptedPayload {
-  encrypted: string;
-  iv:        string;
-  tag:       string;
-  prefix:    string;
-}
-⋮----
-export class CryptoService
-⋮----
-private masterKey(): Buffer
-⋮----
-encrypt(plaintext: string): EncryptedPayload
-⋮----
-decrypt(encryptedB64: string, ivB64: string, tagB64: string): string
-</file>
-
-<file path="realsass-sass-back/src/config-templates/dto/create-template.dto.ts">
-import { IsString, IsOptional, IsArray, IsIn, MaxLength } from 'class-validator';
-⋮----
-export class CreateTemplateDto
-</file>
-
 <file path="realsass-sass-back/src/config-templates/config-templates.controller.ts">
 import { Controller, Get, Post, Param, Query, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ConfigTemplatesService } from './config-templates.service';
@@ -5115,7 +3983,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 ⋮----
-export class ConfigTemplatesController
+export class ConfigTemplatesController {
 ⋮----
 constructor(private readonly svc: ConfigTemplatesService)
 ⋮----
@@ -5133,7 +4001,7 @@ import { ConfigTemplatesService } from './config-templates.service';
 import { ConfigCacheModule } from '../config-cache/config-cache.module';
 import { ConfigAuditModule } from '../config-audit/config-audit.module';
 ⋮----
-export class ConfigTemplatesModule
+export class ConfigTemplatesModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-templates/config-templates.service.ts">
@@ -5143,7 +4011,7 @@ import { ConfigCacheService } from '../config-cache/config-cache.service';
 import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 ⋮----
-export class ConfigTemplatesService
+export class ConfigTemplatesService {
 ⋮----
 constructor(
 ⋮----
@@ -5158,12 +4026,6 @@ async list(organizationId: string)
 async create(organizationId: string, userId: string, dto: CreateTemplateDto)
 </file>
 
-<file path="realsass-sass-back/src/config-themes/dto/create-theme.dto.ts">
-import { IsString, IsOptional, IsBoolean, MaxLength, IsHexColor } from 'class-validator';
-⋮----
-export class CreateThemeDto
-</file>
-
 <file path="realsass-sass-back/src/config-themes/config-themes.controller.ts">
 import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ConfigThemesService } from './config-themes.service';
@@ -5174,7 +4036,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 ⋮----
-export class ConfigThemesController
+export class ConfigThemesController {
 ⋮----
 constructor(private readonly svc: ConfigThemesService)
 ⋮----
@@ -5194,7 +4056,7 @@ import { ConfigThemesService } from './config-themes.service';
 import { ConfigCacheModule } from '../config-cache/config-cache.module';
 import { ConfigAuditModule } from '../config-audit/config-audit.module';
 ⋮----
-export class ConfigThemesModule
+export class ConfigThemesModule {}
 </file>
 
 <file path="realsass-sass-back/src/config-themes/config-themes.service.ts">
@@ -5207,7 +4069,7 @@ import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateThemeDto } from './dto/create-theme.dto';
 ⋮----
-export class ConfigThemesService
+export class ConfigThemesService {
 ⋮----
 constructor(
 ⋮----
@@ -5222,12 +4084,6 @@ async activate(organizationId: string, userId: string, id: string)
 async remove(organizationId: string, userId: string, id: string)
 </file>
 
-<file path="realsass-sass-back/src/config-webhooks/dto/create-webhook.dto.ts">
-import { IsUrl, IsArray, IsString, ArrayNotEmpty, MaxLength, IsOptional } from 'class-validator';
-⋮----
-export class CreateWebhookDto
-</file>
-
 <file path="realsass-sass-back/src/config-webhooks/config-webhooks.controller.ts">
 import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ConfigWebhooksService } from './config-webhooks.service';
@@ -5238,7 +4094,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 ⋮----
-export class ConfigWebhooksController
+export class ConfigWebhooksController {
 ⋮----
 constructor(private readonly svc: ConfigWebhooksService)
 ⋮----
@@ -5272,7 +4128,7 @@ import { WebhookDeliveryService } from './webhook-delivery.service';
 import { ConfigAuditService } from '../config-audit/config-audit.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 ⋮----
-export class ConfigWebhooksService
+export class ConfigWebhooksService {
 ⋮----
 constructor(
 ⋮----
@@ -5359,7 +4215,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
 import { UpdateOrganizationDto } from './dto/update-organization.dto'; // sin "s"
 ⋮----
-export class OrganizationsController
+export class OrganizationsController {
 ⋮----
 constructor(private readonly organizationsService: OrganizationsService)
 ⋮----
@@ -5389,64 +4245,6 @@ controllers: [OrganizationsController], // ← faltaba esto
 export class OrganizationsModule
 </file>
 
-<file path="realsass-sass-back/src/organizations/organizations.service.ts">
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { UpdateOrganizationDto } from './dto/update-organization.dto';
-⋮----
-export class OrganizationsService
-⋮----
-constructor(private readonly prisma: PrismaService)
-⋮----
-/**
-   * Crea una organización vacía para un usuario Owner.
-   * Acepta un cliente Prisma de transacción (tx) o el servicio estándar.
-   */
-async createForUser(userId: string, tx?: Prisma.TransactionClient)
-⋮----
-// Slug temporal único basado en el userId.
-// El owner puede cambiarlo desde PATCH /organizations/me.
-⋮----
-/**
-   * PATCH /organizations/me
-   * Actualiza el perfil de la organización del usuario autenticado.
-   * Solo el Owner de la organización puede editarla.
-   */
-async updateMyOrganization(
-    firebaseUid: string,
-    dto: UpdateOrganizationDto,
-)
-⋮----
-// Buscar usuario y verificar que sea owner
-⋮----
-// Filtrar solo los campos enviados (no pisamos con undefined)
-⋮----
-/**
-   * GET /organizations/me
-   * Retorna la organización del usuario autenticado.
-   */
-async getMyOrganization(firebaseUid: string)
-⋮----
-async findByUserId(userId: string)
-⋮----
-/**
-   * GET /organizations/public/by-slug/:slug
-   * Endpoint público — sin autenticación Firebase.
-   * Usado por realsass-ecommerce-back (store.service.ts) para resolver
-   * slug → StoreInfo sin necesidad de token del usuario.
-   *
-   * Devuelve null si la org no existe o si el slug no está asignado.
-   * El campo ecommerceEnabled se extrae de enabledProducts.ecommerce.
-   */
-async findBySlugPublic(slug: string): Promise<
-</file>
-
 <file path="realsass-sass-back/src/prisma/prisma.module.ts">
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
@@ -5456,38 +4254,11 @@ import { PrismaService } from './prisma.service';
 export class PrismaModule
 </file>
 
-<file path="realsass-sass-back/src/prisma/prisma.service.ts">
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-// Importa el adaptador de PostgreSQL
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
-// Importa el driver pg (node-postgres)
-⋮----
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-⋮----
-constructor()
-⋮----
-// Asegúrate de que DATABASE_URL esté disponible en tu archivo .env
-⋮----
-// Crea una instancia del Pool de conexión del driver
-⋮----
-// Crea una instancia del adaptador de Prisma
-⋮----
-// Pasa el adaptador al constructor de PrismaClient
-⋮----
-// Puedes añadir tus logs aquí si es necesario:
-// log: ['query', 'error', 'warn'],
-⋮----
-async onModuleInit()
-⋮----
-async onModuleDestroy()
-</file>
-
 <file path="realsass-sass-back/src/redis/redis.module.ts">
 import { Global, Module } from '@nestjs/common';
 import { RedisService } from './redis.service';
 ⋮----
-export class RedisModule
+export class RedisModule {}
 </file>
 
 <file path="realsass-sass-back/src/redis/redis.service.ts">
@@ -5576,7 +4347,7 @@ import { ConfigWebhooksModule }      from '../config-webhooks/config-webhooks.mo
 import { ConfigAuditModule }         from '../config-audit/config-audit.module';
 import { ConfigSecretsModule }       from '../config-secrets/config-secrets.module';
 ⋮----
-export class TrpcService
+export class TrpcService {
 ⋮----
 constructor(
     private readonly prisma:        PrismaService,
@@ -5608,22 +4379,11 @@ async applyTenantContext(req: Request, _res: Response, next: NextFunction): Prom
 ⋮----
 // Sin tenant — los procedures que lo requieran rechazarán con FORBIDDEN
 ⋮----
-export class TrpcModule implements NestModule
+export class TrpcModule implements NestModule {
 ⋮----
 constructor(private readonly trpcService: TrpcService)
 ⋮----
 configure(consumer: MiddlewareConsumer): void
-</file>
-
-<file path="realsass-sass-back/src/users/dto/select-role.dto.ts">
-import { IsEnum, IsNotEmpty } from 'class-validator';
-⋮----
-export enum UserRole {
-  OWNER = 'owner',
-  AFFILIATE = 'affiliate',
-}
-⋮----
-export class SelectRoleDto {
 </file>
 
 <file path="realsass-sass-back/src/users/types/organization-access.types.ts">
@@ -5661,37 +4421,6 @@ export interface OrganizationAccessResult {
 }
 </file>
 
-<file path="realsass-sass-back/src/users/users.controller.ts">
-import {
-  Controller, Patch, Body, Get, HttpCode, HttpStatus,
-} from '@nestjs/common';
-import { UsersService } from './users.service';
-import { SelectRoleDto } from './dto/select-role.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-⋮----
-export class UsersController {
-⋮----
-constructor(private readonly usersService: UsersService)
-⋮----
-/**
-   * GET /users/me
-   * Perfil completo: user + org + tenants (colaboraciones) + affiliateData
-   */
-⋮----
-async getProfile(@CurrentUser() user: CurrentUserPayload)
-⋮----
-/**
-   * PATCH /users/select-role
-   * Activa rol owner o affiliate. Devuelve perfil completo actualizado.
-   */
-⋮----
-async selectRole(
-    @CurrentUser('uid') uid: string,
-    @Body() selectRoleDto: SelectRoleDto,
-)
-</file>
-
 <file path="realsass-sass-back/src/users/users.module.ts">
 import { Module } from '@nestjs/common';
 import { UsersController } from './users.controller';
@@ -5718,7 +4447,7 @@ import type { OrganizationAccessResult } from './types/organization-access.types
 function parseCollabPermissions(raw)
 // ─────────────────────────────────────────────────────────────────────────────
 ⋮----
-export class UsersService
+export class UsersService {
 ⋮----
 constructor(
 ⋮----
@@ -5848,145 +4577,10 @@ async function bootstrap()
 }
 </file>
 
-<file path="realsass-sass-back/package.json">
-{
-  "name": "realsass-sass-back",
-  "version": "0.0.1",
-  "private": true,
-  "packageManager": "pnpm@10.11.1",
-  "license": "UNLICENSED",
-  "scripts": {
-    "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "npx prisma migrate deploy && node dist/main",
-    "start:migrate": "npx prisma migrate deploy",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@nestjs/bullmq": "catalog:",
-    "@nestjs/common": "catalog:",
-    "@nestjs/config": "catalog:",
-    "@nestjs/core": "catalog:",
-    "@nestjs/event-emitter": "catalog:",
-    "@nestjs/mapped-types": "catalog:",
-    "@nestjs/platform-express": "catalog:",
-    "@nestjs/swagger": "catalog:",
-    "@nestjs/terminus": "catalog:",
-    "@nestjs/throttler": "catalog:",
-    "@prisma/adapter-pg": "catalog:",
-    "@prisma/client": "catalog:",
-    "@trpc/server": "catalog:",
-    "bcryptjs": "catalog:",
-    "bullmq": "catalog:",
-    "class-transformer": "catalog:",
-    "class-validator": "catalog:",
-    "dotenv": "catalog:",
-    "firebase-admin": "catalog:",
-    "helmet": "catalog:",
-    "ioredis": "catalog:",
-    "joi": "^18.2.1",
-    "pg": "catalog:",
-    "reflect-metadata": "catalog:",
-    "rxjs": "catalog:",
-    "swagger-ui-express": "^5.0.1",
-    "uuid": "catalog:",
-    "zod": "catalog:",
-    "@real/trpc": "workspace:*"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "catalog:",
-    "@eslint/js": "catalog:",
-    "@nestjs/cli": "catalog:",
-    "@nestjs/schematics": "catalog:",
-    "@nestjs/testing": "catalog:",
-    "@types/bcryptjs": "catalog:",
-    "@types/express": "catalog:",
-    "@types/jest": "catalog:",
-    "@types/node": "catalog:",
-    "@types/qs": "^6.15.1",
-    "@types/supertest": "catalog:",
-    "@types/uuid": "catalog:",
-    "eslint": "catalog:",
-    "eslint-config-prettier": "catalog:",
-    "eslint-plugin-prettier": "catalog:",
-    "globals": "catalog:",
-    "jest": "catalog:",
-    "prettier": "catalog:",
-    "prisma": "catalog:",
-    "source-map-support": "catalog:",
-    "supertest": "catalog:",
-    "ts-jest": "catalog:",
-    "ts-loader": "catalog:",
-    "ts-node": "catalog:",
-    "tsconfig-paths": "catalog:",
-    "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
-  }
-}
-</file>
-
 <file path="realsass-sass-back/tsconfig.build.json">
 {
   "extends": "./tsconfig.json",
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
-}
-</file>
-
-<file path="realsass-sass-back/tsconfig.json">
-{
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": [
-      "node"
-    ]
-  },
-  "extends": "../tsconfig.base.json"
 }
 </file>
 
@@ -6087,9 +4681,15 @@ type="number" min=
 ⋮----
 onChange=
 ⋮----
+<Button size="sm" disabled=
+⋮----
 // ── Tema ──────────────────────────────────────────────────────────────────────
 ⋮----
-const activate = async (id: string) =>
+setPending(id)
+    try {
+      await activateTheme(organizationId, id)
+      load()
+} catch (e)
 ⋮----
 <Button size="sm" variant="outline" disabled=
 ⋮----
@@ -6535,51 +5135,6 @@ export function useUpdateCollaboratorPermissions()
 export function useAcceptInvitation()
 </file>
 
-<file path="realsass-sass-front/hooks/use-config.ts">
-/**
- * hooks/use-config.ts
- *
- * Reemplaza lib/config-api para el flujo del owner.
- * Usado actualmente en app/profile/config/page.tsx.
- *
- * Requiere x-organization-id header — el TrpcProvider lo inyecta
- * automáticamente cuando el owner está en el contexto de su org.
- *
- * NOTA: Para pasar organizationId al header tRPC desde este front,
- * el TrpcProvider necesita leerlo del perfil del usuario.
- * Ver lib/trpc/provider.tsx — extender getOrganizationId si es necesario.
- */
-import { trpc } from '@/lib/trpc/client';
-⋮----
-// ── Feature Flags ─────────────────────────────────────────────────────────────
-⋮----
-export function useFeatureFlags()
-⋮----
-export function useUpdateFeatureFlag()
-⋮----
-// ── Quotas ────────────────────────────────────────────────────────────────────
-⋮----
-export function useQuotas()
-⋮----
-export function useUpdateQuotaLimit()
-⋮----
-// ── Themes ────────────────────────────────────────────────────────────────────
-⋮----
-export function useThemes()
-⋮----
-export function useActivateTheme()
-⋮----
-// ── Webhooks ──────────────────────────────────────────────────────────────────
-⋮----
-export function useWebhooks()
-⋮----
-export function useCreateWebhook()
-⋮----
-export function useDeleteWebhook()
-⋮----
-export function useWebhookLogs(webhookId: string | null | undefined)
-</file>
-
 <file path="realsass-sass-front/hooks/use-dashboard-sso.ts">
 // hooks/use-dashboard-sso.ts
 ⋮----
@@ -6601,43 +5156,6 @@ export function useDashboardSSO(
 export function useIsMobile()
 ⋮----
 const onChange = () =>
-</file>
-
-<file path="realsass-sass-front/hooks/use-organization.ts">
-/**
- * hooks/use-organization.ts
- *
- * Reemplaza las llamadas a:
- *   updateMyOrganization(uid, dto) → trpc.organizations.update
- *
- * La org del usuario se obtiene desde el perfil (auth.me)
- * que ya incluye el campo organization completo.
- */
-import { trpc } from '@/lib/trpc/client';
-⋮----
-export function useMyOrganization()
-⋮----
-export function useUpdateOrganization()
-</file>
-
-<file path="realsass-sass-front/hooks/use-profile.ts">
-/**
- * hooks/use-profile.ts
- *
- * Perfil completo del usuario via tRPC.
- * Reemplaza el profile que viene del AuthContext cuando se necesite
- * refetch manual o invalidación después de mutaciones.
- *
- * El AuthContext sigue siendo la fuente de verdad para auth state.
- * Este hook es para operaciones de datos adicionales sobre el perfil.
- */
-import { trpc } from '@/lib/trpc/client';
-⋮----
-export function useProfile()
-⋮----
-export function useSyncUser()
-⋮----
-export function useSelectRole()
 </file>
 
 <file path="realsass-sass-front/hooks/use-toast.ts">
@@ -6695,16 +5213,6 @@ const update = (props: ToasterToast)
 const dismiss = () => dispatch(
 ⋮----
 function useToast()
-</file>
-
-<file path="realsass-sass-front/lib/trpc/client.ts">
-import { createTRPCReact } from '@trpc/react-query';
-import { httpBatchLink }   from '@trpc/client';
-import type { AnyRouter }  from '@trpc/server';
-⋮----
-export function createTrpcClient(getToken: () => Promise<string | null>)
-⋮----
-async headers()
 </file>
 
 <file path="realsass-sass-front/lib/api.ts">
@@ -7229,28 +5737,11 @@ export function cn(...inputs: ClassValue[])
 }
 </file>
 
-<file path="realsass-sass-front/next.config.mjs">
-// next.config.mjs
-/** @type {import('next').NextConfig} */
-⋮----
-async headers()
-⋮----
-// Firebase Auth iframe
-⋮----
-// Google service accounts iframe (OAuth)
-⋮----
-// COOP: same-origin-allow-popups permite que Firebase Auth popup
-// pueda llamar window.closed y window.opener sin ser bloqueado
-⋮----
-// En dev solo aplicamos COOP (sin CSP estricta)
-</file>
-
 <file path="realsass-sass-front/package.json">
 {
   "name": "realsass-sass-front",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -7333,55 +5824,6 @@ async headers()
 }
 </file>
 
-<file path="realsass-sass-front/tsconfig.json">
-{
-  "compilerOptions": {
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "target": "ES6",
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
-  },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "../realsass-sass-back",
-    "../realsass-ecommerce-back",
-    "../chat-ia-back",
-    "../pagos-back"
-  ],
-  "extends": "../tsconfig.base.json"
-}
-</file>
-
 <file path="docker-compose.yml">
 version: "3.9"
 services:
@@ -7437,46 +5879,6 @@ volumes:
   postgres_back_data:
   postgres_ecommerce_data:
   redis_data:
-</file>
-
-<file path="package.json">
-{
-  "name": "welver",
-  "private": true,
-  "version": "0.0.0",
-  "description": "Ecosistema Real — pnpm workspaces",
-  "scripts": {
-    "dev":           "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front dev",
-    "dev:back":      "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back dev",
-    "dev:front":     "pnpm --parallel --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front dev",
-
-    "dev:sass-back":   "pnpm --filter realsass-sass-back start:dev",
-    "dev:ecom-back":   "pnpm --filter realsass-ecommerce-back start:dev",
-    "dev:sass-front":  "pnpm --filter realsass-sass-front dev",
-    "dev:dashboard":   "pnpm --filter realsass-dashboard-front dev",
-    "dev:store":       "pnpm --filter real-ecommerce-front dev",
-
-    "build":          "pnpm --filter './packages/*' build && pnpm --recursive --filter './realsass-*' --filter './real-*' build",
-    "build:packages": "pnpm --filter './packages/*' build",
-
-    "lint":      "pnpm --recursive lint",
-    "typecheck": "pnpm --recursive typecheck",
-    "test":      "pnpm --recursive test",
-
-    "clean": "find . -name 'node_modules' -maxdepth 3 -type d -exec rm -rf {} + 2>/dev/null; find . -name 'dist' -maxdepth 3 -type d -exec rm -rf {} + 2>/dev/null; find . -name '.next' -maxdepth 3 -type d -exec rm -rf {} + 2>/dev/null; echo 'Limpio'",
-
-    "docker:up":   "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=10.0.0"
-  },
-  "devDependencies": {
-    "typescript": "catalog:"
-  }
-}
 </file>
 
 <file path="pnpm-workspace.yaml">
@@ -7610,8 +6012,6 @@ catalog:
   "@trpc/react-query": "^11.4.3"
   "@trpc/next": "^11.4.3"
   superjson: "^2.2.2"
-  swagger-ui-express: "^5.0.1"
-  joi: "^18.2.1"
   vitest: "^3.2.4"
   "@vitest/ui": "^3.2.4"
   "@testing-library/react": "^16.3.0"
@@ -7621,26 +6021,1652 @@ catalog:
   "@opentelemetry/sdk-node": "^0.57.2"
   "@opentelemetry/auto-instrumentations-node": "^0.58.0"
   "@opentelemetry/exporter-prometheus": "^0.57.2"
+  swagger-ui-express: "^5.0.1"
+  joi: "^18.2.1"
+</file>
+
+<file path="packages/auth-client/tsconfig.json">
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="packages/ui/tsconfig.json">
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="realsass-dashboard-front/app/dashboard/configuracion/flags/page.tsx">
+import { AlertCircle, ToggleLeft, Globe, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useFlags, useUpdateFlag } from '@/features/config-flags/hooks';
+import type { FeatureFlag } from '@/features/config/types';
+import { cn } from '@/lib/utils';
+⋮----
+const handleToggle = async (flag: FeatureFlag) =>
+⋮----
+if (!organizationId || !flag.organizationId) return; // flags globales son readonly
+⋮----
+<div className=
+</file>
+
+<file path="realsass-ecommerce-back/nest-cli.json">
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "entryFile": "src/main",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+</file>
+
+<file path="realsass-ecommerce-back/tsconfig.json">
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "../node_modules/@types",
+      "./node_modules/@types"
+    ]
+  },
+  "extends": "../tsconfig.base.json"
+}
+</file>
+
+<file path="realsass-sass-back/src/collaborators/dto/invite-collaborator.dto.ts">
+import {
+  IsEmail,
+  IsBoolean,
+  IsOptional,
+  IsNotEmpty,
+} from 'class-validator';
+⋮----
+export class InviteCollaboratorDto {
+⋮----
+// Permisos — todos opcionales (default en el modelo)
+</file>
+
+<file path="realsass-sass-back/src/common/guards/firebase-auth.guard.ts">
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+⋮----
+/**
+ * Decorador para marcar rutas como públicas (sin auth)
+ * Uso: @Public() en controller o handler
+ */
+import { SetMetadata } from '@nestjs/common';
+export const Public = ()
+⋮----
+export class FirebaseAuthGuard implements CanActivate {
+⋮----
+constructor(
+    private readonly reflector: Reflector,
+    private readonly configService: ConfigService,
+)
+⋮----
+// Inicializar Firebase Admin SDK (singleton)
+⋮----
+// Reemplaza \\n escapados del .env
+⋮----
+async canActivate(context: ExecutionContext): Promise<boolean>
+⋮----
+// Verificar si la ruta es pública
+⋮----
+// Inyectar el usuario decodificado en el request
+⋮----
+private extractTokenFromHeader(request: Request): string | undefined
+</file>
+
+<file path="realsass-sass-back/src/common/guards/tenant.guard.ts">
+import {
+  CanActivate, ExecutionContext, ForbiddenException,
+  Injectable, UnauthorizedException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+⋮----
+export interface CollaboratorPermissions {
+  canViewListings: boolean;
+  canCreateListings: boolean;
+  canEditListings: boolean;
+  canDeleteListings: boolean;
+  canViewStats: boolean;
+  canManageLeads: boolean;
+  canManageCollaborators: boolean;
+}
+⋮----
+export interface TenantContext {
+  userId: string;
+  organizationId: string;
+  role: 'OWNER' | 'COLLABORATOR';
+  permissions: CollaboratorPermissions;
+}
+⋮----
+/**
+ * Resuelve TenantContext leyendo Prisma directo.
+ * S1: reemplaza el patrón HTTP hacia OrganizationsClientService — ahora
+ * estamos en el mismo proceso, no tiene sentido llamar a sí mismo por HTTP.
+ */
+⋮----
+export class TenantGuard implements CanActivate {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+async canActivate(ctx: ExecutionContext): Promise<boolean>
+⋮----
+// Caso 1: OWNER de esa org
+⋮----
+// Caso 2: COLLABORATOR activo
+</file>
+
+<file path="realsass-sass-back/src/config-quotas/config-quotas.controller.ts">
+import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { ConfigQuotasService } from './config-quotas.service';
+import { IsInt, Min } from 'class-validator';
+import { Tenant } from '../common/decorators/tenant.decorator';
+import type { TenantContext } from '../common/guards/tenant.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { TenantGuard } from '../common/guards/tenant.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+⋮----
+class UpdateLimitDto {
+⋮----
+export class ConfigQuotasController {
+⋮----
+constructor(private readonly svc: ConfigQuotasService)
+⋮----
+list(@Tenant() t: TenantContext)
+⋮----
+updateLimit(@Tenant() t: TenantContext, @Param('resource') resource: string, @Body() dto: UpdateLimitDto)
+</file>
+
+<file path="realsass-sass-back/src/config-secrets/dto/create-secret.dto.ts">
+import { IsString, IsOptional, MaxLength, IsIn, IsDateString } from 'class-validator';
+⋮----
+export class CreateSecretDto {
+</file>
+
+<file path="realsass-sass-back/src/config-secrets/config-secrets.controller.ts">
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { ConfigSecretsService } from './config-secrets.service';
+import { CreateSecretDto } from './dto/create-secret.dto';
+import { Tenant } from '../common/decorators/tenant.decorator';
+import type { TenantContext } from '../common/guards/tenant.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { TenantGuard } from '../common/guards/tenant.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { StepUpGuard } from '../common/guards/step-up.guard';
+import { IsString } from 'class-validator';
+⋮----
+class RotateSecretDto {
+⋮----
+export class ConfigSecretsController {
+⋮----
+constructor(private readonly svc: ConfigSecretsService)
+⋮----
+create(@Tenant() t: TenantContext, @Body() dto: CreateSecretDto, @Req() req: Request)
+⋮----
+list(@Tenant() t: TenantContext)
+⋮----
+rotate(@Tenant() t: TenantContext, @Param('id') id: string, @Body() dto: RotateSecretDto, @Req() req: Request)
+⋮----
+revoke(@Tenant() t: TenantContext, @Param('id') id: string, @Req() req: Request)
+</file>
+
+<file path="realsass-sass-back/src/config-secrets/crypto.service.ts">
+import { Injectable } from '@nestjs/common';
+⋮----
+export interface EncryptedPayload {
+  encrypted: string;
+  iv: string;
+  tag: string;
+  prefix: string;
+}
+⋮----
+export class CryptoService {
+⋮----
+private masterKey(): Buffer
+⋮----
+encrypt(plaintext: string): EncryptedPayload
+⋮----
+decrypt(encryptedB64: string, ivB64: string, tagB64: string): string
+</file>
+
+<file path="realsass-sass-back/src/config-templates/dto/create-template.dto.ts">
+import { IsString, IsOptional, IsArray, IsIn, MaxLength } from 'class-validator';
+⋮----
+export class CreateTemplateDto {
+</file>
+
+<file path="realsass-sass-back/src/config-themes/dto/create-theme.dto.ts">
+import { IsString, IsOptional, IsBoolean, MaxLength, IsHexColor } from 'class-validator';
+⋮----
+export class CreateThemeDto {
+</file>
+
+<file path="realsass-sass-back/src/config-webhooks/dto/create-webhook.dto.ts">
+import { IsUrl, IsArray, IsString, ArrayNotEmpty, MaxLength, IsOptional } from 'class-validator';
+⋮----
+export class CreateWebhookDto {
+</file>
+
+<file path="realsass-sass-back/src/users/users.controller.ts">
+import {
+  Controller, Patch, Body, Get, HttpCode, HttpStatus,
+} from '@nestjs/common';
+import { UsersService } from './users.service';
+import { SelectRoleDto } from './dto/select-role.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+⋮----
+export class UsersController {
+⋮----
+constructor(private readonly usersService: UsersService)
+⋮----
+/**
+   * GET /users/me
+   * Perfil completo: user + org + tenants (colaboraciones) + affiliateData
+   */
+⋮----
+async getProfile(@CurrentUser() user: CurrentUserPayload)
+⋮----
+/**
+   * PATCH /users/select-role
+   * Activa rol owner o affiliate. Devuelve perfil completo actualizado.
+   */
+⋮----
+async selectRole(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() selectRoleDto: SelectRoleDto,
+)
+</file>
+
+<file path="realsass-sass-back/package.json">
+{
+  "name": "realsass-sass-back",
+  "version": "0.0.1",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "prisma generate && nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "npx prisma migrate deploy && node dist/main",
+    "start:migrate": "npx prisma migrate deploy",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/bullmq": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/event-emitter": "catalog:",
+    "@nestjs/mapped-types": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/swagger": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "bcryptjs": "catalog:",
+    "bullmq": "catalog:",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:",
+    "dotenv": "catalog:",
+    "firebase-admin": "catalog:",
+    "helmet": "catalog:",
+    "ioredis": "catalog:",
+    "joi": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "swagger-ui-express": "catalog:",
+    "uuid": "catalog:",
+    "zod": "catalog:",
+    "@real/trpc": "workspace:*"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "catalog:",
+    "@eslint/js": "catalog:",
+    "@nestjs/cli": "catalog:",
+    "@nestjs/schematics": "catalog:",
+    "@nestjs/testing": "catalog:",
+    "@types/bcryptjs": "catalog:",
+    "@types/express": "catalog:",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/qs": "^6.15.1",
+    "@types/supertest": "catalog:",
+    "@types/uuid": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-prettier": "catalog:",
+    "globals": "catalog:",
+    "jest": "catalog:",
+    "prettier": "catalog:",
+    "prisma": "catalog:",
+    "source-map-support": "catalog:",
+    "supertest": "catalog:",
+    "ts-jest": "catalog:",
+    "ts-loader": "catalog:",
+    "ts-node": "catalog:",
+    "tsconfig-paths": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}
+</file>
+
+<file path="realsass-sass-back/tsconfig.json">
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "../node_modules/@types",
+      "./node_modules/@types"
+    ]
+  },
+  "extends": "../tsconfig.base.json"
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "welver",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Ecosistema Real — pnpm workspaces",
+  "scripts": {
+    "build":          "pnpm --filter \"./packages/*\" build && pnpm --recursive --filter \"./realsass-*\" --filter \"./real-*\" build",
+    "build:packages": "pnpm --filter \"./packages/*\" build",
+    "dev":            "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front dev",
+    "lint":           "pnpm --recursive lint",
+    "typecheck":      "pnpm --recursive typecheck",
+    "test":           "pnpm --recursive test"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}
 </file>
 
 <file path="tsconfig.base.json">
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "strict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "forceConsistentCasingInFileNames": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "incremental": false,
+    "typeRoots": []
   }
 }
+</file>
+
+<file path="packages/trpc/package.json">
+{
+  "name": "@real/trpc",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contratos tRPC compartidos — routers, tipos, contexto (S1/S2)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo \"@real/trpc ok\"",
+    "typecheck": "echo \"@real/trpc ok\""
+  },
+  "dependencies": {
+    "@trpc/server": "catalog:",
+    "superjson": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  }
+}
+</file>
+
+<file path="realsass-dashboard-front/lib/trpc/router-type.ts">
+import type { AppRouter } from '@real/trpc';
+</file>
+
+<file path="realsass-dashboard-front/tsconfig.json">
+{
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "target": "ES6",
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../realsass-sass-back/src/collaborators/dto",
+    "../realsass-sass-back/src/config-secrets/dto",
+    "../realsass-sass-back/src/config-quotas",
+    "../realsass-sass-back/src/config-themes",
+    "../realsass-sass-back/src/config-webhooks/dto",
+    "../realsass-sass-back/src/config-templates/dto",
+    "../realsass-sass-back/src/users/dto",
+    "../realsass-sass-back/src/auth/dto"
+  ],
+  "extends": "../tsconfig.base.json"
+}
+</file>
+
+<file path="realsass-ecommerce-back/prisma/schema.prisma">
+// prisma/schema.prisma — real-ecommerce-back
+// Ver detalle de decisiones en el mensaje que acompañó este script.
+generator client {
+
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Category {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String
+  handle         String
+  description    String?
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  products       Product[]
+
+  @@unique([organizationId, handle])
+  @@index([organizationId])
+  @@map("categories")
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Product {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  categoryId     String?       @map("category_id")
+  name           String
+  handle         String
+  description    String?
+  status         ProductStatus @default(DRAFT)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  category       Category?        @relation(fields: [categoryId], references: [id])
+  variants       ProductVariant[]
+
+  @@unique([organizationId, handle])
+  @@index([organizationId, status])
+  @@map("products")
+}
+
+model ProductVariant {
+  id             String   @id @default(uuid())
+  productId      String   @map("product_id")
+  organizationId String   @map("organization_id")
+  sku            String
+  title          String
+  priceCents     Int      @map("price_cents")
+  currency       String   @default("USD")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventory      InventoryItem?
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+
+  @@unique([organizationId, sku])
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model InventoryItem {
+  id                String   @id @default(uuid())
+  variantId         String   @unique @map("variant_id")
+  organizationId    String   @map("organization_id")
+  quantityAvailable Int      @default(0) @map("quantity_available")
+  quantityReserved  Int      @default(0) @map("quantity_reserved")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("inventory_items")
+}
+
+model StoreCustomer {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  email          String
+  displayName    String?  @map("display_name")
+  phone          String?
+  isGuest        Boolean  @default(true) @map("is_guest")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  addresses      CustomerAddress[]
+  carts          Cart[]
+  orders         Order[]
+  activityEvents CustomerActivityEvent[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@map("store_customers")
+}
+
+model CustomerAddress {
+  id         String  @id @default(uuid())
+  customerId String  @map("customer_id")
+  label      String?
+  line1      String
+  line2      String?
+  city       String
+  province   String?
+  postalCode String? @map("postal_code")
+  country    String
+  isDefault  Boolean @default(false) @map("is_default")
+  customer   StoreCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+enum ActivityEventType {
+  PRODUCT_VIEW
+  CART_ADD
+  CART_REMOVE
+  CHECKOUT_STARTED
+  ORDER_COMPLETED
+}
+
+model CustomerActivityEvent {
+  id             String            @id @default(uuid())
+  organizationId String            @map("organization_id")
+  customerId     String?           @map("customer_id")
+  sessionId      String            @map("session_id")
+  eventType      ActivityEventType @map("event_type")
+  payload        Json              @default("{}")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  customer       StoreCustomer? @relation(fields: [customerId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([sessionId])
+  @@map("customer_activity_events")
+}
+
+enum CartStatus {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+}
+
+model Cart {
+  id             String     @id @default(uuid())
+  organizationId String     @map("organization_id")
+  customerId     String?    @map("customer_id")
+  sessionId      String     @map("session_id")
+  status         CartStatus @default(ACTIVE)
+  currency       String     @default("USD")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  customer       StoreCustomer? @relation(fields: [customerId], references: [id])
+  items          CartItem[]
+  order          Order?
+
+  @@index([organizationId, status])
+  @@index([sessionId])
+  @@index([customerId])
+  @@map("carts")
+}
+
+model CartItem {
+  id                     String @id @default(uuid())
+  cartId                 String @map("cart_id")
+  variantId              String @map("variant_id")
+  quantity               Int
+  unitPriceCentsSnapshot Int    @map("unit_price_cents_snapshot")
+  cart                   Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant                ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, variantId])
+  @@map("cart_items")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  FULFILLING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  organizationId  String      @map("organization_id")
+  customerId      String      @map("customer_id")
+  cartId          String      @unique @map("cart_id")
+  status          OrderStatus @default(PENDING_PAYMENT)
+  currency        String
+  subtotalCents   Int         @map("subtotal_cents")
+  shippingCents   Int         @default(0) @map("shipping_cents")
+  totalCents      Int         @map("total_cents")
+  paymentIntentId String?     @map("payment_intent_id")
+  shippingAddress Json        @map("shipping_address")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  customer        StoreCustomer      @relation(fields: [customerId], references: [id])
+  cart            Cart               @relation(fields: [cartId], references: [id])
+  items           OrderItem[]
+  statusHistory   OrderStatusEvent[]
+
+  @@index([organizationId, status])
+  @@index([customerId])
+  @@index([paymentIntentId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                     String @id @default(uuid())
+  orderId                String @map("order_id")
+  variantId              String @map("variant_id")
+  quantity               Int
+  unitPriceCentsSnapshot Int    @map("unit_price_cents_snapshot")
+  order                  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant                ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusEvent {
+  id         String       @id @default(uuid())
+  orderId    String       @map("order_id")
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  reason     String?
+  createdAt  DateTime     @default(now()) @map("created_at")
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_status_events")
+}
+</file>
+
+<file path="realsass-ecommerce-back/src/activity/activity.service.ts">
+import { Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+⋮----
+export class ActivityService {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+// Append-only — no hay update ni delete. Errores acá no deben tumbar el
+// flujo de compra: quien llama debe tratar esto como best-effort.
+async log(
+    organizationId: string,
+    sessionId: string,
+    eventType: string,
+    customerId?: string,
+    payload: Record<string, unknown> = {},
+)
+</file>
+
+<file path="realsass-ecommerce-back/src/inventory/inventory.service.ts">
+import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { InsufficientStockError } from './errors/insufficient-stock.error';
+⋮----
+export class InventoryService {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+async setStock(organizationId: string, variantId: string, quantityAvailable: number)
+⋮----
+/**
+   * Reserva stock de forma ATÓMICA dentro de una transacción Prisma existente.
+   *
+   * Usa $executeRaw con una condición WHERE columna-vs-columna para evitar
+   * overselling bajo concurrencia. El UPDATE adquiere el row lock en Postgres
+   * y evalúa la condición de stock de forma atómica — no hay ventana de
+   * tiempo entre el check y el write como en el patrón read-check-update.
+   *
+   * Si rowsAffected === 0: la condición no se cumplió (stock insuficiente).
+   * Se hace un SELECT de diagnóstico solo en el path de error para devolver
+   * un mensaje informativo sin pagar ese costo en el path feliz.
+   */
+async reserveWithinTransaction(
+    tx: Prisma.TransactionClient,
+    variantId: string,
+    sku: string,
+    quantity: number,
+): Promise<void>
+⋮----
+// UPDATE atómico: solo actualiza si (quantity_available - quantity_reserved) >= quantity
+⋮----
+// Path de error (frío): leer stock actual solo para el mensaje.
+⋮----
+async releaseWithinTransaction(
+    tx: Prisma.TransactionClient,
+    variantId: string,
+    quantity: number,
+): Promise<void>
+</file>
+
+<file path="realsass-ecommerce-back/src/prisma/prisma.service.ts">
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+⋮----
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+⋮----
+constructor()
+⋮----
+async onModuleInit(): Promise<void>
+⋮----
+async onModuleDestroy(): Promise<void>
+</file>
+
+<file path="realsass-sass-back/prisma/schema.prisma">
+// =============================================================================
+// prisma/schema.prisma — real-back (post S1)
+// Modelos originales: User, Organization, Collaborator, Invitation, AffiliateData
+// Modelos nuevos (fusión de real-config-back): ThemeConfig, SecretConfig,
+//   FeatureFlag, ContentTemplate, QuotaConfig, WebhookEndpoint,
+//   WebhookDeliveryLog, ConfigAuditLog
+// Migración de permisos: columnas booleanas → permissions JSONB en Collaborator
+// =============================================================================
+
+generator client {
+
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums originales ─────────────────────────────────────────────────────────
+
+enum CollaboratorStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+}
+
+// ─── Modelos originales ───────────────────────────────────────────────────────
+
+model User {
+  id             String  @id @default(uuid())
+  firebaseUid    String  @unique
+  email          String  @unique
+  isOwner        Boolean @default(false)
+  isAffiliate    Boolean @default(false)
+  affiliateCode  String? @unique
+  referredByCode String?
+  displayName    String?
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization?
+  affiliateData  AffiliateData?
+  collaborations Collaborator[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  name        String?
+  description String?
+  logoUrl     String?
+  website     String?
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collaborators Collaborator[]
+
+  slug            String?  @unique        // ← AGREGAR
+  enabledProducts Json     @default("{}") // ← AGREGAR
+
+  // Relaciones con módulos de config (fusión S1)
+  themes        ThemeConfig[]
+  secrets       SecretConfig[]
+  flags         FeatureFlag[]
+  templates     ContentTemplate[]
+  quotas        QuotaConfig[]
+  webhooks      WebhookEndpoint[]
+  configAudit   ConfigAuditLog[]
+
+  @@map("organizations")
+}
+
+model Collaborator {
+  id             String             @id @default(uuid())
+  organizationId String
+  userId         String?
+  email          String
+  status         CollaboratorStatus @default(PENDING)
+
+  // S1: permisos granulares migrados a JSONB
+  // Las columnas booleanas (canViewListings, etc.) fueron eliminadas.
+  // Estructura esperada: { canViewListings, canCreateListings, canEditListings,
+  //   canDeleteListings, canViewStats, canManageLeads, canManageCollaborators }
+  // Owner siempre recibe permisos completos desde el servicio — no se guarda en DB.
+  permissions Json @default("{}")
+
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+  updatedAt  DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invitation   Invitation?
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("collaborators")
+}
+
+model Invitation {
+  id             String    @id @default(uuid())
+  collaboratorId String    @unique
+  token          String    @unique @default(uuid())
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  collaborator Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+}
+
+model AffiliateData {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  balance       Decimal  @default(0) @db.Decimal(10, 2)
+  referralCount Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("affiliate_data")
+}
+
+// ─── Módulos de config (fusión desde real-config-back — S1) ──────────────────
+
+model ThemeConfig {
+  id              String   @id @default(uuid())
+  organizationId  String?
+  name            String
+  isActive        Boolean  @default(false)
+  isSystemDefault Boolean  @default(false)
+  primaryColor    String   @default("#000000")
+  secondaryColor  String   @default("#ffffff")
+  accentColor     String?
+  fontFamily      String   @default("DM Sans")
+  borderRadius    String   @default("0.75rem")
+  logoUrl         String?
+  faviconUrl      String?
+  darkMode        Boolean  @default(false)
+  customCSS       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("theme_configs")
+}
+
+model SecretConfig {
+  id             String    @id @default(uuid())
+  organizationId String
+  key            String
+  valueEncrypted String
+  valueIv        String
+  valueTag       String
+  keyPrefix      String
+  description    String?
+  systemTarget   String    @default("all")
+  isActive       Boolean   @default(true)
+  rotatedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("secret_configs")
+}
+
+model FeatureFlag {
+  id                String   @id @default(uuid())
+  organizationId    String?
+  key               String
+  enabled           Boolean  @default(false)
+  description       String?
+  systemTarget      String   @default("all")
+  rolloutPercentage Int      @default(100)
+  conditions        Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("feature_flags")
+}
+
+model ContentTemplate {
+  id              String   @id @default(uuid())
+  organizationId  String?
+  key             String
+  name            String
+  content         String
+  category        String   @default("email")
+  systemTarget    String   @default("all")
+  isSystemDefault Boolean  @default(false)
+  variables       Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("content_templates")
+}
+
+model QuotaConfig {
+  id             String    @id @default(uuid())
+  organizationId String
+  resource       String
+  limit          Int
+  currentUsage   Int       @default(0)
+  alertAt        Int       @default(80)
+  resetAt        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, resource])
+  @@index([organizationId])
+  @@map("quota_configs")
+}
+
+model WebhookEndpoint {
+  id              String    @id @default(uuid())
+  organizationId  String
+  url             String
+  events          Json      @default("[]")
+  secretHash      String
+  secretPrefix    String
+  isActive        Boolean   @default(true)
+  description     String?
+  lastTriggeredAt DateTime?
+  failureCount    Int       @default(0)
+  retryPolicy     Json      @default("{\"maxAttempts\":3,\"backoffMs\":1000}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveryLogs  WebhookDeliveryLog[]
+
+  @@index([organizationId])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDeliveryLog {
+  id         String   @id @default(uuid())
+  webhookId  String
+  event      String
+  statusCode Int?
+  success    Boolean
+  duration   Int?
+  attempt    Int      @default(1)
+  error      String?
+  createdAt  DateTime @default(now())
+
+  webhook WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@map("webhook_delivery_logs")
+}
+
+model ConfigAuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?
+  userId         String?
+  configType     String
+  configKey      String?
+  action         String
+  previousValue  String?
+  newValue       String?
+  diff           Json?
+  reason         String?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([configType])
+  @@map("config_audit_logs")
+}
+</file>
+
+<file path="realsass-sass-back/src/common/decorators/current-user.decorator.ts">
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+⋮----
+export interface CurrentUserPayload {
+  uid: string;
+  email: string;
+  emailVerified: boolean;
+}
+⋮----
+/**
+ * Extrae el usuario autenticado del request.
+ *
+ * Uso:
+ *   @Get('profile')
+ *   getProfile(@CurrentUser() user: CurrentUserPayload) { ... }
+ *
+ *   @Get('uid-only')
+ *   getUid(@CurrentUser('uid') uid: string) { ... }
+ */
+</file>
+
+<file path="realsass-sass-back/src/organizations/organizations.service.ts">
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
+⋮----
+export class OrganizationsService {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+/**
+   * Crea una organización vacía para un usuario Owner.
+   * Acepta un cliente Prisma de transacción (tx) o el servicio estándar.
+   */
+async createForUser(userId: string, tx?: Prisma.TransactionClient)
+⋮----
+// Slug temporal único basado en el userId.
+// El owner puede cambiarlo desde PATCH /organizations/me.
+⋮----
+/**
+   * PATCH /organizations/me
+   * Actualiza el perfil de la organización del usuario autenticado.
+   * Solo el Owner de la organización puede editarla.
+   */
+async updateMyOrganization(
+    firebaseUid: string,
+    dto: UpdateOrganizationDto,
+)
+⋮----
+// Buscar usuario y verificar que sea owner
+⋮----
+// Filtrar solo los campos enviados (no pisamos con undefined)
+⋮----
+/**
+   * GET /organizations/me
+   * Retorna la organización del usuario autenticado.
+   */
+async getMyOrganization(firebaseUid: string)
+⋮----
+async findByUserId(userId: string)
+⋮----
+/**
+   * GET /organizations/public/by-slug/:slug
+   * Endpoint público — sin autenticación Firebase.
+   * Usado por realsass-ecommerce-back (store.service.ts) para resolver
+   * slug → StoreInfo sin necesidad de token del usuario.
+   *
+   * Devuelve null si la org no existe o si el slug no está asignado.
+   * El campo ecommerceEnabled se extrae de enabledProducts.ecommerce.
+   */
+async findBySlugPublic(slug: string): Promise<
+</file>
+
+<file path="realsass-sass-back/src/prisma/prisma.service.ts">
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+// Importa el adaptador de PostgreSQL
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+// Importa el driver pg (node-postgres)
+⋮----
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+⋮----
+constructor()
+⋮----
+// Asegúrate de que DATABASE_URL esté disponible en tu archivo .env
+⋮----
+// Crea una instancia del Pool de conexión del driver
+⋮----
+// Crea una instancia del adaptador de Prisma
+⋮----
+// Pasa el adaptador al constructor de PrismaClient
+⋮----
+// Puedes añadir tus logs aquí si es necesario:
+// log: ['query', 'error', 'warn'],
+⋮----
+async onModuleInit()
+⋮----
+async onModuleDestroy()
+</file>
+
+<file path="realsass-sass-back/src/users/dto/select-role.dto.ts">
+import { IsEnum, IsNotEmpty } from 'class-validator';
+⋮----
+export enum UserRole {
+  OWNER = 'owner',
+  AFFILIATE = 'affiliate',
+}
+⋮----
+export class SelectRoleDto {
+</file>
+
+<file path="realsass-sass-front/lib/trpc/router-type.ts">
+// No usado en Docker build — client.ts usa createTRPCReact<any>
+export type AppRouter = any;
+</file>
+
+<file path="realsass-sass-front/next.config.mjs">
+// next.config.mjs
+/** @type {import('next').NextConfig} */
+⋮----
+async headers()
+⋮----
+// Firebase Auth iframe
+⋮----
+// Google service accounts iframe (OAuth)
+⋮----
+// COOP: same-origin-allow-popups permite que Firebase Auth popup
+// pueda llamar window.closed y window.opener sin ser bloqueado
+⋮----
+// En dev solo aplicamos COOP (sin CSP estricta)
+</file>
+
+<file path="realsass-sass-front/tsconfig.json">
+{
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "target": "ES6",
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../realsass-sass-back",
+    "../realsass-ecommerce-back",
+    "../chat-ia-back",
+    "../pagos-back",
+    "../realsass-sass-back/src/collaborators/dto",
+    "../realsass-sass-back/src/config-secrets/dto",
+    "../realsass-sass-back/src/config-quotas",
+    "../realsass-sass-back/src/config-themes",
+    "../realsass-sass-back/src/config-webhooks/dto",
+    "../realsass-sass-back/src/config-templates/dto",
+    "../realsass-sass-back/src/users/dto",
+    "../realsass-sass-back/src/auth/dto"
+  ],
+  "extends": "../tsconfig.base.json"
+}
+</file>
+
+<file path="packages/trpc/tsconfig.json">
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
+</file>
+
+<file path="real-ecommerce-front/next.config.mjs">
+/** @type {import('next').NextConfig} */
+</file>
+
+<file path="realsass-dashboard-front/lib/trpc/client.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+⋮----
+import { createTRPCReact } from '@trpc/react-query';
+import { httpBatchLink }   from '@trpc/client';
+⋮----
+// Usamos un tipo vacío para evitar el error de AnyRouter en Docker.
+// En runtime tRPC solo necesita la URL — los tipos son solo para DX local.
+type RouterType = any;
+⋮----
+export function makeTrpcClient(
+  url: string,
+  getToken:          () => Promise<string | null>,
+  getOrganizationId: () => string | null = () => null,
+)
+⋮----
+async headers()
+</file>
+
+<file path="realsass-dashboard-front/next.config.mjs">
+/** @type {import('next').NextConfig} */
+⋮----
+// Fuerza revalidación en cada request para páginas dinámicas
+headers: async ()
+⋮----
+// Los chunks de JS/CSS sí pueden cachearse porque Next les cambia el hash
+</file>
+
+<file path="realsass-sass-back/src/config-audit/config-audit.service.ts">
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+⋮----
+export interface ConfigAuditParams {
+  organizationId?: string;
+  userId?:         string;
+  configType: string;
+  configKey?:      string;
+  action: string;
+  previousValue?:  string;
+  newValue?:       string;
+  diff?:           Record<string, unknown>;
+  reason?:         string;
+  ipAddress?:      string;
+}
+⋮----
+export class ConfigAuditService {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+log(params: ConfigAuditParams): void
+⋮----
+async getByOrg(
+    organizationId: string,
+    filters: { configType?: string; from?: Date; to?: Date; userId?: string },
+    take = 50,
+    skip = 0,
+)
+</file>
+
+<file path="packages/trpc/src/index.ts">
+// En Docker el backend no está disponible para type-check del front.
+// AnyRouter permite que el build pase; el tipado real funciona en dev local.
+import type { AnyRouter } from '@trpc/server';
+export type AppRouter = AnyRouter;
+</file>
+
+<file path="realsass-sass-back/src/collaborators/collaborators.service.ts">
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+// Interfaces puras — sin class-validator, compatibles con Next.js type-check
+interface InviteCollaboratorDto {
+  email: string;
+  canViewListings?: boolean;
+  canCreateListings?: boolean;
+  canEditListings?: boolean;
+  canDeleteListings?: boolean;
+  canViewStats?: boolean;
+  canManageLeads?: boolean;
+  canManageCollaborators?: boolean;
+}
+interface UpdateCollaboratorDto {
+  canViewListings?: boolean;
+  canCreateListings?: boolean;
+  canEditListings?: boolean;
+  canDeleteListings?: boolean;
+  canViewStats?: boolean;
+  canManageLeads?: boolean;
+  canManageCollaborators?: boolean;
+}
+import { CollaboratorStatus } from '@prisma/client';
+⋮----
+// ── Helpers permisos JSONB ────────────────────────────────────────────────────
+⋮----
+function parsePermissions(raw: unknown)
+function buildPermissionsPatch(current: unknown, dto: any)
+// ─────────────────────────────────────────────────────────────────────────────
+⋮----
+// Días que dura el link de invitación
+⋮----
+export class CollaboratorsService {
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+// ─── Helpers privados ──────────────────────────────────────────────────────
+⋮----
+/** Verifica que el usuario sea owner de la org y retorna la org */
+private async getOrgForOwner(firebaseUid: string)
+⋮----
+// ─── Endpoints ─────────────────────────────────────────────────────────────
+⋮----
+/**
+   * GET /organizations/me/collaborators
+   * Lista todos los colaboradores de la organización del owner.
+   */
+async listCollaborators(firebaseUid: string)
+⋮----
+/**
+   * POST /organizations/me/collaborators
+   * Invita un nuevo colaborador por email y genera token de invitación.
+   */
+async inviteCollaborator(firebaseUid: string, dto: InviteCollaboratorDto)
+⋮----
+// No puede invitarse a sí mismo
+⋮----
+// Verificar si ya existe una invitación activa o activo para ese email
+⋮----
+// Si estaba REMOVED, lo reactivamos con nueva invitación
+⋮----
+// Crear colaborador + invitación en transacción
+⋮----
+// Construir el link de aceptación (el frontend lo muestra o lo envía por mail)
+⋮----
+inviteLink,           // el frontend puede copiar este link o enviarlo por mail
+⋮----
+/**
+   * PATCH /organizations/me/collaborators/:id
+   * Actualiza permisos de un colaborador.
+   */
+async updateCollaborator(
+    firebaseUid: string,
+    collaboratorId: string,
+    dto: UpdateCollaboratorDto,
+)
+⋮----
+/**
+   * DELETE /organizations/me/collaborators/:id
+   * Remueve un colaborador (soft delete: status = REMOVED).
+   */
+async removeCollaborator(firebaseUid: string, collaboratorId: string)
+⋮----
+/**
+   * GET /invitations/:token
+   * Obtiene info de una invitación por token (ruta pública).
+   * El frontend la usa para mostrar la pantalla de aceptar antes de loguear.
+   */
+async getInvitationInfo(token: string)
+⋮----
+/**
+   * POST /invitations/:token/accept
+   * El colaborador autenticado acepta la invitación.
+   * Verifica que el email del token coincida con el del usuario logueado.
+   */
+async acceptInvitation(token: string, firebaseUid: string)
+⋮----
+// El email del usuario autenticado debe coincidir con el de la invitación
+⋮----
+// Activar colaborador
+</file>
+
+<file path="realsass-sass-front/hooks/use-organization.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { trpc } from '@/lib/trpc/client';
+⋮----
+export function useMyOrganization()
+export function useUpdateOrganization()
+</file>
+
+<file path="realsass-sass-front/hooks/use-profile.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { trpc } from '@/lib/trpc/client';
+⋮----
+export function useProfile()
+export function useSyncUser()
+export function useSelectRole()
+</file>
+
+<file path="realsass-sass-front/hooks/use-config.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { trpc } from '@/lib/trpc/client';
+⋮----
+export function useFeatureFlags()
+export function useUpdateFeatureFlag()
+export function useQuotas()
+export function useUpdateQuotaLimit()
+export function useThemes()
+export function useActivateTheme()
+export function useWebhooks()
+export function useCreateWebhook()
+export function useDeleteWebhook()
+export function useWebhookLogs(webhookId: string | null | undefined)
+</file>
+
+<file path="realsass-sass-front/lib/trpc/client.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+⋮----
+import { createTRPCReact } from '@trpc/react-query';
+import { httpBatchLink }   from '@trpc/client';
+⋮----
+// Usamos un tipo vacío para evitar el error de AnyRouter en Docker.
+// En runtime tRPC solo necesita la URL — los tipos son solo para DX local.
+type RouterType = any;
+⋮----
+export function makeTrpcClient(
+  url: string,
+  getToken:          () => Promise<string | null>,
+  getOrganizationId: () => string | null = () => null,
+)
+⋮----
+async headers()
 </file>
 
 </files>
