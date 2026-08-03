@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
-# cache-bust: 2026-08-03-v2
+# cache-bust: 2026-08-03-v3
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -50,10 +50,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+# El standalone incluye server.js + su propio node_modules con next y dependencias
+# COPY del standalone completo — ya incluye node_modules dentro
 COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/.next/static     ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/public           ./public
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules             ./node_modules
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
