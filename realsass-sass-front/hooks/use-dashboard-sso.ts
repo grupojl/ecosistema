@@ -3,13 +3,16 @@
 
 import { useState, useCallback } from 'react'
 
+// Sin fallbacks hardcodeados — las URLs vienen siempre de variables de entorno.
+// En Railway: configuradas en Settings → Variables del servicio realsass-sass-front.
+// En dev: configuradas en realsass-sass-front/.env.local
+//   NEXT_PUBLIC_SASS_BACK_URL=http://localhost:3004
+//   NEXT_PUBLIC_DASHBOARD_FRONT_URL=http://localhost:3002
 const SASS_BACK_URL: string =
-  (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? 'http://localhost:3004')
-    .replace(/\/+$/, '')
+  (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? '').replace(/\/+$/, '')
 
 const DASHBOARD_FRONT_URL: string =
-  (process.env.NEXT_PUBLIC_DASHBOARD_FRONT_URL ?? 'http://localhost:3002')
-    .replace(/\/+$/, '')
+  (process.env.NEXT_PUBLIC_DASHBOARD_FRONT_URL ?? '').replace(/\/+$/, '')
 
 export type SsoState = 'idle' | 'loading' | 'success' | 'error'
 
@@ -20,6 +23,20 @@ export function useDashboardSSO(
   const [ssoError, setSsoError] = useState<string | null>(null)
 
   const openDashboard = useCallback(async () => {
+    if (!SASS_BACK_URL) {
+      setSsoError('NEXT_PUBLIC_SASS_BACK_URL no está configurada.')
+      setState('error')
+      setTimeout(() => { setState('idle'); setSsoError(null) }, 5000)
+      return
+    }
+
+    if (!DASHBOARD_FRONT_URL) {
+      setSsoError('NEXT_PUBLIC_DASHBOARD_FRONT_URL no está configurada.')
+      setState('error')
+      setTimeout(() => { setState('idle'); setSsoError(null) }, 5000)
+      return
+    }
+
     setState('loading')
     setSsoError(null)
 
@@ -27,7 +44,6 @@ export function useDashboardSSO(
       const firebaseToken = await getIdToken()
       if (!firebaseToken) throw new Error('No se pudo obtener el token de sesión')
 
-      // 1. Mandar el idToken al sass-back para obtener un customToken
       const res = await fetch(`${SASS_BACK_URL}/api/v1/auth/firebase-sso`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,8 +59,6 @@ export function useDashboardSSO(
 
       setState('success')
 
-      // 2. Redirigir al dashboard-front con el customToken en la URL
-      // El dashboard-front lo lee en /auth/sso y hace signInWithCustomToken
       setTimeout(() => {
         window.location.href =
           `${DASHBOARD_FRONT_URL}/auth/sso?token=${encodeURIComponent(data.customToken)}`

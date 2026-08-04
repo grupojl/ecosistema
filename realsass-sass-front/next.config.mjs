@@ -3,101 +3,89 @@
 const nextConfig = {
   output: 'standalone',
 
-
   async headers() {
-    const isDev = process.env.NODE_ENV === 'development'
     const firebaseProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? ''
+
+    // URLs externas leídas de variables de entorno.
+    // En Railway estas vars apuntan a los dominios reales.
+    // En dev apuntan a localhost (configuradas en .env.local).
+    const sassBackUrl    = (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? '').replace(/\/+$/, '')
+    const dashFrontUrl   = (process.env.NEXT_PUBLIC_DASHBOARD_FRONT_URL ?? '').replace(/\/+$/, '')
+    const apiUrl         = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '')
+
+    // Extrae solo origin (protocolo + host) de una URL completa.
+    // Ej: "https://foo.up.railway.app/api/v1" → "https://foo.up.railway.app"
+    function origin(url) {
+      if (!url) return ''
+      try { return new URL(url).origin } catch { return url }
+    }
+
+    // Construye connect-src con todos los orígenes necesarios,
+    // deduplicados y sin entradas vacías.
+    const connectOrigins = [
+      "'self'",
+      'https://identitytoolkit.googleapis.com',
+      'https://securetoken.googleapis.com',
+      'https://*.googleapis.com',
+      'https://*.firebaseio.com',
+      'https://*.firebase.google.com',
+      'https://*.firebasestorage.googleapis.com',
+      'https://*.railway.app',
+      'https://*.up.railway.app',
+      origin(sassBackUrl),
+      origin(apiUrl),
+      origin(dashFrontUrl),
+    ].filter(Boolean)
+
+    // Dedup sin Set para compatibilidad con todos los entornos de build
+    const seen = {}
+    const connectSrc = connectOrigins
+      .filter(v => { if (seen[v]) return false; seen[v] = true; return true })
+      .join(' ')
 
     const csp = [
       "default-src 'self'",
       [
         "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-        "https://apis.google.com",
-        "https://appleid.apple.com",
-        "https://connect.facebook.net",
-        "https://www.facebook.com",
+        'https://apis.google.com',
+        'https://appleid.apple.com',
+        'https://connect.facebook.net',
+        'https://www.facebook.com',
       ].join(' '),
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       [
         "frame-src 'self'",
-        "https://accounts.google.com",
-        "https://appleid.apple.com",
-        "https://www.facebook.com",
-        "https://facebook.com",
-        // Firebase Auth iframe
+        'https://accounts.google.com',
+        'https://appleid.apple.com',
+        'https://www.facebook.com',
+        'https://facebook.com',
         firebaseProject ? `https://${firebaseProject}.firebaseapp.com` : '',
-        // Google service accounts iframe (OAuth)
-        "https://*.iam.gserviceaccount.com",
+        'https://*.iam.gserviceaccount.com',
       ].filter(Boolean).join(' '),
-      [
-        "connect-src 'self'",
-        "https://identitytoolkit.googleapis.com",
-        "https://securetoken.googleapis.com",
-        "https://*.googleapis.com",
-        "https://*.firebaseio.com",
-        "https://*.firebase.google.com",
-        "https://*.firebasestorage.googleapis.com",
-        "https://*.railway.app",
-        "https://*.up.railway.app",
-        "http://localhost:3000",
-        "http://localhost:3001",
-      ].join(' '),
+      `connect-src ${connectSrc}`,
       [
         "img-src 'self' data: blob:",
-        "https://*.googleusercontent.com",
-        "https://*.fbcdn.net",
-        "https://*.facebook.com",
-        "https://*.firebasestorage.googleapis.com",
+        'https://*.googleusercontent.com',
+        'https://*.fbcdn.net',
+        'https://*.facebook.com',
+        'https://*.firebasestorage.googleapis.com',
       ].join(' '),
       "form-action 'self'",
       "manifest-src 'self'",
       "worker-src 'self' blob:",
     ].map(d => d.trim()).join('; ')
 
-    const securityHeaders = [
-      // COOP: same-origin-allow-popups permite que Firebase Auth popup
-      // pueda llamar window.closed y window.opener sin ser bloqueado
-      {
-        key: 'Cross-Origin-Opener-Policy',
-        value: 'same-origin-allow-popups',
-      },
-      {
-        key: 'X-Frame-Options',
-        value: 'SAMEORIGIN',
-      },
-      {
-        key: 'X-Content-Type-Options',
-        value: 'nosniff',
-      },
-      {
-        key: 'Referrer-Policy',
-        value: 'strict-origin-when-cross-origin',
-      },
-      {
-        key: 'Permissions-Policy',
-        value: 'camera=(), microphone=(), geolocation=()',
-      },
-    ]
-
-    // En dev solo aplicamos COOP (sin CSP estricta)
-    if (isDev) {
-      return [
-        {
-          source: '/(.*)',
-          headers: [
-            { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
-          ],
-        },
-      ]
-    }
-
     return [
       {
         source: '/(.*)',
         headers: [
           { key: 'Content-Security-Policy', value: csp },
-          ...securityHeaders,
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
     ]
