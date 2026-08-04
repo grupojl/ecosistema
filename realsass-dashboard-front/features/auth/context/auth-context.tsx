@@ -1,17 +1,19 @@
 'use client';
 
 // =============================================================================
-// auth-context.tsx — Firebase SDK directo + real-back /api/v1/users/me
+// auth-context.tsx — Firebase SDK directo + real-back
 //
-// Flujo:
-//   1. Firebase SDK autentica al usuario (Google popup o email/password)
-//   2. onAuthStateChanged dispara fetchProfile → GET /api/v1/users/me
-//      con el Bearer token → real-back devuelve { user, organizationId }
-//   3. Si el usuario existe en real-back → seteamos user + organizationId
-//   4. Si no existe (primer login) → real-back hace upsert en /auth/sync
+// Flujo login directo (colaborador desde /login):
+//   1. signInWithPopup → Firebase autentica
+//   2. onAuthStateChanged → syncWithRealBack
+//   3. POST /auth/sync → crea/actualiza usuario en DB
+//   4. GET /auth/me → devuelve perfil con tenants
+//   5. Si no tiene tenants (ni owner ni collaborator activo) → acceso denegado
+//   6. Si tiene tenants → setUser + setOrgId → redirect al dashboard
 //
-// Sin cookies propias, sin dashboard-back, sin refresh manual:
-//   Firebase SDK maneja el refresco del JWT automáticamente.
+// Flujo SSO (desde sass-front):
+//   1. signInWithCustomToken → Firebase autentica
+//   2. Mismo flujo desde paso 2
 // =============================================================================
 
 import {
@@ -40,9 +42,10 @@ export interface DashboardUser {
 
 interface AuthContextType {
   user:              DashboardUser | null;
-  firebaseUser:      DashboardUser | null; // alias — compatibilidad con código existente
+  firebaseUser:      DashboardUser | null;
   isLoading:         boolean;
   isAuthenticated:   boolean;
+  accessDenied:      boolean;       // autenticado en Firebase pero sin org asignada
   organizationId:    string | null;
   setOrganizationId: (id: string) => void;
   loginWithGoogle:   () => Promise<void>;
@@ -58,52 +61,81 @@ export function useAuth(): AuthContextType {
   return c;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Tipos internos del perfil del back ──────────────────────────────────────
+
+interface Tenant {
+  organizationId: string;
+  role:           'OWNER' | 'COLLABORATOR';
+}
+
+interface ProfileResponse extends DashboardUser {
+  tenants: Tenant[];
+}
 
 const ORG_KEY = 'dash_org_id';
 
-async function syncWithRealBack(firebaseUser: FirebaseUser): Promise<DashboardUser | null> {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function syncWithRealBack(fbUser: FirebaseUser): Promise<{
+  profile:  DashboardUser | null;
+  orgId:    string | null;
+  denied:   boolean;
+}> {
   try {
-    // Primero sincronizamos el usuario en real-back (upsert idempotente)
-    await realBackFetch.post('/api/v1/auth/sync', {
-      firebaseUid: firebaseUser.uid,
-      email:       firebaseUser.email,
-      displayName: firebaseUser.displayName,
-      avatarUrl:   firebaseUser.photoURL,
-    });
+    // 1. Sync idempotente — crea el usuario si no existe
+    await realBackFetch.post('/api/v1/auth/sync', {});
 
-    // Luego traemos el perfil completo con organizationId
-    const data = await realBackFetch.get<{
-      user:           DashboardUser;
-      organizationId: string | null;
-    }>('/api/v1/users/me');
+    // 2. Perfil completo con tenants
+    // GET /auth/me → api-client desenvuelve { success, data } → devuelve data directamente
+    // data ES el perfil: { id, firebaseUid, email, isOwner, tenants, ... }
+    const data = await realBackFetch.get<ProfileResponse>(`/api/v1/auth/me`);
+    const profile: DashboardUser | null = data
+      ? {
+          id:          data.id,
+          firebaseUid: data.firebaseUid,
+          email:       data.email,
+          displayName: data.displayName ?? null,
+          avatarUrl:   data.avatarUrl   ?? null,
+          isOwner:     data.isOwner     ?? false,
+          isAffiliate: data.isAffiliate ?? false,
+          createdAt:   data.createdAt,
+        }
+      : null;
 
-    return data.user;
+    if (!profile) return { profile: null, orgId: null, denied: false };
+
+    // 3. Determinar si tiene acceso real al dashboard
+    const tenants: Tenant[] = data?.tenants ?? [];
+    const hasAccess = profile.isOwner || tenants.length > 0;
+
+    if (!hasAccess) {
+      // Autenticado en Firebase pero sin organización asignada
+      return { profile: null, orgId: null, denied: true };
+    }
+
+    // 4. Resolver organizationId: localStorage → primer tenant disponible
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
+    // Verificar que el stored orgId siga siendo válido para este usuario
+    const validStored = stored && tenants.some(t => t.organizationId === stored);
+    const orgId = validStored ? stored : (tenants[0]?.organizationId ?? null);
+
+    if (orgId) localStorage.setItem(ORG_KEY, orgId);
+
+    return { profile, orgId, denied: false };
   } catch (err) {
     console.error('[Auth] Error sincronizando con real-back:', err);
-    return null;
-  }
-}
-
-async function fetchOrganizationId(user: DashboardUser): Promise<string | null> {
-  try {
-    const data = await realBackFetch.get<{
-      user:           DashboardUser;
-      organizationId: string | null;
-    }>('/api/v1/users/me');
-    return data.organizationId ?? null;
-  } catch {
-    return null;
+    return { profile: null, orgId: null, denied: false };
   }
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,      setUser]    = useState<DashboardUser | null>(null);
-  const [orgId,     setOrgId]   = useState<string | null>(null);
-  const [isLoading, setLoading] = useState(true);
-  const router = useRouter();
+  const [user,        setUser]       = useState<DashboardUser | null>(null);
+  const [orgId,       setOrgId]      = useState<string | null>(null);
+  const [isLoading,   setLoading]    = useState(true);
+  const [accessDenied, setDenied]    = useState(false);
+  const router      = useRouter();
   const initialized = useRef(false);
 
   const setOrganizationId = useCallback((id: string) => {
@@ -111,46 +143,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') localStorage.setItem(ORG_KEY, id);
   }, []);
 
-  // Sincroniza Firebase user → real-back → dashboard state
   const handleFirebaseUser = useCallback(async (fbUser: FirebaseUser | null) => {
     if (!fbUser) {
       setUser(null);
       setOrgId(null);
+      setDenied(false);
       setLoading(false);
       return;
     }
 
-    const profile = await syncWithRealBack(fbUser);
-    if (!profile) {
+    const { profile, orgId: resolvedOrgId, denied } = await syncWithRealBack(fbUser);
+
+    if (denied) {
+      // Cerrar sesión de Firebase también para que no quede en estado zombie
+      await signOut(auth);
       setUser(null);
       setOrgId(null);
+      setDenied(true);
       setLoading(false);
       return;
     }
 
     setUser(profile);
-
-    // Recuperar orgId: primero localStorage, luego real-back
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
-    if (stored) {
-      setOrgId(stored);
-    } else {
-      const remoteOrgId = await fetchOrganizationId(profile);
-      if (remoteOrgId) {
-        setOrgId(remoteOrgId);
-        localStorage.setItem(ORG_KEY, remoteOrgId);
-      }
-    }
-
+    setOrgId(resolvedOrgId);
+    setDenied(false);
     setLoading(false);
   }, []);
 
-  // Escuchar cambios de auth de Firebase (incluye refresh automático de token)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (!initialized.current) {
-        initialized.current = true;
-      }
+      initialized.current = true;
       await handleFirebaseUser(fbUser);
     });
     return () => unsub();
@@ -158,9 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = useCallback(async () => {
     setLoading(true);
+    setDenied(false);
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged se dispara automáticamente
+      // onAuthStateChanged maneja el resto
     } catch (err) {
       setLoading(false);
       throw err;
@@ -172,14 +195,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') localStorage.removeItem(ORG_KEY);
     setUser(null);
     setOrgId(null);
+    setDenied(false);
     router.push('/login');
   }, [router]);
 
   const refreshUser = useCallback(async () => {
     const fbUser = auth.currentUser;
     if (!fbUser) return;
-    const profile = await syncWithRealBack(fbUser);
-    if (profile) setUser(profile);
+    const { profile, orgId: resolvedOrgId } = await syncWithRealBack(fbUser);
+    if (profile) {
+      setUser(profile);
+      if (resolvedOrgId) setOrgId(resolvedOrgId);
+    }
   }, []);
 
   return (
@@ -188,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       firebaseUser:    user,
       isLoading,
       isAuthenticated: !!user,
+      accessDenied,
       organizationId:  orgId,
       setOrganizationId,
       loginWithGoogle,

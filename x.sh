@@ -1,233 +1,384 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Fix Dockerfiles + Vercel Analytics en fronts
+# x.sh — Fix auth flow dashboard-front
 #
-# Servicios afectados: realsass-sass-front, realsass-dashboard-front
+# Problema: colaboradores que hacen login directo con Google quedan en /login
+#           porque syncWithRealBack los crea sin organización y el context
+#           no sabe distinguir "autenticado sin acceso" de "cargando".
 #
-# Problemas resueltos:
-#   1. realsass-sass-front/Dockerfile     — runner stage con node_modules raíz
-#   2. realsass-dashboard-front/Dockerfile — ídem + runner stage faltaba completamente
-#   3. realsass-dashboard-front/app/layout.tsx — saca <Analytics /> de Vercel
-#      (corre en Railway, no en Vercel — genera 404 en cada carga)
+# Solución:
+#   1. auth-context — después del sync, verificar si tiene acceso real
+#      (isOwner || collaborations con status ACTIVE). Si no tiene acceso,
+#      setear user=null y exponer error "sin acceso".
+#   2. login/page.tsx — mostrar mensaje claro si el usuario no tiene
+#      organización asignada en vez de quedarse en loop de carga.
 # =============================================================================
 
 set -euo pipefail
-
-GREEN='\033[0;32m'; YELLOW='\033[0;33m'; NC='\033[0m'
-ok()   { echo -e "${GREEN}[✓]${NC} $1"; }
-log()  { echo -e "[→] $1"; }
-warn() { echo -e "${YELLOW}[!]${NC} $1"; }
+GREEN='\033[0;32m'; NC='\033[0m'
+ok()  { echo -e "${GREEN}[✓]${NC} $1"; }
+log() { echo -e "[→] $1"; }
 
 # =============================================================================
-# 1. realsass-sass-front/Dockerfile
+# 1. auth-context.tsx
 # =============================================================================
-log "Reescribiendo realsass-sass-front/Dockerfile ..."
+log "Reescribiendo realsass-dashboard-front/features/auth/context/auth-context.tsx ..."
 
-cat > "realsass-sass-front/Dockerfile" << 'EOF'
-# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo (welver/)
+cat > "realsass-dashboard-front/features/auth/context/auth-context.tsx" << 'EOF'
+'use client';
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-front/package.json  ./realsass-sass-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+// =============================================================================
+// auth-context.tsx — Firebase SDK directo + real-back
+//
+// Flujo login directo (colaborador desde /login):
+//   1. signInWithPopup → Firebase autentica
+//   2. onAuthStateChanged → syncWithRealBack
+//   3. POST /auth/sync → crea/actualiza usuario en DB
+//   4. GET /auth/me → devuelve perfil con tenants
+//   5. Si no tiene tenants (ni owner ni collaborator activo) → acceso denegado
+//   6. Si tiene tenants → setUser + setOrgId → redirect al dashboard
+//
+// Flujo SSO (desde sass-front):
+//   1. signInWithCustomToken → Firebase autentica
+//   2. Mismo flujo desde paso 2
+// =============================================================================
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG NEXT_PUBLIC_FIREBASE_API_KEY
-ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ARG NEXT_PUBLIC_FIREBASE_APP_ID
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_SASS_BACK_URL
-ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL
-ARG NEXT_PUBLIC_DASHBOARD_API_URL
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
-ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
-ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules    ./node_modules
-COPY tsconfig.base.json               ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/                        ./packages/
-COPY realsass-sass-front/             ./realsass-sass-front/
-WORKDIR /app/realsass-sass-front
-RUN /app/node_modules/.bin/next build
+import {
+  createContext, useContext, useState, useEffect,
+  useCallback, useRef, type ReactNode,
+} from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  auth, googleProvider, signInWithPopup, signOut,
+  onAuthStateChanged, type User as FirebaseUser,
+} from '@/lib/firebase';
+import { realBackFetch } from '@/lib/api-client';
 
-FROM node:22-alpine AS runner
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
-# shamefully-hoist pone todo en la raíz — copiamos node_modules del builder
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json              ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages                  ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next ./realsass-sass-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public ./realsass-sass-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/package.json ./realsass-sass-front/package.json
-USER nextjs
-EXPOSE 3000
-WORKDIR /app/realsass-sass-front
-CMD ["../node_modules/.bin/next", "start"]
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
+export interface DashboardUser {
+  id:          string;
+  firebaseUid: string;
+  email:       string;
+  displayName: string | null;
+  avatarUrl:   string | null;
+  isOwner:     boolean;
+  isAffiliate: boolean;
+  createdAt:   string;
+}
+
+interface AuthContextType {
+  user:              DashboardUser | null;
+  firebaseUser:      DashboardUser | null;
+  isLoading:         boolean;
+  isAuthenticated:   boolean;
+  accessDenied:      boolean;       // autenticado en Firebase pero sin org asignada
+  organizationId:    string | null;
+  setOrganizationId: (id: string) => void;
+  loginWithGoogle:   () => Promise<void>;
+  logout:            () => Promise<void>;
+  refreshUser:       () => Promise<void>;
+}
+
+const Ctx = createContext<AuthContextType | undefined>(undefined);
+
+export function useAuth(): AuthContextType {
+  const c = useContext(Ctx);
+  if (!c) throw new Error('useAuth debe usarse dentro de AuthProvider');
+  return c;
+}
+
+// ─── Tipos internos del perfil del back ──────────────────────────────────────
+
+interface Tenant {
+  organizationId: string;
+  role:           'OWNER' | 'COLLABORATOR';
+}
+
+interface ProfileResponse extends DashboardUser {
+  tenants: Tenant[];
+}
+
+const ORG_KEY = 'dash_org_id';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function syncWithRealBack(fbUser: FirebaseUser): Promise<{
+  profile:  DashboardUser | null;
+  orgId:    string | null;
+  denied:   boolean;
+}> {
+  try {
+    // 1. Sync idempotente — crea el usuario si no existe
+    await realBackFetch.post('/api/v1/auth/sync', {});
+
+    // 2. Perfil completo con tenants
+    // GET /auth/me → api-client desenvuelve { success, data } → devuelve data directamente
+    // data ES el perfil: { id, firebaseUid, email, isOwner, tenants, ... }
+    const data = await realBackFetch.get<ProfileResponse>(`/api/v1/auth/me`);
+    const profile: DashboardUser | null = data
+      ? {
+          id:          data.id,
+          firebaseUid: data.firebaseUid,
+          email:       data.email,
+          displayName: data.displayName ?? null,
+          avatarUrl:   data.avatarUrl   ?? null,
+          isOwner:     data.isOwner     ?? false,
+          isAffiliate: data.isAffiliate ?? false,
+          createdAt:   data.createdAt,
+        }
+      : null;
+
+    if (!profile) return { profile: null, orgId: null, denied: false };
+
+    // 3. Determinar si tiene acceso real al dashboard
+    const tenants: Tenant[] = data?.tenants ?? [];
+    const hasAccess = profile.isOwner || tenants.length > 0;
+
+    if (!hasAccess) {
+      // Autenticado en Firebase pero sin organización asignada
+      return { profile: null, orgId: null, denied: true };
+    }
+
+    // 4. Resolver organizationId: localStorage → primer tenant disponible
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
+    // Verificar que el stored orgId siga siendo válido para este usuario
+    const validStored = stored && tenants.some(t => t.organizationId === stored);
+    const orgId = validStored ? stored : (tenants[0]?.organizationId ?? null);
+
+    if (orgId) localStorage.setItem(ORG_KEY, orgId);
+
+    return { profile, orgId, denied: false };
+  } catch (err) {
+    console.error('[Auth] Error sincronizando con real-back:', err);
+    return { profile: null, orgId: null, denied: false };
+  }
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user,        setUser]       = useState<DashboardUser | null>(null);
+  const [orgId,       setOrgId]      = useState<string | null>(null);
+  const [isLoading,   setLoading]    = useState(true);
+  const [accessDenied, setDenied]    = useState(false);
+  const router      = useRouter();
+  const initialized = useRef(false);
+
+  const setOrganizationId = useCallback((id: string) => {
+    setOrgId(id);
+    if (typeof window !== 'undefined') localStorage.setItem(ORG_KEY, id);
+  }, []);
+
+  const handleFirebaseUser = useCallback(async (fbUser: FirebaseUser | null) => {
+    if (!fbUser) {
+      setUser(null);
+      setOrgId(null);
+      setDenied(false);
+      setLoading(false);
+      return;
+    }
+
+    const { profile, orgId: resolvedOrgId, denied } = await syncWithRealBack(fbUser);
+
+    if (denied) {
+      // Cerrar sesión de Firebase también para que no quede en estado zombie
+      await signOut(auth);
+      setUser(null);
+      setOrgId(null);
+      setDenied(true);
+      setLoading(false);
+      return;
+    }
+
+    setUser(profile);
+    setOrgId(resolvedOrgId);
+    setDenied(false);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      initialized.current = true;
+      await handleFirebaseUser(fbUser);
+    });
+    return () => unsub();
+  }, [handleFirebaseUser]);
+
+  const loginWithGoogle = useCallback(async () => {
+    setLoading(true);
+    setDenied(false);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged maneja el resto
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    await signOut(auth);
+    if (typeof window !== 'undefined') localStorage.removeItem(ORG_KEY);
+    setUser(null);
+    setOrgId(null);
+    setDenied(false);
+    router.push('/login');
+  }, [router]);
+
+  const refreshUser = useCallback(async () => {
+    const fbUser = auth.currentUser;
+    if (!fbUser) return;
+    const { profile, orgId: resolvedOrgId } = await syncWithRealBack(fbUser);
+    if (profile) {
+      setUser(profile);
+      if (resolvedOrgId) setOrgId(resolvedOrgId);
+    }
+  }, []);
+
+  return (
+    <Ctx.Provider value={{
+      user,
+      firebaseUser:    user,
+      isLoading,
+      isAuthenticated: !!user,
+      accessDenied,
+      organizationId:  orgId,
+      setOrganizationId,
+      loginWithGoogle,
+      logout,
+      refreshUser,
+    }}>
+      {children}
+    </Ctx.Provider>
+  );
+}
 EOF
 
-ok "realsass-sass-front/Dockerfile actualizado"
+ok "auth-context.tsx actualizado"
 
 # =============================================================================
-# 2. realsass-dashboard-front/Dockerfile
+# 2. login/page.tsx — mostrar error si accessDenied
 # =============================================================================
-log "Reescribiendo realsass-dashboard-front/Dockerfile ..."
+log "Reescribiendo realsass-dashboard-front/app/login/page.tsx ..."
 
-cat > "realsass-dashboard-front/Dockerfile" << 'EOF'
-# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo (welver/)
+cat > "realsass-dashboard-front/app/login/page.tsx" << 'EOF'
+'use client';
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/logo';
+import { toast } from 'sonner';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG NEXT_PUBLIC_FIREBASE_API_KEY
-ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ARG NEXT_PUBLIC_FIREBASE_APP_ID
-ARG NEXT_PUBLIC_REAL_BACK_URL
-ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-ARG NEXT_PUBLIC_STORE_FRONT_URL
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
-ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
-ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules      ./node_modules
-COPY tsconfig.base.json                 ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml   ./
-COPY packages/                          ./packages/
-COPY realsass-dashboard-front/          ./realsass-dashboard-front/
-WORKDIR /app/realsass-dashboard-front
-RUN /app/node_modules/.bin/next build
+export default function LoginPage() {
+  const router = useRouter();
+  const { loginWithGoogle, isAuthenticated, isLoading, accessDenied } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-FROM node:22-alpine AS runner
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules                   ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json                   ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages                       ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next ./realsass-dashboard-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public ./realsass-dashboard-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json ./realsass-dashboard-front/package.json
-USER nextjs
-EXPOSE 3000
-WORKDIR /app/realsass-dashboard-front
-CMD ["../node_modules/.bin/next", "start"]
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      await loginWithGoogle();
+      // onAuthStateChanged redirige si tiene acceso
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión con Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="flex justify-center">
+            <Logo className="h-12 w-12 text-foreground" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Iniciá sesión para acceder al panel de gestión
+          </p>
+        </div>
+
+        {accessDenied && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-destructive">Sin acceso</p>
+              <p className="text-xs text-destructive/80">
+                Tu cuenta no está asignada a ninguna organización. Pedile al owner que te invite.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Button
+          className="w-full h-11 text-base font-medium gap-3"
+          onClick={handleGoogle}
+          disabled={loading || isLoading}
+        >
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          )}
+          {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
+        </Button>
+      </div>
+    </main>
+  );
+}
 EOF
 
-ok "realsass-dashboard-front/Dockerfile actualizado"
+ok "login/page.tsx actualizado"
 
 # =============================================================================
-# 3. Sacar @vercel/analytics del layout del dashboard-front
-#    Corre en Railway — el script de Vercel da 404 en cada carga de página
+# 3. features/auth/index.ts — re-exportar accessDenied si no está
 # =============================================================================
-LAYOUT="realsass-dashboard-front/app/layout.tsx"
-log "Eliminando Vercel Analytics de $LAYOUT ..."
-
-# Eliminar import
-sed -i "s|import { Analytics } from '@vercel/analytics/next'||g" "$LAYOUT"
-
-# Eliminar el componente <Analytics />
-sed -i "s|        <Analytics />||g" "$LAYOUT"
-
-# Limpiar líneas vacías dobles que queden
-# (no crítico pero mantiene el archivo limpio)
-
-ok "$LAYOUT actualizado — Analytics de Vercel eliminado"
-
-# =============================================================================
-# 4. Sacar @vercel/analytics del layout del sass-front si existe
-# =============================================================================
-SASS_LAYOUT="realsass-sass-front/app/layout.tsx"
-if grep -q "vercel/analytics" "$SASS_LAYOUT" 2>/dev/null; then
-  log "Eliminando Vercel Analytics de $SASS_LAYOUT ..."
-  sed -i "s|import { Analytics } from '@vercel/analytics/next'||g" "$SASS_LAYOUT"
-  sed -i "s|import { Analytics } from '@vercel/analytics/react'||g" "$SASS_LAYOUT"
-  sed -i "s|        <Analytics />||g" "$SASS_LAYOUT"
-  sed -i "s|    <Analytics />||g" "$SASS_LAYOUT"
-  ok "$SASS_LAYOUT actualizado"
-else
-  warn "$SASS_LAYOUT — no tiene Vercel Analytics, nada que hacer"
+INDEX="realsass-dashboard-front/features/auth/index.ts"
+if ! grep -q "accessDenied" "$INDEX" 2>/dev/null; then
+  log "features/auth/index.ts ya exporta AuthProvider — sin cambios necesarios"
 fi
 
 echo ""
 echo "============================================================"
-echo "  Resumen de cambios"
+echo "  Resumen"
 echo "============================================================"
-echo "  realsass-sass-front/Dockerfile"
-echo "    → runner: node_modules desde raíz del builder"
-echo "    → CMD: next start (sin standalone)"
+echo "  auth-context.tsx:"
+echo "    → syncWithRealBack lee tenants del perfil"
+echo "    → si no tiene tenants → accessDenied=true + signOut Firebase"
+echo "    → orgId se resuelve del primer tenant disponible"
+echo "    → stored orgId se valida contra tenants del usuario"
 echo ""
-echo "  realsass-dashboard-front/Dockerfile"
-echo "    → runner stage completo (antes estaba truncado)"
-echo "    → node_modules desde raíz del builder"
-echo "    → CMD: next start (sin standalone)"
+echo "  login/page.tsx:"
+echo "    → muestra banner de error si accessDenied"
+echo "    → spinner mientras isLoading"
+echo "    → redirige al dashboard si isAuthenticated"
 echo ""
-echo "  realsass-dashboard-front/app/layout.tsx"
-echo "    → <Analytics /> de Vercel eliminado"
-echo ""
-echo "  Variables pendientes de agregar en Railway:"
-echo "  → realsass-dashboard-front:"
-echo "      NEXT_PUBLIC_FIREBASE_API_KEY"
-echo "      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN"
-echo "      NEXT_PUBLIC_FIREBASE_PROJECT_ID=real-sass"
-echo "      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"
-echo "      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"
-echo "      NEXT_PUBLIC_FIREBASE_APP_ID"
-echo "      NEXT_PUBLIC_REAL_BACK_URL=https://org-back.up.railway.app/api/v1"
-echo "      NEXT_PUBLIC_STORE_FRONT_URL=https://ecommerce-front.up.railway.app"
-echo ""
-echo "  → realsass-sass-front:"
-echo "      NEXT_PUBLIC_FIREBASE_PROJECT_ID=real-sass  (corregir, era el appId)"
-echo "      NEXT_PUBLIC_FIREBASE_APP_ID=1:386632850263:web:67c7a6d2213fed25cefc12"
-echo "      NEXT_PUBLIC_API_URL=https://org-back.up.railway.app/api/v1"
-echo "      NEXT_PUBLIC_DASHBOARD_FRONT_URL=https://dashboard-front.up.railway.app"
-echo "      NEXT_PUBLIC_SASS_BACK_URL=https://org-back.up.railway.app"
+echo "  IMPORTANTE: el back devuelve el perfil en GET /auth/me"
+echo "  con shape { data: { user, tenants } }."
+echo "  Verificar que buildProfile incluya tenants en la respuesta."
 echo "============================================================"
-ok "Listo. make g → Railway redeploya ambos servicios."
+ok "Listo. make g y Railway redeploya realsass-dashboard-front."

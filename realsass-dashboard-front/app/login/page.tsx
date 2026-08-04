@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { toast } from 'sonner';
@@ -10,24 +10,34 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginWithGoogle, isAuthenticated } = useAuth();
+  const { loginWithGoogle, isAuthenticated, isLoading, accessDenied } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  if (isAuthenticated) {
-    router.replace('/dashboard');
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleGoogle = async () => {
     setLoading(true);
     try {
       await loginWithGoogle();
-      router.replace('/dashboard');
+      // onAuthStateChanged redirige si tiene acceso
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión con Google');
+    } finally {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -42,10 +52,22 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {accessDenied && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-destructive">Sin acceso</p>
+              <p className="text-xs text-destructive/80">
+                Tu cuenta no está asignada a ninguna organización. Pedile al owner que te invite.
+              </p>
+            </div>
+          </div>
+        )}
+
         <Button
           className="w-full h-11 text-base font-medium gap-3"
           onClick={handleGoogle}
-          disabled={loading}
+          disabled={loading || isLoading}
         >
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
