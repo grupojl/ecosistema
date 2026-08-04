@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
@@ -20,24 +20,33 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Palette, ToggleLeft, Webhook, BarChart2,
 };
 
+const STORE_FRONT_URL =
+  (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');
+
 export function DashboardSidebar() {
-  const pathname         = usePathname();
-  const { user, logout } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const pathname                             = usePathname();
+  const { user, logout, organizationSlug }  = useAuth();
+  const [menuOpen, setMenuOpen]              = useState(false);
 
   const isActive = (href: string) =>
     href === '/dashboard'
       ? pathname === '/dashboard'
       : pathname.startsWith(href);
 
+  const resolveHref = (href: string) => {
+    if (href === '__storefront__') {
+      if (!organizationSlug || !STORE_FRONT_URL) return '#';
+      return `${STORE_FRONT_URL}/tienda/${organizationSlug}`;
+    }
+    return href;
+  };
+
   return (
     <aside className="hidden md:flex flex-col w-60 border-r border-border bg-sidebar h-screen sticky top-0 shrink-0">
-      {/* Header */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
         <span className="font-semibold text-sm text-sidebar-foreground">{siteConfig.name}</span>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
@@ -46,12 +55,37 @@ export function DashboardSidebar() {
             </p>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const Icon   = ICON_MAP[item.icon] ?? Package;
-                const active = isActive(item.href);
+                const Icon     = ICON_MAP[item.icon] ?? Package;
+                const external = item.href === '__storefront__';
+                const href     = resolveHref(item.href);
+                const active   = !external && isActive(item.href);
+
+                if (external) {
+                  return (
+                    <li key={item.href}>
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+                          !organizationSlug
+                            ? 'opacity-40 pointer-events-none text-sidebar-foreground/70'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {item.name}
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                      </a>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={item.href}>
                     <Link
-                      href={item.href}
+                      href={href}
                       className={cn(
                         'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
                         active
@@ -76,7 +110,6 @@ export function DashboardSidebar() {
         ))}
       </nav>
 
-      {/* User */}
       {user && (
         <div className="border-t border-sidebar-border px-3 py-3">
           <button
@@ -94,6 +127,17 @@ export function DashboardSidebar() {
 
           {menuOpen && (
             <div className="mt-1 rounded-md border border-border bg-popover shadow-md overflow-hidden">
+              {organizationSlug && STORE_FRONT_URL && (
+                <a
+                  href={`${STORE_FRONT_URL}/tienda/${organizationSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Ver tienda
+                </a>
+              )}
               <button
                 onClick={logout}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"

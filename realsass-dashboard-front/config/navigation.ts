@@ -2,9 +2,9 @@ export const NAV_GROUPS = [
   {
     label: 'Tienda',
     items: [
-      { name: 'Productos',   href: '/dashboard/tienda/productos', icon: 'Package',    active: true  },
-      { name: 'Pedidos',     href: '/dashboard/tienda/pedidos',   icon: 'ShoppingBag', active: true  },
-      { name: 'Preview',     href: '/dashboard/tienda/preview',   icon: 'ExternalLink', active: true },
+      { name: 'Productos',  href: '/dashboard/tienda/productos', icon: 'Package',     active: true  },
+      { name: 'Pedidos',    href: '/dashboard/tienda/pedidos',   icon: 'ShoppingBag', active: true  },
+      { name: 'Ver tienda', href: '__storefront__',              icon: 'ExternalLink', active: true },
     ],
   },
   {

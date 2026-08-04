@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
 # x.sh — Ecommerce multitenant en dashboard-front
-#
-# Cambios:
-#   1. realsass-sass-back: buildProfile incluye slug en el select de organization
-#   2. realsass-dashboard-front auth-context: expone organizationSlug
-#   3. realsass-dashboard-front config/navigation: Preview → link externo al storefront
-#   4. realsass-dashboard-front sidebar: link "Ver tienda" abre storefront en nueva tab
 # =============================================================================
 
 set -euo pipefail
@@ -16,64 +10,19 @@ log() { echo -e "[→] $1"; }
 
 # =============================================================================
 # 1. realsass-sass-back — agregar slug al select de organization en buildProfile
-#    El select actual no incluye slug ni enabledProducts — el front no puede
-#    construir el link al storefront sin el slug.
+#    Reemplaza el bloque select sin slug por uno que lo incluye
 # =============================================================================
 log "Actualizando realsass-sass-back/src/users/users.service.ts ..."
 
-# Reemplazar el select de organization en las collaborations para incluir slug
-python3 - << 'PYEOF'
-import re
+USERS_SVC="realsass-sass-back/src/users/users.service.ts"
 
-path = 'realsass-sass-back/src/users/users.service.ts'
-with open(path, 'r', encoding='utf-8') as f:
-    content = f.read()
+sed -i 's/                id:          true,$/                id:              true,/' "$USERS_SVC"
+sed -i 's/                name:        true,$/                name:            true,\n                slug:            true,\n                enabledProducts: true,/' "$USERS_SVC"
 
-old = """            organization: {
-              select: {
-                id:          true,
-                name:        true,
-                logoUrl:     true,
-                description: true,
-                website:     true,
-                phone:       true,
-                address:     true,
-                userId:      true,
-                createdAt:   true,
-                updatedAt:   true,
-              },
-            },"""
-
-new = """            organization: {
-              select: {
-                id:              true,
-                name:            true,
-                slug:            true,
-                enabledProducts: true,
-                logoUrl:         true,
-                description:     true,
-                website:         true,
-                phone:           true,
-                address:         true,
-                userId:          true,
-                createdAt:       true,
-                updatedAt:       true,
-              },
-            },"""
-
-if old in content:
-    content = content.replace(old, new)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    print("OK — slug agregado al select de organization")
-else:
-    print("MISS — patrón no encontrado, verificar manualmente")
-PYEOF
-
-ok "users.service.ts actualizado"
+ok "$USERS_SVC actualizado"
 
 # =============================================================================
-# 2. realsass-dashboard-front auth-context — exponer organizationSlug
+# 2. realsass-dashboard-front auth-context
 # =============================================================================
 log "Reescribiendo realsass-dashboard-front/features/auth/context/auth-context.tsx ..."
 
@@ -82,9 +31,7 @@ cat > "realsass-dashboard-front/features/auth/context/auth-context.tsx" << 'EOF'
 
 // =============================================================================
 // auth-context.tsx — Firebase SDK directo + real-back
-//
-// Flujo optimizado: 1 solo request (POST /auth/sync devuelve perfil + tenants).
-// Expone organizationSlug para construir links al storefront multitenant.
+// 1 request (POST /auth/sync) — expone organizationSlug para storefront
 // =============================================================================
 
 import {
@@ -98,8 +45,6 @@ import {
 } from '@/lib/firebase';
 import { realBackFetch } from '@/lib/api-client';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 export interface DashboardUser {
   id:          string;
   firebaseUid: string;
@@ -111,7 +56,7 @@ export interface DashboardUser {
   createdAt:   string;
 }
 
-interface TenantOrganization {
+interface TenantOrg {
   id:   string;
   name: string | null;
   slug: string | null;
@@ -120,7 +65,7 @@ interface TenantOrganization {
 interface Tenant {
   organizationId: string;
   role:           'OWNER' | 'COLLABORATOR';
-  organization:   TenantOrganization;
+  organization:   TenantOrg;
 }
 
 interface SyncResponse {
@@ -142,7 +87,7 @@ interface AuthContextType {
   isAuthenticated:   boolean;
   accessDenied:      boolean;
   organizationId:    string | null;
-  organizationSlug:  string | null;   // ← para construir link al storefront
+  organizationSlug:  string | null;
   setOrganizationId: (id: string) => void;
   loginWithGoogle:   () => Promise<void>;
   logout:            () => Promise<void>;
@@ -159,8 +104,6 @@ export function useAuth(): AuthContextType {
 
 const ORG_KEY  = 'dash_org_id';
 const SLUG_KEY = 'dash_org_slug';
-
-// ─── Helper ───────────────────────────────────────────────────────────────────
 
 async function syncWithRealBack(_fbUser: FirebaseUser): Promise<{
   profile:  DashboardUser | null;
@@ -185,14 +128,12 @@ async function syncWithRealBack(_fbUser: FirebaseUser): Promise<{
 
     const tenants: Tenant[] = data.tenants ?? [];
     const hasAccess = profile.isOwner || tenants.length > 0;
-
     if (!hasAccess) return { profile: null, orgId: null, orgSlug: null, denied: true };
 
-    // Resolver orgId activo: localStorage si sigue siendo tenant válido
-    const stored     = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
+    const stored      = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
     const validTenant = tenants.find(t => t.organizationId === stored) ?? tenants[0];
-    const orgId      = validTenant?.organizationId ?? null;
-    const orgSlug    = validTenant?.organization?.slug ?? null;
+    const orgId       = validTenant?.organizationId ?? null;
+    const orgSlug     = validTenant?.organization?.slug ?? null;
 
     if (orgId)   localStorage.setItem(ORG_KEY,  orgId);
     if (orgSlug) localStorage.setItem(SLUG_KEY, orgSlug);
@@ -203,8 +144,6 @@ async function syncWithRealBack(_fbUser: FirebaseUser): Promise<{
     return { profile: null, orgId: null, orgSlug: null, denied: false };
   }
 }
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,         setUser]    = useState<DashboardUser | null>(null);
@@ -226,22 +165,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDenied(false); setLoading(false);
       return;
     }
-
-    const { profile, orgId: resolvedId, orgSlug: resolvedSlug, denied } =
-      await syncWithRealBack(fbUser);
-
+    const { profile, orgId: id, orgSlug: slug, denied } = await syncWithRealBack(fbUser);
     if (denied) {
       await signOut(auth);
       setUser(null); setOrgId(null); setOrgSlug(null);
       setDenied(true); setLoading(false);
       return;
     }
-
-    setUser(profile);
-    setOrgId(resolvedId);
-    setOrgSlug(resolvedSlug);
-    setDenied(false);
-    setLoading(false);
+    setUser(profile); setOrgId(id); setOrgSlug(slug);
+    setDenied(false); setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -254,12 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = useCallback(async () => {
     setLoading(true); setDenied(false);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      setLoading(false);
-      throw err;
-    }
+    try { await signInWithPopup(auth, googleProvider); }
+    catch (err) { setLoading(false); throw err; }
   }, []);
 
   const logout = useCallback(async () => {
@@ -282,42 +210,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider value={{
-      user,
-      firebaseUser:     user,
-      isLoading,
-      isAuthenticated:  !!user,
+      user, firebaseUser: user,
+      isLoading, isAuthenticated: !!user,
       accessDenied,
-      organizationId:   orgId,
-      organizationSlug: orgSlug,
-      setOrganizationId,
-      loginWithGoogle,
-      logout,
-      refreshUser,
+      organizationId: orgId, organizationSlug: orgSlug,
+      setOrganizationId, loginWithGoogle, logout, refreshUser,
     }}>
       {children}
     </Ctx.Provider>
   );
 }
 EOF
-
-ok "auth-context.tsx actualizado — expone organizationSlug"
+ok "auth-context.tsx actualizado"
 
 # =============================================================================
-# 3. config/navigation.ts — Preview usa href especial que el sidebar resuelve
+# 3. config/navigation.ts
 # =============================================================================
 log "Actualizando realsass-dashboard-front/config/navigation.ts ..."
 
 cat > "realsass-dashboard-front/config/navigation.ts" << 'EOF'
-// navigation.ts
-// href especial "__storefront__" es interceptado por el sidebar
-// para construir el link dinámico al storefront de la org activa.
-
 export const NAV_GROUPS = [
   {
     label: 'Tienda',
     items: [
-      { name: 'Productos',  href: '/dashboard/tienda/productos', icon: 'Package',     active: true },
-      { name: 'Pedidos',    href: '/dashboard/tienda/pedidos',   icon: 'ShoppingBag', active: true },
+      { name: 'Productos',  href: '/dashboard/tienda/productos', icon: 'Package',     active: true  },
+      { name: 'Pedidos',    href: '/dashboard/tienda/pedidos',   icon: 'ShoppingBag', active: true  },
       { name: 'Ver tienda', href: '__storefront__',              icon: 'ExternalLink', active: true },
     ],
   },
@@ -340,11 +257,10 @@ export const NAV_GROUPS = [
   },
 ] as const;
 EOF
-
 ok "navigation.ts actualizado"
 
 # =============================================================================
-# 4. dashboard-sidebar.tsx — resuelve __storefront__ al link real
+# 4. dashboard-sidebar.tsx
 # =============================================================================
 log "Reescribiendo realsass-dashboard-front/components/layout/dashboard-sidebar.tsx ..."
 
@@ -375,17 +291,16 @@ const STORE_FRONT_URL =
   (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');
 
 export function DashboardSidebar() {
-  const pathname                            = usePathname();
-  const { user, logout, organizationSlug } = useAuth();
-  const [menuOpen, setMenuOpen]             = useState(false);
+  const pathname                             = usePathname();
+  const { user, logout, organizationSlug }  = useAuth();
+  const [menuOpen, setMenuOpen]              = useState(false);
 
   const isActive = (href: string) =>
     href === '/dashboard'
       ? pathname === '/dashboard'
       : pathname.startsWith(href);
 
-  // Resuelve href especiales
-  const resolveHref = (href: string): string => {
+  const resolveHref = (href: string) => {
     if (href === '__storefront__') {
       if (!organizationSlug || !STORE_FRONT_URL) return '#';
       return `${STORE_FRONT_URL}/tienda/${organizationSlug}`;
@@ -393,16 +308,12 @@ export function DashboardSidebar() {
     return href;
   };
 
-  const isExternal = (href: string) => href === '__storefront__';
-
   return (
     <aside className="hidden md:flex flex-col w-60 border-r border-border bg-sidebar h-screen sticky top-0 shrink-0">
-      {/* Header */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
         <span className="font-semibold text-sm text-sidebar-foreground">{siteConfig.name}</span>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
@@ -412,22 +323,21 @@ export function DashboardSidebar() {
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon     = ICON_MAP[item.icon] ?? Package;
+                const external = item.href === '__storefront__';
                 const href     = resolveHref(item.href);
-                const external = isExternal(item.href);
                 const active   = !external && isActive(item.href);
-                const disabled = !item.active || (item.href === '__storefront__' && !organizationSlug);
 
-                return (
-                  <li key={item.href}>
-                    {external ? (
+                if (external) {
+                  return (
+                    <li key={item.href}>
                       <a
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(
                           'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
-                          disabled
-                            ? 'opacity-50 pointer-events-none text-sidebar-foreground/70'
+                          !organizationSlug
+                            ? 'opacity-40 pointer-events-none text-sidebar-foreground/70'
                             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
                         )}
                       >
@@ -435,26 +345,30 @@ export function DashboardSidebar() {
                         {item.name}
                         <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
                       </a>
-                    ) : (
-                      <Link
-                        href={href}
-                        className={cn(
-                          'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
-                          active
-                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-                          !item.active && 'opacity-50 pointer-events-none',
-                        )}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        {item.name}
-                        {!item.active && (
-                          <span className="ml-auto text-[9px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                            Pronto
-                          </span>
-                        )}
-                      </Link>
-                    )}
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={href}
+                      className={cn(
+                        'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+                        active
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                        !item.active && 'opacity-50 pointer-events-none',
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {item.name}
+                      {!item.active && (
+                        <span className="ml-auto text-[9px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                          Pronto
+                        </span>
+                      )}
+                    </Link>
                   </li>
                 );
               })}
@@ -463,7 +377,6 @@ export function DashboardSidebar() {
         ))}
       </nav>
 
-      {/* User */}
       {user && (
         <div className="border-t border-sidebar-border px-3 py-3">
           <button
@@ -507,28 +420,18 @@ export function DashboardSidebar() {
   );
 }
 EOF
-
 ok "dashboard-sidebar.tsx actualizado"
 
 echo ""
 echo "============================================================"
-echo "  Resumen de cambios"
+echo "  Resumen"
 echo "============================================================"
-echo "  realsass-sass-back/src/users/users.service.ts"
-echo "    → select de organization en collaborations incluye slug"
+echo "  sass-back/users.service.ts  → slug en select de organization"
+echo "  auth-context.tsx            → expone organizationSlug"
+echo "  navigation.ts               → 'Ver tienda' = __storefront__"
+echo "  dashboard-sidebar.tsx       → resuelve slug → link externo"
 echo ""
-echo "  realsass-dashboard-front/features/auth/context/auth-context.tsx"
-echo "    → expone organizationSlug resuelto del tenant activo"
-echo ""
-echo "  realsass-dashboard-front/config/navigation.ts"
-echo "    → 'Ver tienda' usa href especial '__storefront__'"
-echo ""
-echo "  realsass-dashboard-front/components/layout/dashboard-sidebar.tsx"
-echo "    → resuelve '__storefront__' → STORE_FRONT_URL/tienda/{slug}"
-echo "    → link externo con target=_blank"
-echo "    → también aparece en el menú de usuario"
-echo ""
-echo "  Variable requerida en Railway → realsass-dashboard-front:"
+echo "  Variable requerida en Railway (realsass-dashboard-front):"
 echo "    NEXT_PUBLIC_STORE_FRONT_URL=https://ecommerce-front.up.railway.app"
 echo "============================================================"
 ok "Listo. make g → redeploya sass-back + dashboard-front."

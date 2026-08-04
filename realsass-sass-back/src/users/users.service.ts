@@ -52,8 +52,10 @@ export class UsersService {
           include: {
             organization: {
               select: {
-                id:          true,
-                name:        true,
+                id:              true,
+                name:            true,
+                slug:            true,
+                enabledProducts: true,
                 logoUrl:     true,
                 description: true,
                 website:     true,
