@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Fix auth flow dashboard-front
+# x.sh — Ecommerce multitenant en dashboard-front
 #
-# Problema: colaboradores que hacen login directo con Google quedan en /login
-#           porque syncWithRealBack los crea sin organización y el context
-#           no sabe distinguir "autenticado sin acceso" de "cargando".
-#
-# Solución:
-#   1. auth-context — después del sync, verificar si tiene acceso real
-#      (isOwner || collaborations con status ACTIVE). Si no tiene acceso,
-#      setear user=null y exponer error "sin acceso".
-#   2. login/page.tsx — mostrar mensaje claro si el usuario no tiene
-#      organización asignada en vez de quedarse en loop de carga.
+# Cambios:
+#   1. realsass-sass-back: buildProfile incluye slug en el select de organization
+#   2. realsass-dashboard-front auth-context: expone organizationSlug
+#   3. realsass-dashboard-front config/navigation: Preview → link externo al storefront
+#   4. realsass-dashboard-front sidebar: link "Ver tienda" abre storefront en nueva tab
 # =============================================================================
 
 set -euo pipefail
@@ -20,7 +15,65 @@ ok()  { echo -e "${GREEN}[✓]${NC} $1"; }
 log() { echo -e "[→] $1"; }
 
 # =============================================================================
-# 1. auth-context.tsx
+# 1. realsass-sass-back — agregar slug al select de organization en buildProfile
+#    El select actual no incluye slug ni enabledProducts — el front no puede
+#    construir el link al storefront sin el slug.
+# =============================================================================
+log "Actualizando realsass-sass-back/src/users/users.service.ts ..."
+
+# Reemplazar el select de organization en las collaborations para incluir slug
+python3 - << 'PYEOF'
+import re
+
+path = 'realsass-sass-back/src/users/users.service.ts'
+with open(path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+old = """            organization: {
+              select: {
+                id:          true,
+                name:        true,
+                logoUrl:     true,
+                description: true,
+                website:     true,
+                phone:       true,
+                address:     true,
+                userId:      true,
+                createdAt:   true,
+                updatedAt:   true,
+              },
+            },"""
+
+new = """            organization: {
+              select: {
+                id:              true,
+                name:            true,
+                slug:            true,
+                enabledProducts: true,
+                logoUrl:         true,
+                description:     true,
+                website:         true,
+                phone:           true,
+                address:         true,
+                userId:          true,
+                createdAt:       true,
+                updatedAt:       true,
+              },
+            },"""
+
+if old in content:
+    content = content.replace(old, new)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("OK — slug agregado al select de organization")
+else:
+    print("MISS — patrón no encontrado, verificar manualmente")
+PYEOF
+
+ok "users.service.ts actualizado"
+
+# =============================================================================
+# 2. realsass-dashboard-front auth-context — exponer organizationSlug
 # =============================================================================
 log "Reescribiendo realsass-dashboard-front/features/auth/context/auth-context.tsx ..."
 
@@ -30,17 +83,8 @@ cat > "realsass-dashboard-front/features/auth/context/auth-context.tsx" << 'EOF'
 // =============================================================================
 // auth-context.tsx — Firebase SDK directo + real-back
 //
-// Flujo login directo (colaborador desde /login):
-//   1. signInWithPopup → Firebase autentica
-//   2. onAuthStateChanged → syncWithRealBack
-//   3. POST /auth/sync → crea/actualiza usuario en DB
-//   4. GET /auth/me → devuelve perfil con tenants
-//   5. Si no tiene tenants (ni owner ni collaborator activo) → acceso denegado
-//   6. Si tiene tenants → setUser + setOrgId → redirect al dashboard
-//
-// Flujo SSO (desde sass-front):
-//   1. signInWithCustomToken → Firebase autentica
-//   2. Mismo flujo desde paso 2
+// Flujo optimizado: 1 solo request (POST /auth/sync devuelve perfil + tenants).
+// Expone organizationSlug para construir links al storefront multitenant.
 // =============================================================================
 
 import {
@@ -67,13 +111,38 @@ export interface DashboardUser {
   createdAt:   string;
 }
 
+interface TenantOrganization {
+  id:   string;
+  name: string | null;
+  slug: string | null;
+}
+
+interface Tenant {
+  organizationId: string;
+  role:           'OWNER' | 'COLLABORATOR';
+  organization:   TenantOrganization;
+}
+
+interface SyncResponse {
+  id:          string;
+  firebaseUid: string;
+  email:       string;
+  displayName: string | null;
+  avatarUrl:   string | null;
+  isOwner:     boolean;
+  isAffiliate: boolean;
+  createdAt:   string;
+  tenants:     Tenant[];
+}
+
 interface AuthContextType {
   user:              DashboardUser | null;
   firebaseUser:      DashboardUser | null;
   isLoading:         boolean;
   isAuthenticated:   boolean;
-  accessDenied:      boolean;       // autenticado en Firebase pero sin org asignada
+  accessDenied:      boolean;
   organizationId:    string | null;
+  organizationSlug:  string | null;   // ← para construir link al storefront
   setOrganizationId: (id: string) => void;
   loginWithGoogle:   () => Promise<void>;
   logout:            () => Promise<void>;
@@ -88,80 +157,61 @@ export function useAuth(): AuthContextType {
   return c;
 }
 
-// ─── Tipos internos del perfil del back ──────────────────────────────────────
+const ORG_KEY  = 'dash_org_id';
+const SLUG_KEY = 'dash_org_slug';
 
-interface Tenant {
-  organizationId: string;
-  role:           'OWNER' | 'COLLABORATOR';
-}
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
-interface ProfileResponse extends DashboardUser {
-  tenants: Tenant[];
-}
-
-const ORG_KEY = 'dash_org_id';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async function syncWithRealBack(fbUser: FirebaseUser): Promise<{
+async function syncWithRealBack(_fbUser: FirebaseUser): Promise<{
   profile:  DashboardUser | null;
   orgId:    string | null;
+  orgSlug:  string | null;
   denied:   boolean;
 }> {
   try {
-    // 1. Sync idempotente — crea el usuario si no existe
-    await realBackFetch.post('/api/v1/auth/sync', {});
+    const data = await realBackFetch.post<SyncResponse>('/api/v1/auth/sync', {});
+    if (!data) return { profile: null, orgId: null, orgSlug: null, denied: false };
 
-    // 2. Perfil completo con tenants
-    // GET /auth/me → api-client desenvuelve { success, data } → devuelve data directamente
-    // data ES el perfil: { id, firebaseUid, email, isOwner, tenants, ... }
-    const data = await realBackFetch.get<ProfileResponse>(`/api/v1/auth/me`);
-    const profile: DashboardUser | null = data
-      ? {
-          id:          data.id,
-          firebaseUid: data.firebaseUid,
-          email:       data.email,
-          displayName: data.displayName ?? null,
-          avatarUrl:   data.avatarUrl   ?? null,
-          isOwner:     data.isOwner     ?? false,
-          isAffiliate: data.isAffiliate ?? false,
-          createdAt:   data.createdAt,
-        }
-      : null;
+    const profile: DashboardUser = {
+      id:          data.id,
+      firebaseUid: data.firebaseUid,
+      email:       data.email,
+      displayName: data.displayName ?? null,
+      avatarUrl:   data.avatarUrl   ?? null,
+      isOwner:     data.isOwner     ?? false,
+      isAffiliate: data.isAffiliate ?? false,
+      createdAt:   data.createdAt,
+    };
 
-    if (!profile) return { profile: null, orgId: null, denied: false };
-
-    // 3. Determinar si tiene acceso real al dashboard
-    const tenants: Tenant[] = data?.tenants ?? [];
+    const tenants: Tenant[] = data.tenants ?? [];
     const hasAccess = profile.isOwner || tenants.length > 0;
 
-    if (!hasAccess) {
-      // Autenticado en Firebase pero sin organización asignada
-      return { profile: null, orgId: null, denied: true };
-    }
+    if (!hasAccess) return { profile: null, orgId: null, orgSlug: null, denied: true };
 
-    // 4. Resolver organizationId: localStorage → primer tenant disponible
-    const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
-    // Verificar que el stored orgId siga siendo válido para este usuario
-    const validStored = stored && tenants.some(t => t.organizationId === stored);
-    const orgId = validStored ? stored : (tenants[0]?.organizationId ?? null);
+    // Resolver orgId activo: localStorage si sigue siendo tenant válido
+    const stored     = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
+    const validTenant = tenants.find(t => t.organizationId === stored) ?? tenants[0];
+    const orgId      = validTenant?.organizationId ?? null;
+    const orgSlug    = validTenant?.organization?.slug ?? null;
 
-    if (orgId) localStorage.setItem(ORG_KEY, orgId);
+    if (orgId)   localStorage.setItem(ORG_KEY,  orgId);
+    if (orgSlug) localStorage.setItem(SLUG_KEY, orgSlug);
 
-    return { profile, orgId, denied: false };
+    return { profile, orgId, orgSlug, denied: false };
   } catch (err) {
     console.error('[Auth] Error sincronizando con real-back:', err);
-    return { profile: null, orgId: null, denied: false };
+    return { profile: null, orgId: null, orgSlug: null, denied: false };
   }
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,        setUser]       = useState<DashboardUser | null>(null);
-  const [orgId,       setOrgId]      = useState<string | null>(null);
-  const [isLoading,   setLoading]    = useState(true);
-  const [accessDenied, setDenied]    = useState(false);
+  const [user,         setUser]    = useState<DashboardUser | null>(null);
+  const [orgId,        setOrgId]   = useState<string | null>(null);
+  const [orgSlug,      setOrgSlug] = useState<string | null>(null);
+  const [isLoading,    setLoading] = useState(true);
+  const [accessDenied, setDenied]  = useState(false);
   const router      = useRouter();
   const initialized = useRef(false);
 
@@ -172,27 +222,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleFirebaseUser = useCallback(async (fbUser: FirebaseUser | null) => {
     if (!fbUser) {
-      setUser(null);
-      setOrgId(null);
-      setDenied(false);
-      setLoading(false);
+      setUser(null); setOrgId(null); setOrgSlug(null);
+      setDenied(false); setLoading(false);
       return;
     }
 
-    const { profile, orgId: resolvedOrgId, denied } = await syncWithRealBack(fbUser);
+    const { profile, orgId: resolvedId, orgSlug: resolvedSlug, denied } =
+      await syncWithRealBack(fbUser);
 
     if (denied) {
-      // Cerrar sesión de Firebase también para que no quede en estado zombie
       await signOut(auth);
-      setUser(null);
-      setOrgId(null);
-      setDenied(true);
-      setLoading(false);
+      setUser(null); setOrgId(null); setOrgSlug(null);
+      setDenied(true); setLoading(false);
       return;
     }
 
     setUser(profile);
-    setOrgId(resolvedOrgId);
+    setOrgId(resolvedId);
+    setOrgSlug(resolvedSlug);
     setDenied(false);
     setLoading(false);
   }, []);
@@ -206,11 +253,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleFirebaseUser]);
 
   const loginWithGoogle = useCallback(async () => {
-    setLoading(true);
-    setDenied(false);
+    setLoading(true); setDenied(false);
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged maneja el resto
     } catch (err) {
       setLoading(false);
       throw err;
@@ -219,9 +264,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await signOut(auth);
-    if (typeof window !== 'undefined') localStorage.removeItem(ORG_KEY);
-    setUser(null);
-    setOrgId(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(ORG_KEY);
+      localStorage.removeItem(SLUG_KEY);
+    }
+    setUser(null); setOrgId(null); setOrgSlug(null);
     setDenied(false);
     router.push('/login');
   }, [router]);
@@ -229,21 +276,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     const fbUser = auth.currentUser;
     if (!fbUser) return;
-    const { profile, orgId: resolvedOrgId } = await syncWithRealBack(fbUser);
-    if (profile) {
-      setUser(profile);
-      if (resolvedOrgId) setOrgId(resolvedOrgId);
-    }
+    const { profile, orgId: id, orgSlug: slug } = await syncWithRealBack(fbUser);
+    if (profile) { setUser(profile); if (id) setOrgId(id); if (slug) setOrgSlug(slug); }
   }, []);
 
   return (
     <Ctx.Provider value={{
       user,
-      firebaseUser:    user,
+      firebaseUser:     user,
       isLoading,
-      isAuthenticated: !!user,
+      isAuthenticated:  !!user,
       accessDenied,
-      organizationId:  orgId,
+      organizationId:   orgId,
+      organizationSlug: orgSlug,
       setOrganizationId,
       loginWithGoogle,
       logout,
@@ -255,130 +300,235 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 EOF
 
-ok "auth-context.tsx actualizado"
+ok "auth-context.tsx actualizado — expone organizationSlug"
 
 # =============================================================================
-# 2. login/page.tsx — mostrar error si accessDenied
+# 3. config/navigation.ts — Preview usa href especial que el sidebar resuelve
 # =============================================================================
-log "Reescribiendo realsass-dashboard-front/app/login/page.tsx ..."
+log "Actualizando realsass-dashboard-front/config/navigation.ts ..."
 
-cat > "realsass-dashboard-front/app/login/page.tsx" << 'EOF'
+cat > "realsass-dashboard-front/config/navigation.ts" << 'EOF'
+// navigation.ts
+// href especial "__storefront__" es interceptado por el sidebar
+// para construir el link dinámico al storefront de la org activa.
+
+export const NAV_GROUPS = [
+  {
+    label: 'Tienda',
+    items: [
+      { name: 'Productos',  href: '/dashboard/tienda/productos', icon: 'Package',     active: true },
+      { name: 'Pedidos',    href: '/dashboard/tienda/pedidos',   icon: 'ShoppingBag', active: true },
+      { name: 'Ver tienda', href: '__storefront__',              icon: 'ExternalLink', active: true },
+    ],
+  },
+  {
+    label: 'Módulos',
+    items: [
+      { name: 'Chat IA',  href: '/dashboard/chat',     icon: 'MessageSquare', active: false },
+      { name: 'Pagos',    href: '/dashboard/pagos',    icon: 'CreditCard',    active: false },
+      { name: 'Campañas', href: '/dashboard/campanas', icon: 'TrendingUp',    active: false },
+    ],
+  },
+  {
+    label: 'Configuración',
+    items: [
+      { name: 'Tema visual',   href: '/dashboard/configuracion/tema',     icon: 'Palette',    active: true },
+      { name: 'Feature Flags', href: '/dashboard/configuracion/flags',    icon: 'ToggleLeft', active: true },
+      { name: 'Webhooks',      href: '/dashboard/configuracion/webhooks', icon: 'Webhook',    active: true },
+      { name: 'Quotas',        href: '/dashboard/configuracion/quotas',   icon: 'BarChart2',  active: true },
+    ],
+  },
+] as const;
+EOF
+
+ok "navigation.ts actualizado"
+
+# =============================================================================
+# 4. dashboard-sidebar.tsx — resuelve __storefront__ al link real
+# =============================================================================
+log "Reescribiendo realsass-dashboard-front/components/layout/dashboard-sidebar.tsx ..."
+
+cat > "realsass-dashboard-front/components/layout/dashboard-sidebar.tsx" << 'EOF'
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Logo } from '@/components/logo';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Package, ShoppingBag, ExternalLink,
+  MessageSquare, CreditCard, TrendingUp,
+  Palette, ToggleLeft, Webhook, BarChart2,
+  LogOut, ChevronDown,
+} from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { siteConfig } from '@/config/site';
+import { NAV_GROUPS } from '@/config/navigation';
+import { cn } from '@/lib/utils';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { loginWithGoogle, isAuthenticated, isLoading, accessDenied } = useAuth();
-  const [loading, setLoading] = useState(false);
+const ICON_MAP: Record<string, React.ElementType> = {
+  Package, ShoppingBag, ExternalLink,
+  MessageSquare, CreditCard, TrendingUp,
+  Palette, ToggleLeft, Webhook, BarChart2,
+};
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace('/dashboard');
+const STORE_FRONT_URL =
+  (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');
+
+export function DashboardSidebar() {
+  const pathname                            = usePathname();
+  const { user, logout, organizationSlug } = useAuth();
+  const [menuOpen, setMenuOpen]             = useState(false);
+
+  const isActive = (href: string) =>
+    href === '/dashboard'
+      ? pathname === '/dashboard'
+      : pathname.startsWith(href);
+
+  // Resuelve href especiales
+  const resolveHref = (href: string): string => {
+    if (href === '__storefront__') {
+      if (!organizationSlug || !STORE_FRONT_URL) return '#';
+      return `${STORE_FRONT_URL}/tienda/${organizationSlug}`;
     }
-  }, [isAuthenticated, isLoading, router]);
-
-  const handleGoogle = async () => {
-    setLoading(true);
-    try {
-      await loginWithGoogle();
-      // onAuthStateChanged redirige si tiene acceso
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión con Google');
-    } finally {
-      setLoading(false);
-    }
+    return href;
   };
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </main>
-    );
-  }
+  const isExternal = (href: string) => href === '__storefront__';
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="flex justify-center">
-            <Logo className="h-12 w-12 text-foreground" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Iniciá sesión para acceder al panel de gestión
-          </p>
-        </div>
-
-        {accessDenied && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-destructive">Sin acceso</p>
-              <p className="text-xs text-destructive/80">
-                Tu cuenta no está asignada a ninguna organización. Pedile al owner que te invite.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <Button
-          className="w-full h-11 text-base font-medium gap-3"
-          onClick={handleGoogle}
-          disabled={loading || isLoading}
-        >
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-          )}
-          {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
-        </Button>
+    <aside className="hidden md:flex flex-col w-60 border-r border-border bg-sidebar h-screen sticky top-0 shrink-0">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
+        <span className="font-semibold text-sm text-sidebar-foreground">{siteConfig.name}</span>
       </div>
-    </main>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label}>
+            <p className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {group.label}
+            </p>
+            <ul className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon     = ICON_MAP[item.icon] ?? Package;
+                const href     = resolveHref(item.href);
+                const external = isExternal(item.href);
+                const active   = !external && isActive(item.href);
+                const disabled = !item.active || (item.href === '__storefront__' && !organizationSlug);
+
+                return (
+                  <li key={item.href}>
+                    {external ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(
+                          'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+                          disabled
+                            ? 'opacity-50 pointer-events-none text-sidebar-foreground/70'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {item.name}
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                      </a>
+                    ) : (
+                      <Link
+                        href={href}
+                        className={cn(
+                          'flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+                          active
+                            ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                          !item.active && 'opacity-50 pointer-events-none',
+                        )}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {item.name}
+                        {!item.active && (
+                          <span className="ml-auto text-[9px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                            Pronto
+                          </span>
+                        )}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* User */}
+      {user && (
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex items-center gap-2.5 w-full rounded-md px-2 py-1.5 hover:bg-sidebar-accent transition-colors"
+          >
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">
+                {user.displayName ?? user.email}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+            </div>
+            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', menuOpen && 'rotate-180')} />
+          </button>
+
+          {menuOpen && (
+            <div className="mt-1 rounded-md border border-border bg-popover shadow-md overflow-hidden">
+              {organizationSlug && STORE_FRONT_URL && (
+                <a
+                  href={`${STORE_FRONT_URL}/tienda/${organizationSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Ver tienda
+                </a>
+              )}
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </aside>
   );
 }
 EOF
 
-ok "login/page.tsx actualizado"
-
-# =============================================================================
-# 3. features/auth/index.ts — re-exportar accessDenied si no está
-# =============================================================================
-INDEX="realsass-dashboard-front/features/auth/index.ts"
-if ! grep -q "accessDenied" "$INDEX" 2>/dev/null; then
-  log "features/auth/index.ts ya exporta AuthProvider — sin cambios necesarios"
-fi
+ok "dashboard-sidebar.tsx actualizado"
 
 echo ""
 echo "============================================================"
-echo "  Resumen"
+echo "  Resumen de cambios"
 echo "============================================================"
-echo "  auth-context.tsx:"
-echo "    → syncWithRealBack lee tenants del perfil"
-echo "    → si no tiene tenants → accessDenied=true + signOut Firebase"
-echo "    → orgId se resuelve del primer tenant disponible"
-echo "    → stored orgId se valida contra tenants del usuario"
+echo "  realsass-sass-back/src/users/users.service.ts"
+echo "    → select de organization en collaborations incluye slug"
 echo ""
-echo "  login/page.tsx:"
-echo "    → muestra banner de error si accessDenied"
-echo "    → spinner mientras isLoading"
-echo "    → redirige al dashboard si isAuthenticated"
+echo "  realsass-dashboard-front/features/auth/context/auth-context.tsx"
+echo "    → expone organizationSlug resuelto del tenant activo"
 echo ""
-echo "  IMPORTANTE: el back devuelve el perfil en GET /auth/me"
-echo "  con shape { data: { user, tenants } }."
-echo "  Verificar que buildProfile incluya tenants en la respuesta."
+echo "  realsass-dashboard-front/config/navigation.ts"
+echo "    → 'Ver tienda' usa href especial '__storefront__'"
+echo ""
+echo "  realsass-dashboard-front/components/layout/dashboard-sidebar.tsx"
+echo "    → resuelve '__storefront__' → STORE_FRONT_URL/tienda/{slug}"
+echo "    → link externo con target=_blank"
+echo "    → también aparece en el menú de usuario"
+echo ""
+echo "  Variable requerida en Railway → realsass-dashboard-front:"
+echo "    NEXT_PUBLIC_STORE_FRONT_URL=https://ecommerce-front.up.railway.app"
 echo "============================================================"
-ok "Listo. make g y Railway redeploya realsass-dashboard-front."
+ok "Listo. make g → redeploya sass-back + dashboard-front."
