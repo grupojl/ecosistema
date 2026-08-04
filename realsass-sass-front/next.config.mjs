@@ -1,27 +1,22 @@
 // next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Sin output: standalone — el monorepo usa shamefully-hoist, los
+  // node_modules están en la raíz del workspace. standalone no los
+  // incluye correctamente en ese setup y rompe en runtime.
 
   async headers() {
     const firebaseProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? ''
 
-    // URLs externas leídas de variables de entorno.
-    // En Railway estas vars apuntan a los dominios reales.
-    // En dev apuntan a localhost (configuradas en .env.local).
-    const sassBackUrl    = (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? '').replace(/\/+$/, '')
-    const dashFrontUrl   = (process.env.NEXT_PUBLIC_DASHBOARD_FRONT_URL ?? '').replace(/\/+$/, '')
-    const apiUrl         = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '')
+    const sassBackUrl  = (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? '').replace(/\/+$/, '')
+    const dashFrontUrl = (process.env.NEXT_PUBLIC_DASHBOARD_FRONT_URL ?? '').replace(/\/+$/, '')
+    const apiUrl       = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/+$/, '')
 
-    // Extrae solo origin (protocolo + host) de una URL completa.
-    // Ej: "https://foo.up.railway.app/api/v1" → "https://foo.up.railway.app"
     function origin(url) {
       if (!url) return ''
       try { return new URL(url).origin } catch { return url }
     }
 
-    // Construye connect-src con todos los orígenes necesarios,
-    // deduplicados y sin entradas vacías.
     const connectOrigins = [
       "'self'",
       'https://identitytoolkit.googleapis.com',
@@ -37,7 +32,6 @@ const nextConfig = {
       origin(dashFrontUrl),
     ].filter(Boolean)
 
-    // Dedup sin Set para compatibilidad con todos los entornos de build
     const seen = {}
     const connectSrc = connectOrigins
       .filter(v => { if (seen[v]) return false; seen[v] = true; return true })

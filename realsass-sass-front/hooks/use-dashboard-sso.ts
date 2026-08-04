@@ -3,11 +3,6 @@
 
 import { useState, useCallback } from 'react'
 
-// Sin fallbacks hardcodeados — las URLs vienen siempre de variables de entorno.
-// En Railway: configuradas en Settings → Variables del servicio realsass-sass-front.
-// En dev: configuradas en realsass-sass-front/.env.local
-//   NEXT_PUBLIC_SASS_BACK_URL=http://localhost:3004
-//   NEXT_PUBLIC_DASHBOARD_FRONT_URL=http://localhost:3002
 const SASS_BACK_URL: string =
   (process.env.NEXT_PUBLIC_SASS_BACK_URL ?? '').replace(/\/+$/, '')
 
@@ -29,7 +24,6 @@ export function useDashboardSSO(
       setTimeout(() => { setState('idle'); setSsoError(null) }, 5000)
       return
     }
-
     if (!DASHBOARD_FRONT_URL) {
       setSsoError('NEXT_PUBLIC_DASHBOARD_FRONT_URL no está configurada.')
       setState('error')
@@ -56,7 +50,6 @@ export function useDashboardSSO(
       }
 
       const data = await res.json() as { customToken: string }
-
       setState('success')
 
       setTimeout(() => {
