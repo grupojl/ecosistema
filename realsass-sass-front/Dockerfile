@@ -8,7 +8,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-front/package.json              ./realsass-sass-front/
+COPY realsass-sass-front/package.json  ./realsass-sass-front/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile
 
@@ -36,11 +36,11 @@ ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
 ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
 ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
+COPY --from=deps /app/node_modules    ./node_modules
+COPY tsconfig.base.json               ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
-COPY packages/                         ./packages/
-COPY realsass-sass-front/                          ./realsass-sass-front/
+COPY packages/                        ./packages/
+COPY realsass-sass-front/             ./realsass-sass-front/
 WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
@@ -49,11 +49,16 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static     ./realsass-sass-front/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public           ./realsass-sass-front/public
-USER nextjs
-EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "realsass-sass-front/server.js"]
+
+# standalone genera su propio árbol con node_modules mínimas y server.js en la raíz
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone ./
+# assets estáticos van a la ruta que Next espera dentro del standalone
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next/static     ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public           ./public
+
+USER nextjs
+EXPOSE 3000
+# server.js queda en /app/server.js después del COPY standalone
+CMD ["node", "server.js"]
