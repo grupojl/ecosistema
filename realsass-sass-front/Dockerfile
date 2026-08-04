@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
-# Patrón: sin output:standalone — node_modules en raíz del workspace (shamefully-hoist)
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -52,13 +51,13 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-# node_modules desde la raíz del workspace (donde shamefully-hoist los puso)
+# shamefully-hoist pone todo en la raíz — copiamos node_modules del builder
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules              ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json              ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/packages                  ./packages
 COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next ./realsass-sass-front/.next
 COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public ./realsass-sass-front/public
 COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/package.json ./realsass-sass-front/package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages                  ./packages
 USER nextjs
 EXPOSE 3000
 WORKDIR /app/realsass-sass-front

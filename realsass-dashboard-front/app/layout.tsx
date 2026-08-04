@@ -1,7 +1,7 @@
 import { TrpcProvider } from '@/lib/trpc/provider';
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+
 import { Toaster } from 'sonner'
 import { QueryProvider } from '@/providers/query-provider'
 import { AuthProvider } from '@/features/auth/context/auth-context'
@@ -58,7 +58,7 @@ export default function RootLayout({
             />
           </AuthProvider>
         </QueryProvider>
-        <Analytics />
+
       </body>
     </html>
   )
