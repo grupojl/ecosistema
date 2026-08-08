@@ -1,52 +1,23 @@
 'use client';
 
-import { useState }      from 'react';
-import { useRouter }     from 'next/navigation';
-import { Loader2 }       from 'lucide-react';
-import { Button }        from '@/components/ui/button';
-import { Logo }          from '@/components/logo';
-import { toast }         from 'sonner';
-import { auth, googleProvider, signInWithPopup, waitForAuthReady } from '@/lib/firebase';
-import { realBackFetch } from '@/lib/api-client';
+import { useState }     from 'react';
+import { useRouter }    from 'next/navigation';
+import { Loader2 }      from 'lucide-react';
+import { Button }       from '@/components/ui/button';
+import { Logo }         from '@/components/logo';
+import { toast }        from 'sonner';
+import { useAuth }      from '@/features/auth/context/auth-context';
 
 export default function LoginPage() {
-  const router  = useRouter();
+  const router              = useRouter();
+  const { loginWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      // 1. Login con Google directamente
-      await signInWithPopup(auth, googleProvider);
-
-      // 2. Esperar que Firebase confirme la sesión
-      const user = await waitForAuthReady(5000);
-      if (!user) throw new Error('No se pudo establecer la sesión');
-
-      // 3. Sync con sass-back (crea el usuario si no existe)
-      await realBackFetch.post('/api/v1/auth/sync', {
-        firebaseUid: user.uid,
-        email:       user.email,
-        displayName: user.displayName,
-        avatarUrl:   user.photoURL,
-      });
-
-      // 4. Verificar que tiene acceso al dashboard
-      const access = await realBackFetch.get<{
-        canAccess: boolean;
-        role?:     string;
-        reason?:   string;
-      }>('/api/v1/auth/dashboard-access');
-
-      if (!access.canAccess) {
-        toast.error(access.reason ?? 'No tenés acceso al dashboard. Contactá al administrador.');
-        await auth.signOut();
-        setLoading(false);
-        return;
-      }
-
+      await loginWithGoogle();
       router.replace('/dashboard');
-
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión');
       setLoading(false);
@@ -83,10 +54,6 @@ export default function LoginPage() {
           )}
           {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
         </Button>
-
-        <p className="text-center text-xs text-muted-foreground">
-          Solo cuentas con acceso al dashboard pueden ingresar
-        </p>
       </div>
     </main>
   );
