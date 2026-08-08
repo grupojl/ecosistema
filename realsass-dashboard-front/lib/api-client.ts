@@ -1,10 +1,8 @@
 // lib/api-client.ts
-// Dos helpers HTTP — uno por backend.
-// Ambos obtienen el token Firebase fresco en cada llamada.
+// Helpers HTTP para realsass-sass-back y realsass-ecommerce-back.
+// Retry automático en 401: forceRefresh del token + reintento único.
 
 import { getCurrentUserToken } from './firebase';
-
-// ─── Helpers internos ─────────────────────────────────────────────────────────
 
 function getRealBackBase(): string {
   const url = process.env.NEXT_PUBLIC_REAL_BACK_URL ?? '';
@@ -27,32 +25,33 @@ export function buildQuery(params: Record<string, unknown>): string {
   return s ? `?${s}` : '';
 }
 
-async function getToken(): Promise<string | undefined> {
+async function getToken(forceRefresh = false): Promise<string | undefined> {
   if (typeof window === 'undefined') return undefined;
   try {
-    return await getCurrentUserToken();
+    return await getCurrentUserToken(forceRefresh);
   } catch {
     return undefined;
   }
 }
 
 interface FetchOptions {
-  method?:  string;
-  body?:    unknown;
-  orgId?:   string;
-  signal?:  AbortSignal;
+  method?:   string;
+  body?:     unknown;
+  orgId?:    string;
+  signal?:   AbortSignal;
+  _isRetry?: boolean;
 }
 
 async function coreFetch<T>(
   baseUrl: string,
   path: string,
-  { method = 'GET', body, orgId, signal }: FetchOptions = {},
+  { method = 'GET', body, orgId, signal, _isRetry = false }: FetchOptions = {},
 ): Promise<T> {
-  const token = await getToken();
+  const token = await getToken(_isRetry); // forceRefresh en el retry
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(token  ? { Authorization: `Bearer ${token}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(orgId  ? { 'x-organization-id': orgId }      : {}),
   };
 
@@ -62,6 +61,13 @@ async function coreFetch<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
     signal,
   });
+
+  // Retry automático en 401 — solo una vez
+  if (res.status === 401 && !_isRetry) {
+    return coreFetch<T>(baseUrl, path, {
+      method, body, orgId, signal, _isRetry: true,
+    });
+  }
 
   const json = await res.json().catch(() => ({})) as Record<string, unknown>;
 
@@ -73,38 +79,29 @@ async function coreFetch<T>(
     throw new Error(msg);
   }
 
-  // real-back y ecommerce-back envuelven en { success, data }
   return ((json['data'] as T | undefined) ?? json as unknown as T);
 }
 
-// ─── real-back (auth + config) ────────────────────────────────────────────────
-
+// ─── realsass-sass-back ───────────────────────────────────────────────────────
 export const realBackFetch = {
-  get: <T>(path: string, orgId?: string) =>
+  get:    <T>(path: string, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { orgId }),
-
-  post: <T>(path: string, body: unknown, orgId?: string) =>
+  post:   <T>(path: string, body: unknown, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { method: 'POST', body, orgId }),
-
-  patch: <T>(path: string, body: unknown, orgId?: string) =>
+  patch:  <T>(path: string, body: unknown, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { method: 'PATCH', body, orgId }),
-
   delete: <T>(path: string, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { method: 'DELETE', orgId }),
 };
 
-// ─── real-ecommerce-back (catálogo + pedidos) ─────────────────────────────────
-
+// ─── realsass-ecommerce-back ──────────────────────────────────────────────────
 export const ecommerceFetch = {
-  get: <T>(path: string, orgId: string) =>
+  get:    <T>(path: string, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { orgId }),
-
-  post: <T>(path: string, body: unknown, orgId: string) =>
+  post:   <T>(path: string, body: unknown, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { method: 'POST', body, orgId }),
-
-  patch: <T>(path: string, body: unknown, orgId: string) =>
+  patch:  <T>(path: string, body: unknown, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { method: 'PATCH', body, orgId }),
-
   delete: <T>(path: string, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { method: 'DELETE', orgId }),
 };
