@@ -1,4 +1,3 @@
 'use client';
-// Re-exporta desde @real/auth-client — los componentes importan de aca.
 export { AuthProvider, useAuth } from '@real/auth-client';
 export type { UserProfile }      from '@real/auth-client';

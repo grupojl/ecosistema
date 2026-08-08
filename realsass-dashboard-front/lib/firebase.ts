@@ -1,5 +1,5 @@
 /**
- * sass-front/lib/firebase.ts
+ * dashboard-front/lib/firebase.ts
  * Importar en app/layout.tsx antes del AuthProvider.
  */
 import { initFirebase } from '@real/auth-client';

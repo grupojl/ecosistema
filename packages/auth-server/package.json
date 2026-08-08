@@ -1,0 +1,26 @@
+{
+  "name": "@real/auth-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Guards, decorators, CachePort y FirebaseModule compartidos entre backs NestJS",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo \"@real/auth-server ok\"",
+    "typecheck": "echo \"@real/auth-server ok\""
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "firebase-admin": "catalog:",
+    "reflect-metadata": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@types/node": "catalog:"
+  },
+  "peerDependencies": {
+    "@nestjs/common": ">=11.0.0",
+    "firebase-admin": ">=13.0.0"
+  }
+}

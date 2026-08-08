@@ -48,7 +48,8 @@
     "swagger-ui-express": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:",
-    "@real/trpc": "workspace:*"
+    "@real/trpc": "workspace:*",
+    "@real/auth-server": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "catalog:",
