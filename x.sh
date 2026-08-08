@@ -1,321 +1,229 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — FIX 2: Errores de build ronda 2
+# x.sh — FIX 3: Cannot find module '@real/auth-server' en runtime
 #
-# Corre desde la raiz del monorepo (donde esta pnpm-workspace.yaml)
+# CAUSA RAIZ:
+#   NestJS build usa webpack con webpack-node-externals, que excluye todos los
+#   node_modules del bundle — incluyendo los paquetes workspace (@real/*).
+#   El dist/ queda con require('@real/auth-server') sin resolver y falla al
+#   arrancar el container en Railway.
 #
-# QUE CORRIGE:
-#   1. sass-back app.module.ts: aun importa FirebaseAuthGuard de ./common/guards/
-#   2. sass-back + ecommerce-back: @Roles('COLLABORATOR') — no existe en TenantRole
-#      TenantRole = 'OWNER'|'ADMIN'|'MEMBER'|'VIEWER' → COLLABORATOR era el viejo
-#   3. sass-back users.service.ts: llama ensureOrganization que no existe en
-#      OrganizationsService → el metodo correcto es createForUser()
-#   4. ecommerce-back firebase.module.ts: @nestjs/config no esta en peer deps
-#      de auth-server → agregar ConfigModule o usar process.env directo
-#   5. ecommerce-back organizations-client/types: importa CollaboratorPermissions
-#      que no existe en @real/auth-server → usar Record<string, boolean>
+# SOLUCION:
+#   Configurar nest-cli.json en cada back para que webpack INCLUYA los paquetes
+#   @real/* en el bundle (allowlist en webpack-node-externals).
+#   Ademas agregar @nestjs/config como dependencia real en ecommerce-back.
+#
+# Corre desde la raiz del monorepo.
 # =============================================================================
 
 set -euo pipefail
 
-BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-log()  { echo -e "${BLUE}[->]${NC} $1"; }
-ok()   { echo -e "${GREEN}[ok]${NC} $1"; }
-sep()  { echo -e "${BOLD}----------------------------------------------------${NC}"; }
+BLUE='\033[0;34m'; GREEN='\033[0;32m'; BOLD='\033[1m'; NC='\033[0m'
+log() { echo -e "${BLUE}[->]${NC} $1"; }
+ok()  { echo -e "${GREEN}[ok]${NC} $1"; }
+sep() { echo -e "${BOLD}----------------------------------------------------${NC}"; }
 
-if [ ! -f "pnpm-workspace.yaml" ]; then
-  echo "Corre desde la raiz del monorepo"; exit 1
-fi
+[ -f "pnpm-workspace.yaml" ] || { echo "Corre desde la raiz"; exit 1; }
 
 sep
-echo -e "${BOLD}  FIX 2 — Errores de build ronda 2${NC}"
+echo -e "${BOLD}  FIX 3 — Bundle @real/* en el dist de NestJS${NC}"
 sep
 
 # =============================================================================
-# FIX 1 — sass-back app.module.ts: import de FirebaseAuthGuard local
-# El sed anterior no lo alcanzo porque el import usa ruta './common/...' (sin ../)
+# FIX 1 — webpack.config.js en sass-back
+# Configura webpack para que incluya @real/* en el bundle en lugar de
+# dejarlos como require() externos que Node.js no puede resolver.
 # =============================================================================
-log "FIX 1 — app.module.ts de sass-back: corrigiendo import local de FirebaseAuthGuard..."
+log "FIX 1 — webpack.config.js en sass-back..."
 
-cat > realsass-sass-back/src/app.module.ts << 'EOF'
-import { Module }                     from '@nestjs/common';
-import { ConfigModule }               from '@nestjs/config';
-import { APP_GUARD }                  from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { EventEmitterModule }         from '@nestjs/event-emitter';
+cat > realsass-sass-back/webpack.config.js << 'EOF'
+const nodeExternals = require('webpack-node-externals');
+const { RunScriptWebpackPlugin } = require('run-script-webpack-plugin');
 
-import { HealthModule }          from './health/health.module';
-import { PrismaModule }          from './prisma/prisma.module';
-import { RedisModule }           from './redis/redis.module';
-import { AuthModule }            from './auth/auth.module';
-import { UsersModule }           from './users/users.module';
-import { OrganizationsModule }   from './organizations/organizations.module';
-import { AffiliatesModule }      from './affiliate/affiliate.module';
-import { CollaboratorsModule }   from './collaborators/collaborators.module';
-import { ConfigCacheModule }     from './config-cache/config-cache.module';
-import { ConfigAuditModule }     from './config-audit/config-audit.module';
-import { ConfigThemesModule }    from './config-themes/config-themes.module';
-import { ConfigFlagsModule }     from './config-flags/config-flags.module';
-import { ConfigSecretsModule }   from './config-secrets/config-secrets.module';
-import { ConfigTemplatesModule } from './config-templates/config-templates.module';
-import { ConfigQuotasModule }    from './config-quotas/config-quotas.module';
-import { ConfigWebhooksModule }  from './config-webhooks/config-webhooks.module';
-import { TrpcModule }            from './trpc/trpc.module';
-
-import {
-  FirebaseModule,
-  FirebaseAuthGuard,
-  CACHE_PORT,
-  MemoryCacheAdapter,
-} from '@real/auth-server';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
-    EventEmitterModule.forRoot({ wildcard: false }),
-    FirebaseModule,
-    HealthModule,
-    PrismaModule,
-    RedisModule,
-    AuthModule,
-    UsersModule,
-    OrganizationsModule,
-    AffiliatesModule,
-    CollaboratorsModule,
-    ConfigCacheModule,
-    ConfigAuditModule,
-    ConfigThemesModule,
-    ConfigFlagsModule,
-    ConfigSecretsModule,
-    ConfigTemplatesModule,
-    ConfigQuotasModule,
-    ConfigWebhooksModule,
-    TrpcModule,
-  ],
-  providers: [
-    { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
-    { provide: APP_GUARD,  useClass: ThrottlerGuard },
-    { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
-  ],
-})
-export class AppModule {}
+module.exports = function (options, webpack) {
+  return {
+    ...options,
+    entry: ['webpack/hot/poll?100', options.entry],
+    externals: [
+      nodeExternals({
+        // Incluir paquetes @real/* en el bundle en lugar de dejarlos externos.
+        // Sin esto, Node.js intenta resolver @real/auth-server desde node_modules
+        // en runtime y falla porque el symlink del workspace no existe en la imagen.
+        allowlist: [/@real\//],
+      }),
+    ],
+    plugins: [
+      ...options.plugins,
+      new webpack.HotModuleReplacementPlugin(),
+      new webpack.WatchIgnorePlugin({
+        paths: [/\.js$/, /\.d\.ts$/],
+      }),
+      new RunScriptWebpackPlugin({
+        name: options.output.filename,
+        autoRestart: false,
+      }),
+    ],
+  };
+};
 EOF
-ok "sass-back/src/app.module.ts"
+ok "sass-back/webpack.config.js"
 
 # =============================================================================
-# FIX 2 — TenantRole: reemplazar 'COLLABORATOR' por 'MEMBER' en ambos backs
-#
-# El rol viejo era OWNER | COLLABORATOR (sistema propio).
-# El nuevo TenantRole en @real/auth-server es OWNER | ADMIN | MEMBER | VIEWER.
-# Los controllers que usaban 'COLLABORATOR' deben usar 'MEMBER'.
+# FIX 2 — nest-cli.json en sass-back
+# Apunta al webpack.config.js personalizado.
 # =============================================================================
-sep
-log "FIX 2 — Reemplazando COLLABORATOR por MEMBER en @Roles() de ambos backs..."
+log "FIX 2 — nest-cli.json en sass-back..."
 
-# sass-back
-find realsass-sass-back/src -name "*.ts" -exec \
-  sed -i "s/@Roles('OWNER', 'COLLABORATOR')/@Roles('OWNER', 'MEMBER')/g" {} \;
-find realsass-sass-back/src -name "*.ts" -exec \
-  sed -i "s/@Roles('COLLABORATOR')/@Roles('MEMBER')/g" {} \;
-
-# ecommerce-back
-find realsass-ecommerce-back/src -name "*.ts" -exec \
-  sed -i "s/@Roles('OWNER', 'COLLABORATOR')/@Roles('OWNER', 'MEMBER')/g" {} \;
-find realsass-ecommerce-back/src -name "*.ts" -exec \
-  sed -i "s/@Roles('COLLABORATOR')/@Roles('MEMBER')/g" {} \;
-
-ok "COLLABORATOR -> MEMBER en @Roles()"
-
-# =============================================================================
-# FIX 3 — users.service.ts: ensureOrganization no existe
-# OrganizationsService tiene createForUser(userId) — ese es el metodo correcto
-# =============================================================================
-sep
-log "FIX 3 — users.service.ts: ensureOrganization -> createForUser..."
-
-sed -i "s/await this\.orgs\.ensureOrganization(user\.id)/await this.orgs.createForUser(user.id)/g" \
-  realsass-sass-back/src/users/users.service.ts
-
-ok "users.service.ts: ensureOrganization -> createForUser"
-
-# =============================================================================
-# FIX 4 — @real/auth-server/firebase.module.ts: @nestjs/config no disponible
-# en ecommerce-back via el paquete. Solucion: usar process.env directamente
-# en el FirebaseModule, sin depender de ConfigService.
-# Esto elimina la dependencia de @nestjs/config en el paquete auth-server.
-# =============================================================================
-sep
-log "FIX 4 — firebase.module.ts: reemplazar ConfigService por process.env..."
-
-cat > packages/auth-server/src/firebase/firebase.module.ts << 'EOF'
-import { Global, Module, OnModuleInit, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
-
-/**
- * FirebaseModule — inicializa Firebase Admin SDK UNA sola vez.
- * @Global() — disponible en toda la app sin importarlo en cada modulo.
- *
- * Lee directamente de process.env para no depender de @nestjs/config,
- * lo que permite que el paquete funcione en cualquier app NestJS sin
- * requerir ConfigModule como dependencia transitiva.
- *
- * Variables de entorno requeridas:
- *   FIREBASE_PROJECT_ID
- *   FIREBASE_CLIENT_EMAIL
- *   FIREBASE_PRIVATE_KEY  (con \\n escapados del .env)
- */
-@Global()
-@Module({})
-export class FirebaseModule implements OnModuleInit {
-  private readonly logger = new Logger(FirebaseModule.name);
-
-  onModuleInit(): void {
-    if (admin.apps.length > 0) return;
-
-    const projectId   = process.env['FIREBASE_PROJECT_ID'];
-    const clientEmail = process.env['FIREBASE_CLIENT_EMAIL'];
-    const privateKey  = process.env['FIREBASE_PRIVATE_KEY']?.replace(/\\n/g, '\n');
-
-    if (!projectId) {
-      this.logger.warn('FIREBASE_PROJECT_ID no configurado — FirebaseModule deshabilitado');
-      return;
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-    });
-
-    this.logger.log(`Firebase Admin inicializado: ${projectId}`);
+cat > realsass-sass-back/nest-cli.json << 'EOF'
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "webpackConfigPath": "webpack.config.js"
   }
 }
 EOF
-ok "packages/auth-server/src/firebase/firebase.module.ts"
+ok "sass-back/nest-cli.json"
 
-# Remover @nestjs/config de las dependencias del paquete auth-server
-# ya que no lo necesitamos mas
+# =============================================================================
+# FIX 3 — webpack.config.js en ecommerce-back (mismo patron)
+# =============================================================================
+log "FIX 3 — webpack.config.js en ecommerce-back..."
+
+cat > realsass-ecommerce-back/webpack.config.js << 'EOF'
+const nodeExternals = require('webpack-node-externals');
+const { RunScriptWebpackPlugin } = require('run-script-webpack-plugin');
+
+module.exports = function (options, webpack) {
+  return {
+    ...options,
+    entry: ['webpack/hot/poll?100', options.entry],
+    externals: [
+      nodeExternals({
+        allowlist: [/@real\//],
+      }),
+    ],
+    plugins: [
+      ...options.plugins,
+      new webpack.HotModuleReplacementPlugin(),
+      new webpack.WatchIgnorePlugin({
+        paths: [/\.js$/, /\.d\.ts$/],
+      }),
+      new RunScriptWebpackPlugin({
+        name: options.output.filename,
+        autoRestart: false,
+      }),
+    ],
+  };
+};
+EOF
+ok "ecommerce-back/webpack.config.js"
+
+# =============================================================================
+# FIX 4 — nest-cli.json en ecommerce-back
+# =============================================================================
+log "FIX 4 — nest-cli.json en ecommerce-back..."
+
+cat > realsass-ecommerce-back/nest-cli.json << 'EOF'
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "webpackConfigPath": "webpack.config.js"
+  }
+}
+EOF
+ok "ecommerce-back/nest-cli.json"
+
+# =============================================================================
+# FIX 5 — ecommerce-back: agregar @nestjs/config como dependencia real
+# El app.module.ts lo importa — necesita estar en dependencies, no solo
+# disponible via shamefully-hoist.
+# =============================================================================
+log "FIX 5 — agregando @nestjs/config a ecommerce-back..."
+
 node -e "
 const fs  = require('fs');
-const p   = 'packages/auth-server/package.json';
+const p   = 'realsass-ecommerce-back/package.json';
 const pkg = JSON.parse(fs.readFileSync(p, 'utf8'));
-delete pkg.dependencies['@nestjs/config'];
-if (pkg.peerDependencies) delete pkg.peerDependencies['@nestjs/config'];
+pkg.dependencies = pkg.dependencies || {};
+pkg.dependencies['@nestjs/config'] = 'catalog:';
 fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
-console.log('[ok] @nestjs/config removido de auth-server');
+console.log('[ok] @nestjs/config agregado a ecommerce-back');
 "
 
 # =============================================================================
-# FIX 5 — ecommerce-back organizations-client/types: CollaboratorPermissions
-# no existe en @real/auth-server. Reemplazar por Record<string, boolean>.
+# FIX 6 — sass-back: agregar @real/auth-server a dependencies si falta
 # =============================================================================
-sep
-log "FIX 5 — organizations-client/types: CollaboratorPermissions -> Record<string, boolean>..."
+log "FIX 6 — verificando @real/auth-server en sass-back package.json..."
 
-ORG_TYPES="realsass-ecommerce-back/src/organizations-client/types/organization-access.types.ts"
-
-if [ -f "$ORG_TYPES" ]; then
-  cat > "$ORG_TYPES" << 'EOF'
-/**
- * Tipos locales para OrganizationsClientService.
- * Alineados con el contrato de GET /api/v1/auth/organization-access en sass-back.
- */
-import type { TenantRole } from '@real/auth-server';
-
-export type { TenantRole };
-
-export interface OrganizationAccessResult {
-  canAccess:       boolean;
-  userId?:         string;
-  organizationId?: string;
-  role?:           TenantRole;
-  permissions?:    Record<string, boolean>;
-  reason?:         string;
+node -e "
+const fs  = require('fs');
+const p   = 'realsass-sass-back/package.json';
+const pkg = JSON.parse(fs.readFileSync(p, 'utf8'));
+pkg.dependencies = pkg.dependencies || {};
+if (!pkg.dependencies['@real/auth-server']) {
+  pkg.dependencies['@real/auth-server'] = 'workspace:*';
+  fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
+  console.log('[ok] @real/auth-server agregado a sass-back');
+} else {
+  console.log('[ok] @real/auth-server ya estaba en sass-back');
 }
-EOF
-  ok "organizations-client/types/organization-access.types.ts"
-else
-  echo "Archivo no encontrado, buscando..."
-  find realsass-ecommerce-back/src -name "organization-access.types.ts" | while read f; do
-    sed -i "s/import type { TenantRole, CollaboratorPermissions } from '@real\/auth-server'/import type { TenantRole } from '@real\/auth-server'/g" "$f"
-    sed -i "s/CollaboratorPermissions/Record<string, boolean>/g" "$f"
-    echo "[ok] Parcheado: $f"
-  done
-fi
+"
 
 # =============================================================================
-# FIX 6 — ecommerce-back app.module.ts: aun puede tener import local
+# FIX 7 — ecommerce-back: agregar @real/auth-server a dependencies si falta
+# =============================================================================
+log "FIX 7 — verificando @real/auth-server en ecommerce-back package.json..."
+
+node -e "
+const fs  = require('fs');
+const p   = 'realsass-ecommerce-back/package.json';
+const pkg = JSON.parse(fs.readFileSync(p, 'utf8'));
+pkg.dependencies = pkg.dependencies || {};
+if (!pkg.dependencies['@real/auth-server']) {
+  pkg.dependencies['@real/auth-server'] = 'workspace:*';
+  fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
+  console.log('[ok] @real/auth-server agregado a ecommerce-back');
+} else {
+  console.log('[ok] @real/auth-server ya estaba en ecommerce-back');
+}
+"
+
+# =============================================================================
+# FIX 8 — pnpm install para actualizar lockfile con los cambios de package.json
 # =============================================================================
 sep
-log "FIX 6 — ecommerce-back app.module.ts: verificando imports..."
-
-cat > realsass-ecommerce-back/src/app.module.ts << 'EOF'
-import { Module }                     from '@nestjs/common';
-import { APP_GUARD }                  from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ConfigModule }               from '@nestjs/config';
-
-import { PrismaModule }              from './prisma/prisma.module';
-import { RedisModule }               from './redis/redis.module';
-import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
-import { CatalogModule }             from './catalog/catalog.module';
-import { InventoryModule }           from './inventory/inventory.module';
-import { CustomersModule }           from './customers/customers.module';
-import { ActivityModule }            from './activity/activity.module';
-import { CartModule }                from './cart/cart.module';
-import { OrdersModule }              from './orders/orders.module';
-import { StoreModule }               from './store/store.module';
-import { TrpcModule }                from './trpc/trpc.module';
-
-import {
-  FirebaseModule,
-  FirebaseAuthGuard,
-  CACHE_PORT,
-  MemoryCacheAdapter,
-} from '@real/auth-server';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
-    FirebaseModule,
-    PrismaModule,
-    RedisModule,
-    OrganizationsClientModule,
-    CatalogModule,
-    InventoryModule,
-    CustomersModule,
-    ActivityModule,
-    CartModule,
-    OrdersModule,
-    StoreModule,
-    TrpcModule,
-  ],
-  providers: [
-    { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
-    { provide: APP_GUARD,  useClass: ThrottlerGuard },
-    { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
-  ],
-})
-export class AppModule {}
-EOF
-ok "ecommerce-back/src/app.module.ts"
+log "FIX 8 — pnpm install..."
+pnpm install --ignore-scripts
+ok "pnpm install completado"
 
 # =============================================================================
 # RESUMEN
 # =============================================================================
 sep
-echo -e "${BOLD}  FIX 2 COMPLETO${NC}"
+echo -e "${BOLD}  FIX 3 COMPLETO${NC}"
 sep
 echo ""
-echo -e "${GREEN}  Corregido:${NC}"
-echo "    [1] sass-back app.module.ts        — import FirebaseAuthGuard de @real/auth-server"
-echo "    [2] sass-back + ecommerce-back     — @Roles('COLLABORATOR') -> @Roles('MEMBER')"
-echo "    [3] sass-back users.service.ts     — ensureOrganization -> createForUser"
-echo "    [4] auth-server firebase.module.ts — ConfigService -> process.env directo"
-echo "    [5] ecommerce-back org-access types — CollaboratorPermissions -> Record<string,boolean>"
-echo "    [6] ecommerce-back app.module.ts   — reescrito limpio"
+echo -e "${GREEN}  Que se hizo:${NC}"
+echo "    webpack.config.js en ambos backs con allowlist: [/@real\//]"
+echo "    nest-cli.json en ambos backs apuntando al webpack.config.js"
+echo "    @nestjs/config agregado como dependencia real en ecommerce-back"
+echo "    @real/auth-server verificado en package.json de ambos backs"
 echo ""
-echo -e "${YELLOW}  Proximo paso:${NC}"
-echo "    git add . && git commit -m 'fix: auth rebuild errors round 2' && git push"
+echo -e "${GREEN}  Por que funciona:${NC}"
+echo "    webpack-node-externals excluia @real/* del bundle (tratandolos"
+echo "    como modulos externos). Con allowlist le decimos que los INCLUYA"
+echo "    en el bundle. El dist/ queda con el codigo de @real/auth-server"
+echo "    compilado adentro — no hay require() externo que resolver."
+echo ""
+echo -e "${GREEN}  Proximo paso:${NC}"
+echo "    git add . && git commit -m 'fix: bundle @real packages in webpack' && git push"
 echo ""
 sep

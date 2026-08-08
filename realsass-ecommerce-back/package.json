@@ -46,7 +46,9 @@
     "rxjs": "catalog:",
     "swagger-ui-express": "catalog:",
     "zod": "catalog:",
-    "@real/trpc": "workspace:*"
+    "@real/trpc": "workspace:*",
+    "@nestjs/config": "catalog:",
+    "@real/auth-server": "workspace:*"
   },
   "devDependencies": {
     "@eslint/eslintrc": "catalog:",
