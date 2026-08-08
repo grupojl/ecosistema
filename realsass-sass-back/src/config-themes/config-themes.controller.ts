@@ -13,7 +13,7 @@ export class ConfigThemesController {
   constructor(private readonly svc: ConfigThemesService) {}
 
   @Get()
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   list(@Tenant() t: TenantContext) {
     return this.svc.list(t.organizationId);
   }

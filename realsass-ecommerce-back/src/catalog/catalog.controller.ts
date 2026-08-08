@@ -20,13 +20,13 @@ export class CatalogController {
   }
 
   @Post()
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   create(@Tenant() tenant: TenantContext, @Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(tenant.organizationId, dto);
   }
 
   @Patch(':id')
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   update(@Tenant() tenant: TenantContext, @Param('id') id: string, @Body() dto: UpdateProductDto) {
     return this.catalogService.updateProduct(tenant.organizationId, id, dto);
   }

@@ -152,7 +152,7 @@ export class UsersService {
 
     if (dto.role === 'owner') {
       await this.prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
-      await this.orgs.ensureOrganization(user.id);
+      await this.orgs.createForUser(user.id);
     }
 
     if (dto.role === 'affiliate') {

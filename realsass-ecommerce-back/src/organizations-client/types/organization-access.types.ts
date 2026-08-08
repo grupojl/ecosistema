@@ -1,16 +1,16 @@
 /**
- * Contrato compartido con real-back (src/users/types/organization-access.types.ts)
- * y con real-config-back. Si cambia uno, actualizar los tres.
+ * Tipos locales para OrganizationsClientService.
+ * Alineados con el contrato de GET /api/v1/auth/organization-access en sass-back.
  */
-import type { TenantRole, CollaboratorPermissions } from '@real/auth-server';
+import type { TenantRole } from '@real/auth-server';
 
-export type { TenantRole, CollaboratorPermissions };
+export type { TenantRole };
 
 export interface OrganizationAccessResult {
-  canAccess: boolean;
-  userId?: string;
+  canAccess:       boolean;
+  userId?:         string;
   organizationId?: string;
-  role?: TenantRole;
-  permissions?: CollaboratorPermissions;
-  reason?: string;
+  role?:           TenantRole;
+  permissions?:    Record<string, boolean>;
+  reason?:         string;
 }

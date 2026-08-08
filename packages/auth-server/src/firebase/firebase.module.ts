@@ -1,10 +1,13 @@
 import { Global, Module, OnModuleInit, Logger } from '@nestjs/common';
-import { ConfigService }                         from '@nestjs/config';
-import * as admin                                from 'firebase-admin';
+import * as admin from 'firebase-admin';
 
 /**
  * FirebaseModule — inicializa Firebase Admin SDK UNA sola vez.
  * @Global() — disponible en toda la app sin importarlo en cada modulo.
+ *
+ * Lee directamente de process.env para no depender de @nestjs/config,
+ * lo que permite que el paquete funcione en cualquier app NestJS sin
+ * requerir ConfigModule como dependencia transitiva.
  *
  * Variables de entorno requeridas:
  *   FIREBASE_PROJECT_ID
@@ -16,15 +19,12 @@ import * as admin                                from 'firebase-admin';
 export class FirebaseModule implements OnModuleInit {
   private readonly logger = new Logger(FirebaseModule.name);
 
-  constructor(private readonly config: ConfigService) {}
-
   onModuleInit(): void {
     if (admin.apps.length > 0) return;
 
-    const projectId   = this.config.get<string>('FIREBASE_PROJECT_ID');
-    const clientEmail = this.config.get<string>('FIREBASE_CLIENT_EMAIL');
-    const privateKey  = this.config.get<string>('FIREBASE_PRIVATE_KEY')
-      ?.replace(/\\n/g, '\n');
+    const projectId   = process.env['FIREBASE_PROJECT_ID'];
+    const clientEmail = process.env['FIREBASE_CLIENT_EMAIL'];
+    const privateKey  = process.env['FIREBASE_PRIVATE_KEY']?.replace(/\\n/g, '\n');
 
     if (!projectId) {
       this.logger.warn('FIREBASE_PROJECT_ID no configurado — FirebaseModule deshabilitado');

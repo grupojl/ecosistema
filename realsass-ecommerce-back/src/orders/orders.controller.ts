@@ -9,7 +9,7 @@ import type { TenantContext } from '@real/auth-server';
 // Admin — el dueño de la org revisa órdenes desde el dashboard.
 @Controller('ecommerce/orders')
 @UseGuards(TenantGuard, RolesGuard)
-@Roles('OWNER', 'COLLABORATOR')
+@Roles('OWNER', 'MEMBER')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

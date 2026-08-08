@@ -13,7 +13,7 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Patch(':variantId')
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   setStock(@Tenant() tenant: TenantContext, @Param('variantId') variantId: string, @Body() dto: UpdateStockDto) {
     return this.inventoryService.setStock(tenant.organizationId, variantId, dto.quantityAvailable);
   }

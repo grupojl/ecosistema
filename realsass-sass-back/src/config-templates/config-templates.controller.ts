@@ -13,7 +13,7 @@ export class ConfigTemplatesController {
   constructor(private readonly svc: ConfigTemplatesService) {}
 
   @Get()
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   list(@Tenant() t: TenantContext) {
     return this.svc.list(t.organizationId);
   }
@@ -26,7 +26,7 @@ export class ConfigTemplatesController {
   }
 
   @Get(':key/render')
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   render(@Tenant() t: TenantContext, @Param('key') key: string, @Query() vars: Record<string, string>) {
     return this.svc.renderByKey(t.organizationId, key, vars);
   }

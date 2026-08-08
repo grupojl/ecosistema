@@ -13,7 +13,7 @@ export class ConfigFlagsController {
   constructor(private readonly svc: ConfigFlagsService) {}
 
   @Get()
-  @Roles('OWNER', 'COLLABORATOR')
+  @Roles('OWNER', 'MEMBER')
   list(@Tenant() tenant: TenantContext, @Query('role') role?: string, @Query('plan') plan?: string) {
     return this.svc.getForOrg(tenant.organizationId, role, plan);
   }
