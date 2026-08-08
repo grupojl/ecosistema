@@ -1,31 +1,26 @@
 'use client';
 
 // =============================================================================
-// auth-context.tsx — Firebase SDK + cookie __session + real-back
+// auth-context.tsx — SSO-only auth para realsass-dashboard-front
 //
-// Flujo de sesión:
-//   1. Firebase SDK autentica (SSO via customToken o Google directo)
-//   2. persistSession() → POST /api/auth/session → cookie HttpOnly __session
-//   3. middleware.ts lee la cookie antes de servir /dashboard/*
-//   4. onAuthStateChanged sincroniza con real-back para obtener organizationId
+// Flujo de entrada:
+//   realsass-sass-front → /api/v1/auth/firebase-sso (sass-back) → customToken
+//   → /auth/sso?token=... → signInWithCustomToken → onAuthStateChanged
+//   → syncWithSassBack() → organizationId → /dashboard
 //
-// Refresh automático:
-//   Firebase ID tokens duran 1 hora. Cada 55 minutos:
-//   - user.getIdToken(true) → nuevo token
-//   - persistSession() → actualiza la cookie
-//   Garantiza que el middleware nunca vea un token expirado.
+// No hay login propio. loginWithGoogle() redirige al sass-front.
+// El token Firebase lo maneja el SDK automáticamente (refresh cada ~55min).
 // =============================================================================
 
 import {
   createContext, useContext, useState, useEffect,
   useCallback, useRef, type ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter }              from 'next/navigation';
 import {
-  auth, googleProvider, persistSession, clearSession,
-  signInWithPopup, signOut, onAuthStateChanged, type User as FirebaseUser,
+  auth, signOut, onAuthStateChanged, type User as FirebaseUser,
 } from '@/lib/firebase';
-import { realBackFetch } from '@/lib/api-client';
+import { realBackFetch }          from '@/lib/api-client';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -42,12 +37,12 @@ export interface DashboardUser {
 
 interface AuthContextType {
   user:              DashboardUser | null;
-  firebaseUser:      DashboardUser | null;
+  firebaseUser:      DashboardUser | null; // alias — compatibilidad
   isLoading:         boolean;
   isAuthenticated:   boolean;
   organizationId:    string | null;
   setOrganizationId: (id: string) => void;
-  loginWithGoogle:   () => Promise<void>;
+  loginWithGoogle:   () => Promise<void>;  // redirige al sass-front
   logout:            () => Promise<void>;
   refreshUser:       () => Promise<void>;
 }
@@ -62,11 +57,15 @@ export function useAuth(): AuthContextType {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ORG_KEY            = 'dash_org_id';
-const REFRESH_INTERVAL   = 55 * 60 * 1000; // 55 minutos en ms
+const ORG_KEY       = 'dash_org_id';
+const SASS_FRONT    = process.env.NEXT_PUBLIC_SASS_FRONT_URL ?? '';
 
-async function syncWithRealBack(fbUser: FirebaseUser): Promise<DashboardUser | null> {
+async function syncWithSassBack(fbUser: FirebaseUser): Promise<{
+  user: DashboardUser;
+  organizationId: string | null;
+} | null> {
   try {
+    // Upsert idempotente — crea el user en sass-back si no existe
     await realBackFetch.post('/api/v1/auth/sync', {
       firebaseUid: fbUser.uid,
       email:       fbUser.email,
@@ -74,26 +73,15 @@ async function syncWithRealBack(fbUser: FirebaseUser): Promise<DashboardUser | n
       avatarUrl:   fbUser.photoURL,
     });
 
+    // Traer perfil completo con organizationId
     const data = await realBackFetch.get<{
       user:           DashboardUser;
       organizationId: string | null;
     }>('/api/v1/users/me');
 
-    return data.user;
+    return data;
   } catch (err) {
-    console.error('[Auth] Error sincronizando con real-back:', err);
-    return null;
-  }
-}
-
-async function fetchOrganizationId(): Promise<string | null> {
-  try {
-    const data = await realBackFetch.get<{
-      user:           DashboardUser;
-      organizationId: string | null;
-    }>('/api/v1/users/me');
-    return data.organizationId ?? null;
-  } catch {
+    console.error('[Auth] Error sincronizando con sass-back:', err);
     return null;
   }
 }
@@ -105,32 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgId,     setOrgId]   = useState<string | null>(null);
   const [isLoading, setLoading] = useState(true);
   const router      = useRouter();
-  const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const didInit     = useRef(false);
 
   const setOrganizationId = useCallback((id: string) => {
     setOrgId(id);
     if (typeof window !== 'undefined') localStorage.setItem(ORG_KEY, id);
   }, []);
 
-  // Auto-refresh del token + cookie cada 55 minutos
-  const scheduleRefresh = useCallback((fbUser: FirebaseUser) => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-    refreshTimer.current = setInterval(async () => {
-      try {
-        // forceRefresh=true renueva contra Firebase
-        // persistSession() actualiza la cookie automáticamente (ver firebase.ts)
-        await fbUser.getIdToken(true);
-        await persistSession(fbUser);
-      } catch {
-        // Si el refresh falla, onAuthStateChanged disparará con null
-        // y el usuario será deslogueado automáticamente
-      }
-    }, REFRESH_INTERVAL);
-  }, []);
-
   const handleFirebaseUser = useCallback(async (fbUser: FirebaseUser | null) => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-
     if (!fbUser) {
       setUser(null);
       setOrgId(null);
@@ -138,71 +108,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Iniciar refresh automático para esta sesión
-    scheduleRefresh(fbUser);
+    const result = await syncWithSassBack(fbUser);
 
-    const profile = await syncWithRealBack(fbUser);
-    if (!profile) {
+    if (!result) {
+      // sass-back no disponible o usuario sin acceso
       setUser(null);
       setOrgId(null);
       setLoading(false);
       return;
     }
 
-    setUser(profile);
+    setUser(result.user);
 
+    // Recuperar orgId: localStorage primero (evita un round-trip extra)
     const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
-    if (stored) {
-      setOrgId(stored);
-    } else {
-      const remoteOrgId = await fetchOrganizationId();
-      if (remoteOrgId) {
-        setOrgId(remoteOrgId);
-        localStorage.setItem(ORG_KEY, remoteOrgId);
-      }
+    const resolvedOrgId = stored ?? result.organizationId;
+
+    if (resolvedOrgId) {
+      setOrgId(resolvedOrgId);
+      if (!stored) localStorage.setItem(ORG_KEY, resolvedOrgId);
     }
 
     setLoading(false);
-  }, [scheduleRefresh]);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      // onAuthStateChanged puede disparar múltiples veces — solo procesar una
+      if (didInit.current && fbUser?.uid === auth.currentUser?.uid) return;
+      didInit.current = true;
       await handleFirebaseUser(fbUser);
     });
-    return () => {
-      unsub();
-      if (refreshTimer.current) clearInterval(refreshTimer.current);
-    };
+    return () => unsub();
   }, [handleFirebaseUser]);
 
+  // "login" = redirigir al sass-front para que haga el SSO
   const loginWithGoogle = useCallback(async () => {
-    setLoading(true);
-    try {
-      const credential = await signInWithPopup(auth, googleProvider);
-      // Persistir la cookie ANTES de que onAuthStateChanged dispare las queries
-      await persistSession(credential.user);
-      // onAuthStateChanged se dispara automáticamente → handleFirebaseUser
-    } catch (err) {
-      setLoading(false);
-      throw err;
+    if (SASS_FRONT) {
+      window.location.href = SASS_FRONT;
+    } else {
+      console.error('[Auth] NEXT_PUBLIC_SASS_FRONT_URL no configurado');
     }
   }, []);
 
   const logout = useCallback(async () => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-    // Borrar cookie + sesión Firebase
-    await Promise.all([clearSession(), signOut(auth)]);
+    await signOut(auth);
     if (typeof window !== 'undefined') localStorage.removeItem(ORG_KEY);
     setUser(null);
     setOrgId(null);
-    router.push('/login');
+    // Redirigir al sass-front en lugar del /login local
+    if (SASS_FRONT) {
+      window.location.href = SASS_FRONT;
+    } else {
+      router.push('/login');
+    }
   }, [router]);
 
   const refreshUser = useCallback(async () => {
     const fbUser = auth.currentUser;
     if (!fbUser) return;
-    const profile = await syncWithRealBack(fbUser);
-    if (profile) setUser(profile);
+    const result = await syncWithSassBack(fbUser);
+    if (result) setUser(result.user);
   }, []);
 
   return (

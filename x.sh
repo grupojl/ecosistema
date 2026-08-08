@@ -1,220 +1,65 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Auth con cookie HttpOnly (solución a largo plazo)
+# x.sh — Dashboard-front: solo SSO desde sass-front, sin login propio
 #
-# PROBLEMA RAÍZ:
-#   El token Firebase vive solo en memoria del browser (Firebase SDK).
-#   Cuando el SSO redirige a /dashboard, Next.js renderiza los componentes
-#   antes de que onAuthStateChanged dispare → los fetches salen sin token → 401.
-#   No hay forma de "esperar" al SDK desde el middleware de Next.js.
+# DISEÑO:
+#   realsass-sass-front → POST /api/v1/auth/firebase-sso → customToken
+#                       → redirect /auth/sso?token=... (dashboard-front)
+#                       → signInWithCustomToken → onAuthStateChanged
+#                       → sync con sass-back → organizationId → /dashboard
 #
-# SOLUCIÓN:
-#   Persistir el Firebase ID token en una cookie HttpOnly con nombre
-#   __session (nombre que Firebase Hosting entiende, pero vale para cualquier host).
-#   El middleware de Next.js lee esa cookie ANTES de renderizar cualquier página
-#   protegida. Si no existe → redirect a /login. Si existe → la página monta
-#   con la garantía de que hay token disponible.
+# El dashboard-front NO tiene login propio.
+# /login redirige al sass-front (NEXT_PUBLIC_SASS_FRONT_URL).
+# Todo el auth vive en Firebase SDK — sin cookies propias, sin middleware.
+# El race condition se resuelve esperando onAuthStateChanged antes de navegar.
 #
-#   El token se escribe en la cookie desde el cliente via un endpoint
-#   /api/auth/session (Next.js Route Handler) — el único lugar que puede
-#   setear cookies HttpOnly desde el browser.
-#
-# FLUJO COMPLETO:
-#   1. SSO page: signInWithCustomToken → onAuthStateChanged resuelve →
-#      POST /api/auth/session { idToken } → cookie __session seteada →
-#      router.replace('/dashboard')
-#   2. middleware.ts: lee __session → existe → deja pasar
-#   3. Componentes montan → getCurrentUserToken() usa auth.currentUser
-#      (que ya resolvió porque esperamos el onAuthStateChanged en el paso 1)
-#   4. En refresh de página: Firebase SDK restaura la sesión via cookie
-#      (o la cookie nos dice que hay sesión → mostramos loading hasta que SDK resuelve)
-#
-# ARCHIVOS CREADOS/MODIFICADOS:
-#   realsass-dashboard-front/middleware.ts                    (NUEVO)
-#   realsass-dashboard-front/app/api/auth/session/route.ts   (NUEVO)
-#   realsass-dashboard-front/app/api/auth/logout/route.ts    (NUEVO)
-#   realsass-dashboard-front/app/auth/sso/page.tsx           (MODIFICADO)
-#   realsass-dashboard-front/lib/firebase.ts                 (MODIFICADO)
-#   realsass-dashboard-front/lib/api-client.ts               (MODIFICADO)
-#   realsass-dashboard-front/features/auth/context/auth-context.tsx (MODIFICADO)
+# ARCHIVOS TOCADOS:
+#   ELIMINA  realsass-dashboard-front/middleware.ts
+#   ELIMINA  realsass-dashboard-front/app/api/auth/ (route handlers de cookie)
+#   MOD      realsass-dashboard-front/app/login/page.tsx
+#   MOD      realsass-dashboard-front/app/auth/sso/page.tsx
+#   MOD      realsass-dashboard-front/lib/firebase.ts
+#   MOD      realsass-dashboard-front/lib/api-client.ts
+#   MOD      realsass-dashboard-front/features/auth/context/auth-context.tsx
 # =============================================================================
 set -euo pipefail
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 log()  { echo -e "${YELLOW}▶${NC} $1"; }
 ok()   { echo -e "${GREEN}✓${NC} $1"; }
-fail() { echo -e "${RED}✗${NC} $1"; exit 1; }
+warn() { echo -e "${YELLOW}⚠${NC}  $1"; }
 
 ROOT="realsass-dashboard-front"
-[ -d "$ROOT" ] || fail "No se encontró $ROOT/ — correr desde la raíz del monorepo"
+[ -d "$ROOT" ] || { echo -e "${RED}✗${NC} No se encontró $ROOT/ — correr desde la raíz del monorepo"; exit 1; }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1) middleware.ts — guard que bloquea /dashboard/* sin cookie __session
+# 1) Eliminar artefactos del x.sh anterior (middleware + route handlers cookie)
 # ─────────────────────────────────────────────────────────────────────────────
-log "Creando $ROOT/middleware.ts..."
+log "Limpiando artefactos del x.sh anterior..."
 
-cat > "$ROOT/middleware.ts" << 'EOF'
-// middleware.ts
-//
-// Corre en el Edge Runtime ANTES de que cualquier página se renderice.
-// Lee la cookie __session que contiene el Firebase ID token.
-//
-// Si no existe → redirect a /login.
-// Si existe   → deja pasar. El SDK de Firebase en el cliente ya tiene
-//               la sesión restaurada porque la seteamos antes de navegar.
-//
-// IMPORTANTE: Este middleware NO verifica la firma del JWT (eso requiere
-// Firebase Admin que no corre en Edge). Solo verifica presencia + expiración
-// básica del token (campo exp del payload). La verificación criptográfica
-// real la hacen los backends (realsass-sass-back y realsass-ecommerce-back)
-// con Firebase Admin en cada request autenticado.
+[ -f "$ROOT/middleware.ts" ] && rm "$ROOT/middleware.ts" && warn "middleware.ts eliminado"
+[ -d "$ROOT/app/api/auth" ] && rm -rf "$ROOT/app/api/auth" && warn "app/api/auth/ eliminado"
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-const SESSION_COOKIE = '__session';
-
-function isTokenExpired(token: string): boolean {
-  try {
-    const [, payloadB64] = token.split('.');
-    if (!payloadB64) return true;
-    // Edge Runtime tiene atob
-    const payload = JSON.parse(atob(payloadB64)) as { exp?: number };
-    if (!payload.exp) return true;
-    // exp es en segundos, Date.now() en ms
-    return Date.now() / 1000 > payload.exp;
-  } catch {
-    return true;
-  }
-}
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Rutas que no necesitan auth — dejar pasar siempre
-  if (
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth') ||   // nuestros route handlers de sesión
-    pathname === '/favicon.ico'
-  ) {
-    return NextResponse.next();
-  }
-
-  // Para todo lo demás bajo /dashboard/*
-  const sessionCookie = request.cookies.get(SESSION_COOKIE)?.value;
-
-  if (!sessionCookie || isTokenExpired(sessionCookie)) {
-    const loginUrl = new URL('/login', request.url);
-    // Guardamos el destino para redirigir después del login
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  // Aplica solo a rutas del dashboard — no a assets estáticos ni API routes
-  matcher: ['/dashboard/:path*'],
-};
-EOF
-
-ok "$ROOT/middleware.ts creado"
+ok "Limpieza completa"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2) Route Handler: POST /api/auth/session — setea la cookie __session
+# 2) lib/firebase.ts — solo lo necesario: auth + waitForUser + getCurrentUserToken
+#    Sin persistSession ni clearSession (no usamos cookies propias)
 # ─────────────────────────────────────────────────────────────────────────────
-log "Creando $ROOT/app/api/auth/session/route.ts..."
-mkdir -p "$ROOT/app/api/auth/session"
-
-cat > "$ROOT/app/api/auth/session/route.ts" << 'EOF'
-// app/api/auth/session/route.ts
-//
-// POST /api/auth/session { idToken: string }
-//   Recibe el Firebase ID token desde el cliente y lo persiste en una
-//   cookie HttpOnly. Llamado desde app/auth/sso/page.tsx después de
-//   signInWithCustomToken, y desde auth-context después de cada login.
-//
-// DELETE /api/auth/session
-//   Borra la cookie (logout).
-//
-// La cookie es HttpOnly → JS del cliente no puede leerla → más seguro.
-// El middleware.ts la lee en el Edge para proteger /dashboard/*.
-
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
-const SESSION_COOKIE  = '__session';
-const ONE_HOUR_SECS   = 60 * 60;           // Firebase ID tokens duran 1 hora
-const COOKIE_MAX_AGE  = ONE_HOUR_SECS - 60; // 59 min — margen para el refresh
-
-function cookieOptions(maxAge: number) {
-  return {
-    httpOnly:  true,
-    secure:    process.env.NODE_ENV === 'production',
-    sameSite:  'lax' as const,   // 'lax' permite el redirect del SSO
-    path:      '/',
-    maxAge,
-  };
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json() as { idToken?: string };
-    const { idToken } = body;
-
-    if (!idToken || typeof idToken !== 'string') {
-      return NextResponse.json(
-        { error: 'idToken requerido' },
-        { status: 400 },
-      );
-    }
-
-    // Verificación básica: que sea un JWT de 3 partes
-    if (idToken.split('.').length !== 3) {
-      return NextResponse.json(
-        { error: 'idToken inválido' },
-        { status: 400 },
-      );
-    }
-
-    const response = NextResponse.json({ ok: true });
-    response.cookies.set(SESSION_COOKIE, idToken, cookieOptions(COOKIE_MAX_AGE));
-    return response;
-
-  } catch {
-    return NextResponse.json(
-      { error: 'Error interno' },
-      { status: 500 },
-    );
-  }
-}
-
-export async function DELETE() {
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, '', cookieOptions(0));
-  return response;
-}
-EOF
-
-ok "$ROOT/app/api/auth/session/route.ts creado"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3) lib/firebase.ts — getCurrentUserToken con waitForUser + persistSession
-# ─────────────────────────────────────────────────────────────────────────────
-log "Sobreescribiendo $ROOT/lib/firebase.ts..."
+log "Escribiendo $ROOT/lib/firebase.ts..."
 
 cat > "$ROOT/lib/firebase.ts" << 'EOF'
-// lib/firebase.ts — Firebase client SDK + helpers de sesión
+// lib/firebase.ts
+// Firebase client SDK para realsass-dashboard-front.
+// Auth exclusivamente via SSO desde realsass-sass-front.
+// No hay login propio — signInWithCustomToken es el único entry point.
+
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
+  signInWithCustomToken,
   type User,
 } from 'firebase/auth';
 
@@ -235,40 +80,17 @@ if (!getApps().length) {
 }
 
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
-// ─── Helpers de sesión (cookie HttpOnly) ─────────────────────────────────────
-
-/**
- * Persiste el ID token en la cookie __session via el Route Handler.
- * Llamar después de signInWithCustomToken o signInWithPopup.
- */
-export async function persistSession(user: User): Promise<void> {
-  const idToken = await user.getIdToken();
-  await fetch('/api/auth/session', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ idToken }),
-  });
-}
-
-/**
- * Borra la cookie __session (logout).
- */
-export async function clearSession(): Promise<void> {
-  await fetch('/api/auth/session', { method: 'DELETE' });
-}
-
-// ─── Helpers de token ────────────────────────────────────────────────────────
 
 /**
  * Espera hasta `timeoutMs` ms a que Firebase resuelva auth.currentUser.
- * Necesario en el primer render post-SSO cuando el SDK todavía no emitió
- * onAuthStateChanged.
+ *
+ * Necesario después de signInWithCustomToken: Firebase confirma la sesión
+ * de forma asíncrona. Sin esta espera, los primeros fetches salen sin token.
  */
-function waitForUser(timeoutMs = 3000): Promise<User | null> {
+export function waitForAuthReady(timeoutMs = 5000): Promise<User | null> {
   return new Promise((resolve) => {
-    if (auth.currentUser) {
+    // Si ya está resuelto, devolver inmediatamente
+    if (auth.currentUser !== null) {
       resolve(auth.currentUser);
       return;
     }
@@ -283,38 +105,29 @@ function waitForUser(timeoutMs = 3000): Promise<User | null> {
 
 /**
  * Retorna el Firebase ID token del usuario actual.
- * - Espera hasta 3s si auth.currentUser es null (post-SSO race condition).
+ * - Espera hasta 5s si auth.currentUser es null (post-SSO).
  * - forceRefresh=true renueva el token contra Firebase (para retry en 401).
- * - Si el token fue renovado, actualiza la cookie automáticamente.
  */
 export async function getCurrentUserToken(forceRefresh = false): Promise<string> {
-  const user = auth.currentUser ?? await waitForUser();
+  const user = auth.currentUser ?? await waitForAuthReady();
   if (!user) throw new Error('No hay usuario autenticado');
-
-  const token = await user.getIdToken(forceRefresh);
-
-  // Actualizar la cookie si pedimos refresh (el token viejo expiró)
-  if (forceRefresh) {
-    void persistSession(user); // fire-and-forget — no bloquear el fetch
-  }
-
-  return token;
+  return user.getIdToken(forceRefresh);
 }
 
-export { signInWithPopup, signOut, onAuthStateChanged, type User };
+export { signOut, onAuthStateChanged, signInWithCustomToken, type User };
 EOF
 
-ok "$ROOT/lib/firebase.ts actualizado"
+ok "$ROOT/lib/firebase.ts listo"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4) lib/api-client.ts — retry en 401 con forceRefresh
+# 3) lib/api-client.ts — retry en 401 con forceRefresh
 # ─────────────────────────────────────────────────────────────────────────────
-log "Sobreescribiendo $ROOT/lib/api-client.ts..."
+log "Escribiendo $ROOT/lib/api-client.ts..."
 
 cat > "$ROOT/lib/api-client.ts" << 'EOF'
 // lib/api-client.ts
-// Helpers HTTP para realsass-sass-back y realsass-ecommerce-back.
-// Retry automático en 401: forceRefresh del token + reintento único.
+// Helpers HTTP hacia realsass-sass-back y realsass-ecommerce-back.
+// Retry automático en 401: forceRefresh del token Firebase + un reintento.
 
 import { getCurrentUserToken } from './firebase';
 
@@ -341,11 +154,8 @@ export function buildQuery(params: Record<string, unknown>): string {
 
 async function getToken(forceRefresh = false): Promise<string | undefined> {
   if (typeof window === 'undefined') return undefined;
-  try {
-    return await getCurrentUserToken(forceRefresh);
-  } catch {
-    return undefined;
-  }
+  try { return await getCurrentUserToken(forceRefresh); }
+  catch { return undefined; }
 }
 
 interface FetchOptions {
@@ -361,7 +171,7 @@ async function coreFetch<T>(
   path: string,
   { method = 'GET', body, orgId, signal, _isRetry = false }: FetchOptions = {},
 ): Promise<T> {
-  const token = await getToken(_isRetry); // forceRefresh en el retry
+  const token = await getToken(_isRetry);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -376,11 +186,9 @@ async function coreFetch<T>(
     signal,
   });
 
-  // Retry automático en 401 — solo una vez
+  // Un solo retry con token fresco en el primer 401
   if (res.status === 401 && !_isRetry) {
-    return coreFetch<T>(baseUrl, path, {
-      method, body, orgId, signal, _isRetry: true,
-    });
+    return coreFetch<T>(baseUrl, path, { method, body, orgId, signal, _isRetry: true });
   }
 
   const json = await res.json().catch(() => ({})) as Record<string, unknown>;
@@ -393,10 +201,10 @@ async function coreFetch<T>(
     throw new Error(msg);
   }
 
-  return ((json['data'] as T | undefined) ?? json as unknown as T);
+  return (json['data'] as T | undefined) ?? json as unknown as T;
 }
 
-// ─── realsass-sass-back ───────────────────────────────────────────────────────
+// ─── realsass-sass-back (identidad + org + config) ────────────────────────────
 export const realBackFetch = {
   get:    <T>(path: string, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { orgId }),
@@ -408,7 +216,7 @@ export const realBackFetch = {
     coreFetch<T>(getRealBackBase(), path, { method: 'DELETE', orgId }),
 };
 
-// ─── realsass-ecommerce-back ──────────────────────────────────────────────────
+// ─── realsass-ecommerce-back (CMS productos + pedidos) ────────────────────────
 export const ecommerceFetch = {
   get:    <T>(path: string, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { orgId }),
@@ -421,33 +229,34 @@ export const ecommerceFetch = {
 };
 EOF
 
-ok "$ROOT/lib/api-client.ts actualizado"
+ok "$ROOT/lib/api-client.ts listo"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5) app/auth/sso/page.tsx — espera onAuthStateChanged ANTES de navegar
+# 4) app/auth/sso/page.tsx — espera onAuthStateChanged ANTES de navegar
 # ─────────────────────────────────────────────────────────────────────────────
-log "Sobreescribiendo $ROOT/app/auth/sso/page.tsx..."
+log "Escribiendo $ROOT/app/auth/sso/page.tsx..."
+mkdir -p "$ROOT/app/auth/sso"
 
 cat > "$ROOT/app/auth/sso/page.tsx" << 'EOF'
 // app/auth/sso/page.tsx
 //
-// Flujo:
-//   1. Lee el customToken de la URL (?token=...)
-//   2. signInWithCustomToken → Firebase establece la sesión
-//   3. Espera onAuthStateChanged para confirmar que user != null
-//   4. getIdToken() → POST /api/auth/session → cookie __session seteada
-//   5. router.replace('/dashboard')  ← ahora el middleware ve la cookie
+// Entry point del flujo SSO desde realsass-sass-front.
 //
-// El paso 3-4 antes del redirect es la clave: garantiza que el middleware
-// tenga la cookie Y que Firebase SDK tenga auth.currentUser antes de que
-// cualquier componente del dashboard intente hacer un fetch.
+// Flujo:
+//   sass-front → POST /api/v1/auth/firebase-sso (sass-back) → customToken
+//             → redirect aquí con ?token=<customToken>
+//   1. signInWithCustomToken(auth, customToken)
+//   2. waitForAuthReady() — espera que Firebase confirme la sesión
+//      (sin esto, router.replace('/dashboard') monta los componentes
+//       antes de que onAuthStateChanged dispare y los fetches salen sin token)
+//   3. router.replace('/dashboard')
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter }           from 'next/navigation';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { signInWithCustomToken } from 'firebase/auth';
-import { auth, persistSession }  from '@/lib/firebase';
+import { useEffect, useState }        from 'react';
+import { useRouter }                  from 'next/navigation';
+import { Loader2, AlertCircle }       from 'lucide-react';
+import { signInWithCustomToken }      from 'firebase/auth';
+import { auth, waitForAuthReady }     from '@/lib/firebase';
 
 type State = 'loading' | 'error';
 
@@ -471,23 +280,26 @@ export default function SsoPage() {
         setMessage('Verificando credenciales...');
 
         // 1. Firebase establece la sesión con el customToken
-        const credential = await signInWithCustomToken(auth, customToken);
+        await signInWithCustomToken(auth, customToken);
 
-        setMessage('Guardando sesión...');
+        // 2. Esperar que onAuthStateChanged confirme auth.currentUser !== null
+        //    ANTES de navegar. Esto garantiza que cuando el DashboardLayout
+        //    y los hooks de TanStack Query monten, el token ya está disponible.
+        setMessage('Estableciendo sesión...');
+        const user = await waitForAuthReady(5000);
 
-        // 2. Persistir el ID token en la cookie HttpOnly ANTES de navegar.
-        //    Esto garantiza que el middleware vea la cookie en el primer request
-        //    a /dashboard, y que auth.currentUser != null cuando los componentes monten.
-        await persistSession(credential.user);
+        if (!user) {
+          setMessage('No se pudo establecer la sesión. Intentá de nuevo.');
+          setState('error');
+          return;
+        }
 
         setMessage('Redirigiendo...');
-
-        // 3. Ahora sí navegamos — el middleware tiene la cookie y el SDK tiene el user
         router.replace('/dashboard');
 
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Error desconocido';
-        console.error('[SSO] Error:', msg);
+        console.error('[SSO]', msg);
         setMessage('No se pudo iniciar sesión. El enlace puede haber expirado.');
         setState('error');
       }
@@ -508,7 +320,10 @@ export default function SsoPage() {
         <>
           <AlertCircle className="h-10 w-10 text-destructive" />
           <p className="text-sm text-destructive text-center max-w-xs">{message}</p>
-          <a href="/" className="text-xs text-primary underline underline-offset-2">
+          <a
+            href={process.env.NEXT_PUBLIC_SASS_FRONT_URL ?? '/'}
+            className="text-xs text-primary underline underline-offset-2"
+          >
             Volver al inicio
           </a>
         </>
@@ -518,44 +333,89 @@ export default function SsoPage() {
 }
 EOF
 
-ok "$ROOT/app/auth/sso/page.tsx actualizado"
+ok "$ROOT/app/auth/sso/page.tsx listo"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6) auth-context.tsx — persistSession en login + clearSession en logout
-#    + auto-refresh de la cookie cada 55 minutos
+# 5) app/login/page.tsx — redirige al sass-front, no tiene login propio
 # ─────────────────────────────────────────────────────────────────────────────
-log "Sobreescribiendo $ROOT/features/auth/context/auth-context.tsx..."
+log "Escribiendo $ROOT/app/login/page.tsx..."
+mkdir -p "$ROOT/app/login"
+
+cat > "$ROOT/app/login/page.tsx" << 'EOF'
+// app/login/page.tsx
+//
+// El dashboard-front no tiene login propio.
+// El acceso es exclusivamente via SSO desde realsass-sass-front.
+// Esta página redirige al usuario al sass-front para que inicie sesión allá.
+'use client';
+
+import { useEffect }   from 'react';
+import { Loader2 }     from 'lucide-react';
+
+const SASS_FRONT_URL = process.env.NEXT_PUBLIC_SASS_FRONT_URL ?? '';
+
+export default function LoginPage() {
+  useEffect(() => {
+    if (SASS_FRONT_URL) {
+      window.location.href = SASS_FRONT_URL;
+    }
+  }, []);
+
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">
+        Redirigiendo al sistema de organizaciones...
+      </p>
+      {SASS_FRONT_URL ? (
+        <a
+          href={SASS_FRONT_URL}
+          className="text-xs text-primary underline underline-offset-2"
+        >
+          Ir ahora
+        </a>
+      ) : (
+        <p className="text-xs text-destructive">
+          NEXT_PUBLIC_SASS_FRONT_URL no configurado
+        </p>
+      )}
+    </main>
+  );
+}
+EOF
+
+ok "$ROOT/app/login/page.tsx listo"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6) auth-context.tsx — sin login propio, sin register, solo SSO
+# ─────────────────────────────────────────────────────────────────────────────
+log "Escribiendo $ROOT/features/auth/context/auth-context.tsx..."
 mkdir -p "$ROOT/features/auth/context"
 
 cat > "$ROOT/features/auth/context/auth-context.tsx" << 'EOF'
 'use client';
 
 // =============================================================================
-// auth-context.tsx — Firebase SDK + cookie __session + real-back
+// auth-context.tsx — SSO-only auth para realsass-dashboard-front
 //
-// Flujo de sesión:
-//   1. Firebase SDK autentica (SSO via customToken o Google directo)
-//   2. persistSession() → POST /api/auth/session → cookie HttpOnly __session
-//   3. middleware.ts lee la cookie antes de servir /dashboard/*
-//   4. onAuthStateChanged sincroniza con real-back para obtener organizationId
+// Flujo de entrada:
+//   realsass-sass-front → /api/v1/auth/firebase-sso (sass-back) → customToken
+//   → /auth/sso?token=... → signInWithCustomToken → onAuthStateChanged
+//   → syncWithSassBack() → organizationId → /dashboard
 //
-// Refresh automático:
-//   Firebase ID tokens duran 1 hora. Cada 55 minutos:
-//   - user.getIdToken(true) → nuevo token
-//   - persistSession() → actualiza la cookie
-//   Garantiza que el middleware nunca vea un token expirado.
+// No hay login propio. loginWithGoogle() redirige al sass-front.
+// El token Firebase lo maneja el SDK automáticamente (refresh cada ~55min).
 // =============================================================================
 
 import {
   createContext, useContext, useState, useEffect,
   useCallback, useRef, type ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter }              from 'next/navigation';
 import {
-  auth, googleProvider, persistSession, clearSession,
-  signInWithPopup, signOut, onAuthStateChanged, type User as FirebaseUser,
+  auth, signOut, onAuthStateChanged, type User as FirebaseUser,
 } from '@/lib/firebase';
-import { realBackFetch } from '@/lib/api-client';
+import { realBackFetch }          from '@/lib/api-client';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -572,12 +432,12 @@ export interface DashboardUser {
 
 interface AuthContextType {
   user:              DashboardUser | null;
-  firebaseUser:      DashboardUser | null;
+  firebaseUser:      DashboardUser | null; // alias — compatibilidad
   isLoading:         boolean;
   isAuthenticated:   boolean;
   organizationId:    string | null;
   setOrganizationId: (id: string) => void;
-  loginWithGoogle:   () => Promise<void>;
+  loginWithGoogle:   () => Promise<void>;  // redirige al sass-front
   logout:            () => Promise<void>;
   refreshUser:       () => Promise<void>;
 }
@@ -592,11 +452,15 @@ export function useAuth(): AuthContextType {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ORG_KEY            = 'dash_org_id';
-const REFRESH_INTERVAL   = 55 * 60 * 1000; // 55 minutos en ms
+const ORG_KEY       = 'dash_org_id';
+const SASS_FRONT    = process.env.NEXT_PUBLIC_SASS_FRONT_URL ?? '';
 
-async function syncWithRealBack(fbUser: FirebaseUser): Promise<DashboardUser | null> {
+async function syncWithSassBack(fbUser: FirebaseUser): Promise<{
+  user: DashboardUser;
+  organizationId: string | null;
+} | null> {
   try {
+    // Upsert idempotente — crea el user en sass-back si no existe
     await realBackFetch.post('/api/v1/auth/sync', {
       firebaseUid: fbUser.uid,
       email:       fbUser.email,
@@ -604,26 +468,15 @@ async function syncWithRealBack(fbUser: FirebaseUser): Promise<DashboardUser | n
       avatarUrl:   fbUser.photoURL,
     });
 
+    // Traer perfil completo con organizationId
     const data = await realBackFetch.get<{
       user:           DashboardUser;
       organizationId: string | null;
     }>('/api/v1/users/me');
 
-    return data.user;
+    return data;
   } catch (err) {
-    console.error('[Auth] Error sincronizando con real-back:', err);
-    return null;
-  }
-}
-
-async function fetchOrganizationId(): Promise<string | null> {
-  try {
-    const data = await realBackFetch.get<{
-      user:           DashboardUser;
-      organizationId: string | null;
-    }>('/api/v1/users/me');
-    return data.organizationId ?? null;
-  } catch {
+    console.error('[Auth] Error sincronizando con sass-back:', err);
     return null;
   }
 }
@@ -635,32 +488,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgId,     setOrgId]   = useState<string | null>(null);
   const [isLoading, setLoading] = useState(true);
   const router      = useRouter();
-  const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const didInit     = useRef(false);
 
   const setOrganizationId = useCallback((id: string) => {
     setOrgId(id);
     if (typeof window !== 'undefined') localStorage.setItem(ORG_KEY, id);
   }, []);
 
-  // Auto-refresh del token + cookie cada 55 minutos
-  const scheduleRefresh = useCallback((fbUser: FirebaseUser) => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-    refreshTimer.current = setInterval(async () => {
-      try {
-        // forceRefresh=true renueva contra Firebase
-        // persistSession() actualiza la cookie automáticamente (ver firebase.ts)
-        await fbUser.getIdToken(true);
-        await persistSession(fbUser);
-      } catch {
-        // Si el refresh falla, onAuthStateChanged disparará con null
-        // y el usuario será deslogueado automáticamente
-      }
-    }, REFRESH_INTERVAL);
-  }, []);
-
   const handleFirebaseUser = useCallback(async (fbUser: FirebaseUser | null) => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-
     if (!fbUser) {
       setUser(null);
       setOrgId(null);
@@ -668,71 +503,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Iniciar refresh automático para esta sesión
-    scheduleRefresh(fbUser);
+    const result = await syncWithSassBack(fbUser);
 
-    const profile = await syncWithRealBack(fbUser);
-    if (!profile) {
+    if (!result) {
+      // sass-back no disponible o usuario sin acceso
       setUser(null);
       setOrgId(null);
       setLoading(false);
       return;
     }
 
-    setUser(profile);
+    setUser(result.user);
 
+    // Recuperar orgId: localStorage primero (evita un round-trip extra)
     const stored = typeof window !== 'undefined' ? localStorage.getItem(ORG_KEY) : null;
-    if (stored) {
-      setOrgId(stored);
-    } else {
-      const remoteOrgId = await fetchOrganizationId();
-      if (remoteOrgId) {
-        setOrgId(remoteOrgId);
-        localStorage.setItem(ORG_KEY, remoteOrgId);
-      }
+    const resolvedOrgId = stored ?? result.organizationId;
+
+    if (resolvedOrgId) {
+      setOrgId(resolvedOrgId);
+      if (!stored) localStorage.setItem(ORG_KEY, resolvedOrgId);
     }
 
     setLoading(false);
-  }, [scheduleRefresh]);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      // onAuthStateChanged puede disparar múltiples veces — solo procesar una
+      if (didInit.current && fbUser?.uid === auth.currentUser?.uid) return;
+      didInit.current = true;
       await handleFirebaseUser(fbUser);
     });
-    return () => {
-      unsub();
-      if (refreshTimer.current) clearInterval(refreshTimer.current);
-    };
+    return () => unsub();
   }, [handleFirebaseUser]);
 
+  // "login" = redirigir al sass-front para que haga el SSO
   const loginWithGoogle = useCallback(async () => {
-    setLoading(true);
-    try {
-      const credential = await signInWithPopup(auth, googleProvider);
-      // Persistir la cookie ANTES de que onAuthStateChanged dispare las queries
-      await persistSession(credential.user);
-      // onAuthStateChanged se dispara automáticamente → handleFirebaseUser
-    } catch (err) {
-      setLoading(false);
-      throw err;
+    if (SASS_FRONT) {
+      window.location.href = SASS_FRONT;
+    } else {
+      console.error('[Auth] NEXT_PUBLIC_SASS_FRONT_URL no configurado');
     }
   }, []);
 
   const logout = useCallback(async () => {
-    if (refreshTimer.current) clearInterval(refreshTimer.current);
-    // Borrar cookie + sesión Firebase
-    await Promise.all([clearSession(), signOut(auth)]);
+    await signOut(auth);
     if (typeof window !== 'undefined') localStorage.removeItem(ORG_KEY);
     setUser(null);
     setOrgId(null);
-    router.push('/login');
+    // Redirigir al sass-front en lugar del /login local
+    if (SASS_FRONT) {
+      window.location.href = SASS_FRONT;
+    } else {
+      router.push('/login');
+    }
   }, [router]);
 
   const refreshUser = useCallback(async () => {
     const fbUser = auth.currentUser;
     if (!fbUser) return;
-    const profile = await syncWithRealBack(fbUser);
-    if (profile) setUser(profile);
+    const result = await syncWithSassBack(fbUser);
+    if (result) setUser(result.user);
   }, []);
 
   return (
@@ -753,43 +584,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 EOF
 
-ok "$ROOT/features/auth/context/auth-context.tsx actualizado"
+ok "$ROOT/features/auth/context/auth-context.tsx listo"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Resumen
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "  ═══════════════════════════════════════════════════════════════"
-echo "  Archivos creados/modificados:"
+echo "  ════════════════════════════════════════════════════════════════"
+echo "  Cambios aplicados en $ROOT:"
 echo ""
-echo "  NUEVO    $ROOT/middleware.ts"
-echo "           Lee cookie __session antes de servir /dashboard/*"
-echo "           Token expirado o ausente → redirect a /login"
+echo "  ELIMINADO  middleware.ts (rompía el SSO flow)"
+echo "  ELIMINADO  app/api/auth/ (route handlers de cookie — no necesarios)"
 echo ""
-echo "  NUEVO    $ROOT/app/api/auth/session/route.ts"
-echo "           POST → setea cookie HttpOnly __session con el ID token"
-echo "           DELETE → borra la cookie (logout)"
+echo "  app/auth/sso/page.tsx"
+echo "    waitForAuthReady() ANTES de router.replace('/dashboard')"
+echo "    Garantiza auth.currentUser != null cuando los componentes montan"
 echo ""
-echo "  MOD      $ROOT/app/auth/sso/page.tsx"
-echo "           Agrega persistSession() ANTES de router.replace('/dashboard')"
-echo "           Elimina el race condition: cookie existe cuando el"
-echo "           middleware recibe el primer request al dashboard"
+echo "  app/login/page.tsx"
+echo "    Ya no tiene login propio — redirige a NEXT_PUBLIC_SASS_FRONT_URL"
 echo ""
-echo "  MOD      $ROOT/lib/firebase.ts"
-echo "           + persistSession(user) → POST /api/auth/session"
-echo "           + clearSession() → DELETE /api/auth/session"
-echo "           + getCurrentUserToken(forceRefresh) con waitForUser(3s)"
-echo "           + auto-actualiza la cookie cuando forceRefresh=true"
+echo "  lib/firebase.ts"
+echo "    waitForAuthReady(5000) — espera hasta 5s a Firebase post-SSO"
+echo "    getCurrentUserToken(forceRefresh) — para retry en 401"
+echo "    Solo signInWithCustomToken como entry point (sin signInWithPopup)"
 echo ""
-echo "  MOD      $ROOT/lib/api-client.ts"
-echo "           + retry automático en 401 con forceRefresh del token"
+echo "  lib/api-client.ts"
+echo "    Retry automático en 401 con token fresco (forceRefresh=true)"
 echo ""
-echo "  MOD      $ROOT/features/auth/context/auth-context.tsx"
-echo "           + persistSession() en loginWithGoogle"
-echo "           + clearSession() en logout"
-echo "           + auto-refresh de cookie cada 55 minutos"
-echo "  ═══════════════════════════════════════════════════════════════"
+echo "  features/auth/context/auth-context.tsx"
+echo "    Sin login propio ni register"
+echo "    loginWithGoogle() → redirige a NEXT_PUBLIC_SASS_FRONT_URL"
+echo "    logout() → signOut Firebase + redirige a NEXT_PUBLIC_SASS_FRONT_URL"
+echo "    syncWithSassBack() → /api/v1/auth/sync + /api/v1/users/me"
 echo ""
-echo "  No se requieren cambios en Railway ni en variables de entorno."
-echo "  No se requieren cambios en los backends."
+echo "  ⚠  Agregar en Railway (realsass-dashboard-front → Variables):"
+echo "     NEXT_PUBLIC_SASS_FRONT_URL=https://tu-sass-front.up.railway.app"
+echo "  ════════════════════════════════════════════════════════════════"
 echo ""

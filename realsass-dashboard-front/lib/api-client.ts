@@ -1,6 +1,6 @@
 // lib/api-client.ts
-// Helpers HTTP para realsass-sass-back y realsass-ecommerce-back.
-// Retry automático en 401: forceRefresh del token + reintento único.
+// Helpers HTTP hacia realsass-sass-back y realsass-ecommerce-back.
+// Retry automático en 401: forceRefresh del token Firebase + un reintento.
 
 import { getCurrentUserToken } from './firebase';
 
@@ -27,11 +27,8 @@ export function buildQuery(params: Record<string, unknown>): string {
 
 async function getToken(forceRefresh = false): Promise<string | undefined> {
   if (typeof window === 'undefined') return undefined;
-  try {
-    return await getCurrentUserToken(forceRefresh);
-  } catch {
-    return undefined;
-  }
+  try { return await getCurrentUserToken(forceRefresh); }
+  catch { return undefined; }
 }
 
 interface FetchOptions {
@@ -47,7 +44,7 @@ async function coreFetch<T>(
   path: string,
   { method = 'GET', body, orgId, signal, _isRetry = false }: FetchOptions = {},
 ): Promise<T> {
-  const token = await getToken(_isRetry); // forceRefresh en el retry
+  const token = await getToken(_isRetry);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,11 +59,9 @@ async function coreFetch<T>(
     signal,
   });
 
-  // Retry automático en 401 — solo una vez
+  // Un solo retry con token fresco en el primer 401
   if (res.status === 401 && !_isRetry) {
-    return coreFetch<T>(baseUrl, path, {
-      method, body, orgId, signal, _isRetry: true,
-    });
+    return coreFetch<T>(baseUrl, path, { method, body, orgId, signal, _isRetry: true });
   }
 
   const json = await res.json().catch(() => ({})) as Record<string, unknown>;
@@ -79,10 +74,10 @@ async function coreFetch<T>(
     throw new Error(msg);
   }
 
-  return ((json['data'] as T | undefined) ?? json as unknown as T);
+  return (json['data'] as T | undefined) ?? json as unknown as T;
 }
 
-// ─── realsass-sass-back ───────────────────────────────────────────────────────
+// ─── realsass-sass-back (identidad + org + config) ────────────────────────────
 export const realBackFetch = {
   get:    <T>(path: string, orgId?: string) =>
     coreFetch<T>(getRealBackBase(), path, { orgId }),
@@ -94,7 +89,7 @@ export const realBackFetch = {
     coreFetch<T>(getRealBackBase(), path, { method: 'DELETE', orgId }),
 };
 
-// ─── realsass-ecommerce-back ──────────────────────────────────────────────────
+// ─── realsass-ecommerce-back (CMS productos + pedidos) ────────────────────────
 export const ecommerceFetch = {
   get:    <T>(path: string, orgId: string) =>
     coreFetch<T>(getEcommerceBase(), path, { orgId }),
