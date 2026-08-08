@@ -16,7 +16,7 @@
  *   configSecrets.*   → secretos cifrados
  */
 import { router }                         from './trpc';
-import { createAuthRouter }               from './routers/auth.router';
+// TODO Sprint 2: import { createAuthRouter }               from './routers/auth.router';
 import { createOrganizationsRouter }      from './routers/organizations.router';
 import { createCollaboratorsRouter }      from './routers/collaborators.router';
 import { createConfigFlagsRouter }        from './routers/config-flags.router';
@@ -52,7 +52,7 @@ export interface AppRouterDeps {
 
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
-    auth:           createAuthRouter(deps.usersService, deps.authService),
+    // TODO Sprint 2: auth: createAuthRouter(deps.usersService, deps.authService),
     organizations:  createOrganizationsRouter(deps.orgsService),
     collaborators:  createCollaboratorsRouter(deps.collaboratorsService),
     configFlags:    createConfigFlagsRouter(deps.flagsService),

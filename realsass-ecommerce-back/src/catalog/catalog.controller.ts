@@ -2,11 +2,11 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/types/tenant-context';
+import { TenantGuard } from '@real/auth-server';
+import { RolesGuard } from '@real/auth-server';
+import { Roles } from '@real/auth-server';
+import { Tenant } from '@real/auth-server';
+import type { TenantContext } from '@real/auth-server';
 
 // Admin — requiere Firebase + x-organization-id (FirebaseAuthGuard es global).
 @Controller('ecommerce/products')

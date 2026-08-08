@@ -49,13 +49,18 @@ export class UsersService {
 
     if (!user) return null;
 
-    const tenants = [];
+    const tenants: Array<{
+      organizationId: string;
+      organization:   unknown;
+      role:           'OWNER' | 'COLLABORATOR';
+      permissions:    Record<string, boolean>;
+    }> = [];
 
     if (user.isOwner && user.organization) {
       tenants.push({
         organizationId: user.organization.id,
         organization:   user.organization,
-        role:           'OWNER' as const,
+        role:           'OWNER',
         permissions:    FULL_PERMISSIONS,
       });
     }
@@ -64,7 +69,7 @@ export class UsersService {
       tenants.push({
         organizationId: collab.organizationId,
         organization:   collab.organization,
-        role:           'COLLABORATOR' as const,
+        role:           'COLLABORATOR',
         permissions:    parsePermissions(collab.permissions),
       });
     }
@@ -101,68 +106,65 @@ export class UsersService {
   }
 
   async getOrganizationAccess(
-    firebaseUid: string,
-    o
-# =============================================================================
-# PASO 4 — realsass-ecommerce-back: usar @real/auth-server
-# =============================================================================
-sep
-log "PASO 4 — Actualizando realsass-ecommerce-back..."
+    firebaseUid:    string,
+    organizationId: string,
+  ): Promise<OrganizationAccessResult> {
+    const user = await this.prisma.user.findUnique({ where: { firebaseUid } });
+    if (!user) return { canAccess: false, reason: 'Usuario no encontrado' };
 
-node -e "
-const fs  = require('fs');
-const p   = 'realsass-ecommerce-back/package.json';
-const pkg = JSON.parse(fs.readFileSync(p, 'utf8'));
-pkg.dependencies = pkg.dependencies || {};
-pkg.dependencies['@real/auth-server'] = 'workspace:*';
-fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + '\n');
-console.log('[ok] @real/auth-server agregado a ecommerce-back');
-"
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org) return { canAccess: false, reason: 'Organizacion no encontrada' };
 
-cat > realsass-ecommerce-back/src/app.module.ts << 'EOF'
-import { Module }                     from '@nestjs/common';
-import { APP_GUARD }                  from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ConfigModule }               from '@nestjs/config';
+    if (org.userId === user.id) {
+      return {
+        canAccess: true, userId: user.id, organizationId: org.id,
+        role: 'OWNER', permissions: FULL_PERMISSIONS,
+      };
+    }
 
-import { PrismaModule }              from './prisma/prisma.module';
-import { RedisModule }               from './redis/redis.module';
-import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
-import { CatalogModule }             from './catalog/catalog.module';
-import { InventoryModule }           from './inventory/inventory.module';
-import { CustomersModule }           from './customers/customers.module';
-import { ActivityModule }            from './activity/activity.module';
-import { CartModule }                from './cart/cart.module';
-import { OrdersModule }              from './orders/orders.module';
-import { StoreModule }               from './store/store.module';
-import { TrpcModule }                from './trpc/trpc.module';
+    const collab = await this.prisma.collaborator.findFirst({
+      where: { userId: user.id, organizationId: org.id, status: 'ACTIVE' },
+    });
 
-import {
-  FirebaseModule, FirebaseAuthGuard,
-  CACHE_PORT, MemoryCacheAdapter,
-} from '@real/auth-server';
+    if (!collab) return { canAccess: false, reason: 'Sin acceso a esta organizacion' };
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
-    FirebaseModule,
-    PrismaModule,
-    RedisModule,
-    OrganizationsClientModule,
-    CatalogModule,
-    InventoryModule,
-    CustomersModule,
-    ActivityModule,
-    CartModule,
-    OrdersModule,
-    StoreModule,
-    TrpcModule,
-  ],
-  providers: [
-    { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
-    { provide: APP_GUARD,  useClass: ThrottlerGuard },
-    { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
-  ],
-})
-export class AppModule {}
+    return {
+      canAccess: true, userId: user.id, organizationId: org.id,
+      role: 'MEMBER', permissions: parsePermissions(collab.permissions),
+    };
+  }
+
+  async getDashboardAccess(firebaseUid: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { firebaseUid }, include: { organization: true, collaborations: true },
+    });
+    if (!user) return { canAccess: false };
+    return {
+      canAccess:      user.isOwner || (user.collaborations?.length ?? 0) > 0,
+      isOwner:        user.isOwner,
+      organizationId: user.organization?.id ?? null,
+    };
+  }
+
+  async selectRole(firebaseUid: string, dto: { role: 'owner' | 'affiliate' }) {
+    const user = await this.prisma.user.findUnique({ where: { firebaseUid } });
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+
+    if (dto.role === 'owner') {
+      await this.prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
+      await this.orgs.ensureOrganization(user.id);
+    }
+
+    if (dto.role === 'affiliate') {
+      const code = `AF-${user.id.slice(0, 8).toUpperCase()}`;
+      await this.prisma.user.update({
+        where: { id: user.id }, data: { isAffiliate: true, affiliateCode: code },
+      });
+      await this.prisma.affiliateData.upsert({
+        where: { userId: user.id }, update: {}, create: { userId: user.id },
+      });
+    }
+
+    return this.buildProfile(firebaseUid);
+  }
+}

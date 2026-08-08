@@ -2,7 +2,7 @@
  * Contrato compartido con real-back (src/users/types/organization-access.types.ts)
  * y con real-config-back. Si cambia uno, actualizar los tres.
  */
-import type { TenantRole, CollaboratorPermissions } from '../../common/types/tenant-context';
+import type { TenantRole, CollaboratorPermissions } from '@real/auth-server';
 
 export type { TenantRole, CollaboratorPermissions };
 

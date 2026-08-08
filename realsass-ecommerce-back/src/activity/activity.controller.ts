@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 import { LogEventDto } from './dto/log-event.dto';
-import { Public } from '../common/decorators/public.decorator';
+import { Public } from '@real/auth-server';
 
 @Controller('ecommerce/public/:organizationId/activity')
 @Public()

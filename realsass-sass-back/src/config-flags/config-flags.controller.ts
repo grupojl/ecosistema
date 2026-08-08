@@ -1,11 +1,11 @@
 import { Controller, Get, Patch, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { ConfigFlagsService } from './config-flags.service';
 import { UpdateFlagDto } from './dto/update-flag.dto';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/guards/tenant.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { Tenant } from '@real/auth-server';
+import type { TenantContext } from '@real/auth-server';
+import { Roles } from '@real/auth-server';
+import { TenantGuard } from '@real/auth-server';
+import { RolesGuard } from '@real/auth-server';
 
 @Controller('config/flags')
 @UseGuards(TenantGuard, RolesGuard)

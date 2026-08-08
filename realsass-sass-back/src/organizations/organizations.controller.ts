@@ -1,4 +1,4 @@
-import { Public } from '../common/guards/firebase-auth.guard';
+import { Public } from '@real/auth-server';
 import {
   Controller,
   Get,
@@ -10,8 +10,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { CurrentUser } from '@real/auth-server';
+import type { CurrentUserPayload } from '@real/auth-server';
 import { UpdateOrganizationDto } from './dto/update-organization.dto'; // sin "s"
 
 @Controller('organizations')

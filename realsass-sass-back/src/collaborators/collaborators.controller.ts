@@ -12,9 +12,9 @@ import {
 import { CollaboratorsService } from './collaborators.service';
 import { InviteCollaboratorDto } from './dto/invite-collaborator.dto';
 import { UpdateCollaboratorDto } from './dto/update-collaborator.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { Public } from '../common/guards/firebase-auth.guard';
+import { CurrentUser } from '@real/auth-server';
+import type { CurrentUserPayload } from '@real/auth-server';
+import { Public } from '@real/auth-server';
 
 @Controller()
 export class CollaboratorsController {

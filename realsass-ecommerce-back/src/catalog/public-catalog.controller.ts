@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
-import { Public } from '../common/decorators/public.decorator';
+import { Public } from '@real/auth-server';
 
 // Público — visitantes anónimos de la tienda. Sin Firebase.
 // TODO: cuando exista StorefrontSettings, validar acá que la organización

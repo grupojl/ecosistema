@@ -6,6 +6,7 @@ RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-client/package.json ./packages/auth-client/
+COPY packages/auth-server/package.json ./packages/auth-server/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
 COPY realsass-sass-back/package.json              ./realsass-sass-back/

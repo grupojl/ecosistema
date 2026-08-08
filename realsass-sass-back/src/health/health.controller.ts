@@ -5,7 +5,7 @@
 // de healthcheck y el deploy nunca pasa.
 
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
-import { Public } from '../common/guards/firebase-auth.guard';
+import { Public } from '@real/auth-server';
 
 @Public()
 @Controller('health')

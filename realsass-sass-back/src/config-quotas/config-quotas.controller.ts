@@ -1,11 +1,11 @@
 import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
 import { ConfigQuotasService } from './config-quotas.service';
 import { IsInt, Min } from 'class-validator';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/guards/tenant.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
+import { Tenant } from '@real/auth-server';
+import type { TenantContext } from '@real/auth-server';
+import { Roles } from '@real/auth-server';
+import { TenantGuard } from '@real/auth-server';
+import { RolesGuard } from '@real/auth-server';
 
 class UpdateLimitDto {
   @IsInt() @Min(-1)

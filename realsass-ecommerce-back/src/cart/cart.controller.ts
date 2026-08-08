@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { AddItemDto } from './dto/add-item.dto';
-import { Public } from '../common/decorators/public.decorator';
+import { Public } from '@real/auth-server';
 
 @Controller('ecommerce/public/:organizationId/cart')
 @Public()

@@ -12,7 +12,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { StoreService } from './store.service';
-import { Public } from '../common/decorators/public.decorator';
+import { Public } from '@real/auth-server';
 
 @ApiTags('Store (public)')
 @Controller('ecommerce/public')

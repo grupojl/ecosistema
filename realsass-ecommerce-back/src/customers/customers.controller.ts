@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { IdentifyCustomerDto } from './dto/identify-customer.dto';
-import { Public } from '../common/decorators/public.decorator';
+import { Public } from '@real/auth-server';
 
 @Controller('ecommerce/public/:organizationId/customers')
 @Public()

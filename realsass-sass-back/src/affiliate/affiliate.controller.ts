@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { CurrentUser } from '@real/auth-server';
+import type { CurrentUserPayload } from '@real/auth-server';
 import { AffiliatesService } from './affiliate.service';
 
 @Controller('affiliates')

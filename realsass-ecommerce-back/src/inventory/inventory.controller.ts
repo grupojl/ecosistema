@@ -1,11 +1,11 @@
 import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { UpdateStockDto } from './dto/update-stock.dto';
-import { TenantGuard } from '../common/guards/tenant.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { Tenant } from '../common/decorators/tenant.decorator';
-import type { TenantContext } from '../common/types/tenant-context';
+import { TenantGuard } from '@real/auth-server';
+import { RolesGuard } from '@real/auth-server';
+import { Roles } from '@real/auth-server';
+import { Tenant } from '@real/auth-server';
+import type { TenantContext } from '@real/auth-server';
 
 @Controller('ecommerce/inventory')
 @UseGuards(TenantGuard, RolesGuard)
