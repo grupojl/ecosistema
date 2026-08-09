@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — FIX 6: Restaurar UseGuards en config-secrets.controller.ts
+# x.sh — FIX 7: Recrear guards de negocio borrados en sass-back
 #
-# El sed anterior removia @UseGuards(TenantGuard) y @UseGuards(RolesGuard)
-# pero tambien eliminaba UseGuards del import de @nestjs/common cuando
-# quedaba solitario — rompiendo el uso de @UseGuards(StepUpGuard) que
-# es un guard de negocio propio (step-up auth para operaciones criticas).
-#
-# Ademas hay otros guards propios en sass-back (ApiKeyGuard, StepUpGuard)
-# que tambien necesitan UseGuards en el import.
-#
-# SOLUCION:
-#   1. Reescribir config-secrets.controller.ts con imports correctos
-#   2. Verificar otros controllers que puedan tener el mismo problema
-#   3. La regla correcta de sed: solo remover @UseGuards(TenantGuard)
-#      y @UseGuards(RolesGuard) del DECORADOR, nunca del import
+# api-key.guard.ts y step-up.guard.ts fueron borrados por el x.sh de
+# limpieza inicial (borraba todo src/common/guards/).
+# Son guards de NEGOCIO propios de sass-back, no de infra — deben vivir
+# en src/common/guards/ del servicio, no en @real/auth-server.
 # =============================================================================
 
 set -euo pipefail
@@ -26,189 +17,168 @@ log() { echo -e "${BLUE}[->]${NC} $1"; }
 sep() { echo -e "${BOLD}----------------------------------------------------${NC}"; }
 
 sep
-echo -e "${BOLD}  FIX 6 — Restaurar imports de UseGuards en controllers${NC}"
+echo -e "${BOLD}  FIX 7 — Recrear guards de negocio en sass-back${NC}"
 sep
 
-# =============================================================================
-# FIX 1 — Restaurar config-secrets.controller.ts completo
-# TenantGuard y RolesGuard ahora son globales, pero StepUpGuard sigue
-# siendo inline porque aplica solo a rutas especificas (step-up auth)
-# =============================================================================
-log "FIX 1 — Reescribiendo config-secrets.controller.ts..."
+mkdir -p realsass-sass-back/src/common/guards
 
-cat > realsass-sass-back/src/config-secrets/config-secrets.controller.ts << 'EOF'
+# =============================================================================
+# api-key.guard.ts — verifica API Keys de sistema (x-api-key header)
+# Usada en rutas internas de config: /config/secrets/resolve, /config/flags/:orgId
+# =============================================================================
+log "Recreando api-key.guard.ts..."
+
+cat > realsass-sass-back/src/common/guards/api-key.guard.ts << 'EOF'
 import {
-  Controller, Get, Post, Delete,
-  Param, Body, UseGuards, HttpCode, HttpStatus, Req,
+  CanActivate, ExecutionContext, Injectable, UnauthorizedException,
 } from '@nestjs/common';
-import type { Request }          from 'express';
-import { ConfigSecretsService }  from './config-secrets.service';
-import { CreateSecretDto }       from './dto/create-secret.dto';
-import { Tenant }                from '@real/auth-server';
-import type { TenantContext }    from '@real/auth-server';
-import { Roles }                 from '@real/auth-server';
-import { Public }                from '@real/auth-server';
-import { StepUpGuard }           from '../common/guards/step-up.guard';
-import { ApiKeyGuard }           from '../common/guards/api-key.guard';
-import { IsString }              from 'class-validator';
+import { PrismaService }   from '../../prisma/prisma.service';
+import { MembershipRole }  from '@prisma/client';
+import * as bcrypt         from 'bcryptjs';
 
-class RotateSecretDto {
-  @IsString()
-  value!: string;
-}
+const KEY_PREFIX = 'sk_live_';
 
 /**
- * ConfigSecretsController
+ * ApiKeyGuard — autentica via header x-api-key.
+ * Usada en rutas de sistema que consumen config en runtime:
+ *   GET /config/secrets/resolve/:key
+ *   GET /config/flags/:orgId
+ *   GET /config/templates/:key
  *
- * TenantGuard y RolesGuard son GLOBALES (APP_GUARD en AppModule).
- * StepUpGuard se mantiene INLINE porque solo aplica a operaciones
- * criticas (rotate y revoke) — verifica re-autenticacion reciente (5 min).
+ * NO es un APP_GUARD global — se aplica inline con @UseGuards(ApiKeyGuard)
+ * solo en las rutas que lo necesitan.
+ *
+ * Inyecta req.tenant con el organizationId de la API Key para que
+ * los services puedan usarlo normalmente.
  */
-@Controller('config/secrets')
-@Roles('OWNER')
-export class ConfigSecretsController {
-  constructor(private readonly svc: ConfigSecretsService) {}
+@Injectable()
+export class ApiKeyGuard implements CanActivate {
+  constructor(private readonly prisma: PrismaService) {}
 
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  create(
-    @Tenant() t: TenantContext,
-    @Body() dto: CreateSecretDto,
-    @Req() req: Request,
-  ) {
-    return this.svc.create(t.organizationId, t.userId, dto, req.ip);
-  }
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    const req    = ctx.switchToHttp().getRequest();
+    const rawKey = req.headers['x-api-key'] as string | undefined;
 
-  @Get()
-  list(@Tenant() t: TenantContext) {
-    return this.svc.list(t.organizationId);
-  }
+    if (!rawKey) return false;
+    if (!rawKey.startsWith(KEY_PREFIX)) {
+      throw new UnauthorizedException('Formato de API Key invalido');
+    }
 
-  @Post(':id/rotate')
-  @UseGuards(StepUpGuard)
-  rotate(
-    @Tenant() t: TenantContext,
-    @Param('id') id: string,
-    @Body() dto: RotateSecretDto,
-    @Req() req: Request,
-  ) {
-    return this.svc.rotate(t.organizationId, t.userId, id, dto.value, req.ip);
-  }
+    const keyPrefix  = rawKey.substring(0, 12);
+    const candidates = await this.prisma.apiKey.findMany({
+      where: {
+        keyPrefix,
+        revokedAt: null,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      include: { organization: true },
+    });
 
-  @Delete(':id')
-  @UseGuards(StepUpGuard)
-  revoke(
-    @Tenant() t: TenantContext,
-    @Param('id') id: string,
-    @Req() req: Request,
-  ) {
-    return this.svc.revoke(t.organizationId, t.userId, id, req.ip);
-  }
+    for (const candidate of candidates) {
+      const valid = await bcrypt.compare(rawKey, candidate.keyHash);
+      if (valid) {
+        // Actualizar lastUsedAt sin bloquear el request
+        void this.prisma.apiKey
+          .update({ where: { id: candidate.id }, data: { lastUsedAt: new Date() } })
+          .catch(() => null);
 
-  @Public()
-  @Get('resolve/:key')
-  @UseGuards(ApiKeyGuard)
-  resolve(@Param('key') key: string, @Req() req: Request & { tenant: TenantContext }) {
-    return this.svc.resolve(req.tenant.organizationId, key);
+        req.tenant = {
+          organizationId:     candidate.organizationId,
+          role:               MembershipRole.MEMBER,
+          apiKeyScopes:       candidate.scopes as string[],
+          productPermissions: {},
+        };
+        return true;
+      }
+    }
+
+    throw new UnauthorizedException('API Key invalida o expirada');
   }
 }
 EOF
-ok "config-secrets.controller.ts"
+ok "api-key.guard.ts"
 
 # =============================================================================
-# FIX 2 — Verificar otros controllers que usen UseGuards con guards propios
-# (ApiKeyGuard, StepUpGuard) y asegurarnos que tengan el import correcto.
-# La estrategia: buscar archivos que usen @UseGuards pero no importen UseGuards
+# step-up.guard.ts — verifica re-autenticacion reciente (ventana de 5 min)
+# Usada en operaciones criticas: rotate y revoke de secretos
 # =============================================================================
-log "FIX 2 — Verificando controllers con @UseGuards sin import de UseGuards..."
+log "Recreando step-up.guard.ts..."
 
-SASS_SRC="realsass-sass-back/src"
+cat > realsass-sass-back/src/common/guards/step-up.guard.ts << 'EOF'
+import {
+  CanActivate, ExecutionContext, ForbiddenException, Injectable,
+} from '@nestjs/common';
+import * as admin from 'firebase-admin';
 
-find "$SASS_SRC" -name "*.controller.ts" | while read -r f; do
-  # Si el archivo usa @UseGuards pero no tiene UseGuards en el import de @nestjs/common
-  if grep -q "@UseGuards" "$f" && ! grep -q "UseGuards" "$f" | grep -q "from '@nestjs/common'"; then
-    # Verificar mas precisamente
-    uses_guard=$(grep -c "@UseGuards" "$f" || true)
-    has_import=$(grep "UseGuards" "$f" | grep -c "from '@nestjs/common'" || true)
-    
-    if [ "$uses_guard" -gt 0 ] && [ "$has_import" -eq 0 ]; then
-      echo "[!] Falta import de UseGuards en: $f"
-      # Agregar UseGuards al primer import de @nestjs/common que encontremos
-      sed -i "0,/from '@nestjs\/common'/{s/^import {/import { UseGuards,/}" "$f"
-    fi
-  fi
-done
+/**
+ * StepUpGuard — exige re-autenticacion reciente (maximo 5 minutos).
+ * Se usa en operaciones criticas que requieren que el usuario haya
+ * ingresado su password recientemente:
+ *   POST /config/secrets/:id/rotate
+ *   DELETE /config/secrets/:id
+ *
+ * NO es un APP_GUARD global — se aplica inline con @UseGuards(StepUpGuard).
+ * Funciona verificando auth_time del Firebase idToken.
+ */
+@Injectable()
+export class StepUpGuard implements CanActivate {
+  private readonly WINDOW_MS = 5 * 60 * 1_000; // 5 minutos
 
-# Verificacion alternativa mas robusta
-log "Verificacion adicional por archivo..."
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    const req   = ctx.switchToHttp().getRequest();
+    const token = (req.headers['authorization'] as string | undefined)?.split(' ')[1];
 
-check_and_fix() {
-  local file="$1"
-  if [ ! -f "$file" ]; then return; fi
-  
-  local uses_useguards
-  uses_useguards=$(grep -c "@UseGuards" "$file" 2>/dev/null || echo "0")
-  
-  if [ "$uses_useguards" -gt 0 ]; then
-    local has_import
-    has_import=$(grep "UseGuards" "$file" | grep -c "from '@nestjs/common'" 2>/dev/null || echo "0")
-    
-    if [ "$has_import" -eq 0 ]; then
-      warn "Necesita UseGuards en import: $file"
-      # Agregar UseGuards al import de @nestjs/common
-      sed -i "/from '@nestjs\/common'/s/^import {/import { UseGuards, /" "$file"
-      ok "  Agregado UseGuards a: $(basename "$file")"
-    fi
-  fi
+    if (!token) throw new ForbiddenException('Token requerido para esta accion');
+
+    const decoded  = await admin.app().auth().verifyIdToken(token);
+    const authTime = decoded.auth_time * 1_000;
+
+    if (Date.now() - authTime > this.WINDOW_MS) {
+      throw new ForbiddenException(
+        'Re-autenticacion requerida. Cerrá sesion y volvé a ingresar.',
+      );
+    }
+
+    return true;
+  }
 }
-
-# Revisar controllers especificos que pueden tener guards propios
-check_and_fix "$SASS_SRC/config-flags/config-flags.controller.ts"
-check_and_fix "$SASS_SRC/config-webhooks/config-webhooks.controller.ts"
-check_and_fix "$SASS_SRC/health/health.controller.ts"
-check_and_fix "$SASS_SRC/organizations/organizations.controller.ts"
+EOF
+ok "step-up.guard.ts"
 
 # =============================================================================
-# FIX 3 — Mismo proceso para ecommerce-back
+# Verificar si hay otros controllers que importan guards de ../common/guards/
+# que pudieran haberse borrado — listar para revision manual
 # =============================================================================
-log "FIX 3 — Verificando controllers de ecommerce-back..."
+sep
+log "Verificando imports de guards en controllers de sass-back..."
 
-ECO_SRC="realsass-ecommerce-back/src"
+echo ""
+echo "  Controllers que importan guards locales:"
+grep -rl "from '../common/guards/" realsass-sass-back/src/ 2>/dev/null \
+  | grep "\.controller\." \
+  | sed 's|realsass-sass-back/src/||' \
+  | while read -r f; do echo "    - $f"; done
 
-find "$ECO_SRC" -name "*.controller.ts" | while read -r f; do
-  uses_guard=$(grep -c "@UseGuards" "$f" 2>/dev/null || echo "0")
-  if [ "$uses_guard" -gt 0 ]; then
-    has_import=$(grep "UseGuards" "$f" | grep -c "from '@nestjs/common'" 2>/dev/null || echo "0")
-    if [ "$has_import" -eq 0 ]; then
-      echo "[!] Agregando UseGuards import a: $f"
-      sed -i "/from '@nestjs\/common'/s/^import {/import { UseGuards, /" "$f"
-    fi
-  fi
-done
-
-ok "ecommerce-back controllers verificados"
+echo ""
+echo "  Guards que existen ahora en src/common/guards/:"
+ls realsass-sass-back/src/common/guards/ 2>/dev/null \
+  | while read -r f; do echo "    - $f"; done
 
 # =============================================================================
 # RESUMEN
 # =============================================================================
 sep
-echo -e "${BOLD}  FIX 6 COMPLETO${NC}"
+echo -e "${BOLD}  FIX 7 COMPLETO${NC}"
 sep
 echo ""
-echo -e "${GREEN}  Corregido:${NC}"
-echo "    [1] config-secrets.controller.ts reescrito limpio"
-echo "        - TenantGuard y RolesGuard removidos (ahora son APP_GUARD global)"
-echo "        - StepUpGuard mantenido inline (guard de negocio, no de infra)"
-echo "        - UseGuards importado correctamente de @nestjs/common"
-echo "        - Decorators importados de @real/auth-server"
-echo "    [2] Controllers de ambos backs verificados por imports faltantes"
+echo -e "${GREEN}  Recreado:${NC}"
+echo "    src/common/guards/api-key.guard.ts  — auth via x-api-key header"
+echo "    src/common/guards/step-up.guard.ts  — re-auth en ventana de 5 min"
 echo ""
-echo -e "${GREEN}  Leccion aprendida:${NC}"
-echo "    El sed 'remover @UseGuards inline' fue demasiado agresivo."
-echo "    Solo debia remover @UseGuards(TenantGuard) y @UseGuards(RolesGuard)"
-echo "    porque esos dos son ahora APP_GUARD globales."
-echo "    Guards de negocio (StepUpGuard, ApiKeyGuard) deben mantenerse inline."
+echo -e "${GREEN}  Estos guards son de NEGOCIO — viven en sass-back, no en @real/auth-server${NC}"
+echo "    ApiKeyGuard  — necesita PrismaService (acceso a DB de sass-back)"
+echo "    StepUpGuard  — necesita firebase-admin (ya disponible via FirebaseModule)"
 echo ""
-echo "  git add . && git commit -m 'fix: restore UseGuards import, clean secrets controller' && git push"
+echo "  git add . && git commit -m 'fix: recreate business guards api-key and step-up' && git push"
 echo ""
 sep
