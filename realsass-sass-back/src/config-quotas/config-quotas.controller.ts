@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
 import { ConfigQuotasService } from './config-quotas.service';
 import { IsInt, Min } from 'class-validator';
 import { Tenant } from '@real/auth-server';
@@ -13,7 +13,7 @@ class UpdateLimitDto {
 }
 
 @Controller('config/quotas')
-@UseGuards(TenantGuard, RolesGuard)
+
 export class ConfigQuotasController {
   constructor(private readonly svc: ConfigQuotasService) {}
 

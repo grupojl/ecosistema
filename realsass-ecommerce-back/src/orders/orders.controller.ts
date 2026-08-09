@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { TenantGuard } from '@real/auth-server';
 import { RolesGuard } from '@real/auth-server';
@@ -8,7 +8,7 @@ import type { TenantContext } from '@real/auth-server';
 
 // Admin — el dueño de la org revisa órdenes desde el dashboard.
 @Controller('ecommerce/orders')
-@UseGuards(TenantGuard, RolesGuard)
+
 @Roles('OWNER', 'MEMBER')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}

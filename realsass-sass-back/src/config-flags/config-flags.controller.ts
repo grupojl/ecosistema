@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query } from '@nestjs/common';
 import { ConfigFlagsService } from './config-flags.service';
 import { UpdateFlagDto } from './dto/update-flag.dto';
 import { Tenant } from '@real/auth-server';
@@ -8,7 +8,7 @@ import { TenantGuard } from '@real/auth-server';
 import { RolesGuard } from '@real/auth-server';
 
 @Controller('config/flags')
-@UseGuards(TenantGuard, RolesGuard)
+
 export class ConfigFlagsController {
   constructor(private readonly svc: ConfigFlagsService) {}
 

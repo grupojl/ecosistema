@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ConfigWebhooksService } from './config-webhooks.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { Tenant } from '@real/auth-server';
@@ -8,7 +8,7 @@ import { TenantGuard } from '@real/auth-server';
 import { RolesGuard } from '@real/auth-server';
 
 @Controller('config/webhooks')
-@UseGuards(TenantGuard, RolesGuard)
+
 @Roles('OWNER')
 export class ConfigWebhooksController {
   constructor(private readonly svc: ConfigWebhooksService) {}

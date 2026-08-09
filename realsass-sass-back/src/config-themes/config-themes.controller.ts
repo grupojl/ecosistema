@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ConfigThemesService } from './config-themes.service';
 import { CreateThemeDto } from './dto/create-theme.dto';
 import { Tenant } from '@real/auth-server';
@@ -8,7 +8,7 @@ import { TenantGuard } from '@real/auth-server';
 import { RolesGuard } from '@real/auth-server';
 
 @Controller('config/themes')
-@UseGuards(TenantGuard, RolesGuard)
+
 export class ConfigThemesController {
   constructor(private readonly svc: ConfigThemesService) {}
 

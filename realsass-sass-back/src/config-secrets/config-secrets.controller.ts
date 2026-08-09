@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { ConfigSecretsService } from './config-secrets.service';
 import { CreateSecretDto } from './dto/create-secret.dto';
@@ -16,7 +16,7 @@ class RotateSecretDto {
 }
 
 @Controller('config/secrets')
-@UseGuards(TenantGuard, RolesGuard)
+
 @Roles('OWNER')
 export class ConfigSecretsController {
   constructor(private readonly svc: ConfigSecretsService) {}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -10,7 +10,7 @@ import type { TenantContext } from '@real/auth-server';
 
 // Admin — requiere Firebase + x-organization-id (FirebaseAuthGuard es global).
 @Controller('ecommerce/products')
-@UseGuards(TenantGuard, RolesGuard)
+
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 

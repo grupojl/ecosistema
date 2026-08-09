@@ -18,10 +18,19 @@ import { TrpcModule }                from './trpc/trpc.module';
 import {
   FirebaseModule,
   FirebaseAuthGuard,
+  TenantGuard,
+  RolesGuard,
   CACHE_PORT,
   MemoryCacheAdapter,
 } from '@real/auth-server';
 
+/**
+ * Orden de APP_GUARD importa:
+ *   1. FirebaseAuthGuard — verifica identidad (quien sos)
+ *   2. TenantGuard       — resuelve organizacion y rol
+ *   3. RolesGuard        — aplica RBAC
+ *   4. ThrottlerGuard    — rate limiting
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
@@ -41,6 +50,8 @@ import {
   ],
   providers: [
     { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
+    { provide: APP_GUARD,  useClass: TenantGuard },
+    { provide: APP_GUARD,  useClass: RolesGuard },
     { provide: APP_GUARD,  useClass: ThrottlerGuard },
     { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
   ],

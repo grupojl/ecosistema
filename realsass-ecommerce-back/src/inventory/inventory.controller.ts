@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { UpdateStockDto } from './dto/update-stock.dto';
 import { TenantGuard } from '@real/auth-server';
@@ -8,7 +8,7 @@ import { Tenant } from '@real/auth-server';
 import type { TenantContext } from '@real/auth-server';
 
 @Controller('ecommerce/inventory')
-@UseGuards(TenantGuard, RolesGuard)
+
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 

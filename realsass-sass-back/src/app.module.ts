@@ -25,9 +25,13 @@ import { TrpcModule }            from './trpc/trpc.module';
 import {
   FirebaseModule,
   FirebaseAuthGuard,
+  RolesGuard,
   CACHE_PORT,
   MemoryCacheAdapter,
 } from '@real/auth-server';
+
+// sass-back NO usa TenantGuard — el TenantContext se resuelve directamente
+// desde Prisma en cada service (sin hop de red).
 
 @Module({
   imports: [
@@ -55,6 +59,7 @@ import {
   ],
   providers: [
     { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
+    { provide: APP_GUARD,  useClass: RolesGuard },
     { provide: APP_GUARD,  useClass: ThrottlerGuard },
     { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
   ],

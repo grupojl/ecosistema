@@ -2,37 +2,54 @@ import {
   CanActivate, ExecutionContext, ForbiddenException,
   Inject, Injectable, Logger, UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector }     from '@nestjs/core';
 import { CACHE_PORT }    from '../ports/cache.port';
 import type { CachePort } from '../ports/cache.port';
-import type { TenantContext, CurrentUserPayload, OrganizationAccessResult } from '../types/tenant-context';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import type {
+  TenantContext, CurrentUserPayload, OrganizationAccessResult,
+} from '../types/tenant-context';
 
-const CACHE_TTL = 90; // segundos — evita hop de red por cada request
+const CACHE_TTL = 90;
 
 /**
  * TenantGuard — resuelve TenantContext para ecommerce-back.
- * Llama a sass-back GET /api/v1/auth/organization-access con cache.
  *
- * En sass-back no uses este guard — el TenantContext se resuelve
- * directamente desde Prisma sin hop de red.
+ * IMPORTANTE: registrar como APP_GUARD global en AppModule, NO con @UseGuards().
+ * Si se registra con @UseGuards() NestJS intenta instanciarlo en el modulo
+ * del controller donde CACHE_PORT no esta disponible.
  *
- * Variable de entorno requerida en ecommerce-back:
- *   SASS_BACK_URL=https://tu-sass-back.railway.app
+ * Skipea rutas con @Public() — igual que FirebaseAuthGuard.
+ * Skipea rutas sin header x-organization-id (storefront publico).
  */
 @Injectable()
 export class TenantGuard implements CanActivate {
   private readonly logger = new Logger(TenantGuard.name);
 
-  constructor(@Inject(CACHE_PORT) private readonly cache: CachePort) {}
+  constructor(
+    @Inject(CACHE_PORT) private readonly cache: CachePort,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    // Skip rutas publicas
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      ctx.getHandler(), ctx.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const req            = ctx.switchToHttp().getRequest();
     const user           = req.user as CurrentUserPayload | undefined;
     const organizationId = req.headers['x-organization-id'] as string | undefined;
     const token          = this.extractToken(req);
 
-    if (!organizationId) throw new ForbiddenException('Header x-organization-id requerido');
-    if (!user?.uid)      throw new UnauthorizedException('Usuario no autenticado');
-    if (!token)          throw new UnauthorizedException('Bearer token requerido');
+    // Sin organizationId — puede ser una ruta que no requiere tenant context
+    // (ej: rutas de salud, rutas de store publico sin auth)
+    // En ese caso simplemente no inyectamos tenant y dejamos pasar
+    if (!organizationId) return true;
+
+    if (!user?.uid)  throw new UnauthorizedException('Usuario no autenticado');
+    if (!token)      throw new UnauthorizedException('Bearer token requerido');
 
     const cacheKey = `org-access:${user.uid}:${organizationId}`;
 

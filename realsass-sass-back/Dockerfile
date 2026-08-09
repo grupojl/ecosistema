@@ -40,4 +40,4 @@ COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       .
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
 USER nestjs
 EXPOSE 3000
-CMD ["dumb-init", "node", "dist/src/main"]
+CMD ["dumb-init", "node", "dist/main"]

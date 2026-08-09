@@ -10,7 +10,7 @@ import { RolesGuard } from '@real/auth-server';
 import { Roles } from '@real/auth-server';
 
 @Controller('config/audit')
-@UseGuards(TenantGuard, RolesGuard)
+
 @Roles('OWNER')
 export class ConfigAuditController {
   constructor(private readonly svc: ConfigAuditService) {}
