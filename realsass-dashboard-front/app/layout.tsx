@@ -1,10 +1,10 @@
-import { TrpcProvider } from '@/lib/trpc/provider';
+import '@/lib/firebase'
+import { TrpcProvider }  from '@/lib/trpc/provider'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-
-import { Toaster } from 'sonner'
+import { Inter }         from 'next/font/google'
+import { Toaster }       from 'sonner'
 import { QueryProvider } from '@/providers/query-provider'
-import { AuthProvider } from '@/features/auth/context/auth-context'
+import { AuthProvider }  from '@/features/auth/context/auth-context'
 import './globals.css'
 
 const inter = Inter({
@@ -43,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>
-          <AuthProvider>
+          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_REAL_BACK_URL!}>
             <TrpcProvider>{children}</TrpcProvider>
             <Toaster
               theme="dark"
@@ -58,7 +58,6 @@ export default function RootLayout({
             />
           </AuthProvider>
         </QueryProvider>
-
       </body>
     </html>
   )
