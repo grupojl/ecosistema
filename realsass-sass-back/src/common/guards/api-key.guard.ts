@@ -1,66 +1,43 @@
 import {
   CanActivate, ExecutionContext, Injectable, UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService }   from '../../prisma/prisma.service';
-import { MembershipRole }  from '@prisma/client';
-import * as bcrypt         from 'bcryptjs';
-
-const KEY_PREFIX = 'sk_live_';
 
 /**
- * ApiKeyGuard — autentica via header x-api-key.
- * Usada en rutas de sistema que consumen config en runtime:
- *   GET /config/secrets/resolve/:key
- *   GET /config/flags/:orgId
- *   GET /config/templates/:key
+ * ApiKeyGuard — valida el header x-api-key contra INTERNAL_API_KEY.
  *
- * NO es un APP_GUARD global — se aplica inline con @UseGuards(ApiKeyGuard)
- * solo en las rutas que lo necesitan.
+ * Usado en rutas internas de config que consumen servicios del ecosistema:
+ *   GET /config/secrets/resolve/:key  (ecommerce-back, chat-back, etc.)
+ *   GET /config/flags/:orgId          (servicios externos)
+ *   GET /config/templates/:key        (servicios externos)
  *
- * Inyecta req.tenant con el organizationId de la API Key para que
- * los services puedan usarlo normalmente.
+ * Configuracion requerida en .env:
+ *   INTERNAL_API_KEY=tu-clave-secreta-interna
+ *
+ * Esta implementacion es correcta para la etapa actual donde los consumidores
+ * son servicios internos del ecosistema. Cuando se necesiten API Keys por
+ * organizacion (modelo ApiKey en schema), se puede reemplazar esta implementacion
+ * sin cambiar los controllers que la usan.
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async canActivate(ctx: ExecutionContext): Promise<boolean> {
+  canActivate(ctx: ExecutionContext): boolean {
     const req    = ctx.switchToHttp().getRequest();
-    const rawKey = req.headers['x-api-key'] as string | undefined;
+    const apiKey = req.headers['x-api-key'] as string | undefined;
 
-    if (!rawKey) return false;
-    if (!rawKey.startsWith(KEY_PREFIX)) {
-      throw new UnauthorizedException('Formato de API Key invalido');
+    if (!apiKey) {
+      throw new UnauthorizedException('Header x-api-key requerido');
     }
 
-    const keyPrefix  = rawKey.substring(0, 12);
-    const candidates = await this.prisma.apiKey.findMany({
-      where: {
-        keyPrefix,
-        revokedAt: null,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      include: { organization: true },
-    });
+    const validKey = process.env['INTERNAL_API_KEY'];
 
-    for (const candidate of candidates) {
-      const valid = await bcrypt.compare(rawKey, candidate.keyHash);
-      if (valid) {
-        // Actualizar lastUsedAt sin bloquear el request
-        void this.prisma.apiKey
-          .update({ where: { id: candidate.id }, data: { lastUsedAt: new Date() } })
-          .catch(() => null);
-
-        req.tenant = {
-          organizationId:     candidate.organizationId,
-          role:               MembershipRole.MEMBER,
-          apiKeyScopes:       candidate.scopes as string[],
-          productPermissions: {},
-        };
-        return true;
-      }
+    if (!validKey) {
+      throw new UnauthorizedException('INTERNAL_API_KEY no configurada en el servidor');
     }
 
-    throw new UnauthorizedException('API Key invalida o expirada');
+    if (apiKey !== validKey) {
+      throw new UnauthorizedException('API Key invalida');
+    }
+
+    return true;
   }
 }

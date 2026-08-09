@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — FIX 7: Recrear guards de negocio borrados en sass-back
+# x.sh — FIX 8: ApiKeyGuard compatible con schema actual de sass-back
 #
-# api-key.guard.ts y step-up.guard.ts fueron borrados por el x.sh de
-# limpieza inicial (borraba todo src/common/guards/).
-# Son guards de NEGOCIO propios de sass-back, no de infra — deben vivir
-# en src/common/guards/ del servicio, no en @real/auth-server.
+# El schema actual de sass-back NO tiene modelo ApiKey ni enum MembershipRole.
+# Tiene: User, Organization, Collaborator, Invitation, AffiliateData + config models.
+#
+# El ApiKeyGuard del fix anterior usaba prisma.apiKey y MembershipRole
+# que solo existen en el schema del config-back viejo (no fusionado).
+#
+# SOLUCION: ApiKeyGuard simplificado que valida contra INTERNAL_API_KEY
+# en variables de entorno. Es la implementacion correcta para esta etapa
+# donde las rutas internas (/config/secrets/resolve, /config/flags/:orgId)
+# son consumidas por servicios internos con una clave compartida.
 # =============================================================================
 
 set -euo pipefail
@@ -17,168 +23,73 @@ log() { echo -e "${BLUE}[->]${NC} $1"; }
 sep() { echo -e "${BOLD}----------------------------------------------------${NC}"; }
 
 sep
-echo -e "${BOLD}  FIX 7 — Recrear guards de negocio en sass-back${NC}"
+echo -e "${BOLD}  FIX 8 — ApiKeyGuard compatible con schema actual${NC}"
 sep
 
-mkdir -p realsass-sass-back/src/common/guards
-
-# =============================================================================
-# api-key.guard.ts — verifica API Keys de sistema (x-api-key header)
-# Usada en rutas internas de config: /config/secrets/resolve, /config/flags/:orgId
-# =============================================================================
-log "Recreando api-key.guard.ts..."
+log "Reescribiendo api-key.guard.ts sin dependencia de prisma.apiKey..."
 
 cat > realsass-sass-back/src/common/guards/api-key.guard.ts << 'EOF'
 import {
   CanActivate, ExecutionContext, Injectable, UnauthorizedException,
 } from '@nestjs/common';
-import { PrismaService }   from '../../prisma/prisma.service';
-import { MembershipRole }  from '@prisma/client';
-import * as bcrypt         from 'bcryptjs';
-
-const KEY_PREFIX = 'sk_live_';
 
 /**
- * ApiKeyGuard — autentica via header x-api-key.
- * Usada en rutas de sistema que consumen config en runtime:
- *   GET /config/secrets/resolve/:key
- *   GET /config/flags/:orgId
- *   GET /config/templates/:key
+ * ApiKeyGuard — valida el header x-api-key contra INTERNAL_API_KEY.
  *
- * NO es un APP_GUARD global — se aplica inline con @UseGuards(ApiKeyGuard)
- * solo en las rutas que lo necesitan.
+ * Usado en rutas internas de config que consumen servicios del ecosistema:
+ *   GET /config/secrets/resolve/:key  (ecommerce-back, chat-back, etc.)
+ *   GET /config/flags/:orgId          (servicios externos)
+ *   GET /config/templates/:key        (servicios externos)
  *
- * Inyecta req.tenant con el organizationId de la API Key para que
- * los services puedan usarlo normalmente.
+ * Configuracion requerida en .env:
+ *   INTERNAL_API_KEY=tu-clave-secreta-interna
+ *
+ * Esta implementacion es correcta para la etapa actual donde los consumidores
+ * son servicios internos del ecosistema. Cuando se necesiten API Keys por
+ * organizacion (modelo ApiKey en schema), se puede reemplazar esta implementacion
+ * sin cambiar los controllers que la usan.
  */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async canActivate(ctx: ExecutionContext): Promise<boolean> {
+  canActivate(ctx: ExecutionContext): boolean {
     const req    = ctx.switchToHttp().getRequest();
-    const rawKey = req.headers['x-api-key'] as string | undefined;
+    const apiKey = req.headers['x-api-key'] as string | undefined;
 
-    if (!rawKey) return false;
-    if (!rawKey.startsWith(KEY_PREFIX)) {
-      throw new UnauthorizedException('Formato de API Key invalido');
+    if (!apiKey) {
+      throw new UnauthorizedException('Header x-api-key requerido');
     }
 
-    const keyPrefix  = rawKey.substring(0, 12);
-    const candidates = await this.prisma.apiKey.findMany({
-      where: {
-        keyPrefix,
-        revokedAt: null,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      include: { organization: true },
-    });
+    const validKey = process.env['INTERNAL_API_KEY'];
 
-    for (const candidate of candidates) {
-      const valid = await bcrypt.compare(rawKey, candidate.keyHash);
-      if (valid) {
-        // Actualizar lastUsedAt sin bloquear el request
-        void this.prisma.apiKey
-          .update({ where: { id: candidate.id }, data: { lastUsedAt: new Date() } })
-          .catch(() => null);
-
-        req.tenant = {
-          organizationId:     candidate.organizationId,
-          role:               MembershipRole.MEMBER,
-          apiKeyScopes:       candidate.scopes as string[],
-          productPermissions: {},
-        };
-        return true;
-      }
+    if (!validKey) {
+      throw new UnauthorizedException('INTERNAL_API_KEY no configurada en el servidor');
     }
 
-    throw new UnauthorizedException('API Key invalida o expirada');
-  }
-}
-EOF
-ok "api-key.guard.ts"
-
-# =============================================================================
-# step-up.guard.ts — verifica re-autenticacion reciente (ventana de 5 min)
-# Usada en operaciones criticas: rotate y revoke de secretos
-# =============================================================================
-log "Recreando step-up.guard.ts..."
-
-cat > realsass-sass-back/src/common/guards/step-up.guard.ts << 'EOF'
-import {
-  CanActivate, ExecutionContext, ForbiddenException, Injectable,
-} from '@nestjs/common';
-import * as admin from 'firebase-admin';
-
-/**
- * StepUpGuard — exige re-autenticacion reciente (maximo 5 minutos).
- * Se usa en operaciones criticas que requieren que el usuario haya
- * ingresado su password recientemente:
- *   POST /config/secrets/:id/rotate
- *   DELETE /config/secrets/:id
- *
- * NO es un APP_GUARD global — se aplica inline con @UseGuards(StepUpGuard).
- * Funciona verificando auth_time del Firebase idToken.
- */
-@Injectable()
-export class StepUpGuard implements CanActivate {
-  private readonly WINDOW_MS = 5 * 60 * 1_000; // 5 minutos
-
-  async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const req   = ctx.switchToHttp().getRequest();
-    const token = (req.headers['authorization'] as string | undefined)?.split(' ')[1];
-
-    if (!token) throw new ForbiddenException('Token requerido para esta accion');
-
-    const decoded  = await admin.app().auth().verifyIdToken(token);
-    const authTime = decoded.auth_time * 1_000;
-
-    if (Date.now() - authTime > this.WINDOW_MS) {
-      throw new ForbiddenException(
-        'Re-autenticacion requerida. Cerrá sesion y volvé a ingresar.',
-      );
+    if (apiKey !== validKey) {
+      throw new UnauthorizedException('API Key invalida');
     }
 
     return true;
   }
 }
 EOF
-ok "step-up.guard.ts"
+ok "api-key.guard.ts reescrito"
 
-# =============================================================================
-# Verificar si hay otros controllers que importan guards de ../common/guards/
-# que pudieran haberse borrado — listar para revision manual
-# =============================================================================
 sep
-log "Verificando imports de guards en controllers de sass-back..."
-
-echo ""
-echo "  Controllers que importan guards locales:"
-grep -rl "from '../common/guards/" realsass-sass-back/src/ 2>/dev/null \
-  | grep "\.controller\." \
-  | sed 's|realsass-sass-back/src/||' \
-  | while read -r f; do echo "    - $f"; done
-
-echo ""
-echo "  Guards que existen ahora en src/common/guards/:"
-ls realsass-sass-back/src/common/guards/ 2>/dev/null \
-  | while read -r f; do echo "    - $f"; done
-
-# =============================================================================
-# RESUMEN
-# =============================================================================
-sep
-echo -e "${BOLD}  FIX 7 COMPLETO${NC}"
+echo -e "${BOLD}  FIX 8 COMPLETO${NC}"
 sep
 echo ""
-echo -e "${GREEN}  Recreado:${NC}"
-echo "    src/common/guards/api-key.guard.ts  — auth via x-api-key header"
-echo "    src/common/guards/step-up.guard.ts  — re-auth en ventana de 5 min"
+echo -e "${GREEN}  Que se hizo:${NC}"
+echo "    ApiKeyGuard reescrito sin prisma.apiKey ni MembershipRole"
+echo "    Valida x-api-key contra variable de entorno INTERNAL_API_KEY"
+echo "    Compatible con el schema actual de sass-back"
 echo ""
-echo -e "${GREEN}  Estos guards son de NEGOCIO — viven en sass-back, no en @real/auth-server${NC}"
-echo "    ApiKeyGuard  — necesita PrismaService (acceso a DB de sass-back)"
-echo "    StepUpGuard  — necesita firebase-admin (ya disponible via FirebaseModule)"
+echo -e "${GREEN}  Agregar en Railway (sass-back variables de entorno):${NC}"
+echo "    INTERNAL_API_KEY=<generar con: openssl rand -hex 32>"
 echo ""
-echo "  git add . && git commit -m 'fix: recreate business guards api-key and step-up' && git push"
+echo -e "${GREEN}  Y en los servicios que consumen esas rutas:${NC}"
+echo "    INTERNAL_API_KEY=<mismo valor>"
+echo ""
+echo "  git add . && git commit -m 'fix: simplify ApiKeyGuard, no prisma.apiKey dependency' && git push"
 echo ""
 sep
