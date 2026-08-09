@@ -1,41 +1,22 @@
 /**
  * lib/firebase.ts — dashboard-front
- * Compatible con el codigo existente que importa: auth, signOut,
- * onAuthStateChanged, signInWithPopup, googleProvider, getCurrentUserToken
+ *
+ * Re-exporta desde @real/auth-client para compatibilidad con el codigo
+ * existente que importa: auth, signOut, onAuthStateChanged, etc.
+ *
+ * La inicializacion de Firebase ocurre automaticamente en @real/auth-client
+ * usando las variables NEXT_PUBLIC_FIREBASE_* — no se necesita llamar
+ * initFirebase() explicitamente.
  */
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
+export {
+  getFirebaseAuth as getAuth,
+  signInWithGoogle,
   signOut,
   onAuthStateChanged,
   type User,
-} from 'firebase/auth';
+} from '@real/auth-client';
 
-const firebaseConfig = {
-  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-};
-
-let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0]!;
-}
-
-export const auth           = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
-export async function getCurrentUserToken(): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('No hay usuario autenticado');
-  return user.getIdToken();
-}
-
-export { signInWithPopup, signOut, onAuthStateChanged, type User };
+// Para compatibilidad con codigo que importa 'auth' como objeto
+// en lugar de llamar a getAuth()
+import { getFirebaseAuth } from '@real/auth-client';
+export const auth = getFirebaseAuth();

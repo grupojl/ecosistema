@@ -1,16 +1,14 @@
 /**
  * lib/firebase.ts — sass-front
  *
- * Mantiene todos los exports originales para compatibilidad con:
+ * Re-exporta desde @real/auth-client para compatibilidad con:
  *   - components/login-modal.tsx (signInWithGoogle, signInWithApple, signInWithFacebook)
  *   - context/auth-context.tsx   (auth, signOut, onAuthStateChanged)
  *   - lib/api.ts                 (getIdToken)
- *   - lib/config-api.ts          (getIdToken)
  *
- * Internamente usa @real/auth-client para la init, pero re-exporta
- * todo lo que el codigo existente espera.
+ * Firebase se auto-inicializa usando NEXT_PUBLIC_FIREBASE_* al primer uso.
  */
-import { initializeApp, getApps, getApp } from 'firebase/app'
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -20,8 +18,9 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
-} from 'firebase/auth'
+} from 'firebase/auth';
 
+// Auto-init con variables de entorno — mismo patron que el paquete
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
   authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
@@ -29,41 +28,37 @@ const firebaseConfig = {
   storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
   appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-}
+};
 
-// Singleton — evita reinicializar en HMR
-const app  = getApps().length ? getApp() : initializeApp(firebaseConfig)
-const auth = getAuth(app)
+const app  = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-// Providers
-const googleProvider   = new GoogleAuthProvider()
-const appleProvider    = new OAuthProvider('apple.com')
-const facebookProvider = new FacebookAuthProvider()
+const googleProvider   = new GoogleAuthProvider();
+const appleProvider    = new OAuthProvider('apple.com');
+const facebookProvider = new FacebookAuthProvider();
 
-appleProvider.addScope('email')
-appleProvider.addScope('name')
-
-// ─── Helpers de auth ─────────────────────────────────────────────────────────
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 
 export async function signInWithGoogle() {
-  return signInWithPopup(auth, googleProvider)
+  return signInWithPopup(auth, googleProvider);
 }
 
 export async function signInWithApple() {
-  return signInWithPopup(auth, appleProvider)
+  return signInWithPopup(auth, appleProvider);
 }
 
 export async function signInWithFacebook() {
-  return signInWithPopup(auth, facebookProvider)
+  return signInWithPopup(auth, facebookProvider);
 }
 
 export async function signOut() {
-  return firebaseSignOut(auth)
+  return firebaseSignOut(auth);
 }
 
-export function getIdToken(forceRefresh = false): Promise<string> {
-  if (!auth.currentUser) throw new Error('No hay usuario autenticado')
-  return auth.currentUser.getIdToken(forceRefresh)
+export async function getIdToken(forceRefresh = false): Promise<string> {
+  if (!auth.currentUser) throw new Error('No hay usuario autenticado');
+  return auth.currentUser.getIdToken(forceRefresh);
 }
 
-export { auth, onAuthStateChanged, type User }
+export { auth, onAuthStateChanged, type User };

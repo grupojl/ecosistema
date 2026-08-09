@@ -1,4 +1,4 @@
-import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -19,15 +19,64 @@ export interface FirebaseConfig {
 
 let _app: FirebaseApp | null = null;
 
-/** initFirebase — inicializa el SDK una sola vez. Llamar en el layout raiz. */
+/**
+ * initFirebase — inicializa Firebase con una config explicita.
+ * Llamar desde el layout si se quiere control explicito.
+ * Si no se llama, getFirebaseAuth() auto-inicializa usando NEXT_PUBLIC_FIREBASE_*
+ */
 export function initFirebase(config: FirebaseConfig): FirebaseApp {
-  _app = getApps().length > 0 ? getApps()[0]! : initializeApp(config);
+  if (getApps().length > 0) {
+    _app = getApp();
+  } else {
+    _app = initializeApp(config);
+  }
+  return _app;
+}
+
+/**
+ * getOrInitApp — obtiene la app de Firebase, inicializando automaticamente
+ * si hay variables de entorno NEXT_PUBLIC_FIREBASE_* disponibles.
+ * Esto garantiza que Firebase este disponible en cualquier chunk de Next.js
+ * sin importar el orden de carga de modulos.
+ */
+function getOrInitApp(): FirebaseApp {
+  if (_app) return _app;
+
+  // Si ya hay una app inicializada por otro medio, usarla
+  if (getApps().length > 0) {
+    _app = getApp();
+    return _app;
+  }
+
+  // Auto-init usando variables de entorno NEXT_PUBLIC_FIREBASE_*
+  const apiKey            = process.env['NEXT_PUBLIC_FIREBASE_API_KEY'];
+  const authDomain        = process.env['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'];
+  const projectId         = process.env['NEXT_PUBLIC_FIREBASE_PROJECT_ID'];
+  const storageBucket     = process.env['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'];
+  const messagingSenderId = process.env['NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'];
+  const appId             = process.env['NEXT_PUBLIC_FIREBASE_APP_ID'];
+
+  if (!apiKey || !projectId) {
+    throw new Error(
+      'Firebase no inicializado. Faltan variables de entorno NEXT_PUBLIC_FIREBASE_API_KEY y NEXT_PUBLIC_FIREBASE_PROJECT_ID. ' +
+      'Verificá las variables de entorno en Railway.',
+    );
+  }
+
+  _app = initializeApp({
+    apiKey,
+    authDomain:        authDomain        ?? `${projectId}.firebaseapp.com`,
+    projectId,
+    storageBucket:     storageBucket     ?? `${projectId}.appspot.com`,
+    messagingSenderId: messagingSenderId ?? '',
+    appId:             appId             ?? '',
+  });
+
   return _app;
 }
 
 export function getFirebaseAuth() {
-  if (!_app) throw new Error('Firebase no inicializado. Llama a initFirebase() primero.');
-  return getAuth(_app);
+  return getAuth(getOrInitApp());
 }
 
 /**

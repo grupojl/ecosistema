@@ -1,4 +1,3 @@
-import '@/lib/firebase'
 import { TrpcProvider }  from '@/lib/trpc/provider'
 import type { Metadata } from 'next'
 import { Inter }         from 'next/font/google'
