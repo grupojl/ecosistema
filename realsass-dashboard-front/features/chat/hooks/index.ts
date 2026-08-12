@@ -3,5 +3,12 @@ export {
   useMensajes,
   useEnviarMensaje,
   useMarcarLeidos,
-  useTomarOportunidad,
 } from './use-conversaciones';
+
+export {
+  useProyectosIA,
+  useCrearProyectoIA,
+  useAssistantConfig,
+  useUpdateAssistantConfig,
+  useToggleAssistant,
+} from './use-proyectos-ia';

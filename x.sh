@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Sprint 3 / ADR-001: ClaimsService en realsass-sass-back
+# x.sh — Integración realsass-dashboard-front ↔ chat-ia-back
 # Repo: grupojl/ecosistema (raíz del monorepo welver/)
 #
 # Qué hace:
-#   1. Crea realsass-sass-back/src/auth/claims.service.ts
-#   2. Reescribe realsass-sass-back/src/auth/auth.service.ts  (agrega ClaimsService)
-#   3. Reescribe realsass-sass-back/src/auth/auth.module.ts   (registra ClaimsService)
-#   4. Reescribe realsass-sass-back/src/auth/auth.controller.ts (agrega refresh-claims)
+#   1. Agrega NEXT_PUBLIC_CHAT_IA_URL al .env.example del dashboard-front
+#   2. Crea lib/chat-ia-client.ts  — fetch autenticado al chat-ia-back
+#   3. Crea features/chat/types/index.ts — tipos alineados al schema del back
+#   4. Crea features/chat/services/chat.service.ts — endpoints reales
+#   5. Crea features/chat/hooks/use-proyectos-ia.ts — CRUD proyectos IA
+#   6. Crea features/chat/hooks/use-conversaciones.ts — conversaciones
+#   7. Actualiza features/chat/hooks/index.ts — exportaciones
+#   8. Reemplaza app/dashboard/chat/page.tsx — lista de conversaciones real
+#   9. Crea app/dashboard/chat/proyectos/page.tsx — gestión proyectos IA
 #
 # USO (desde raíz del monorepo welver/):
 #   bash x.sh
 #   bash x.sh --dry-run
-#
-# Después:
-#   pnpm --filter realsass-sass-back build
 # =============================================================================
 set -euo pipefail
 
@@ -30,11 +32,11 @@ DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SASS_BACK="$ROOT/realsass-sass-back"
+DASH="$ROOT/realsass-dashboard-front"
 
-[[ -f "$ROOT/pnpm-workspace.yaml" ]]           || err "Ejecutá desde la raíz del monorepo (welver/)"
-[[ -d "$SASS_BACK/src/auth" ]]                 || err "No encontré realsass-sass-back/src/auth"
-[[ -f "$SASS_BACK/src/auth/auth.service.ts" ]] || err "No encontré auth.service.ts"
+[[ -f "$ROOT/pnpm-workspace.yaml" ]]             || err "Ejecutá desde la raíz del monorepo (welver/)"
+[[ -d "$DASH/app/dashboard/chat" ]]              || err "No encontré realsass-dashboard-front/app/dashboard/chat"
+[[ -f "$DASH/lib/api-client.ts" ]]               || err "No encontré lib/api-client.ts en dashboard-front"
 
 [[ "$DRY_RUN" == true ]] && warn "DRY-RUN — no se escribirá nada"
 
@@ -47,371 +49,703 @@ write_file() {
   ok "write → $rel"
 }
 
-# =============================================================================
-# 1 — claims.service.ts (archivo nuevo)
-# =============================================================================
-section "1/4 — claims.service.ts"
+sed_inplace() {
+  local expr="$1"; local file="$2"
+  sed -i.sedbak "$expr" "$file" 2>/dev/null || sed -i "$expr" "$file"
+  rm -f "${file}.sedbak"
+}
 
-write_file "realsass-sass-back/src/auth/claims.service.ts" << 'EOF'
-// realsass-sass-back/src/auth/claims.service.ts
-//
-// Emite custom claims en el token Firebase para que los servicios de plataforma
-// (chat-ia-back, etc.) puedan validar identidad y permisos sin llamar al sass-back.
-//
-// Referencia: ADR-003 — Contrato de custom claims Firebase
-//
-// Shape emitido:
-// {
-//   organizationId:   string,
-//   organizationName: string,
-//   organizationSlug: string,
-//   role:             'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER',
-//   permissions: {
-//     chat: { canRead: boolean, canWrite: boolean }
-//   }
-// }
-import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+# =============================================================================
+# 1 — .env.example: agregar NEXT_PUBLIC_CHAT_IA_URL
+# =============================================================================
+section "1/9 — .env.example"
 
-export interface PlatformClaims {
-  organizationId:   string;
-  organizationName: string;
-  organizationSlug: string;
-  role:             string;
-  permissions: {
-    chat?: { canRead: boolean; canWrite: boolean };
+ENV_EXAMPLE="$DASH/.env.example"
+
+if [[ -f "$ENV_EXAMPLE" ]]; then
+  if ! grep -q 'CHAT_IA_URL' "$ENV_EXAMPLE"; then
+    if [[ "$DRY_RUN" == false ]]; then
+      cat >> "$ENV_EXAMPLE" << 'ENVEOF'
+
+# ── Chat IA back ──────────────────────────────────────────────────────────────
+# URL del chat-ia-back en Railway
+NEXT_PUBLIC_CHAT_IA_URL=https://tu-chat-ia-back.railway.app
+ENVEOF
+      ok "NEXT_PUBLIC_CHAT_IA_URL agregada a .env.example"
+    else
+      warn "[DRY] append → .env.example"
+    fi
+  else
+    log "CHAT_IA_URL ya existe en .env.example"
+  fi
+else
+  warn ".env.example no encontrado en dashboard-front — crear manualmente"
+fi
+
+# =============================================================================
+# 2 — lib/chat-ia-client.ts (cliente fetch para chat-ia-back)
+# =============================================================================
+section "2/9 — lib/chat-ia-client.ts"
+
+write_file "realsass-dashboard-front/lib/chat-ia-client.ts" << 'EOF'
+// realsass-dashboard-front/lib/chat-ia-client.ts
+//
+// Cliente HTTP autenticado para chat-ia-back.
+// Incluye el Firebase Bearer token + x-organization-id en cada request.
+// La URL base viene de NEXT_PUBLIC_CHAT_IA_URL.
+import { getIdToken } from '@real/auth-client';
+
+const CHAT_IA_URL = process.env['NEXT_PUBLIC_CHAT_IA_URL'] ?? '';
+
+export function buildQuery(params: Record<string, unknown>): string {
+  const q = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join('&');
+  return q ? `?${q}` : '';
+}
+
+async function getHeaders(organizationId: string): Promise<Record<string, string>> {
+  const token = await getIdToken();
+  return {
+    'Content-Type':      'application/json',
+    'Authorization':     `Bearer ${token}`,
+    'x-organization-id': organizationId,
   };
 }
 
-// Shape mínimo que necesitamos del perfil — independiente del tipo exacto
-// que devuelve buildProfile() para evitar el error "organization: unknown"
-interface ProfileForClaims {
-  tenants: Array<{
-    organizationId: string;
-    organization:   Record<string, unknown>;
-    role:           string;
-  }>;
-}
+export async function chatIaFetch<T>(
+  path:           string,
+  organizationId: string,
+  options:        RequestInit = {},
+): Promise<T> {
+  const headers = await getHeaders(organizationId);
 
-@Injectable()
-export class ClaimsService {
-  private readonly logger = new Logger(ClaimsService.name);
+  const res = await fetch(`${CHAT_IA_URL}/api/v1${path}`, {
+    ...options,
+    headers: { ...headers, ...(options.headers ?? {}) },
+  });
 
-  // ── Emitir claims ─────────────────────────────────────────────────────────
-  async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void> {
-    try {
-      await admin.app().auth().setCustomUserClaims(uid, claims);
-      this.logger.log(
-        `Claims emitidos → uid: ${uid} org: ${claims.organizationId} role: ${claims.role}`,
-      );
-    } catch (err) {
-      // No rompemos el flujo de login si los claims fallan
-      this.logger.error(`Error emitiendo claims para ${uid}: ${(err as Error).message}`);
-    }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(body.message ?? `HTTP ${res.status} — ${path}`);
   }
 
-  // ── Revocar refresh tokens ────────────────────────────────────────────────
-  async revokeUserTokens(uid: string): Promise<void> {
-    try {
-      await admin.app().auth().revokeRefreshTokens(uid);
-      this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
-    } catch (err) {
-      this.logger.error(`Error revocando tokens para ${uid}: ${(err as Error).message}`);
-    }
-  }
-
-  // ── Construir claims desde el perfil ─────────────────────────────────────
-  buildClaimsFromProfile(profile: ProfileForClaims): PlatformClaims | null {
-    if (!profile.tenants.length) return null;
-
-    // OWNER tiene prioridad, luego el primero disponible
-    const tenant =
-      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0]!;
-
-    const org = tenant.organization;
-
-    return {
-      organizationId:   tenant.organizationId,
-      organizationName: (org['name'] as string | null) ?? tenant.organizationId,
-      organizationSlug: (org['slug'] as string | null) ?? '',
-      role:             this.mapRole(tenant.role),
-      permissions: {
-        chat: {
-          canRead:  true,
-          canWrite: tenant.role !== 'VIEWER',
-        },
-      },
-    };
-  }
-
-  private mapRole(ecosystemRole: string): string {
-    const map: Record<string, string> = {
-      OWNER:        'OWNER',
-      COLLABORATOR: 'MEMBER',
-      ADMIN:        'ADMIN',
-      MEMBER:       'MEMBER',
-      VIEWER:       'VIEWER',
-    };
-    return map[ecosystemRole] ?? 'VIEWER';
-  }
+  return res.json() as Promise<T>;
 }
 EOF
 
 # =============================================================================
-# 2 — auth.service.ts (reescritura completa con ClaimsService)
+# 3 — features/chat/types/index.ts
 # =============================================================================
-section "2/4 — auth.service.ts"
+section "3/9 — features/chat/types/index.ts"
 
-write_file "realsass-sass-back/src/auth/auth.service.ts" << 'EOF'
-// realsass-sass-back/src/auth/auth.service.ts
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import * as admin            from 'firebase-admin';
-import { PrismaService }     from '../prisma/prisma.service';
-import { UsersService }      from '../users/users.service';
-import { AffiliatesService } from '../affiliate/affiliate.service';
-import { ClaimsService }     from './claims.service';
-import type { CurrentUserPayload } from '@real/auth-server';
+write_file "realsass-dashboard-front/features/chat/types/index.ts" << 'EOF'
+// realsass-dashboard-front/features/chat/types/index.ts
+// Tipos alineados al schema de chat-ia-back (ADR-001)
 
-/**
- * AuthService — tres responsabilidades:
- *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
- *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
- *   3. refreshClaims()       — reemite claims (cambio de org activa)
- */
-@Injectable()
-export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
+// ── Proyectos IA ──────────────────────────────────────────────────────────────
+export interface ProyectoIA {
+  id:          string;
+  slug:        string;
+  name:        string;
+  description: string | null;
+  isActive:    boolean;
+  createdAt:   string;
+  updatedAt:   string;
+}
 
-  constructor(
-    private readonly prisma:     PrismaService,
-    private readonly users:      UsersService,
-    private readonly affiliates: AffiliatesService,
-    private readonly claims:     ClaimsService,
-  ) {}
+export interface CreateProyectoInput {
+  name:        string;
+  slug:        string;
+  description?: string;
+}
 
-  async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string) {
-    const existing = await this.prisma.user.findUnique({
-      where: { firebaseUid: firebaseUser.uid },
-    });
+// ── Configuración del Asistente ───────────────────────────────────────────────
+export interface AssistantConfig {
+  id:                 string;
+  personaName:        string;
+  systemPrompt:       string;
+  welcomeMessage:     string | null;
+  isEnabled:          boolean;
+  groqModel:          string;
+  temperature:        number;
+  maxTokens:          number;
+  sessionTtlMinutes:  number;
+}
 
-    if (existing) {
-      await this.prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          displayName: firebaseUser.displayName ?? existing.displayName,
-          avatarUrl:   firebaseUser.avatarUrl   ?? existing.avatarUrl,
-        },
-      });
-      this.logger.log(`Usuario sincronizado: ${existing.email}`);
-      const profile = await this.users.buildProfile(firebaseUser.uid);
+export interface UpdateAssistantConfigInput {
+  personaName?:       string;
+  systemPrompt?:      string;
+  welcomeMessage?:    string;
+  groqModel?:         string;
+  temperature?:       number;
+  maxTokens?:         number;
+  sessionTtlMinutes?: number;
+}
 
-      // ── Emitir custom claims (ADR-003) ──────────────────────────────────
-      if (profile?.tenants.length) {
-        const platformClaims = this.claims.buildClaimsFromProfile(profile);
-        if (platformClaims) {
-          await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
-        }
-      }
+// ── Conversaciones ────────────────────────────────────────────────────────────
+export type ConversacionStatus =
+  | 'OPEN'
+  | 'RESOLVED'
+  | 'PENDING'
+  | 'HUMAN_TAKEOVER';
 
-      return { isNew: false, user: profile! };
-    }
+export type ChannelType =
+  | 'WHATSAPP'
+  | 'INSTAGRAM'
+  | 'MESSENGER'
+  | 'TIKTOK'
+  | 'widget';
 
-    const newUser = await this.prisma.user.create({
-      data: {
-        firebaseUid: firebaseUser.uid,
-        email:       firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        avatarUrl:   firebaseUser.avatarUrl,
-        isOwner:     false,
-        isAffiliate: false,
-      },
-    });
+export interface Conversacion {
+  id:               string;
+  organizationId:   string;
+  status:           ConversacionStatus;
+  channelType:      ChannelType;
+  contactName:      string | null;
+  lastMessageAt:    string | null;
+  unreadCount:      number;
+  assignedAgentId:  string | null;
+  createdAt:        string;
+  updatedAt:        string;
+}
 
-    this.logger.log(`Nuevo usuario: ${newUser.email}`);
+export interface ConversacionFilters {
+  status?:      ConversacionStatus;
+  channelType?: ChannelType;
+  page?:        number;
+  limit?:       number;
+}
 
-    if (affiliateCode) {
-      try {
-        await this.affiliates.registerReferral(newUser.id, affiliateCode);
-      } catch (err) {
-        this.logger.warn(`Error referido ${affiliateCode}: ${(err as Error).message}`);
-      }
-    }
+export interface PaginatedConversaciones {
+  data:  Conversacion[];
+  total: number;
+  page:  number;
+  limit: number;
+}
 
-    const profile = await this.users.buildProfile(firebaseUser.uid);
+// ── Mensajes ──────────────────────────────────────────────────────────────────
+export type MensajeRole = 'user' | 'assistant' | 'agent';
 
-    // ── Emitir custom claims para usuario nuevo ──────────────────────────
-    if (profile?.tenants.length) {
-      const platformClaims = this.claims.buildClaimsFromProfile(profile);
-      if (platformClaims) {
-        await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
-      }
-    }
+export interface Mensaje {
+  id:             string;
+  conversationId: string;
+  role:           MensajeRole;
+  content:        string;
+  isRead:         boolean;
+  createdAt:      string;
+}
 
-    return { isNew: true, user: profile! };
-  }
+export interface PaginatedMensajes {
+  data:  Mensaje[];
+  total: number;
+  page:  number;
+  limit: number;
+}
 
-  // ── Reemitir claims (cambio de org activa) ───────────────────────────────
-  async refreshClaims(firebaseUid: string): Promise<void> {
-    const profile = await this.users.buildProfile(firebaseUid);
-    if (!profile?.tenants.length) return;
-
-    const platformClaims = this.claims.buildClaimsFromProfile(profile);
-    if (platformClaims) {
-      await this.claims.setOrgClaims(firebaseUid, platformClaims);
-    }
-  }
-
-  async generateCustomToken(firebaseIdToken: string) {
-    let decoded: admin.auth.DecodedIdToken;
-    try {
-      decoded = await admin.app().auth().verifyIdToken(firebaseIdToken);
-    } catch {
-      throw new UnauthorizedException('Firebase idToken invalido o expirado');
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where:   { firebaseUid: decoded.uid },
-      include: { organization: true, collaborations: true },
-    });
-
-    if (!user) throw new UnauthorizedException('Usuario no registrado. Llama a /auth/sync primero.');
-
-    const canAccess = user.isOwner || (user.collaborations?.length ?? 0) > 0;
-    if (!canAccess) throw new UnauthorizedException('El usuario no tiene acceso al dashboard.');
-
-    const customToken = await admin.app().auth().createCustomToken(decoded.uid, {
-      isOwner:        user.isOwner,
-      organizationId: user.organization?.id ?? null,
-    });
-
-    this.logger.log(`customToken SSO generado: ${user.email}`);
-    return { customToken, uid: decoded.uid, email: user.email };
-  }
+export interface EnviarMensajeInput {
+  conversacionId: string;
+  contenido:      string;
 }
 EOF
 
 # =============================================================================
-# 3 — auth.module.ts (reescritura completa con ClaimsService)
+# 4 — features/chat/services/chat.service.ts
 # =============================================================================
-section "3/4 — auth.module.ts"
+section "4/9 — features/chat/services/chat.service.ts"
 
-write_file "realsass-sass-back/src/auth/auth.module.ts" << 'EOF'
-// realsass-sass-back/src/auth/auth.module.ts
-import { Module }           from '@nestjs/common';
-import { AuthController }   from './auth.controller';
-import { AuthService }      from './auth.service';
-import { ClaimsService }    from './claims.service';
-import { UsersModule }      from '../users/users.module';
-import { AffiliatesModule } from '../affiliate/affiliate.module';
+write_file "realsass-dashboard-front/features/chat/services/chat.service.ts" << 'EOF'
+// realsass-dashboard-front/features/chat/services/chat.service.ts
+import { chatIaFetch, buildQuery } from '@/lib/chat-ia-client';
+import type {
+  AssistantConfig,
+  ConversacionFilters,
+  CreateProyectoInput,
+  EnviarMensajeInput,
+  PaginatedConversaciones,
+  PaginatedMensajes,
+  ProyectoIA,
+  UpdateAssistantConfigInput,
+} from '../types';
 
-@Module({
-  imports:     [UsersModule, AffiliatesModule],
-  controllers: [AuthController],
-  providers:   [AuthService, ClaimsService],
-  exports:     [AuthService, ClaimsService],
-})
-export class AuthModule {}
+// ── Proyectos IA ──────────────────────────────────────────────────────────────
+
+export const getProyectosIA = (orgId: string) =>
+  chatIaFetch<{ data: ProyectoIA[] }>('/projects', orgId);
+
+export const createProyectoIA = (orgId: string, input: CreateProyectoInput) =>
+  chatIaFetch<{ data: ProyectoIA }>('/projects', orgId, {
+    method: 'POST',
+    body:   JSON.stringify(input),
+  });
+
+// ── Configuración del Asistente ───────────────────────────────────────────────
+
+export const getAssistantConfig = (orgId: string, slug: string) =>
+  chatIaFetch<{ data: AssistantConfig }>(`/projects/${slug}/assistant/config`, orgId);
+
+export const updateAssistantConfig = (
+  orgId: string,
+  slug:  string,
+  input: UpdateAssistantConfigInput,
+) =>
+  chatIaFetch<{ data: AssistantConfig }>(`/projects/${slug}/assistant/config`, orgId, {
+    method: 'PUT',
+    body:   JSON.stringify(input),
+  });
+
+export const toggleAssistant = (orgId: string, slug: string) =>
+  chatIaFetch<{ data: AssistantConfig }>(`/projects/${slug}/assistant/config/toggle`, orgId, {
+    method: 'PATCH',
+  });
+
+// ── Conversaciones ────────────────────────────────────────────────────────────
+
+export const getConversaciones = (orgId: string, filters: ConversacionFilters = {}) =>
+  chatIaFetch<PaginatedConversaciones>(
+    `/conversations${buildQuery(filters as Record<string, unknown>)}`,
+    orgId,
+  );
+
+export const getMensajes = (orgId: string, conversacionId: string, page = 1) =>
+  chatIaFetch<PaginatedMensajes>(
+    `/conversations/${conversacionId}/messages${buildQuery({ page, limit: 50 })}`,
+    orgId,
+  );
+
+export const enviarMensaje = (orgId: string, input: EnviarMensajeInput) =>
+  chatIaFetch<{ data: Mensaje }>(`/conversations/${input.conversacionId}/messages`, orgId, {
+    method: 'POST',
+    body:   JSON.stringify({ content: input.contenido }),
+  });
+
+export const marcarLeidos = (orgId: string, conversacionId: string) =>
+  chatIaFetch<{ updated: number }>(`/conversations/${conversacionId}/read`, orgId, {
+    method: 'PATCH',
+  });
+
+// Fix de tipo — Mensaje no importado arriba, lo re-exportamos del módulo de tipos
+import type { Mensaje } from '../types';
 EOF
 
 # =============================================================================
-# 4 — auth.controller.ts (reescritura completa con refresh-claims)
+# 5 — features/chat/hooks/use-proyectos-ia.ts
 # =============================================================================
-section "4/4 — auth.controller.ts"
+section "5/9 — features/chat/hooks/use-proyectos-ia.ts"
 
-write_file "realsass-sass-back/src/auth/auth.controller.ts" << 'EOF'
-// realsass-sass-back/src/auth/auth.controller.ts
+write_file "realsass-dashboard-front/features/chat/hooks/use-proyectos-ia.ts" << 'EOF'
+// realsass-dashboard-front/features/chat/hooks/use-proyectos-ia.ts
+'use client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import {
-  Body, Controller, Get, Headers,
-  HttpCode, HttpStatus, NotFoundException, Post, Query,
-} from '@nestjs/common';
-import { AuthService }                                  from './auth.service';
-import { UsersService }                                 from '../users/users.service';
-import { Public, CurrentUser, type CurrentUserPayload } from '@real/auth-server';
+  createProyectoIA,
+  getAssistantConfig,
+  getProyectosIA,
+  toggleAssistant,
+  updateAssistantConfig,
+} from '../services/chat.service';
+import type { CreateProyectoInput, UpdateAssistantConfigInput } from '../types';
 
-@Controller('auth')
-export class AuthController {
-  constructor(
-    private readonly auth:  AuthService,
-    private readonly users: UsersService,
-  ) {}
+function useOrgId(): string {
+  const { profile } = useAuth();
+  return profile?.tenants?.[0]?.organizationId ?? '';
+}
 
-  /** POST /api/v1/auth/sync — crea o actualiza el usuario. Idempotente. */
-  @Post('sync')
-  @HttpCode(HttpStatus.OK)
-  async sync(
-    @CurrentUser() user: CurrentUserPayload,
-    @Query('ref') affiliateCode?: string,
-  ) {
-    const result = await this.auth.syncUser(user, affiliateCode);
-    return {
-      success: true,
-      isNew:   result.isNew,
-      message: result.isNew ? 'Usuario creado' : 'Usuario sincronizado',
-      data:    result.user,
-    };
-  }
+export function useProyectosIA() {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ['chat-proyectos', orgId],
+    queryFn:  () => getProyectosIA(orgId).then((r) => r.data),
+    enabled:  Boolean(orgId),
+  });
+}
 
-  /** GET /api/v1/auth/me — perfil completo. */
-  @Get('me')
-  async me(@CurrentUser() user: CurrentUserPayload) {
-    const profile = await this.users.getMyProfile(user.uid);
-    if (!profile) throw new NotFoundException('Usuario no encontrado. Llama a /auth/sync primero.');
-    return { success: true, data: profile };
-  }
+export function useCrearProyectoIA() {
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateProyectoInput) => createProyectoIA(orgId, input),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['chat-proyectos', orgId] }),
+  });
+}
 
-  /** GET /api/v1/auth/organization-access — contrato con ecommerce-back. */
-  @Get('organization-access')
-  async organizationAccess(
-    @CurrentUser() user: CurrentUserPayload,
-    @Headers('x-organization-id') organizationId: string,
-  ) {
-    if (!organizationId) return { canAccess: false, reason: 'Header x-organization-id requerido' };
-    return this.users.getOrganizationAccess(user.uid, organizationId);
-  }
+export function useAssistantConfig(slug: string) {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ['chat-assistant-config', orgId, slug],
+    queryFn:  () => getAssistantConfig(orgId, slug).then((r) => r.data),
+    enabled:  Boolean(orgId) && Boolean(slug),
+  });
+}
 
-  /** POST /api/v1/auth/firebase-sso — SSO publico entre fronts. */
-  @Public()
-  @Post('firebase-sso')
-  @HttpCode(HttpStatus.OK)
-  async firebaseSso(@Body() body: { firebaseIdToken?: string }) {
-    if (!body?.firebaseIdToken) throw new NotFoundException('firebaseIdToken requerido');
-    const result = await this.auth.generateCustomToken(body.firebaseIdToken);
-    return { success: true, ...result };
-  }
+export function useUpdateAssistantConfig(slug: string) {
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateAssistantConfigInput) =>
+      updateAssistantConfig(orgId, slug, input),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['chat-assistant-config', orgId, slug] }),
+  });
+}
 
-  /**
-   * POST /api/v1/auth/refresh-claims
-   * Reemite custom claims Firebase para el usuario actual (ADR-003).
-   * El frontend debe llamar getIdToken(true) después para obtener el token fresco.
-   */
-  @Post('refresh-claims')
-  @HttpCode(HttpStatus.OK)
-  async refreshClaims(@CurrentUser() user: CurrentUserPayload) {
-    await this.auth.refreshClaims(user.uid);
-    return {
-      success: true,
-      message: 'Claims actualizados — solicitá un token fresco con getIdToken(true)',
-    };
-  }
+export function useToggleAssistant(slug: string) {
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
+  return useMutation({
+    mutationFn: () => toggleAssistant(orgId, slug),
+    onSuccess:  () =>
+      qc.invalidateQueries({ queryKey: ['chat-assistant-config', orgId, slug] }),
+  });
 }
 EOF
 
 # =============================================================================
-section "Sprint 3 completado"
+# 6 — features/chat/hooks/use-conversaciones.ts
+# =============================================================================
+section "6/9 — features/chat/hooks/use-conversaciones.ts"
+
+write_file "realsass-dashboard-front/features/chat/hooks/use-conversaciones.ts" << 'EOF'
+// realsass-dashboard-front/features/chat/hooks/use-conversaciones.ts
+'use client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import {
+  enviarMensaje,
+  getConversaciones,
+  getMensajes,
+  marcarLeidos,
+} from '../services/chat.service';
+import type { ConversacionFilters, EnviarMensajeInput } from '../types';
+
+function useOrgId(): string {
+  const { profile } = useAuth();
+  return profile?.tenants?.[0]?.organizationId ?? '';
+}
+
+export function useConversaciones(filters: ConversacionFilters = {}) {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ['chat-conversaciones', orgId, filters],
+    queryFn:  () => getConversaciones(orgId, filters),
+    enabled:  Boolean(orgId),
+  });
+}
+
+export function useMensajes(conversacionId: string, page = 1) {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ['chat-mensajes', orgId, conversacionId, page],
+    queryFn:  () => getMensajes(orgId, conversacionId, page),
+    enabled:  Boolean(orgId) && Boolean(conversacionId),
+  });
+}
+
+export function useEnviarMensaje() {
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
+  return useMutation({
+    mutationFn: (input: EnviarMensajeInput) => enviarMensaje(orgId, input),
+    onSuccess:  (_, vars) => {
+      void qc.invalidateQueries({
+        queryKey: ['chat-mensajes', orgId, vars.conversacionId],
+      });
+      void qc.invalidateQueries({ queryKey: ['chat-conversaciones', orgId] });
+    },
+  });
+}
+
+export function useMarcarLeidos() {
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
+  return useMutation({
+    mutationFn: (conversacionId: string) => marcarLeidos(orgId, conversacionId),
+    onSuccess:  () =>
+      qc.invalidateQueries({ queryKey: ['chat-conversaciones', orgId] }),
+  });
+}
+EOF
+
+# =============================================================================
+# 7 — features/chat/hooks/index.ts
+# =============================================================================
+section "7/9 — features/chat/hooks/index.ts"
+
+write_file "realsass-dashboard-front/features/chat/hooks/index.ts" << 'EOF'
+export {
+  useConversaciones,
+  useMensajes,
+  useEnviarMensaje,
+  useMarcarLeidos,
+} from './use-conversaciones';
+
+export {
+  useProyectosIA,
+  useCrearProyectoIA,
+  useAssistantConfig,
+  useUpdateAssistantConfig,
+  useToggleAssistant,
+} from './use-proyectos-ia';
+EOF
+
+# =============================================================================
+# 8 — app/dashboard/chat/page.tsx (reemplazar placeholder)
+# =============================================================================
+section "8/9 — app/dashboard/chat/page.tsx"
+
+write_file "realsass-dashboard-front/app/dashboard/chat/page.tsx" << 'EOF'
+'use client';
+// app/dashboard/chat/page.tsx — lista de conversaciones del chat-ia-back
+import Link from 'next/link';
+import { MessageSquare, Bot, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useConversaciones } from '@/features/chat/hooks';
+import type { ConversacionStatus } from '@/features/chat/types';
+
+const STATUS_LABEL: Record<ConversacionStatus, string> = {
+  OPEN:           'Abierta',
+  PENDING:        'Pendiente',
+  HUMAN_TAKEOVER: 'Requiere agente',
+  RESOLVED:       'Resuelta',
+};
+
+const STATUS_VARIANT: Record<
+  ConversacionStatus,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+  OPEN:           'default',
+  PENDING:        'secondary',
+  HUMAN_TAKEOVER: 'destructive',
+  RESOLVED:       'outline',
+};
+
+export default function ChatIAPage() {
+  const { data, isLoading, refetch, isRefetching } = useConversaciones({ limit: 50 });
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Chat IA</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Conversaciones activas de todos los canales
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          <Link href="/dashboard/chat/proyectos">
+            <Button variant="outline" size="sm">
+              <Bot className="mr-2 h-4 w-4" />
+              Proyectos IA
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+          Cargando conversaciones...
+        </div>
+      )}
+
+      {/* Empty */}
+      {!isLoading && !data?.data?.length && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+          <MessageSquare className="h-12 w-12 opacity-30" />
+          <p className="font-medium">Sin conversaciones activas</p>
+          <p className="text-sm">
+            Las conversaciones de tus canales aparecerán acá.
+          </p>
+        </div>
+      )}
+
+      {/* Lista */}
+      {data?.data && data.data.length > 0 && (
+        <div className="divide-y rounded-lg border bg-card">
+          {data.data.map((conv) => (
+            <div
+              key={conv.id}
+              className="flex items-center justify-between gap-4 px-4 py-3"
+            >
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="font-medium truncate">
+                  {conv.contactName ?? 'Contacto desconocido'}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {conv.channelType}
+                  {conv.lastMessageAt && (
+                    <> · {new Date(conv.lastMessageAt).toLocaleString('es-AR')}</>
+                  )}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {conv.unreadCount > 0 && (
+                  <span className="text-xs font-semibold bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                    {conv.unreadCount}
+                  </span>
+                )}
+                <Badge variant={STATUS_VARIANT[conv.status]}>
+                  {STATUS_LABEL[conv.status]}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Total */}
+      {data?.total != null && (
+        <p className="text-xs text-muted-foreground text-right">
+          {data.total} conversación{data.total !== 1 ? 'es' : ''} en total
+        </p>
+      )}
+    </div>
+  );
+}
+EOF
+
+# =============================================================================
+# 9 — app/dashboard/chat/proyectos/page.tsx (nueva página)
+# =============================================================================
+section "9/9 — app/dashboard/chat/proyectos/page.tsx"
+
+write_file "realsass-dashboard-front/app/dashboard/chat/proyectos/page.tsx" << 'EOF'
+'use client';
+// app/dashboard/chat/proyectos/page.tsx — gestión de proyectos IA
+import Link from 'next/link';
+import { Bot, ArrowLeft, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useProyectosIA } from '@/features/chat/hooks';
+
+export default function ProyectosIAPage() {
+  const { data: proyectos, isLoading, refetch } = useProyectosIA();
+
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/chat">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold">Proyectos IA</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Configuración de asistentes por canal
+            </p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Actualizar
+        </Button>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+          Cargando proyectos...
+        </div>
+      )}
+
+      {/* Empty */}
+      {!isLoading && !proyectos?.length && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+          <Bot className="h-12 w-12 opacity-30" />
+          <p className="font-medium">Sin proyectos IA</p>
+          <p className="text-sm">
+            Creá un proyecto en el chat-ia-back para empezar.
+          </p>
+        </div>
+      )}
+
+      {/* Lista */}
+      {proyectos && proyectos.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {proyectos.map((proyecto) => (
+            <div
+              key={proyecto.id}
+              className="rounded-lg border bg-card p-4 flex flex-col gap-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-primary shrink-0" />
+                  <span className="font-medium truncate">{proyecto.name}</span>
+                </div>
+                {proyecto.isActive ? (
+                  <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+              </div>
+
+              {proyecto.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {proyecto.description}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between mt-auto pt-2">
+                <Badge variant="outline" className="text-xs font-mono">
+                  {proyecto.slug}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(proyecto.createdAt).toLocaleDateString('es-AR')}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+EOF
+
+# =============================================================================
+section "Integración completada"
 
 echo ""
-echo "  Archivos creados:"
-echo "    + realsass-sass-back/src/auth/claims.service.ts"
-echo ""
-echo "  Archivos reescritos:"
-echo "    ~ realsass-sass-back/src/auth/auth.service.ts"
-echo "    ~ realsass-sass-back/src/auth/auth.module.ts"
-echo "    ~ realsass-sass-back/src/auth/auth.controller.ts"
+echo "  Archivos creados/modificados:"
+echo "    ~ realsass-dashboard-front/.env.example         (NEXT_PUBLIC_CHAT_IA_URL)"
+echo "    + realsass-dashboard-front/lib/chat-ia-client.ts"
+echo "    + realsass-dashboard-front/features/chat/types/index.ts"
+echo "    + realsass-dashboard-front/features/chat/services/chat.service.ts"
+echo "    + realsass-dashboard-front/features/chat/hooks/use-proyectos-ia.ts"
+echo "    + realsass-dashboard-front/features/chat/hooks/use-conversaciones.ts"
+echo "    ~ realsass-dashboard-front/features/chat/hooks/index.ts"
+echo "    ~ realsass-dashboard-front/app/dashboard/chat/page.tsx"
+echo "    + realsass-dashboard-front/app/dashboard/chat/proyectos/page.tsx"
 echo ""
 echo "  Próximos pasos:"
 echo ""
-echo "  1. pnpm --filter realsass-sass-back build"
-echo "  2. git add . && git commit -m 'feat(adr-001): sprint-3 claims service'"
+echo "  1. Agregar NEXT_PUBLIC_CHAT_IA_URL en Railway → dashboard-front"
+echo "     Valor: URL del chat-ia-back en Railway"
 echo ""
-echo "  Flujo completo verificado cuando:"
-echo "    login → POST /auth/sync → claims emitidos → request a chat-ia-back → 200"
+echo "  2. Registrar ecosistema Welver en chat-ia-back (si no está):"
+echo "     POST {CHAT_IA_URL}/api/v1/ecosystems"
+echo "     Header: x-platform-admin-key: {PLATFORM_ADMIN_KEY}"
+echo "     Body: { firebaseProjectId: 'real-sass', name: 'Welver' }"
+echo ""
+echo "  3. git add . && git commit -m 'feat: integrar dashboard-front con chat-ia-back'"
+echo ""
+echo "  4. Railway redeploya dashboard-front automáticamente"

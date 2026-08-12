@@ -1,56 +1,58 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { QUERY_KEYS } from '@/config/constants';
+// realsass-dashboard-front/features/chat/hooks/use-conversaciones.ts
+'use client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/features/auth/hooks/use-auth';
 import {
+  enviarMensaje,
   getConversaciones,
   getMensajes,
-  enviarMensaje,
   marcarLeidos,
-  tomarOportunidad,
 } from '../services/chat.service';
 import type { ConversacionFilters, EnviarMensajeInput } from '../types';
 
+function useOrgId(): string {
+  const { profile } = useAuth();
+  return profile?.tenants?.[0]?.organizationId ?? '';
+}
+
 export function useConversaciones(filters: ConversacionFilters = {}) {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey:       [...QUERY_KEYS.conversaciones, filters],
-    queryFn:        () => getConversaciones(filters),
-    staleTime:      1000 * 30,
-    refetchInterval: 1000 * 30,
+    queryKey: ['chat-conversaciones', orgId, filters],
+    queryFn:  () => getConversaciones(orgId, filters),
+    enabled:  Boolean(orgId),
   });
 }
 
-export function useMensajes(conversacionId: string | null) {
+export function useMensajes(conversacionId: string, page = 1) {
+  const orgId = useOrgId();
   return useQuery({
-    queryKey:        [...QUERY_KEYS.mensajes, conversacionId],
-    queryFn:         () => getMensajes(conversacionId!),
-    enabled:         !!conversacionId,
-    staleTime:       1000 * 15,
-    refetchInterval: 1000 * 15,
+    queryKey: ['chat-mensajes', orgId, conversacionId, page],
+    queryFn:  () => getMensajes(orgId, conversacionId, page),
+    enabled:  Boolean(orgId) && Boolean(conversacionId),
   });
 }
 
 export function useEnviarMensaje() {
-  const qc = useQueryClient();
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
   return useMutation({
-    mutationFn: (input: EnviarMensajeInput) => enviarMensaje(input),
-    onSuccess: (_data, variables) => {
-      qc.invalidateQueries({ queryKey: [...QUERY_KEYS.mensajes, variables.conversacionId] });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.conversaciones });
+    mutationFn: (input: EnviarMensajeInput) => enviarMensaje(orgId, input),
+    onSuccess:  (_, vars) => {
+      void qc.invalidateQueries({
+        queryKey: ['chat-mensajes', orgId, vars.conversacionId],
+      });
+      void qc.invalidateQueries({ queryKey: ['chat-conversaciones', orgId] });
     },
   });
 }
 
 export function useMarcarLeidos() {
-  const qc = useQueryClient();
+  const orgId = useOrgId();
+  const qc    = useQueryClient();
   return useMutation({
-    mutationFn: (conversacionId: string) => marcarLeidos(conversacionId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.conversaciones }); },
-  });
-}
-
-export function useTomarOportunidad() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (conversacionId: string) => tomarOportunidad(conversacionId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.conversaciones }); },
+    mutationFn: (conversacionId: string) => marcarLeidos(orgId, conversacionId),
+    onSuccess:  () =>
+      qc.invalidateQueries({ queryKey: ['chat-conversaciones', orgId] }),
   });
 }
