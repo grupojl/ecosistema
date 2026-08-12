@@ -1,17 +1,14 @@
-// realsass-sass-back/src/auth/auth.service.ts
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as admin            from 'firebase-admin';
 import { PrismaService }     from '../prisma/prisma.service';
 import { UsersService }      from '../users/users.service';
 import { AffiliatesService } from '../affiliate/affiliate.service';
-import { ClaimsService }     from './claims.service';
 import type { CurrentUserPayload } from '@real/auth-server';
 
 /**
- * AuthService — tres responsabilidades:
- *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
+ * AuthService — dos responsabilidades:
+ *   1. syncUser()            — upsert del User en DB
  *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
- *   3. refreshClaims()       — reemite claims (cambio de org activa)
  */
 @Injectable()
 export class AuthService {
@@ -21,7 +18,6 @@ export class AuthService {
     private readonly prisma:     PrismaService,
     private readonly users:      UsersService,
     private readonly affiliates: AffiliatesService,
-    private readonly claims:     ClaimsService,
   ) {}
 
   async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string) {
@@ -39,15 +35,6 @@ export class AuthService {
       });
       this.logger.log(`Usuario sincronizado: ${existing.email}`);
       const profile = await this.users.buildProfile(firebaseUser.uid);
-
-      // ── Emitir custom claims (ADR-003) ──────────────────────────────────
-      if (profile?.tenants.length) {
-        const platformClaims = this.claims.buildClaimsFromProfile(profile);
-        if (platformClaims) {
-          await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
-        }
-      }
-
       return { isNew: false, user: profile! };
     }
 
@@ -73,27 +60,7 @@ export class AuthService {
     }
 
     const profile = await this.users.buildProfile(firebaseUser.uid);
-
-    // ── Emitir custom claims para usuario nuevo ──────────────────────────
-    if (profile?.tenants.length) {
-      const platformClaims = this.claims.buildClaimsFromProfile(profile);
-      if (platformClaims) {
-        await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
-      }
-    }
-
     return { isNew: true, user: profile! };
-  }
-
-  // ── Reemitir claims (cambio de org activa) ───────────────────────────────
-  async refreshClaims(firebaseUid: string): Promise<void> {
-    const profile = await this.users.buildProfile(firebaseUid);
-    if (!profile?.tenants.length) return;
-
-    const platformClaims = this.claims.buildClaimsFromProfile(profile);
-    if (platformClaims) {
-      await this.claims.setOrgClaims(firebaseUid, platformClaims);
-    }
   }
 
   async generateCustomToken(firebaseIdToken: string) {

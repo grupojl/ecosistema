@@ -20,14 +20,7 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": [
-      "node"
-    ],
-    "typeRoots": [
-      "../node_modules/@types",
-      "./node_modules/@types"
-    ]
+    "noFallthroughCasesInSwitch": false
   },
   "extends": "../tsconfig.base.json"
 }

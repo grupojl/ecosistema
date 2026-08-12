@@ -1,10 +1,9 @@
-// realsass-sass-back/src/auth/auth.controller.ts
 import {
   Body, Controller, Get, Headers,
   HttpCode, HttpStatus, NotFoundException, Post, Query,
 } from '@nestjs/common';
-import { AuthService }                                  from './auth.service';
-import { UsersService }                                 from '../users/users.service';
+import { AuthService }                           from './auth.service';
+import { UsersService }                          from '../users/users.service';
 import { Public, CurrentUser, type CurrentUserPayload } from '@real/auth-server';
 
 @Controller('auth')
@@ -56,20 +55,5 @@ export class AuthController {
     if (!body?.firebaseIdToken) throw new NotFoundException('firebaseIdToken requerido');
     const result = await this.auth.generateCustomToken(body.firebaseIdToken);
     return { success: true, ...result };
-  }
-
-  /**
-   * POST /api/v1/auth/refresh-claims
-   * Reemite custom claims Firebase para el usuario actual (ADR-003).
-   * El frontend debe llamar getIdToken(true) después para obtener el token fresco.
-   */
-  @Post('refresh-claims')
-  @HttpCode(HttpStatus.OK)
-  async refreshClaims(@CurrentUser() user: CurrentUserPayload) {
-    await this.auth.refreshClaims(user.uid);
-    return {
-      success: true,
-      message: 'Claims actualizados — solicitá un token fresco con getIdToken(true)',
-    };
   }
 }

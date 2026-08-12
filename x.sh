@@ -1,335 +1,417 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — FIX 10: Firebase init garantizada antes de cualquier uso
+# x.sh — Sprint 3 / ADR-001: ClaimsService en realsass-sass-back
+# Repo: grupojl/ecosistema (raíz del monorepo welver/)
 #
-# CAUSA RAIZ:
-#   En Next.js App Router los chunks de rutas se cargan independientemente.
-#   Un componente en /dashboard/page.tsx puede ejecutarse antes de que
-#   el layout.tsx haya corrido el import '@/lib/firebase'.
-#   Cualquier llamada a getFirebaseAuth() desde ese chunk falla.
+# Qué hace:
+#   1. Crea realsass-sass-back/src/auth/claims.service.ts
+#   2. Reescribe realsass-sass-back/src/auth/auth.service.ts  (agrega ClaimsService)
+#   3. Reescribe realsass-sass-back/src/auth/auth.module.ts   (registra ClaimsService)
+#   4. Reescribe realsass-sass-back/src/auth/auth.controller.ts (agrega refresh-claims)
 #
-# SOLUCION:
-#   Mover la inicializacion de Firebase DENTRO del paquete @real/auth-client.
-#   firebase.ts hace la init automaticamente al ser importado, usando las
-#   variables de entorno NEXT_PUBLIC_FIREBASE_* que ya existen en Railway.
-#   Asi no importa en que orden se carguen los chunks — Firebase siempre
-#   esta inicializado cuando se necesita.
+# USO (desde raíz del monorepo welver/):
+#   bash x.sh
+#   bash x.sh --dry-run
+#
+# Después:
+#   pnpm --filter realsass-sass-back build
 # =============================================================================
-
 set -euo pipefail
-[ -f "pnpm-workspace.yaml" ] || { echo "Corre desde la raiz"; exit 1; }
 
-BOLD='\033[1m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
-ok()  { echo -e "${GREEN}[ok]${NC} $1"; }
-log() { echo -e "${BLUE}[->]${NC} $1"; }
-sep() { echo -e "${BOLD}----------------------------------------------------${NC}"; }
+BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
+log()     { echo -e "${BLUE}[→]${NC} $1"; }
+ok()      { echo -e "${GREEN}[✓]${NC} $1"; }
+warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
+err()     { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+section() { echo -e "\n${CYAN}━━━ $1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
 
-sep
-echo -e "${BOLD}  FIX 10 — Firebase auto-init en @real/auth-client${NC}"
-sep
+DRY_RUN=false
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SASS_BACK="$ROOT/realsass-sass-back"
+
+[[ -f "$ROOT/pnpm-workspace.yaml" ]]           || err "Ejecutá desde la raíz del monorepo (welver/)"
+[[ -d "$SASS_BACK/src/auth" ]]                 || err "No encontré realsass-sass-back/src/auth"
+[[ -f "$SASS_BACK/src/auth/auth.service.ts" ]] || err "No encontré auth.service.ts"
+
+[[ "$DRY_RUN" == true ]] && warn "DRY-RUN — no se escribirá nada"
+
+write_file() {
+  local rel="$1"; local full="$ROOT/$rel"
+  mkdir -p "$(dirname "$full")"
+  if [[ "$DRY_RUN" == true ]]; then warn "[DRY] write → $rel"; return; fi
+  [[ -f "$full" ]] && cp "$full" "${full}.bak" && log "backup → ${rel}.bak"
+  cat > "$full"
+  ok "write → $rel"
+}
 
 # =============================================================================
-# FIX 1 — packages/auth-client/src/firebase/firebase.ts
-# Auto-inicializa Firebase al ser importado si hay variables de entorno.
-# initFirebase() sigue disponible para configuracion manual (tests, etc.)
+# 1 — claims.service.ts (archivo nuevo)
 # =============================================================================
-log "FIX 1 — Auto-init en packages/auth-client/src/firebase/firebase.ts..."
+section "1/4 — claims.service.ts"
 
-cat > packages/auth-client/src/firebase/firebase.ts << 'EOF'
-import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+write_file "realsass-sass-back/src/auth/claims.service.ts" << 'EOF'
+// realsass-sass-back/src/auth/claims.service.ts
+//
+// Emite custom claims en el token Firebase para que los servicios de plataforma
+// (chat-ia-back, etc.) puedan validar identidad y permisos sin llamar al sass-back.
+//
+// Referencia: ADR-003 — Contrato de custom claims Firebase
+//
+// Shape emitido:
+// {
+//   organizationId:   string,
+//   organizationName: string,
+//   organizationSlug: string,
+//   role:             'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER',
+//   permissions: {
+//     chat: { canRead: boolean, canWrite: boolean }
+//   }
+// }
+import { Injectable, Logger } from '@nestjs/common';
+import * as admin from 'firebase-admin';
+
+export interface PlatformClaims {
+  organizationId:   string;
+  organizationName: string;
+  organizationSlug: string;
+  role:             string;
+  permissions: {
+    chat?: { canRead: boolean; canWrite: boolean };
+  };
+}
+
+// Shape mínimo que necesitamos del perfil — independiente del tipo exacto
+// que devuelve buildProfile() para evitar el error "organization: unknown"
+interface ProfileForClaims {
+  tenants: Array<{
+    organizationId: string;
+    organization:   Record<string, unknown>;
+    role:           string;
+  }>;
+}
+
+@Injectable()
+export class ClaimsService {
+  private readonly logger = new Logger(ClaimsService.name);
+
+  // ── Emitir claims ─────────────────────────────────────────────────────────
+  async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void> {
+    try {
+      await admin.app().auth().setCustomUserClaims(uid, claims);
+      this.logger.log(
+        `Claims emitidos → uid: ${uid} org: ${claims.organizationId} role: ${claims.role}`,
+      );
+    } catch (err) {
+      // No rompemos el flujo de login si los claims fallan
+      this.logger.error(`Error emitiendo claims para ${uid}: ${(err as Error).message}`);
+    }
+  }
+
+  // ── Revocar refresh tokens ────────────────────────────────────────────────
+  async revokeUserTokens(uid: string): Promise<void> {
+    try {
+      await admin.app().auth().revokeRefreshTokens(uid);
+      this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
+    } catch (err) {
+      this.logger.error(`Error revocando tokens para ${uid}: ${(err as Error).message}`);
+    }
+  }
+
+  // ── Construir claims desde el perfil ─────────────────────────────────────
+  buildClaimsFromProfile(profile: ProfileForClaims): PlatformClaims | null {
+    if (!profile.tenants.length) return null;
+
+    // OWNER tiene prioridad, luego el primero disponible
+    const tenant =
+      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0]!;
+
+    const org = tenant.organization;
+
+    return {
+      organizationId:   tenant.organizationId,
+      organizationName: (org['name'] as string | null) ?? tenant.organizationId,
+      organizationSlug: (org['slug'] as string | null) ?? '',
+      role:             this.mapRole(tenant.role),
+      permissions: {
+        chat: {
+          canRead:  true,
+          canWrite: tenant.role !== 'VIEWER',
+        },
+      },
+    };
+  }
+
+  private mapRole(ecosystemRole: string): string {
+    const map: Record<string, string> = {
+      OWNER:        'OWNER',
+      COLLABORATOR: 'MEMBER',
+      ADMIN:        'ADMIN',
+      MEMBER:       'MEMBER',
+      VIEWER:       'VIEWER',
+    };
+    return map[ecosystemRole] ?? 'VIEWER';
+  }
+}
+EOF
+
+# =============================================================================
+# 2 — auth.service.ts (reescritura completa con ClaimsService)
+# =============================================================================
+section "2/4 — auth.service.ts"
+
+write_file "realsass-sass-back/src/auth/auth.service.ts" << 'EOF'
+// realsass-sass-back/src/auth/auth.service.ts
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import * as admin            from 'firebase-admin';
+import { PrismaService }     from '../prisma/prisma.service';
+import { UsersService }      from '../users/users.service';
+import { AffiliatesService } from '../affiliate/affiliate.service';
+import { ClaimsService }     from './claims.service';
+import type { CurrentUserPayload } from '@real/auth-server';
+
+/**
+ * AuthService — tres responsabilidades:
+ *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
+ *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
+ *   3. refreshClaims()       — reemite claims (cambio de org activa)
+ */
+@Injectable()
+export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly prisma:     PrismaService,
+    private readonly users:      UsersService,
+    private readonly affiliates: AffiliatesService,
+    private readonly claims:     ClaimsService,
+  ) {}
+
+  async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string) {
+    const existing = await this.prisma.user.findUnique({
+      where: { firebaseUid: firebaseUser.uid },
+    });
+
+    if (existing) {
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          displayName: firebaseUser.displayName ?? existing.displayName,
+          avatarUrl:   firebaseUser.avatarUrl   ?? existing.avatarUrl,
+        },
+      });
+      this.logger.log(`Usuario sincronizado: ${existing.email}`);
+      const profile = await this.users.buildProfile(firebaseUser.uid);
+
+      // ── Emitir custom claims (ADR-003) ──────────────────────────────────
+      if (profile?.tenants.length) {
+        const platformClaims = this.claims.buildClaimsFromProfile(profile);
+        if (platformClaims) {
+          await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
+        }
+      }
+
+      return { isNew: false, user: profile! };
+    }
+
+    const newUser = await this.prisma.user.create({
+      data: {
+        firebaseUid: firebaseUser.uid,
+        email:       firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        avatarUrl:   firebaseUser.avatarUrl,
+        isOwner:     false,
+        isAffiliate: false,
+      },
+    });
+
+    this.logger.log(`Nuevo usuario: ${newUser.email}`);
+
+    if (affiliateCode) {
+      try {
+        await this.affiliates.registerReferral(newUser.id, affiliateCode);
+      } catch (err) {
+        this.logger.warn(`Error referido ${affiliateCode}: ${(err as Error).message}`);
+      }
+    }
+
+    const profile = await this.users.buildProfile(firebaseUser.uid);
+
+    // ── Emitir custom claims para usuario nuevo ──────────────────────────
+    if (profile?.tenants.length) {
+      const platformClaims = this.claims.buildClaimsFromProfile(profile);
+      if (platformClaims) {
+        await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
+      }
+    }
+
+    return { isNew: true, user: profile! };
+  }
+
+  // ── Reemitir claims (cambio de org activa) ───────────────────────────────
+  async refreshClaims(firebaseUid: string): Promise<void> {
+    const profile = await this.users.buildProfile(firebaseUid);
+    if (!profile?.tenants.length) return;
+
+    const platformClaims = this.claims.buildClaimsFromProfile(profile);
+    if (platformClaims) {
+      await this.claims.setOrgClaims(firebaseUid, platformClaims);
+    }
+  }
+
+  async generateCustomToken(firebaseIdToken: string) {
+    let decoded: admin.auth.DecodedIdToken;
+    try {
+      decoded = await admin.app().auth().verifyIdToken(firebaseIdToken);
+    } catch {
+      throw new UnauthorizedException('Firebase idToken invalido o expirado');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where:   { firebaseUid: decoded.uid },
+      include: { organization: true, collaborations: true },
+    });
+
+    if (!user) throw new UnauthorizedException('Usuario no registrado. Llama a /auth/sync primero.');
+
+    const canAccess = user.isOwner || (user.collaborations?.length ?? 0) > 0;
+    if (!canAccess) throw new UnauthorizedException('El usuario no tiene acceso al dashboard.');
+
+    const customToken = await admin.app().auth().createCustomToken(decoded.uid, {
+      isOwner:        user.isOwner,
+      organizationId: user.organization?.id ?? null,
+    });
+
+    this.logger.log(`customToken SSO generado: ${user.email}`);
+    return { customToken, uid: decoded.uid, email: user.email };
+  }
+}
+EOF
+
+# =============================================================================
+# 3 — auth.module.ts (reescritura completa con ClaimsService)
+# =============================================================================
+section "3/4 — auth.module.ts"
+
+write_file "realsass-sass-back/src/auth/auth.module.ts" << 'EOF'
+// realsass-sass-back/src/auth/auth.module.ts
+import { Module }           from '@nestjs/common';
+import { AuthController }   from './auth.controller';
+import { AuthService }      from './auth.service';
+import { ClaimsService }    from './claims.service';
+import { UsersModule }      from '../users/users.module';
+import { AffiliatesModule } from '../affiliate/affiliate.module';
+
+@Module({
+  imports:     [UsersModule, AffiliatesModule],
+  controllers: [AuthController],
+  providers:   [AuthService, ClaimsService],
+  exports:     [AuthService, ClaimsService],
+})
+export class AuthModule {}
+EOF
+
+# =============================================================================
+# 4 — auth.controller.ts (reescritura completa con refresh-claims)
+# =============================================================================
+section "4/4 — auth.controller.ts"
+
+write_file "realsass-sass-back/src/auth/auth.controller.ts" << 'EOF'
+// realsass-sass-back/src/auth/auth.controller.ts
 import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  type User,
-} from 'firebase/auth';
+  Body, Controller, Get, Headers,
+  HttpCode, HttpStatus, NotFoundException, Post, Query,
+} from '@nestjs/common';
+import { AuthService }                                  from './auth.service';
+import { UsersService }                                 from '../users/users.service';
+import { Public, CurrentUser, type CurrentUserPayload } from '@real/auth-server';
 
-export interface FirebaseConfig {
-  apiKey:            string;
-  authDomain:        string;
-  projectId:         string;
-  storageBucket:     string;
-  messagingSenderId: string;
-  appId:             string;
-}
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly auth:  AuthService,
+    private readonly users: UsersService,
+  ) {}
 
-let _app: FirebaseApp | null = null;
-
-/**
- * initFirebase — inicializa Firebase con una config explicita.
- * Llamar desde el layout si se quiere control explicito.
- * Si no se llama, getFirebaseAuth() auto-inicializa usando NEXT_PUBLIC_FIREBASE_*
- */
-export function initFirebase(config: FirebaseConfig): FirebaseApp {
-  if (getApps().length > 0) {
-    _app = getApp();
-  } else {
-    _app = initializeApp(config);
-  }
-  return _app;
-}
-
-/**
- * getOrInitApp — obtiene la app de Firebase, inicializando automaticamente
- * si hay variables de entorno NEXT_PUBLIC_FIREBASE_* disponibles.
- * Esto garantiza que Firebase este disponible en cualquier chunk de Next.js
- * sin importar el orden de carga de modulos.
- */
-function getOrInitApp(): FirebaseApp {
-  if (_app) return _app;
-
-  // Si ya hay una app inicializada por otro medio, usarla
-  if (getApps().length > 0) {
-    _app = getApp();
-    return _app;
+  /** POST /api/v1/auth/sync — crea o actualiza el usuario. Idempotente. */
+  @Post('sync')
+  @HttpCode(HttpStatus.OK)
+  async sync(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('ref') affiliateCode?: string,
+  ) {
+    const result = await this.auth.syncUser(user, affiliateCode);
+    return {
+      success: true,
+      isNew:   result.isNew,
+      message: result.isNew ? 'Usuario creado' : 'Usuario sincronizado',
+      data:    result.user,
+    };
   }
 
-  // Auto-init usando variables de entorno NEXT_PUBLIC_FIREBASE_*
-  const apiKey            = process.env['NEXT_PUBLIC_FIREBASE_API_KEY'];
-  const authDomain        = process.env['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'];
-  const projectId         = process.env['NEXT_PUBLIC_FIREBASE_PROJECT_ID'];
-  const storageBucket     = process.env['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'];
-  const messagingSenderId = process.env['NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'];
-  const appId             = process.env['NEXT_PUBLIC_FIREBASE_APP_ID'];
-
-  if (!apiKey || !projectId) {
-    throw new Error(
-      'Firebase no inicializado. Faltan variables de entorno NEXT_PUBLIC_FIREBASE_API_KEY y NEXT_PUBLIC_FIREBASE_PROJECT_ID. ' +
-      'Verificá las variables de entorno en Railway.',
-    );
+  /** GET /api/v1/auth/me — perfil completo. */
+  @Get('me')
+  async me(@CurrentUser() user: CurrentUserPayload) {
+    const profile = await this.users.getMyProfile(user.uid);
+    if (!profile) throw new NotFoundException('Usuario no encontrado. Llama a /auth/sync primero.');
+    return { success: true, data: profile };
   }
 
-  _app = initializeApp({
-    apiKey,
-    authDomain:        authDomain        ?? `${projectId}.firebaseapp.com`,
-    projectId,
-    storageBucket:     storageBucket     ?? `${projectId}.appspot.com`,
-    messagingSenderId: messagingSenderId ?? '',
-    appId:             appId             ?? '',
-  });
+  /** GET /api/v1/auth/organization-access — contrato con ecommerce-back. */
+  @Get('organization-access')
+  async organizationAccess(
+    @CurrentUser() user: CurrentUserPayload,
+    @Headers('x-organization-id') organizationId: string,
+  ) {
+    if (!organizationId) return { canAccess: false, reason: 'Header x-organization-id requerido' };
+    return this.users.getOrganizationAccess(user.uid, organizationId);
+  }
 
-  return _app;
-}
+  /** POST /api/v1/auth/firebase-sso — SSO publico entre fronts. */
+  @Public()
+  @Post('firebase-sso')
+  @HttpCode(HttpStatus.OK)
+  async firebaseSso(@Body() body: { firebaseIdToken?: string }) {
+    if (!body?.firebaseIdToken) throw new NotFoundException('firebaseIdToken requerido');
+    const result = await this.auth.generateCustomToken(body.firebaseIdToken);
+    return { success: true, ...result };
+  }
 
-export function getFirebaseAuth() {
-  return getAuth(getOrInitApp());
-}
-
-/**
- * getIdToken — obtiene el idToken del usuario actual.
- * @param force true fuerza refresh aunque el token sea valido
- */
-export async function getIdToken(force = false): Promise<string> {
-  const user = getFirebaseAuth().currentUser;
-  if (!user) throw new Error('No hay usuario autenticado');
-  return user.getIdToken(force);
-}
-
-export async function signInWithGoogle(): Promise<User> {
-  const result = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
-  return result.user;
-}
-
-export async function signOut(): Promise<void> {
-  await firebaseSignOut(getFirebaseAuth());
-}
-
-export { onAuthStateChanged, type User };
-EOF
-ok "packages/auth-client/src/firebase/firebase.ts"
-
-# =============================================================================
-# FIX 2 — dashboard-front/lib/firebase.ts
-# Ya no necesita hacer nada especial — el paquete se auto-inicializa.
-# Lo simplificamos para que no haga una init duplicada.
-# =============================================================================
-log "FIX 2 — Simplificando dashboard-front/lib/firebase.ts..."
-
-cat > realsass-dashboard-front/lib/firebase.ts << 'EOF'
-/**
- * lib/firebase.ts — dashboard-front
- *
- * Re-exporta desde @real/auth-client para compatibilidad con el codigo
- * existente que importa: auth, signOut, onAuthStateChanged, etc.
- *
- * La inicializacion de Firebase ocurre automaticamente en @real/auth-client
- * usando las variables NEXT_PUBLIC_FIREBASE_* — no se necesita llamar
- * initFirebase() explicitamente.
- */
-export {
-  getFirebaseAuth as getAuth,
-  signInWithGoogle,
-  signOut,
-  onAuthStateChanged,
-  type User,
-} from '@real/auth-client';
-
-// Para compatibilidad con codigo que importa 'auth' como objeto
-// en lugar de llamar a getAuth()
-import { getFirebaseAuth } from '@real/auth-client';
-export const auth = getFirebaseAuth();
-EOF
-ok "dashboard-front/lib/firebase.ts"
-
-# =============================================================================
-# FIX 3 — sass-front/lib/firebase.ts — mismo patron
-# =============================================================================
-log "FIX 3 — Simplificando sass-front/lib/firebase.ts..."
-
-cat > realsass-sass-front/lib/firebase.ts << 'EOF'
-/**
- * lib/firebase.ts — sass-front
- *
- * Re-exporta desde @real/auth-client para compatibilidad con:
- *   - components/login-modal.tsx (signInWithGoogle, signInWithApple, signInWithFacebook)
- *   - context/auth-context.tsx   (auth, signOut, onAuthStateChanged)
- *   - lib/api.ts                 (getIdToken)
- *
- * Firebase se auto-inicializa usando NEXT_PUBLIC_FIREBASE_* al primer uso.
- */
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import {
-  getAuth,
-  GoogleAuthProvider,
-  OAuthProvider,
-  FacebookAuthProvider,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  type User,
-} from 'firebase/auth';
-
-// Auto-init con variables de entorno — mismo patron que el paquete
-const firebaseConfig = {
-  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-};
-
-const app  = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-const googleProvider   = new GoogleAuthProvider();
-const appleProvider    = new OAuthProvider('apple.com');
-const facebookProvider = new FacebookAuthProvider();
-
-appleProvider.addScope('email');
-appleProvider.addScope('name');
-
-export async function signInWithGoogle() {
-  return signInWithPopup(auth, googleProvider);
-}
-
-export async function signInWithApple() {
-  return signInWithPopup(auth, appleProvider);
-}
-
-export async function signInWithFacebook() {
-  return signInWithPopup(auth, facebookProvider);
-}
-
-export async function signOut() {
-  return firebaseSignOut(auth);
-}
-
-export async function getIdToken(forceRefresh = false): Promise<string> {
-  if (!auth.currentUser) throw new Error('No hay usuario autenticado');
-  return auth.currentUser.getIdToken(forceRefresh);
-}
-
-export { auth, onAuthStateChanged, type User };
-EOF
-ok "sass-front/lib/firebase.ts"
-
-# =============================================================================
-# FIX 4 — dashboard-front layout.tsx: sacar el import de firebase
-# que ya no es necesario porque el paquete se auto-inicializa
-# =============================================================================
-log "FIX 4 — Actualizando dashboard-front/app/layout.tsx..."
-
-cat > realsass-dashboard-front/app/layout.tsx << 'EOF'
-import { TrpcProvider }  from '@/lib/trpc/provider'
-import type { Metadata } from 'next'
-import { Inter }         from 'next/font/google'
-import { Toaster }       from 'sonner'
-import { QueryProvider } from '@/providers/query-provider'
-import { AuthProvider }  from '@/features/auth/context/auth-context'
-import './globals.css'
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-export const metadata: Metadata = {
-  title: 'Stock Apple',
-  description: 'Manejo de Stock de Productos Apple',
-  icons: {
-    icon: '/logo.svg',
-    apple: '/logo.svg',
-  },
-}
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
-  return (
-    <html lang="es" className="dark">
-      <head>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for (let registration of registrations) {
-                  registration.unregister();
-                }
-              });
-            }
-          `
-        }} />
-      </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <QueryProvider>
-          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_REAL_BACK_URL!}>
-            <TrpcProvider>{children}</TrpcProvider>
-            <Toaster
-              theme="dark"
-              position="top-right"
-              toastOptions={{
-                style: {
-                  background: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  color: 'hsl(var(--foreground))',
-                },
-              }}
-            />
-          </AuthProvider>
-        </QueryProvider>
-      </body>
-    </html>
-  )
+  /**
+   * POST /api/v1/auth/refresh-claims
+   * Reemite custom claims Firebase para el usuario actual (ADR-003).
+   * El frontend debe llamar getIdToken(true) después para obtener el token fresco.
+   */
+  @Post('refresh-claims')
+  @HttpCode(HttpStatus.OK)
+  async refreshClaims(@CurrentUser() user: CurrentUserPayload) {
+    await this.auth.refreshClaims(user.uid);
+    return {
+      success: true,
+      message: 'Claims actualizados — solicitá un token fresco con getIdToken(true)',
+    };
+  }
 }
 EOF
-ok "dashboard-front/app/layout.tsx"
 
-sep
-echo -e "${BOLD}  FIX 10 COMPLETO${NC}"
-sep
+# =============================================================================
+section "Sprint 3 completado"
+
 echo ""
-echo -e "${GREEN}  Que se hizo:${NC}"
-echo "    @real/auth-client ahora auto-inicializa Firebase con NEXT_PUBLIC_FIREBASE_*"
-echo "    No importa en que orden Next.js cargue los chunks — Firebase siempre esta listo"
-echo "    dashboard-front/lib/firebase.ts simplificado"
-echo "    sass-front/lib/firebase.ts con auto-init propio (compatible con sus imports)"
-echo "    dashboard-front/app/layout.tsx sin import de firebase (ya no necesario)"
+echo "  Archivos creados:"
+echo "    + realsass-sass-back/src/auth/claims.service.ts"
 echo ""
-echo "  git add . && git commit -m 'fix: firebase auto-init from env vars in auth-client' && git push"
+echo "  Archivos reescritos:"
+echo "    ~ realsass-sass-back/src/auth/auth.service.ts"
+echo "    ~ realsass-sass-back/src/auth/auth.module.ts"
+echo "    ~ realsass-sass-back/src/auth/auth.controller.ts"
 echo ""
-sep
+echo "  Próximos pasos:"
+echo ""
+echo "  1. pnpm --filter realsass-sass-back build"
+echo "  2. git add . && git commit -m 'feat(adr-001): sprint-3 claims service'"
+echo ""
+echo "  Flujo completo verificado cuando:"
+echo "    login → POST /auth/sync → claims emitidos → request a chat-ia-back → 200"
