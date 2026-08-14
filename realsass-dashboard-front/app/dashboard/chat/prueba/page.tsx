@@ -1,50 +1,3 @@
-#!/usr/bin/env bash
-# =============================================================================
-# add-chat-prueba-page.sh
-#
-# Agrega una página de testing manual del Asistente IA (chat-ia-back) dentro
-# de realsass-dashboard-front. Permite probar el endpoint
-#   POST /api/v1/projects/:slug/assistant/chat
-# desde el navegador, usando el mismo flujo de auth (Firebase Bearer token)
-# que ya usás con curl.
-#
-# Uso:
-#   1. Parate en la raíz del monorepo (welver/), donde vive
-#      realsass-dashboard-front/
-#   2. bash add-chat-prueba-page.sh
-#   3. Verificá que NEXT_PUBLIC_CHAT_IA_URL esté seteada en
-#      realsass-dashboard-front/.env.local (o .env), por ejemplo:
-#        NEXT_PUBLIC_CHAT_IA_URL=https://chatia-backend-production.up.railway.app
-#      Si no la seteás, el script usa ese valor como default de todos modos.
-#   4. pnpm --filter realsass-dashboard-front dev
-#   5. Logueate en el dashboard (necesitás sesión Firebase activa) y
-#      andá a /dashboard/chat/prueba
-#
-# No agrega dependencias nuevas: usa @real/auth-client (ya está en
-# package.json de dashboard-front) y componentes shadcn ya existentes
-# (button, input, label, card).
-# =============================================================================
-
-set -euo pipefail
-
-REPO_DIR="realsass-dashboard-front"
-TARGET_DIR="${REPO_DIR}/app/dashboard/chat/prueba"
-TARGET_FILE="${TARGET_DIR}/page.tsx"
-
-if [ ! -d "${REPO_DIR}" ]; then
-  echo "ERROR: no se encontró el directorio '${REPO_DIR}'." >&2
-  echo "Corré este script desde la raíz del monorepo (welver/)." >&2
-  exit 1
-fi
-
-mkdir -p "${TARGET_DIR}"
-
-if [ -f "${TARGET_FILE}" ]; then
-  echo "AVISO: ${TARGET_FILE} ya existe. Se hace backup antes de sobrescribir."
-  cp "${TARGET_FILE}" "${TARGET_FILE}.bak.$(date +%s)"
-fi
-
-cat > "${TARGET_FILE}" << 'EOF'
 'use client';
 
 // app/dashboard/chat/prueba/page.tsx
@@ -268,17 +221,3 @@ export default function PruebaAsistentePage() {
     </div>
   );
 }
-EOF
-
-echo ""
-echo "✓ Página creada: ${TARGET_FILE}"
-echo ""
-echo "Siguientes pasos:"
-echo "  1. cd ${REPO_DIR} && pnpm dev"
-echo "  2. Logueate en el dashboard (sesión Firebase activa)"
-echo "  3. Andá a: http://localhost:3000/dashboard/chat/prueba"
-echo "  4. Pegá el Organization ID (ej: f8a5c145-6058-4fcd-8c42-30f9b4e0c792)"
-echo "     y el project slug (ej: mi-primer-proyecto), y probá el chat."
-echo ""
-echo "Si el fetch falla con CORS, verificá en chat-ia-back que"
-echo "ALLOWED_ORIGINS incluya el origen del dashboard-front en Railway."
