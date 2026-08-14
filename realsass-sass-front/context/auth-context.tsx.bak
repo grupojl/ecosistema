@@ -101,11 +101,6 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
 
         try {
           const res = await syncUser(refCode)
-
-        // ADR-003: forzar refresh inmediato del token para que incluya
-        // permissions.chat emitidos por ClaimsService en sass-back.
-        // Sin esto chat-ia-back rechaza con 403 hasta el refresh natural (55 min).
-        await user.getIdToken(/* forceRefresh */ true)
           setProfile(res.data)
         } catch (err) {
           // Si el backend falla, intentar getMe como fallback
