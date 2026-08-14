@@ -57,3 +57,56 @@ export interface EnviarMensajeInput {
   conversacionId: string;
   contenido: string;
 }
+
+// ─── Tipos de chat-ia-back ────────────────────────────────────────────────────
+
+export interface ProyectoIA {
+  id:             string;
+  organizationId: string;
+  slug:           string;
+  name:           string;
+  description?:   string;
+  isActive:       boolean;
+  createdAt:      string;
+  updatedAt:      string;
+}
+
+export interface ConversacionIA {
+  id:               string;
+  organizationId:   string;
+  channelType:      string;
+  status:           string;
+  assignedAgentId?: string;
+  createdAt:        string;
+  updatedAt:        string;
+  contact?: {
+    id:        string;
+    name?:     string;
+    phone?:    string;
+    username?: string;
+  };
+  lastMessage?: {
+    content:   string;
+    direction: string;
+    createdAt: string;
+  };
+}
+
+export type ConversacionStatus = 'OPEN' | 'CLOSED' | 'PENDING' | 'RESOLVED';
+
+export interface MensajeIA {
+  id:        string;
+  content:   string;
+  direction: 'INBOUND' | 'OUTBOUND';
+  type:      string;
+  status:    string;
+  createdAt: string;
+}
+
+export interface ChatResponse {
+  sessionId:       string;
+  response:        string;
+  tokensUsed:      number;
+  modelUsed:       string;
+  usedFaqFallback: boolean;
+}

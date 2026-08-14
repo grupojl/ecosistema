@@ -1,189 +1,172 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Fix definitivo: import ProfileForClaims en auth.service.ts
-#
-# El problema: ProfileForClaims ya está exportada en claims.service.ts
-# pero auth.service.ts no la importa. El script anterior fallaba porque
-# el regex no matcheaba el formato exacto del import.
-#
-# Solución: agregar el import con type en la primera línea del archivo,
-# independientemente del formato del import existente de ClaimsService.
-#
+# x.sh — Crear features/chat/hooks.ts en realsass-dashboard-front
 # USO (desde raíz del monorepo welver/):
 #   bash x.sh
 # =============================================================================
 set -euo pipefail
 
-GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'
 ok()      { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 section() { echo -e "\n${CYAN}━━━ $1 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"; }
-err()     { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[[ -d "$ROOT/realsass-sass-back" ]] || err "Ejecutá desde la raíz del monorepo welver/"
+# Usar pwd en lugar de BASH_SOURCE para evitar el bug de path en Windows
+DASH="$(pwd)/realsass-dashboard-front"
+[[ -d "$DASH" ]] || { echo "No encontré realsass-dashboard-front en $(pwd)"; exit 1; }
 
-# =============================================================================
-section "Fix — auth.service.ts: import ProfileForClaims"
-# =============================================================================
+mkdir -p "$DASH/features/chat"
 
-AUTH_SVC="$ROOT/realsass-sass-back/src/auth/auth.service.ts"
-[[ -f "$AUTH_SVC" ]] || err "No encontré $AUTH_SVC"
+section "features/chat/hooks.ts"
 
-# Verificar estado actual
-echo "[→] Revisando auth.service.ts..."
-grep -n 'ProfileForClaims\|ClaimsService\|claims.service' "$AUTH_SVC" || true
+cat > "$DASH/features/chat/hooks.ts" << 'EOF'
+// features/chat/hooks.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { chatIaFetch } from '@/lib/chat-ia-client';
+import { useAuth } from '@/features/auth/hooks/use-auth';
+import type { ProyectoIA, ConversacionIA, MensajeIA, ChatResponse } from './types';
 
-if grep -q "import.*ProfileForClaims.*claims\.service\|import type.*ProfileForClaims" "$AUTH_SVC"; then
-  warn "ProfileForClaims ya está importada correctamente"
+export function useProyectosIA() {
+  const { profile } = useAuth();
+  const orgId = profile?.organization?.id ?? '';
+  return useQuery({
+    queryKey: ['chat-ia', 'projects', orgId],
+    queryFn: () =>
+      chatIaFetch<{ success: boolean; data: ProyectoIA[] }>('/projects', orgId)
+        .then(r => r.data),
+    enabled: !!orgId,
+  });
+}
+
+export function useCrearProyectoIA() {
+  const { profile } = useAuth();
+  const orgId = profile?.organization?.id ?? '';
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { name: string; description?: string }) =>
+      chatIaFetch<{ success: boolean; data: ProyectoIA }>(
+        '/projects', orgId,
+        { method: 'POST', body: JSON.stringify(dto) },
+      ).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['chat-ia', 'projects', orgId] }),
+  });
+}
+
+export function useConversaciones() {
+  const { profile } = useAuth();
+  const orgId = profile?.organization?.id ?? '';
+  return useQuery({
+    queryKey: ['chat-ia', 'conversations', orgId],
+    queryFn: () =>
+      chatIaFetch<{ success: boolean; data: ConversacionIA[] }>('/conversations', orgId)
+        .then(r => r.data),
+    enabled: !!orgId,
+  });
+}
+
+export function useMensajes(conversacionId: string) {
+  const { profile } = useAuth();
+  const orgId = profile?.organization?.id ?? '';
+  return useQuery({
+    queryKey: ['chat-ia', 'messages', orgId, conversacionId],
+    queryFn: () =>
+      chatIaFetch<{ success: boolean; data: MensajeIA[] }>(
+        `/conversations/${conversacionId}/messages`, orgId,
+      ).then(r => r.data),
+    enabled: !!orgId && !!conversacionId,
+  });
+}
+
+export function useEnviarMensajeAsistente(projectSlug: string) {
+  const { profile } = useAuth();
+  const orgId = profile?.organization?.id ?? '';
+  return useMutation({
+    mutationFn: (dto: { userId: string; message: string; channel?: string }) =>
+      chatIaFetch<ChatResponse>(
+        `/projects/${projectSlug}/assistant/chat`, orgId,
+        { method: 'POST', body: JSON.stringify(dto) },
+      ),
+  });
+}
+EOF
+ok "features/chat/hooks.ts creado"
+
+section "features/chat/types.ts — agregar tipos de chat-ia"
+
+TYPES="$DASH/features/chat/types.ts"
+
+if grep -q 'ProyectoIA' "$TYPES" 2>/dev/null; then
+  echo "[→] tipos chat-ia ya existen — sin cambios"
 else
-  cp "$AUTH_SVC" "$AUTH_SVC.bak"
-  echo "[→] backup creado"
+  cat >> "$TYPES" << 'EOF'
 
-  node --eval "
-const fs  = require('fs');
-const src = fs.readFileSync('$AUTH_SVC', 'utf8');
+// ─── Tipos de chat-ia-back ────────────────────────────────────────────────────
 
-// Verificar que ProfileForClaims no está ya importada
-if (src.includes('ProfileForClaims') && src.includes(\"import\") && src.includes(\"claims.service\") && src.match(/import.*ProfileForClaims.*claims/)) {
-  console.log('Ya importada — sin cambios');
-  process.exit(0);
+export interface ProyectoIA {
+  id:             string;
+  organizationId: string;
+  slug:           string;
+  name:           string;
+  description?:   string;
+  isActive:       boolean;
+  createdAt:      string;
+  updatedAt:      string;
 }
 
-// Agregar import al comienzo del archivo (antes de cualquier otra cosa)
-// Usamos import type para que no genere runtime code
-const IMPORT_LINE = \"import type { ProfileForClaims } from './claims.service';\";
-
-// Insertar después de la primera línea de comentario o al inicio
-const lines = src.split('\n');
-let insertAt = 0;
-
-// Buscar el final del bloque de comentarios iniciales
-for (let i = 0; i < lines.length; i++) {
-  if (lines[i].startsWith('import ') || lines[i].startsWith('import{')) {
-    insertAt = i;
-    break;
-  }
+export interface ConversacionIA {
+  id:               string;
+  organizationId:   string;
+  channelType:      string;
+  status:           string;
+  assignedAgentId?: string;
+  createdAt:        string;
+  updatedAt:        string;
+  contact?: {
+    id:        string;
+    name?:     string;
+    phone?:    string;
+    username?: string;
+  };
+  lastMessage?: {
+    content:   string;
+    direction: string;
+    createdAt: string;
+  };
 }
 
-lines.splice(insertAt, 0, IMPORT_LINE);
-const result = lines.join('\n');
+export type ConversacionStatus = 'OPEN' | 'CLOSED' | 'PENDING' | 'RESOLVED';
 
-fs.writeFileSync('$AUTH_SVC', result, 'utf8');
-console.log('OK: import agregado en línea ' + insertAt);
-"
-  ok "import ProfileForClaims agregado"
+export interface MensajeIA {
+  id:        string;
+  content:   string;
+  direction: 'INBOUND' | 'OUTBOUND';
+  type:      string;
+  status:    string;
+  createdAt: string;
+}
+
+export interface ChatResponse {
+  sessionId:       string;
+  response:        string;
+  tokensUsed:      number;
+  modelUsed:       string;
+  usedFaqFallback: boolean;
+}
+EOF
+  ok "tipos chat-ia agregados"
 fi
 
-# Verificar resultado
-echo ""
-echo "[→] Verificando imports en auth.service.ts:"
-grep -n 'import.*claims\|ProfileForClaims' "$AUTH_SVC"
-
-# =============================================================================
-section "Verificar claims.service.ts — ProfileForClaims exportada"
-# =============================================================================
-
-CLAIMS="$ROOT/realsass-sass-back/src/auth/claims.service.ts"
-[[ -f "$CLAIMS" ]] || err "No encontré $CLAIMS"
-
-if grep -q 'export interface ProfileForClaims' "$CLAIMS"; then
-  ok "ProfileForClaims ya está exportada en claims.service.ts"
-else
-  cp "$CLAIMS" "$CLAIMS.bak"
-  node --eval "
-const fs  = require('fs');
-const src = fs.readFileSync('$CLAIMS', 'utf8');
-const result = src.replace(
-  /^(interface ProfileForClaims)/m,
-  'export interface ProfileForClaims'
-);
-if (result === src) {
-  console.error('ERROR: no encontré interface ProfileForClaims — verificá manualmente');
-  process.exit(1);
-}
-fs.writeFileSync('$CLAIMS', result, 'utf8');
-console.log('OK: ProfileForClaims exportada');
-"
-  ok "claims.service.ts actualizado"
-fi
-
-echo ""
-echo "[→] Verificando export en claims.service.ts:"
-grep -n 'ProfileForClaims' "$CLAIMS"
-
-# =============================================================================
-section "Fix auth-context.tsx — getIdToken(true) post-syncUser"
-# =============================================================================
-
-patch_auth_context() {
-  local FILE="$1"
-  local LABEL="$2"
-
-  [[ -f "$FILE" ]] || { warn "No encontré $FILE — saltando"; return; }
-
-  if grep -q 'ADR-003\|forceRefresh.*true' "$FILE"; then
-    warn "$LABEL ya tiene el fix — sin cambios"
-    return
-  fi
-
-  if ! grep -q 'await syncUser(' "$FILE"; then
-    warn "$LABEL: 'await syncUser(' no encontrado — saltando"
-    return
-  fi
-
-  cp "$FILE" "$FILE.bak"
-
-  node --eval "
-const fs    = require('fs');
-const lines = fs.readFileSync('$FILE', 'utf8').split('\n');
-const INSERT = [
-  '        // ADR-003: token refresh para claims de chat',
-  '        await user.getIdToken(/* forceRefresh */ true)',
-];
-let patched = false;
-const out = [];
-for (const line of lines) {
-  out.push(line);
-  if (!patched && line.includes('await syncUser(')) {
-    INSERT.forEach(l => out.push(l));
-    patched = true;
-  }
-}
-if (!patched) { console.log('WARN: patron no encontrado'); process.exit(0); }
-fs.writeFileSync('$FILE', out.join('\n'), 'utf8');
-console.log('OK: fix aplicado en $FILE');
-"
-  ok "$LABEL parcheado"
-}
-
-# sass-front
-patch_auth_context \
-  "$ROOT/realsass-sass-front/context/auth-context.tsx" \
-  "sass-front"
-
-# dashboard-front
-DASH_CTX=$(find "$ROOT/realsass-dashboard-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
-[[ -n "$DASH_CTX" ]] && patch_auth_context "$DASH_CTX" "dashboard-front" || \
-  warn "dashboard-front: auth-context no encontrado"
-
-# ecommerce-front
-ECO_CTX=$(find "$ROOT/real-ecommerce-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
-[[ -n "$ECO_CTX" ]] && patch_auth_context "$ECO_CTX" "ecommerce-front" || \
-  warn "ecommerce-front: sin auth-context (storefront público — esperado)"
-
-# =============================================================================
 section "Resumen"
-# =============================================================================
 echo ""
-echo "  Archivos modificados:"
-echo "    ~ realsass-sass-back/src/auth/claims.service.ts  (export ProfileForClaims)"
-echo "    ~ realsass-sass-back/src/auth/auth.service.ts    (import type ProfileForClaims)"
-echo "    ~ realsass-sass-front/context/auth-context.tsx"
-echo "    ~ realsass-dashboard-front/.../auth-context.tsx"
+echo "  Archivos:"
+echo "    + realsass-dashboard-front/features/chat/hooks.ts"
+echo "    ~ realsass-dashboard-front/features/chat/types.ts"
 echo ""
 echo "  Próximos pasos:"
 echo "    git add ."
-echo "    git commit -m 'fix: import ProfileForClaims + token refresh post-sync (ADR-003)'"
+echo "    git commit -m 'feat: hooks TanStack Query para chat-ia-back'"
 echo "    git push origin main"
+echo ""
+echo "  Luego navegar a:"
+echo "    /dashboard/chat/proyectos  → lista proyectos de chat-ia"
+echo "    /dashboard/chat            → lista conversaciones"
 echo ""

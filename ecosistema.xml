@@ -7737,39 +7737,6 @@ try { const b = await res.json() as { message?: string }; msg = b.message ?? msg
 // (todos apuntan al mismo real-back). Se mantiene para compatibilidad.
 </file>
 
-<file path="realsass-sass-back/src/auth/auth.service.ts">
-// realsass-sass-back/src/auth/auth.service.ts
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-⋮----
-import { PrismaService }     from '../prisma/prisma.service';
-import { UsersService }      from '../users/users.service';
-import { AffiliatesService } from '../affiliate/affiliate.service';
-import { ClaimsService }     from './claims.service';
-import type { CurrentUserPayload } from '@real/auth-server';
-⋮----
-/**
- * AuthService — tres responsabilidades:
- *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
- *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
- *   3. refreshClaims()       — reemite claims (cambio de org activa)
- */
-⋮----
-export class AuthService
-⋮----
-constructor(
-⋮----
-async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string)
-⋮----
-// ── Emitir custom claims (ADR-003) ──────────────────────────────────
-⋮----
-// ── Emitir custom claims para usuario nuevo ──────────────────────────
-⋮----
-// ── Reemitir claims (cambio de org activa) ───────────────────────────────
-async refreshClaims(firebaseUid: string): Promise<void>
-⋮----
-async generateCustomToken(firebaseIdToken: string)
-</file>
-
 <file path="realsass-sass-back/src/collaborators/collaborators.service.ts">
 import {
   Injectable,
@@ -7958,6 +7925,40 @@ function origin(url)
 /** @type {import('next').NextConfig} */
 ⋮----
 async headers()
+</file>
+
+<file path="realsass-sass-back/src/auth/auth.service.ts">
+// realsass-sass-back/src/auth/auth.service.ts
+import type { ProfileForClaims } from './claims.service';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+⋮----
+import { PrismaService }     from '../prisma/prisma.service';
+import { UsersService }      from '../users/users.service';
+import { AffiliatesService } from '../affiliate/affiliate.service';
+import { ClaimsService }     from './claims.service';
+import type { CurrentUserPayload } from '@real/auth-server';
+⋮----
+/**
+ * AuthService — tres responsabilidades:
+ *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
+ *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
+ *   3. refreshClaims()       — reemite claims (cambio de org activa)
+ */
+⋮----
+export class AuthService
+⋮----
+constructor(
+⋮----
+async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string)
+⋮----
+// ── Emitir custom claims (ADR-003) ──────────────────────────────────
+⋮----
+// ── Emitir custom claims para usuario nuevo ──────────────────────────
+⋮----
+// ── Reemitir claims (cambio de org activa) ───────────────────────────────
+async refreshClaims(firebaseUid: string): Promise<void>
+⋮----
+async generateCustomToken(firebaseIdToken: string)
 </file>
 
 <file path="realsass-sass-back/src/users/users.service.ts">
