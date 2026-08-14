@@ -1,4 +1,5 @@
 // realsass-sass-back/src/auth/auth.service.ts
+import type { ProfileForClaims } from './claims.service';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as admin            from 'firebase-admin';
 import { PrismaService }     from '../prisma/prisma.service';

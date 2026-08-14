@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # =============================================================================
-# x.sh — Fix TS2304 + TS2345 en auth.service.ts + token refresh en fronts
+# x.sh — Fix definitivo: import ProfileForClaims en auth.service.ts
 #
-# Problema 1: ProfileForClaims no está exportada en claims.service.ts
-#   → Exportarla + agregarla al import en auth.service.ts
+# El problema: ProfileForClaims ya está exportada en claims.service.ts
+# pero auth.service.ts no la importa. El script anterior fallaba porque
+# el regex no matcheaba el formato exacto del import.
 #
-# Problema 2: auth-context.tsx en 3 fronts sin getIdToken(true) post-sync
-#   → sass-front, dashboard-front, ecommerce-front
+# Solución: agregar el import con type en la primera línea del archivo,
+# independientemente del formato del import existente de ClaimsService.
 #
 # USO (desde raíz del monorepo welver/):
 #   bash x.sh
@@ -23,95 +24,96 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 [[ -d "$ROOT/realsass-sass-back" ]] || err "Ejecutá desde la raíz del monorepo welver/"
 
 # =============================================================================
-section "Fix 1a — exportar ProfileForClaims en claims.service.ts"
+section "Fix — auth.service.ts: import ProfileForClaims"
+# =============================================================================
+
+AUTH_SVC="$ROOT/realsass-sass-back/src/auth/auth.service.ts"
+[[ -f "$AUTH_SVC" ]] || err "No encontré $AUTH_SVC"
+
+# Verificar estado actual
+echo "[→] Revisando auth.service.ts..."
+grep -n 'ProfileForClaims\|ClaimsService\|claims.service' "$AUTH_SVC" || true
+
+if grep -q "import.*ProfileForClaims.*claims\.service\|import type.*ProfileForClaims" "$AUTH_SVC"; then
+  warn "ProfileForClaims ya está importada correctamente"
+else
+  cp "$AUTH_SVC" "$AUTH_SVC.bak"
+  echo "[→] backup creado"
+
+  node --eval "
+const fs  = require('fs');
+const src = fs.readFileSync('$AUTH_SVC', 'utf8');
+
+// Verificar que ProfileForClaims no está ya importada
+if (src.includes('ProfileForClaims') && src.includes(\"import\") && src.includes(\"claims.service\") && src.match(/import.*ProfileForClaims.*claims/)) {
+  console.log('Ya importada — sin cambios');
+  process.exit(0);
+}
+
+// Agregar import al comienzo del archivo (antes de cualquier otra cosa)
+// Usamos import type para que no genere runtime code
+const IMPORT_LINE = \"import type { ProfileForClaims } from './claims.service';\";
+
+// Insertar después de la primera línea de comentario o al inicio
+const lines = src.split('\n');
+let insertAt = 0;
+
+// Buscar el final del bloque de comentarios iniciales
+for (let i = 0; i < lines.length; i++) {
+  if (lines[i].startsWith('import ') || lines[i].startsWith('import{')) {
+    insertAt = i;
+    break;
+  }
+}
+
+lines.splice(insertAt, 0, IMPORT_LINE);
+const result = lines.join('\n');
+
+fs.writeFileSync('$AUTH_SVC', result, 'utf8');
+console.log('OK: import agregado en línea ' + insertAt);
+"
+  ok "import ProfileForClaims agregado"
+fi
+
+# Verificar resultado
+echo ""
+echo "[→] Verificando imports en auth.service.ts:"
+grep -n 'import.*claims\|ProfileForClaims' "$AUTH_SVC"
+
+# =============================================================================
+section "Verificar claims.service.ts — ProfileForClaims exportada"
 # =============================================================================
 
 CLAIMS="$ROOT/realsass-sass-back/src/auth/claims.service.ts"
 [[ -f "$CLAIMS" ]] || err "No encontré $CLAIMS"
 
 if grep -q 'export interface ProfileForClaims' "$CLAIMS"; then
-  warn "ProfileForClaims ya está exportada — sin cambios"
+  ok "ProfileForClaims ya está exportada en claims.service.ts"
 else
   cp "$CLAIMS" "$CLAIMS.bak"
-  echo "[→] backup → claims.service.ts.bak"
-
   node --eval "
 const fs  = require('fs');
 const src = fs.readFileSync('$CLAIMS', 'utf8');
-
-// Cambiar 'interface ProfileForClaims' por 'export interface ProfileForClaims'
 const result = src.replace(
-  'interface ProfileForClaims',
+  /^(interface ProfileForClaims)/m,
   'export interface ProfileForClaims'
 );
-
 if (result === src) {
-  console.error('WARN: patron interface ProfileForClaims no encontrado');
+  console.error('ERROR: no encontré interface ProfileForClaims — verificá manualmente');
   process.exit(1);
 }
-
 fs.writeFileSync('$CLAIMS', result, 'utf8');
 console.log('OK: ProfileForClaims exportada');
 "
-  ok "claims.service.ts — ProfileForClaims exportada"
+  ok "claims.service.ts actualizado"
 fi
 
-# =============================================================================
-section "Fix 1b — agregar import de ProfileForClaims en auth.service.ts"
-# =============================================================================
-
-AUTH_SVC="$ROOT/realsass-sass-back/src/auth/auth.service.ts"
-[[ -f "$AUTH_SVC" ]] || err "No encontré $AUTH_SVC"
-
-cp "$AUTH_SVC" "$AUTH_SVC.bak"
-echo "[→] backup → auth.service.ts.bak"
-
-node --eval "
-const fs  = require('fs');
-const src = fs.readFileSync('$AUTH_SVC', 'utf8');
-let result = src;
-
-// 1. Asegurar que ProfileForClaims está en el import de claims.service
-if (result.includes('ProfileForClaims')) {
-  console.log('INFO: ProfileForClaims ya importada');
-} else if (result.includes(\"from './claims.service'\")) {
-  // Agregar al import existente
-  result = result.replace(
-    /import\s*\{([^}]+)\}\s*from\s*'\.\/claims\.service'/,
-    (match, imports) => {
-      const cleaned = imports.trim();
-      return \`import { \${cleaned}, ProfileForClaims } from './claims.service'\`;
-    }
-  );
-  console.log('OK: ProfileForClaims agregada al import');
-} else {
-  // No hay import de claims.service todavía — agregar al principio
-  result = \"import { ProfileForClaims } from './claims.service';\n\" + result;
-  console.log('OK: import de ProfileForClaims creado');
-}
-
-// 2. Reemplazar los casts as unknown as ProfileForClaims si ya están (del script anterior)
-//    o agregar el cast correcto
-result = result.replaceAll(
-  'buildClaimsFromProfile(profile as unknown as ProfileForClaims)',
-  'buildClaimsFromProfile(profile as unknown as ProfileForClaims)'
-);
-
-// 3. Si todavía tienen el cast correcto bien, no hacer nada más
-// Si tienen el original sin cast, agregar
-result = result.replaceAll(
-  'buildClaimsFromProfile(profile)',
-  'buildClaimsFromProfile(profile as unknown as ProfileForClaims)'
-);
-
-fs.writeFileSync('$AUTH_SVC', result, 'utf8');
-console.log('OK: auth.service.ts actualizado');
-"
-
-ok "auth.service.ts corregido"
+echo ""
+echo "[→] Verificando export en claims.service.ts:"
+grep -n 'ProfileForClaims' "$CLAIMS"
 
 # =============================================================================
-section "Fix 2 — getIdToken(true) post-syncUser en auth-context.tsx"
+section "Fix auth-context.tsx — getIdToken(true) post-syncUser"
 # =============================================================================
 
 patch_auth_context() {
@@ -126,19 +128,17 @@ patch_auth_context() {
   fi
 
   if ! grep -q 'await syncUser(' "$FILE"; then
-    warn "$LABEL no contiene 'await syncUser(' — saltando"
+    warn "$LABEL: 'await syncUser(' no encontrado — saltando"
     return
   fi
 
   cp "$FILE" "$FILE.bak"
-  echo "[→] backup → $(basename "$FILE").bak"
 
   node --eval "
 const fs    = require('fs');
 const lines = fs.readFileSync('$FILE', 'utf8').split('\n');
 const INSERT = [
-  '        // ADR-003: forzar refresh del token para incluir permissions.chat',
-  '        // emitidos por ClaimsService. Sin esto chat-ia rechaza con 403.',
+  '        // ADR-003: token refresh para claims de chat',
   '        await user.getIdToken(/* forceRefresh */ true)',
 ];
 let patched = false;
@@ -152,7 +152,7 @@ for (const line of lines) {
 }
 if (!patched) { console.log('WARN: patron no encontrado'); process.exit(0); }
 fs.writeFileSync('$FILE', out.join('\n'), 'utf8');
-console.log('OK: fix aplicado');
+console.log('OK: fix aplicado en $FILE');
 "
   ok "$LABEL parcheado"
 }
@@ -163,32 +163,14 @@ patch_auth_context \
   "sass-front"
 
 # dashboard-front
-DASH_CTX=""
-for c in \
-  "$ROOT/realsass-dashboard-front/features/auth/context/auth-context.tsx" \
-  "$ROOT/realsass-dashboard-front/context/auth-context.tsx" \
-  "$ROOT/realsass-dashboard-front/app/context/auth-context.tsx"
-do
-  [[ -f "$c" ]] && { DASH_CTX="$c"; break; }
-done
-[[ -z "$DASH_CTX" ]] && \
-  DASH_CTX=$(find "$ROOT/realsass-dashboard-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
+DASH_CTX=$(find "$ROOT/realsass-dashboard-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
 [[ -n "$DASH_CTX" ]] && patch_auth_context "$DASH_CTX" "dashboard-front" || \
-  warn "No encontré auth-context en dashboard-front"
+  warn "dashboard-front: auth-context no encontrado"
 
 # ecommerce-front
-ECO_CTX=""
-for c in \
-  "$ROOT/real-ecommerce-front/context/auth-context.tsx" \
-  "$ROOT/real-ecommerce-front/features/auth/context/auth-context.tsx" \
-  "$ROOT/real-ecommerce-front/app/context/auth-context.tsx"
-do
-  [[ -f "$c" ]] && { ECO_CTX="$c"; break; }
-done
-[[ -z "$ECO_CTX" ]] && \
-  ECO_CTX=$(find "$ROOT/real-ecommerce-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
+ECO_CTX=$(find "$ROOT/real-ecommerce-front" -name "auth-context.tsx" 2>/dev/null | head -1 || true)
 [[ -n "$ECO_CTX" ]] && patch_auth_context "$ECO_CTX" "ecommerce-front" || \
-  warn "ecommerce-front sin auth-context (storefront público — esperado)"
+  warn "ecommerce-front: sin auth-context (storefront público — esperado)"
 
 # =============================================================================
 section "Resumen"
@@ -196,21 +178,12 @@ section "Resumen"
 echo ""
 echo "  Archivos modificados:"
 echo "    ~ realsass-sass-back/src/auth/claims.service.ts  (export ProfileForClaims)"
-echo "    ~ realsass-sass-back/src/auth/auth.service.ts    (import + cast)"
+echo "    ~ realsass-sass-back/src/auth/auth.service.ts    (import type ProfileForClaims)"
 echo "    ~ realsass-sass-front/context/auth-context.tsx"
 echo "    ~ realsass-dashboard-front/.../auth-context.tsx"
-echo "    ~ real-ecommerce-front/.../auth-context.tsx      (si existe)"
 echo ""
 echo "  Próximos pasos:"
 echo "    git add ."
-echo "    git commit -m 'fix: export ProfileForClaims + token refresh post-sync (ADR-003)'"
+echo "    git commit -m 'fix: import ProfileForClaims + token refresh post-sync (ADR-003)'"
 echo "    git push origin main"
-echo ""
-echo "  Verificación post-deploy (Railway sass-back en verde):"
-echo "    1. Logout → login en sass-front"
-echo "    2. Network → POST /auth/sync → copiar Bearer"
-echo "    3. curl https://chatia-backend-production.up.railway.app/api/v1/projects \\"
-echo "         -H 'Authorization: Bearer TOKEN' \\"
-echo "         -H 'x-organization-id: f8a5c145-6058-4fcd-8c42-30f9b4e0c792'"
-echo "    4. Esperado: [] o lista — NO 403"
 echo ""

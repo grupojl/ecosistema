@@ -198,6 +198,8 @@ realsass-dashboard-front/
       campanas/
         page.tsx
       chat/
+        proyectos/
+          page.tsx
         page.tsx
       configuracion/
         flags/
@@ -255,6 +257,7 @@ realsass-dashboard-front/
       client.ts
       router-type.ts
     api-client.ts
+    chat-ia-client.ts
     firebase.ts
     helpers.ts
     utils.ts
@@ -2059,10 +2062,19 @@ import { TrendingUp } from 'lucide-react';
 export default function CampañasPage()
 </file>
 
-<file path="realsass-dashboard-front/app/dashboard/chat/page.tsx">
-import { MessageSquare } from 'lucide-react';
+<file path="realsass-dashboard-front/app/dashboard/chat/proyectos/page.tsx">
+// app/dashboard/chat/proyectos/page.tsx — gestión de proyectos IA
+import Link from 'next/link';
+import { Bot, ArrowLeft, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useProyectosIA } from '@/features/chat/hooks';
 ⋮----
-export default function ChatIAPage()
+{/* Header */}
+⋮----
+{/* Loading */}
+⋮----
+{/* Lista */}
 </file>
 
 <file path="realsass-dashboard-front/app/dashboard/configuracion/quotas/page.tsx">
@@ -2647,6 +2659,25 @@ const update = (props: ToasterToast)
 const dismiss = () => dispatch(
 ⋮----
 function useToast()
+</file>
+
+<file path="realsass-dashboard-front/lib/chat-ia-client.ts">
+// realsass-dashboard-front/lib/chat-ia-client.ts
+//
+// Cliente HTTP autenticado para chat-ia-back.
+// Incluye el Firebase Bearer token + x-organization-id en cada request.
+// La URL base viene de NEXT_PUBLIC_CHAT_IA_URL.
+import { getIdToken } from '@real/auth-client';
+⋮----
+export function buildQuery(params: Record<string, unknown>): string
+⋮----
+async function getHeaders(organizationId: string): Promise<Record<string, string>>
+⋮----
+export async function chatIaFetch<T>(
+  path:           string,
+  organizationId: string,
+  options:        RequestInit = {},
+): Promise<T>
 </file>
 
 <file path="realsass-dashboard-front/lib/helpers.ts">
@@ -3260,64 +3291,6 @@ return; // No rompemos el flujo de registro si el código no es válido
 import { IsEmail, IsOptional, IsString } from 'class-validator';
 ⋮----
 export class SyncUserDto {
-</file>
-
-<file path="realsass-sass-back/src/auth/claims.service.ts">
-// realsass-sass-back/src/auth/claims.service.ts
-//
-// Emite custom claims en el token Firebase para que los servicios de plataforma
-// (chat-ia-back, etc.) puedan validar identidad y permisos sin llamar al sass-back.
-//
-// Referencia: ADR-003 — Contrato de custom claims Firebase
-//
-// Shape emitido:
-// {
-//   organizationId:   string,
-//   organizationName: string,
-//   organizationSlug: string,
-//   role:             'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER',
-//   permissions: {
-//     chat: { canRead: boolean, canWrite: boolean }
-//   }
-// }
-import { Injectable, Logger } from '@nestjs/common';
-⋮----
-export interface PlatformClaims {
-  organizationId:   string;
-  organizationName: string;
-  organizationSlug: string;
-  role:             string;
-  permissions: {
-    chat?: { canRead: boolean; canWrite: boolean };
-  };
-}
-⋮----
-// Shape mínimo que necesitamos del perfil — independiente del tipo exacto
-// que devuelve buildProfile() para evitar el error "organization: unknown"
-interface ProfileForClaims {
-  tenants: Array<{
-    organizationId: string;
-    organization:   Record<string, unknown>;
-    role:           string;
-  }>;
-}
-⋮----
-export class ClaimsService
-⋮----
-// ── Emitir claims ─────────────────────────────────────────────────────────
-async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void>
-⋮----
-// No rompemos el flujo de login si los claims fallan
-⋮----
-// ── Revocar refresh tokens ────────────────────────────────────────────────
-async revokeUserTokens(uid: string): Promise<void>
-⋮----
-// ── Construir claims desde el perfil ─────────────────────────────────────
-buildClaimsFromProfile(profile: ProfileForClaims): PlatformClaims | null
-⋮----
-// OWNER tiene prioridad, luego el primero disponible
-⋮----
-private mapRole(ecosystemRole: string): string
 </file>
 
 <file path="realsass-sass-back/src/collaborators/dto/update-collaborator.dto.ts">
@@ -4321,59 +4294,6 @@ import {
 export function ThemeProvider(
 </file>
 
-<file path="realsass-sass-front/context/auth-context.tsx">
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ReactNode,
-} from 'react'
-import { useRouter } from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, type User } from '@/lib/firebase'
-import { syncUser, getMe } from '@/lib/api'
-import { AppError } from '@/lib/errors'
-import type { UserProfile } from '@/lib/types'
-⋮----
-interface AuthContextValue {
-  firebaseUser:    User | null
-  profile:         UserProfile | null
-  loading:         boolean
-  busy:            boolean
-  refreshProfile:  () => Promise<void>
-  logout:          () => Promise<void>
-}
-⋮----
-export function useAuth(): AuthContextValue
-⋮----
-interface AuthProviderProps {
-  children: ReactNode
-  refCode?: string
-}
-⋮----
-export function AuthProvider(
-⋮----
-// Ref para el timer de refresh proactivo (antes de los 55 min de expiración)
-⋮----
-/**
-   * Programa el refresh del token 55 minutos después de la última sincronización.
-   * Firebase tokens expiran a los 60 min; los refrescamos 5 min antes para evitar 401.
-   */
-⋮----
-await user.getIdToken(true) // forceRefresh
-⋮----
-// Si el refresh falla (sesión revocada), Firebase disparará onAuthStateChanged
-// con null y el usuario será deslogueado automáticamente
-⋮----
-}, 55 * 60 * 1000) // 55 minutos
-⋮----
-// Si el backend falla, intentar getMe como fallback
-⋮----
-// Usuario no autenticado — limpiar estado
-</file>
-
 <file path="realsass-sass-front/hooks/use-collaborators.ts">
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -5305,6 +5225,26 @@ private extractToken(req:
 }
 </file>
 
+<file path="realsass-dashboard-front/app/dashboard/chat/page.tsx">
+// app/dashboard/chat/page.tsx — lista de conversaciones del chat-ia-back
+import Link from 'next/link';
+import { MessageSquare, Bot, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useConversaciones } from '@/features/chat/hooks';
+import type { ConversacionStatus } from '@/features/chat/types';
+⋮----
+{/* Header */}
+⋮----
+{/* Loading */}
+⋮----
+{/* Lista */}
+⋮----
+<> ·
+⋮----
+{/* Total */}
+</file>
+
 <file path="realsass-dashboard-front/app/dashboard/configuracion/flags/page.tsx">
 import { AlertCircle, ToggleLeft, Globe, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -5694,6 +5634,64 @@ async getMyAffiliateProfile(@CurrentUser() user: CurrentUserPayload)
 async getMyReferrals(@CurrentUser() user: CurrentUserPayload)
 </file>
 
+<file path="realsass-sass-back/src/auth/claims.service.ts">
+// realsass-sass-back/src/auth/claims.service.ts
+//
+// Emite custom claims en el token Firebase para que los servicios de plataforma
+// (chat-ia-back, etc.) puedan validar identidad y permisos sin llamar al sass-back.
+//
+// Referencia: ADR-003 — Contrato de custom claims Firebase
+//
+// Shape emitido:
+// {
+//   organizationId:   string,
+//   organizationName: string,
+//   organizationSlug: string,
+//   role:             'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER',
+//   permissions: {
+//     chat: { canRead: boolean, canWrite: boolean }
+//   }
+// }
+import { Injectable, Logger } from '@nestjs/common';
+⋮----
+export interface PlatformClaims {
+  organizationId:   string;
+  organizationName: string;
+  organizationSlug: string;
+  role:             string;
+  permissions: {
+    chat?: { canRead: boolean; canWrite: boolean };
+  };
+}
+⋮----
+// Shape mínimo que necesitamos del perfil — independiente del tipo exacto
+// que devuelve buildProfile() para evitar el error "organization: unknown"
+export interface ProfileForClaims {
+  tenants: Array<{
+    organizationId: string;
+    organization:   Record<string, unknown>;
+    role:           string;
+  }>;
+}
+⋮----
+export class ClaimsService
+⋮----
+// ── Emitir claims ─────────────────────────────────────────────────────────
+async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void>
+⋮----
+// No rompemos el flujo de login si los claims fallan
+⋮----
+// ── Revocar refresh tokens ────────────────────────────────────────────────
+async revokeUserTokens(uid: string): Promise<void>
+⋮----
+// ── Construir claims desde el perfil ─────────────────────────────────────
+buildClaimsFromProfile(profile: ProfileForClaims): PlatformClaims | null
+⋮----
+// OWNER tiene prioridad, luego el primero disponible
+⋮----
+private mapRole(ecosystemRole: string): string
+</file>
+
 <file path="realsass-sass-back/src/collaborators/dto/invite-collaborator.dto.ts">
 import {
   IsEmail,
@@ -5962,6 +5960,64 @@ async updateMyOrganization(
    */
 ⋮----
 async getBySlugPublic(@Param('slug') slug: string)
+</file>
+
+<file path="realsass-sass-front/context/auth-context.tsx">
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from 'react'
+import { useRouter } from 'next/navigation'
+import { auth, onAuthStateChanged, signOut, type User } from '@/lib/firebase'
+import { syncUser, getMe } from '@/lib/api'
+import { AppError } from '@/lib/errors'
+import type { UserProfile } from '@/lib/types'
+⋮----
+interface AuthContextValue {
+  firebaseUser:    User | null
+  profile:         UserProfile | null
+  loading:         boolean
+  busy:            boolean
+  refreshProfile:  () => Promise<void>
+  logout:          () => Promise<void>
+}
+⋮----
+export function useAuth(): AuthContextValue
+⋮----
+interface AuthProviderProps {
+  children: ReactNode
+  refCode?: string
+}
+⋮----
+export function AuthProvider(
+⋮----
+// Ref para el timer de refresh proactivo (antes de los 55 min de expiración)
+⋮----
+/**
+   * Programa el refresh del token 55 minutos después de la última sincronización.
+   * Firebase tokens expiran a los 60 min; los refrescamos 5 min antes para evitar 401.
+   */
+⋮----
+await user.getIdToken(true) // forceRefresh
+⋮----
+// Si el refresh falla (sesión revocada), Firebase disparará onAuthStateChanged
+// con null y el usuario será deslogueado automáticamente
+⋮----
+}, 55 * 60 * 1000) // 55 minutos
+⋮----
+// ADR-003: forzar refresh inmediato del token para que incluya
+// permissions.chat emitidos por ClaimsService en sass-back.
+// Sin esto chat-ia-back rechaza con 403 hasta el refresh natural (55 min).
+await user.getIdToken(/* forceRefresh */ true)
+⋮----
+// Si el backend falla, intentar getMe como fallback
+⋮----
+// Usuario no autenticado — limpiar estado
 </file>
 
 <file path="realsass-sass-front/package.json">
@@ -7333,39 +7389,6 @@ import { AffiliatesModule } from '../affiliate/affiliate.module';
 export class AuthModule
 </file>
 
-<file path="realsass-sass-back/src/auth/auth.service.ts">
-// realsass-sass-back/src/auth/auth.service.ts
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-⋮----
-import { PrismaService }     from '../prisma/prisma.service';
-import { UsersService }      from '../users/users.service';
-import { AffiliatesService } from '../affiliate/affiliate.service';
-import { ClaimsService }     from './claims.service';
-import type { CurrentUserPayload } from '@real/auth-server';
-⋮----
-/**
- * AuthService — tres responsabilidades:
- *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
- *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
- *   3. refreshClaims()       — reemite claims (cambio de org activa)
- */
-⋮----
-export class AuthService
-⋮----
-constructor(
-⋮----
-async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string)
-⋮----
-// ── Emitir custom claims (ADR-003) ──────────────────────────────────
-⋮----
-// ── Emitir custom claims para usuario nuevo ──────────────────────────
-⋮----
-// ── Reemitir claims (cambio de org activa) ───────────────────────────────
-async refreshClaims(firebaseUid: string): Promise<void>
-⋮----
-async generateCustomToken(firebaseIdToken: string)
-</file>
-
 <file path="realsass-sass-back/src/config-audit/config-audit.service.ts">
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7712,6 +7735,39 @@ try { const b = await res.json() as { message?: string }; msg = b.message ?? msg
 // ─── apiClient — para features/pagos, chat, campanas ─────────────────────────
 // El primer argumento 'servicio' es un string que por ahora se ignora
 // (todos apuntan al mismo real-back). Se mantiene para compatibilidad.
+</file>
+
+<file path="realsass-sass-back/src/auth/auth.service.ts">
+// realsass-sass-back/src/auth/auth.service.ts
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+⋮----
+import { PrismaService }     from '../prisma/prisma.service';
+import { UsersService }      from '../users/users.service';
+import { AffiliatesService } from '../affiliate/affiliate.service';
+import { ClaimsService }     from './claims.service';
+import type { CurrentUserPayload } from '@real/auth-server';
+⋮----
+/**
+ * AuthService — tres responsabilidades:
+ *   1. syncUser()            — upsert del User + emisión de custom claims (ADR-003)
+ *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
+ *   3. refreshClaims()       — reemite claims (cambio de org activa)
+ */
+⋮----
+export class AuthService
+⋮----
+constructor(
+⋮----
+async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string)
+⋮----
+// ── Emitir custom claims (ADR-003) ──────────────────────────────────
+⋮----
+// ── Emitir custom claims para usuario nuevo ──────────────────────────
+⋮----
+// ── Reemitir claims (cambio de org activa) ───────────────────────────────
+async refreshClaims(firebaseUid: string): Promise<void>
+⋮----
+async generateCustomToken(firebaseIdToken: string)
 </file>
 
 <file path="realsass-sass-back/src/collaborators/collaborators.service.ts">
