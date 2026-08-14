@@ -42,7 +42,7 @@ export class AuthService {
 
       // ── Emitir custom claims (ADR-003) ──────────────────────────────────
       if (profile?.tenants.length) {
-        const platformClaims = this.claims.buildClaimsFromProfile(profile);
+        const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
         if (platformClaims) {
           await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
         }
@@ -76,7 +76,7 @@ export class AuthService {
 
     // ── Emitir custom claims para usuario nuevo ──────────────────────────
     if (profile?.tenants.length) {
-      const platformClaims = this.claims.buildClaimsFromProfile(profile);
+      const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
       if (platformClaims) {
         await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
       }
@@ -90,7 +90,7 @@ export class AuthService {
     const profile = await this.users.buildProfile(firebaseUid);
     if (!profile?.tenants.length) return;
 
-    const platformClaims = this.claims.buildClaimsFromProfile(profile);
+    const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
     if (platformClaims) {
       await this.claims.setOrgClaims(firebaseUid, platformClaims);
     }

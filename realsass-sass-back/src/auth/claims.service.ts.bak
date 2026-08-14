@@ -30,7 +30,7 @@ export interface PlatformClaims {
 
 // Shape mínimo que necesitamos del perfil — independiente del tipo exacto
 // que devuelve buildProfile() para evitar el error "organization: unknown"
-export interface ProfileForClaims {
+interface ProfileForClaims {
   tenants: Array<{
     organizationId: string;
     organization:   Record<string, unknown>;
