@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@real/ui';
 import { AlertCircle, TrendingUp, Clock, XCircle, CreditCard } from 'lucide-react';
 import { formatMoney } from '@/lib/helpers';
 import { useBalanceSummary } from '../hooks';

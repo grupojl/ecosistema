@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@real/ui"
+import { Badge } from "@real/ui"
+import { Button } from "@real/ui"
+import { Progress } from "@real/ui"
+import { Separator } from "@real/ui"
 import { Package, Truck, CheckCircle2, MapPin, Clock, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 

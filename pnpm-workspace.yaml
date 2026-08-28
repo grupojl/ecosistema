@@ -140,3 +140,5 @@ catalog:
   "@opentelemetry/exporter-prometheus": "^0.57.2"
   swagger-ui-express: "^5.0.1"
   joi: "^18.2.1"
+  cookie-parser: "^1.4.7"
+  "@types/cookie-parser": "^1.4.8"

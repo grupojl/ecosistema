@@ -1,54 +1,49 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import { AppModule } from './app.module';
+import { NestFactory }      from '@nestjs/core';
+import { ValidationPipe }   from '@nestjs/common';
+import helmet               from 'helmet';
+import cookieParser         from 'cookie-parser';
+import { AppModule }        from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ── Seguridad: CORS ───────────────────────────────────────────────────────
-  // Si ALLOWED_ORIGINS no está definido o está vacío, el servidor NO arranca.
+  // ALLOWED_ORIGINS requerido — sin él el servidor no arranca.
+  // credentials: true + origin explícito → compatible con cookies HttpOnly (ADR-004).
   // credentials: true con origin: '*' es una vulnerabilidad CORS activa.
-  const rawOrigins = process.env['ALLOWED_ORIGINS'];
-  if (!rawOrigins || rawOrigins.trim() === '') {
-    throw new Error(
-      '[real-back] Variable de entorno ALLOWED_ORIGINS no definida. ' +
-      'Definila antes de arrancar el servidor (ej: http://localhost:3001,https://app.tudominio.com). ' +
-      'El servidor no puede arrancar con CORS abierto.',
-    );
+  const rawOrigins = process.env.ALLOWED_ORIGINS ?? '';
+  if (!rawOrigins) {
+    throw new Error('ALLOWED_ORIGINS no está definida — el servidor no puede arrancar sin CORS configurado');
   }
-  const allowedOrigins = rawOrigins
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    credentials: true,
+    origin:      allowedOrigins,
+    credentials: true,  // requerido para cookies HttpOnly (ADR-004)
+    methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-organization-id',
+      'x-trpc-source',
+    ],
   });
 
+  // ── Cookie parser — requerido para leer __session (ADR-004) ───────────────
+  app.use(cookieParser());
+
   // ── Seguridad: Helmet ─────────────────────────────────────────────────────
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-    }),
-  );
+  app.use(helmet());
 
   // ── Validación global ─────────────────────────────────────────────────────
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist:        true,
+    forbidNonWhitelisted: true,
+    transform:        true,
+  }));
 
-  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
-
-  const port = process.env['PORT'] ?? 3000;
-  await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Real Estate SaaS Backend running on port http://localhost:${port}`);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
 }
 
 bootstrap();

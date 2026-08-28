@@ -7,7 +7,7 @@ import { useOrders } from '@/features/store/hooks';
 import type { OrderStatus } from '@/features/store/types';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+} from '@real/ui';
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING:   'Pendiente',

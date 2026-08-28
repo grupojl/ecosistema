@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@real/ui"
 import { PlayCircle } from "lucide-react"
 
 interface CloserLookProps {

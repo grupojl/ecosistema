@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle, BarChart2, Infinity } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useQuotas } from '@/features/config-quotas/hooks';
 import { QUOTA_RESOURCE_LABELS } from '@/features/config/types';

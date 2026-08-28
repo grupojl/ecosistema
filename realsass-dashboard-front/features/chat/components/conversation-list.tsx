@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { MessageSquare, SlidersHorizontal, Search, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
+import { ScrollArea } from '@real/ui';
+import { Skeleton } from '@real/ui';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/helpers';
 import { CanalBadge } from './canal-badge';

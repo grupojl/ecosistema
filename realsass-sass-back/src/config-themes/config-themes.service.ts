@@ -1,87 +1,55 @@
 import {
-  Injectable, NotFoundException, ConflictException, ForbiddenException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException, Inject,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { ConfigCacheService } from '../config-cache/config-cache.service';
-import { ConfigAuditService } from '../config-audit/config-audit.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CreateThemeDto } from './dto/create-theme.dto';
-
-const THEME_TTL = Number(process.env['CONFIG_CACHE_TTL_THEME'] ?? 300);
+import { ConfigCacheService }   from '../config-cache/config-cache.service';
+import { ConfigAuditService }   from '../config-audit/config-audit.service';
+import { EventEmitter2 }        from '@nestjs/event-emitter';
+import { CreateThemeDto }       from './dto/create-theme.dto';
+import { THEMES_REPOSITORY, type IThemesRepository } from './repository/themes.repository.interface';
 
 @Injectable()
 export class ConfigThemesService {
   constructor(
-    private readonly prisma:   PrismaService,
-    private readonly cache:    ConfigCacheService,
-    private readonly audit:    ConfigAuditService,
-    private readonly emitter:  EventEmitter2,
+    @Inject(THEMES_REPOSITORY)
+    private readonly repo:   IThemesRepository,
+    private readonly cache:  ConfigCacheService,
+    private readonly audit:  ConfigAuditService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async getPublicTheme(organizationId: string) {
-    const cached = await this.cache.get<any>(organizationId, 'theme', 'active');
-    if (cached) return { success: true, data: cached };
-
-    let theme = await this.prisma.themeConfig.findFirst({
-      where: { organizationId, isActive: true },
-    });
-    if (!theme) {
-      theme = await this.prisma.themeConfig.findFirst({
-        where: { isSystemDefault: true },
-      });
-    }
-    await this.cache.set(organizationId, 'theme', 'active', theme, THEME_TTL);
-    return { success: true, data: theme };
+    return this.repo.findPublicByOrgId(organizationId);
   }
 
   async list(organizationId: string) {
-    const themes = await this.prisma.themeConfig.findMany({
-      where:   { OR: [{ organizationId }, { isSystemDefault: true }] },
-      orderBy: { createdAt: 'asc' },
-    });
-    return { success: true, data: themes };
+    return this.repo.findAllByOrg(organizationId);
   }
 
   async create(organizationId: string, userId: string, dto: CreateThemeDto) {
-    const exists = await this.prisma.themeConfig.findUnique({
-      where: { organizationId_name: { organizationId, name: dto.name } },
-    });
-    if (exists) throw new ConflictException(`Ya existe un tema llamado "${dto.name}"`);
-
-    const theme = await this.prisma.themeConfig.create({
-      data: { organizationId, ...dto },
-    });
-    this.audit.log({ organizationId, userId, configType: 'theme', configKey: theme.id, action: 'create' });
-    await this.cache.del(organizationId, 'theme');
-    return { success: true, data: theme };
+    const theme = await this.repo.create({ ...dto, organizationId });
+    this.audit.log({ organizationId, userId, configType: 'theme', action: 'create', newValue: theme.name });
+    return theme;
   }
 
   async activate(organizationId: string, userId: string, id: string) {
-    const theme = await this.prisma.themeConfig.findFirst({
-      where: { id, OR: [{ organizationId }, { isSystemDefault: true }] },
-    });
-    if (!theme) throw new NotFoundException('Tema no encontrado');
+    const theme = await this.repo.findById(id);
+    if (!theme) throw new NotFoundException(`Theme ${id} not found`);
+    if (theme.organizationId !== organizationId) throw new ForbiddenException();
+    if (theme.isSystemDefault) throw new ConflictException('Cannot activate system default theme directly');
 
-    await this.prisma.$transaction([
-      this.prisma.themeConfig.updateMany({ where: { organizationId }, data: { isActive: false } }),
-      this.prisma.themeConfig.update({ where: { id }, data: { isActive: true } }),
-    ]);
-
-    this.audit.log({ organizationId, userId, configType: 'theme', configKey: id, action: 'activate' });
-    await this.cache.del(organizationId, 'theme');
-    this.emitter.emit('config.theme.changed', { organizationId, themeId: id });
-    return { success: true, message: 'Tema activado' };
+    await this.repo.activate(id, organizationId);
+    this.audit.log({ organizationId, userId, configType: 'theme', action: 'activate', newValue: id });
+    this.events.emit('config.theme.activated', { organizationId, themeId: id });
   }
 
   async remove(organizationId: string, userId: string, id: string) {
-    const theme = await this.prisma.themeConfig.findFirst({ where: { id, organizationId } });
-    if (!theme) throw new NotFoundException('Tema no encontrado');
-    if (theme.isSystemDefault) throw new ForbiddenException('No se puede eliminar un tema del sistema');
-    if (theme.isActive)        throw new ForbiddenException('Desactivá el tema antes de eliminarlo');
+    const theme = await this.repo.findById(id);
+    if (!theme) throw new NotFoundException(`Theme ${id} not found`);
+    if (theme.organizationId !== organizationId) throw new ForbiddenException();
+    if (theme.isActive) throw new ConflictException('Cannot remove active theme');
+    if (theme.isSystemDefault) throw new ConflictException('Cannot remove system default theme');
 
-    await this.prisma.themeConfig.delete({ where: { id } });
-    this.audit.log({ organizationId, userId, configType: 'theme', configKey: id, action: 'delete' });
-    await this.cache.del(organizationId, 'theme');
-    return { success: true, message: 'Tema eliminado' };
+    await this.repo.remove(id);
+    this.audit.log({ organizationId, userId, configType: 'theme', action: 'delete', previousValue: id });
   }
 }

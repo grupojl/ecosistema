@@ -13,19 +13,19 @@ import {
   SheetTitle,
   SheetDescription,
   SheetFooter,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from '@real/ui';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
+import { Label } from '@real/ui';
+import { Textarea } from '@real/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+} from '@real/ui';
+import { Separator } from '@real/ui';
 import { useCreateAccesorio, useUpdateAccesorio } from '@/features/stock/hooks';
 import type { Accesorio } from '@/features/stock/types';
 import type { PuntoDeVenta } from '@/features/pdv/types';

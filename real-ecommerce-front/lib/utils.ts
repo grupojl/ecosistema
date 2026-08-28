@@ -1,6 +1,6 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+/**
+ * lib/utils.ts
+ * cn() importado desde @real/ui — fuente única de utilidades de clase.
+ * Re-exportado para compatibilidad con imports existentes de '@/lib/utils'.
+ */
+export { cn } from '@real/ui'

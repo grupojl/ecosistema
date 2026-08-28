@@ -7,16 +7,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+} from '@real/ui';
+import { Button } from '@real/ui';
+import { Badge } from '@real/ui';
+import { Card, CardContent } from '@real/ui';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@real/ui';
 import { MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import type { Producto } from '@/features/products/types';
 

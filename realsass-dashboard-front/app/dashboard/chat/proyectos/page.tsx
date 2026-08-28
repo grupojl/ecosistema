@@ -2,8 +2,8 @@
 // app/dashboard/chat/proyectos/page.tsx — gestión de proyectos IA
 import Link from 'next/link';
 import { Bot, ArrowLeft, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@real/ui';
+import { Button } from '@real/ui';
 import { useProyectosIA } from '@/features/chat/hooks';
 
 export default function ProyectosIAPage() {

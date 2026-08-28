@@ -1,8 +1,8 @@
 'use client';
 
 import { AlertCircle, ToggleLeft, Globe, Loader2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@real/ui';
+import { Switch } from '@real/ui';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useFlags, useUpdateFlag } from '@/features/config-flags/hooks';

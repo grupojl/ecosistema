@@ -9,18 +9,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@real/ui';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
+import { Label } from '@real/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from '@real/ui';
+import { Switch } from '@real/ui';
 import { useCreateProduct, useUpdateProduct } from '@/features/products/hooks';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';

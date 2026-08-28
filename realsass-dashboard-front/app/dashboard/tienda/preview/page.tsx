@@ -2,7 +2,7 @@
 
 import { ExternalLink, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { Button } from '@/components/ui/button';
+import { Button } from '@real/ui';
 
 export default function PreviewPage() {
   const { activeOrg } = useAuth();

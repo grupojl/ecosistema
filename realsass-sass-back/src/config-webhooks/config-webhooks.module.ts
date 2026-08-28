@@ -4,20 +4,23 @@ import { ConfigWebhooksController }  from './config-webhooks.controller';
 import { ConfigWebhooksService }     from './config-webhooks.service';
 import { WebhookDeliveryService, WEBHOOK_QUEUE } from './webhook-delivery.service';
 import { WebhookDeliveryProcessor }  from './webhook-delivery.processor';
+import { PrismaWebhooksRepository }  from './repository/prisma-webhooks.repository';
+import { WEBHOOKS_REPOSITORY }       from './repository/webhooks.repository.interface';
+import { PrismaModule }              from '../prisma/prisma.module';
 import { ConfigAuditModule }         from '../config-audit/config-audit.module';
-
-const REDIS_ENABLED = process.env['REDIS_ENABLED'] === 'true';
 
 @Module({
   imports: [
+    PrismaModule,
     ConfigAuditModule,
-    ...(REDIS_ENABLED ? [BullModule.registerQueue({ name: WEBHOOK_QUEUE })] : []),
+    BullModule.registerQueue({ name: WEBHOOK_QUEUE }),
   ],
   controllers: [ConfigWebhooksController],
-  providers: [
+  providers:   [
     ConfigWebhooksService,
     WebhookDeliveryService,
-    ...(REDIS_ENABLED ? [WebhookDeliveryProcessor] : []),
+    WebhookDeliveryProcessor,
+    { provide: WEBHOOKS_REPOSITORY, useClass: PrismaWebhooksRepository },
   ],
   exports: [ConfigWebhooksService, WebhookDeliveryService],
 })

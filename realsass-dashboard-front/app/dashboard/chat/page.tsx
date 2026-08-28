@@ -2,8 +2,8 @@
 // app/dashboard/chat/page.tsx — lista de conversaciones del chat-ia-back
 import Link from 'next/link';
 import { MessageSquare, Bot, RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@real/ui';
+import { Button } from '@real/ui';
 import { useConversaciones } from '@/features/chat/hooks';
 import type { ConversacionStatus } from '@/features/chat/types';
 

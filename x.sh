@@ -1,284 +1,179 @@
 #!/usr/bin/env bash
-# =============================================================================
-# add-chat-prueba-page.sh
-#
-# Agrega una página de testing manual del Asistente IA (chat-ia-back) dentro
-# de realsass-dashboard-front. Permite probar el endpoint
-#   POST /api/v1/projects/:slug/assistant/chat
-# desde el navegador, usando el mismo flujo de auth (Firebase Bearer token)
-# que ya usás con curl.
-#
-# Uso:
-#   1. Parate en la raíz del monorepo (welver/), donde vive
-#      realsass-dashboard-front/
-#   2. bash add-chat-prueba-page.sh
-#   3. Verificá que NEXT_PUBLIC_CHAT_IA_URL esté seteada en
-#      realsass-dashboard-front/.env.local (o .env), por ejemplo:
-#        NEXT_PUBLIC_CHAT_IA_URL=https://chatia-backend-production.up.railway.app
-#      Si no la seteás, el script usa ese valor como default de todos modos.
-#   4. pnpm --filter realsass-dashboard-front dev
-#   5. Logueate en el dashboard (necesitás sesión Firebase activa) y
-#      andá a /dashboard/chat/prueba
-#
-# No agrega dependencias nuevas: usa @real/auth-client (ya está en
-# package.json de dashboard-front) y componentes shadcn ya existentes
-# (button, input, label, card).
-# =============================================================================
-
 set -euo pipefail
 
-REPO_DIR="realsass-dashboard-front"
-TARGET_DIR="${REPO_DIR}/app/dashboard/chat/prueba"
-TARGET_FILE="${TARGET_DIR}/page.tsx"
+MONOREPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLAUDE="$MONOREPO_ROOT/.claude"
 
-if [ ! -d "${REPO_DIR}" ]; then
-  echo "ERROR: no se encontró el directorio '${REPO_DIR}'." >&2
-  echo "Corré este script desde la raíz del monorepo (welver/)." >&2
-  exit 1
-fi
+GREEN='\033[0;32m'; CYAN='\033[0;36m'; NC='\033[0m'; BOLD='\033[1m'
+ok()  { echo -e "${GREEN}[✓]${NC} $*"; }
+log() { echo -e "${CYAN}[x.sh]${NC} $*"; }
 
-mkdir -p "${TARGET_DIR}"
+log "Creando ADR-005-rest-to-trpc.md..."
 
-if [ -f "${TARGET_FILE}" ]; then
-  echo "AVISO: ${TARGET_FILE} ya existe. Se hace backup antes de sobrescribir."
-  cp "${TARGET_FILE}" "${TARGET_FILE}.bak.$(date +%s)"
-fi
+cat > "$CLAUDE/decisions/ADR-005-rest-to-trpc.md" << 'EOF'
+# ADR-005: Migración completa de REST a tRPC — REST solo para endpoints públicos
 
-cat > "${TARGET_FILE}" << 'EOF'
-'use client';
+**Fecha:** 2026-08-28
+**Estado:** Aceptado
 
-// app/dashboard/chat/prueba/page.tsx
-//
-// Página de testing manual contra chat-ia-back — endpoint público del
-// asistente por proyecto: POST /projects/:slug/assistant/chat
-//
-// Deliberadamente NO depende de features/chat/hooks ni de chat-ia-client.ts
-// para mantenerse aislada de cualquier contrato interno del dashboard que
-// pueda cambiar. Usa el mismo patrón de auth (Bearer Firebase token) que
-// @real/auth-client expone para el resto de la app.
+## Contexto
 
-import { useCallback, useState } from 'react';
-import type { KeyboardEvent } from 'react';
-import { getIdToken } from '@real/auth-client';
-import { AlertCircle, Bot, Loader2, Send, User as UserIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+El ecosistema tiene dos capas de comunicación cliente-servidor que conviven:
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+1. **tRPC** — introducido en S1/S2, hoy es el canal principal para todos los
+   fronts. Type-safety end-to-end, Zod en los inputs, inferencia automática
+   de tipos en los hooks.
 
-interface AssistantChatResponse {
-  sessionId: string;
-  response: string;
-  tokensUsed: number;
-  modelUsed: string;
-  usedFaqFallback: boolean;
-  faqSources?: unknown[];
-}
+2. **REST (NestJS controllers)** — el canal original. Hoy sirve tres propósitos:
+   - Endpoints internos entre backs (ej: `OrganizationsClientService` de ecommerce-back → sass-back)
+   - Endpoints públicos del storefront (ej: `GET /ecommerce/public/by-slug/:slug`)
+   - Endpoints legacy que no migraron cuando se introdujo tRPC
 
-const CHAT_IA_URL =
-  process.env.NEXT_PUBLIC_CHAT_IA_URL ??
-  'https://chatia-backend-production.up.railway.app';
+Con la Capa 4 (Repository) completa en todos los módulos, los controllers REST
+legacy son el único lugar donde queda lógica de presentación mezclada con
+la capa de aplicación. Mantener dos canales paralelos tiene costos:
 
-function genUserId(): string {
-  return `user-test-${Math.random().toString(36).slice(2, 8)}`;
-}
+- **Duplicación de validación**: DTOs class-validator en REST + schemas Zod en tRPC
+- **Dos modelos de auth**: `@CurrentUser()` + `@Tenant()` en REST vs `ctx.uid`/`ctx.tenant` en tRPC
+- **Inconsistencia de errores**: `HttpException` en REST vs `TRPCError` en tRPC
+- **DTOs obsoletos**: clases con class-validator que no aportan nada que Zod
+  no haga mejor y que el compilador no puede validar end-to-end
 
-export default function PruebaAsistentePage() {
-  const [organizationId, setOrganizationId] = useState('');
-  const [projectSlug, setProjectSlug] = useState('mi-primer-proyecto');
-  const [userId] = useState<string>(genUserId);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+## Decisión
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || sending) return;
+**Eliminar todos los controllers REST internos. REST solo para:**
 
-    if (!organizationId.trim()) {
-      setError('Falta el Organization ID.');
-      return;
-    }
+1. **Endpoints públicos del storefront** — consumidos por browsers sin auth,
+   SSG/ISR de Next.js, o servicios externos:
+   - `GET /ecommerce/public/by-slug/:slug`
+   - `GET /ecommerce/public/:orgId/catalog/*`
+   - `POST /ecommerce/public/:orgId/customers/identify`
+   - `GET /health` (cualquier back)
 
-    setError(null);
-    setMessages((prev) => [...prev, { role: 'user', content: text }]);
-    setInput('');
-    setSending(true);
+2. **Endpoints back-to-back** — consumidos por otro back, no por un front:
+   - `GET /auth/organization-access` (sass-back → consumido por ecommerce-back)
+   - `POST /auth/firebase-sso` (redirect entre fronts, necesita `res.redirect()`)
 
-    try {
-      const token = await getIdToken();
+3. **Webhooks outbound** — callbacks de sistemas externos (Stripe, couriers, etc.)
+   cuando existan.
 
-      const res = await fetch(
-        `${CHAT_IA_URL}/api/v1/projects/${encodeURIComponent(projectSlug)}/assistant/chat`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'x-organization-id': organizationId.trim(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, message: text }),
-        },
-      );
+**Todo lo demás pasa a tRPC.**
 
-      if (!res.ok) {
-        let msg = `Error ${res.status}`;
-        try {
-          const body = (await res.json()) as { message?: string };
-          if (body?.message) msg = body.message;
-        } catch {
-          /* sin body */
-        }
-        throw new Error(msg);
-      }
+## Plan de migración (para ejecutar mañana)
 
-      const data = (await res.json()) as AssistantChatResponse;
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido al enviar el mensaje');
-    } finally {
-      setSending(false);
-    }
-  }, [input, sending, organizationId, projectSlug, userId]);
+### sass-back — controllers a eliminar
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void sendMessage();
-    }
-  };
+| Controller | Reemplazado por |
+|---|---|
+| `AuthController` (sync, me, refreshClaims, firebase-sso*) | `auth.*` router tRPC (ya existe) · firebase-sso queda en REST |
+| `UsersController` (me, selectRole) | `auth.*` router tRPC (ya existe) |
+| `OrganizationsController` (getMyOrg, updateMyOrg) | `organizations.*` router tRPC (ya existe) |
+| `CollaboratorsController` (list, invite, update, remove) | `collaborators.*` router tRPC (ya existe) |
+| `ConfigFlagsController` | `configFlags.*` router tRPC (ya existe) |
+| `ConfigQuotasController` | `configQuotas.*` router tRPC (ya existe) |
+| `ConfigThemesController` | `configThemes.*` router tRPC (ya existe) |
+| `ConfigWebhooksController` | `configWebhooks.*` router tRPC (ya existe) |
+| `ConfigAuditController` | `configAudit.*` router tRPC (ya existe) |
+| `ConfigSecretsController` | `configSecrets.*` router tRPC (ya existe) |
+| `ConfigTemplatesController` | agregar `configTemplates.*` router tRPC |
+| `AffiliatesController` | agregar `affiliates.*` router tRPC |
 
-  return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Prueba del Asistente IA</h1>
-        <p className="text-sm text-muted-foreground">
-          Página de testing directo contra chat-ia-back ({CHAT_IA_URL}). No
-          persiste nada fuera de la sesión del asistente en el propio backend.
-        </p>
-      </div>
+**Mantener en REST:**
+- `HealthController` — healthcheck de Railway
+- `OrganizationsController.getBySlugPublic` — consumido por ecommerce-back
+- `AuthController.firebaseSso` — redirect entre fronts
+- `AuthController.organizationAccess` — consumido por ecommerce-back
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Configuración</CardTitle>
-          <CardDescription>User ID de prueba: {userId}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="org-id">Organization ID</Label>
-            <Input
-              id="org-id"
-              value={organizationId}
-              onChange={(e) => setOrganizationId(e.target.value)}
-              placeholder="f8a5c145-6058-4fcd-8c42-30f9b4e0c792"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="project-slug">Project slug</Label>
-            <Input
-              id="project-slug"
-              value={projectSlug}
-              onChange={(e) => setProjectSlug(e.target.value)}
-              placeholder="mi-primer-proyecto"
-            />
-          </div>
-        </CardContent>
-      </Card>
+### sass-back — DTOs a eliminar (post-migración)
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4">
-          <div className="flex min-h-[320px] flex-col gap-3 overflow-y-auto rounded-md border bg-muted/30 p-3">
-            {messages.length === 0 && (
-              <p className="m-auto text-sm text-muted-foreground">
-                Escribí un mensaje para empezar a probar el asistente.
-              </p>
-            )}
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
-              >
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                    m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'
-                  }`}
-                >
-                  {m.role === 'user' ? (
-                    <UserIcon className="h-4 w-4" />
-                  ) : (
-                    <Bot className="h-4 w-4" />
-                  )}
-                </div>
-                <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    m.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border bg-background'
-                  }`}
-                >
-                  {m.content}
-                </div>
-              </div>
-            ))}
-            {sending && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                El asistente está escribiendo...
-              </div>
-            )}
-          </div>
+Una vez eliminados los controllers que los usan:
+- `auth/dto/sync.dto.ts`
+- `collaborators/dto/invite-collaborator.dto.ts`
+- `collaborators/dto/update-collaborator.dto.ts`
+- `config-flags/dto/update-flag.dto.ts`
+- `config-secrets/dto/create-secret.dto.ts`
+- `config-templates/dto/create-template.dto.ts`
+- `config-themes/dto/create-theme.dto.ts`
+- `config-webhooks/dto/create-webhook.dto.ts`
+- `organizations/dto/update-organization.dto.ts`
+- `affiliate/dto/create-affiliate.dto.ts` ← clase vacía, eliminar ya
+- `affiliate/dto/update-affiliate.dto.ts` ← clase vacía, eliminar ya
 
-          {error && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
+### sass-back — archivos duplicados a eliminar
 
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Escribí tu mensaje..."
-              disabled={sending}
-            />
-            <Button onClick={() => void sendMessage()} disabled={sending || !input.trim()}>
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+- `users/types/organization-access.types.ts` — duplicado de `@real/auth-server`
+- `common/guards/tenant.guard.ts` — duplicado de `@real/auth-server`
+
+### ecommerce-back — controllers a revisar
+
+| Controller | Acción |
+|---|---|
+| `CatalogController` (admin) | migrar a `adminCatalog.*` router tRPC (ya existe) |
+| `InventoryController` (admin) | migrar a `adminInventory.*` router tRPC (ya existe) |
+| `OrdersController` (admin) | migrar a `adminOrders.*` router tRPC (ya existe) |
+| `CartController` | migrar a `customer.*` router tRPC (ya existe) |
+| `CustomersController` | mantener `POST /identify` en REST (público) · resto a tRPC |
+| `ActivityController` | evaluar si tiene consumidor activo |
+| `PublicCatalogController` | ✅ mantener — endpoints públicos del storefront |
+| `CheckoutController` | ✅ mantener — endpoint público |
+| `StoreController` | ✅ mantener — by-slug es consumido por ecommerce-back |
+
+### ecommerce-back — archivos duplicados a eliminar
+
+- `common/types/tenant-context.ts` — duplicado de `@real/auth-server`
+
+## Alternativas descartadas
+
+- **Mantener REST + tRPC en paralelo indefinidamente:** el costo de mantener
+  dos capas de validación, dos modelos de error y dos sets de tests supera
+  cualquier beneficio. La inconsistencia crece con cada feature nueva.
+
+- **Eliminar tRPC y volver a REST:** va en contra del type-safety end-to-end
+  que ya tenemos. Los fronts perderían inferencia automática de tipos.
+
+- **REST para todo (incluyendo fronts):** descartado — perdemos la Capa 5
+  (AppRouter tipado) que es el principal diferenciador arquitectónico.
+
+## Consecuencias
+
+**Ganancia:**
+- Un solo canal de comunicación front→back — sin ambigüedad sobre cuál usar
+- DTOs class-validator eliminados — Zod es la única capa de validación
+- Consistencia de errores — `TRPCError` en todos los casos internos
+- Menos archivos = menos superficie de mantenimiento
+- Los `*.module.ts` se simplifican — sin controllers REST que importar
+
+**Costo / deuda técnica consciente:**
+- Los controllers REST existentes deben eliminarse uno a uno — no es un cambio
+  atómico. Riesgo de romper algo si un front todavía usa un endpoint REST
+  directamente (verificar antes de eliminar cada controller).
+- Algunos procedures tRPC nuevos deben crearse antes de poder eliminar el
+  controller REST correspondiente (`configTemplates.*`, `affiliates.*`).
+
+## Orden de ejecución recomendado
+
+1. Crear procedures tRPC faltantes (`configTemplates.*`, `affiliates.*`)
+2. Verificar que ningún front llama REST directamente para esos endpoints
+3. Eliminar controllers REST uno a uno, empezando por los más simples
+4. Eliminar DTOs que queden huérfanos
+5. Eliminar archivos duplicados (`users/types/`, `common/types/`)
+6. Eliminar `common/guards/tenant.guard.ts` del sass-back si no tiene uso local
+
+## Referencias
+
+- `realsass-sass-back/src/trpc/routers/` — routers tRPC existentes
+- `realsass-ecommerce-back/src/trpc/routers/` — routers tRPC existentes
+- `architecture/01-backend-capas.md` — Capa 2 Router/Contrato
+- `architecture/03-reglas-duras.md` — reglas de enforcement
+- `roadmap/deuda-tecnica.md` — DTOs y archivos pendientes de eliminar
 EOF
 
+ok "ADR-005-rest-to-trpc.md creado"
+
 echo ""
-echo "✓ Página creada: ${TARGET_FILE}"
-echo ""
-echo "Siguientes pasos:"
-echo "  1. cd ${REPO_DIR} && pnpm dev"
-echo "  2. Logueate en el dashboard (sesión Firebase activa)"
-echo "  3. Andá a: http://localhost:3000/dashboard/chat/prueba"
-echo "  4. Pegá el Organization ID (ej: f8a5c145-6058-4fcd-8c42-30f9b4e0c792)"
-echo "     y el project slug (ej: mi-primer-proyecto), y probá el chat."
-echo ""
-echo "Si el fetch falla con CORS, verificá en chat-ia-back que"
-echo "ALLOWED_ORIGINS incluya el origen del dashboard-front en Railway."
+echo "[x.sh SUMMARY]"
+echo "status:        OK"
+echo "files_created: .claude/decisions/ADR-005-rest-to-trpc.md"
+echo "contenido:     Plan completo de migración REST → tRPC"
+echo "               con tabla de cada controller, qué mantener y qué eliminar"
+echo "timestamp:     $(date -u +%Y-%m-%dT%H:%M:%SZ)"

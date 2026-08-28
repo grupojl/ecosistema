@@ -9,7 +9,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@real/ui';
 import { Loader2 } from 'lucide-react';
 
 interface DeleteProductDialogProps {

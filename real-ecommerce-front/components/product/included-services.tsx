@@ -1,5 +1,5 @@
 import type { Service } from "@/types/product"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@real/ui"
 
 interface IncludedServicesProps {
   services: Service[]

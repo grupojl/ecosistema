@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@real/ui"
+import { Button } from "@real/ui"
+import { Badge } from "@real/ui"
+import { Alert, AlertDescription } from "@real/ui"
+import { Progress } from "@real/ui"
+import { Separator } from "@real/ui"
 import { ShieldCheck, Fingerprint, Smartphone, Key, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react"
 import Link from "next/link"
 

@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@real/ui"
+import { Badge } from "@real/ui"
+import { Separator } from "@real/ui"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ColorOption, Product } from "@/types/product"

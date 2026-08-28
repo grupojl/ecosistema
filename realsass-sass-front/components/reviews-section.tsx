@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@real/ui"
 
 const reviews = [
   {

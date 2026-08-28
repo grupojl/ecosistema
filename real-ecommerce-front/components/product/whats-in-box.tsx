@@ -1,6 +1,6 @@
 import Image from "next/image"
 import type { BoxItem } from "@/types/product"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent } from "@real/ui"
 
 interface WhatsInBoxProps {
   items: BoxItem[]

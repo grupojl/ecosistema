@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Skeleton } from '@real/ui';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+} from '@real/ui';
 import {
   CreditCard, AlertCircle, ChevronLeft, ChevronRight, SlidersHorizontal, X,
 } from 'lucide-react';

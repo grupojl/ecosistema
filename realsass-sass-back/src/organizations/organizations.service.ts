@@ -1,171 +1,46 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from './repository/organizations.repository.interface';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
   private readonly logger = new Logger(OrganizationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(ORGANIZATIONS_REPOSITORY)
+    private readonly repo: IOrganizationsRepository,
+  ) {}
 
-  /**
-   * Crea una organización vacía para un usuario Owner.
-   * Acepta un cliente Prisma de transacción (tx) o el servicio estándar.
-   */
   async createForUser(userId: string, tx?: Prisma.TransactionClient) {
-    const client = tx ?? this.prisma;
-
-    // Slug temporal único basado en el userId.
-    // El owner puede cambiarlo desde PATCH /organizations/me.
-    const slug = `org-${userId.slice(0, 8).toLowerCase()}`;
-
-    return client.organization.create({
-      data: {
-        userId,
-        slug,
-        enabledProducts: { ecommerce: true },
-      },
-    });
+    return this.repo.create({ userId, firebaseUid: '' }, tx);
   }
 
-  /**
-   * PATCH /organizations/me
-   * Actualiza el perfil de la organización del usuario autenticado.
-   * Solo el Owner de la organización puede editarla.
-   */
-  async updateMyOrganization(
-    firebaseUid: string,
-    dto: UpdateOrganizationDto,
-  ) {
-    // Buscar usuario y verificar que sea owner
-    const user = await this.prisma.user.findUnique({
-      where: { firebaseUid },
-      include: { organization: true },
-    });
-
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    if (!user.isOwner) {
-      throw new ForbiddenException(
-        'Solo los usuarios con rol Owner pueden editar una organización',
-      );
-    }
-
-    if (!user.organization) {
-      throw new NotFoundException(
-        'No se encontró una organización asociada a este usuario',
-      );
-    }
-
-    // Filtrar solo los campos enviados (no pisamos con undefined)
-    const dataToUpdate: Prisma.OrganizationUpdateInput = {};
-    if (dto.name !== undefined) dataToUpdate.name = dto.name;
-    if (dto.description !== undefined) dataToUpdate.description = dto.description;
-    if (dto.logoUrl !== undefined) dataToUpdate.logoUrl = dto.logoUrl;
-    if (dto.website !== undefined) dataToUpdate.website = dto.website;
-    if (dto.phone !== undefined) dataToUpdate.phone = dto.phone;
-    if (dto.address !== undefined) dataToUpdate.address = dto.address;
-
-    const updated = await this.prisma.organization.update({
-      where: { id: user.organization.id },
-      data: dataToUpdate,
-    });
-
-    this.logger.log(
-      `Organización actualizada: ${updated.id} por usuario ${user.email}`,
-    );
-
-    return {
-      success: true,
-      message: 'Organización actualizada exitosamente',
-      data: updated,
-    };
-  }
-
-  /**
-   * GET /organizations/me
-   * Retorna la organización del usuario autenticado.
-   */
   async getMyOrganization(firebaseUid: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { firebaseUid },
-      include: { organization: true },
-    });
+    const org = await this.repo.findByFirebaseUid(firebaseUid);
+    if (!org) throw new NotFoundException('Organization not found');
+    return org;
+  }
 
-    if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
-    }
-
-    if (!user.organization) {
-      throw new NotFoundException(
-        'No se encontró una organización asociada a este usuario',
-      );
-    }
-
-    return {
-      success: true,
-      data: user.organization,
-    };
+  async updateMyOrganization(firebaseUid: string, dto: UpdateOrganizationDto) {
+    const org = await this.repo.findByFirebaseUid(firebaseUid);
+    if (!org) throw new NotFoundException('Organization not found');
+    return this.repo.update(org.id, dto);
   }
 
   async findByUserId(userId: string) {
-    return this.prisma.organization.findUnique({
-      where: { userId },
-      include: { user: true },
-    });
+    return this.repo.findByUserId(userId);
   }
 
-  /**
-   * GET /organizations/public/by-slug/:slug
-   * Endpoint público — sin autenticación Firebase.
-   * Usado por realsass-ecommerce-back (store.service.ts) para resolver
-   * slug → StoreInfo sin necesidad de token del usuario.
-   *
-   * Devuelve null si la org no existe o si el slug no está asignado.
-   * El campo ecommerceEnabled se extrae de enabledProducts.ecommerce.
-   */
-  async findBySlugPublic(slug: string): Promise<{
-    organizationId: string;
-    slug: string;
-    name: string | null;
-    description: string | null;
-    logoUrl: string | null;
-    website: string | null;
-    ecommerceEnabled: boolean;
-  } | null> {
-    const org = await this.prisma.organization.findUnique({
-      where: { slug },
-      select: {
-        id:              true,
-        slug:            true,
-        name:            true,
-        description:     true,
-        logoUrl:         true,
-        website:         true,
-        enabledProducts: true,
-      },
-    });
+  async findBySlugPublic(slug: string) {
+    return this.repo.findBySlug(slug);
+  }
 
-    if (!org || !org.slug) return null;
-
-    const enabled = org.enabledProducts as Record<string, boolean> | null;
-
-    return {
-      organizationId:   org.id,
-      slug:             org.slug,
-      name:             org.name ?? null,
-      description:      org.description ?? null,
-      logoUrl:          org.logoUrl ?? null,
-      website:          org.website ?? null,
-      ecommerceEnabled: enabled?.ecommerce === true,
-    };
+  /** Alias para TenantGuard de sass-back (verifica ownership) */
+  async getOrganizationWithOwner(organizationId: string, firebaseUid: string) {
+    const org = await this.repo.findByFirebaseUid(firebaseUid);
+    if (!org) throw new NotFoundException('Organization not found');
+    if (org.id !== organizationId) throw new ForbiddenException('Not owner');
+    return org;
   }
 }

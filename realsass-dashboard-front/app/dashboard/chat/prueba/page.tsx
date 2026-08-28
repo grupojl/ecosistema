@@ -14,16 +14,16 @@ import { useCallback, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { getIdToken } from '@real/auth-client';
 import { AlertCircle, Bot, Loader2, Send, User as UserIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
+import { Label } from '@real/ui';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@real/ui';
 
 interface ChatMessage {
   role: 'user' | 'assistant';

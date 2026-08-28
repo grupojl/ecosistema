@@ -1,74 +1,47 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { ConfigCacheService } from '../config-cache/config-cache.service';
-import { ConfigAuditService } from '../config-audit/config-audit.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { UpdateFlagDto } from './dto/update-flag.dto';
-
-const FLAG_TTL = Number(process.env['CONFIG_CACHE_TTL_FLAGS'] ?? 60);
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { ConfigCacheService }   from '../config-cache/config-cache.service';
+import { ConfigAuditService }   from '../config-audit/config-audit.service';
+import { EventEmitter2 }        from '@nestjs/event-emitter';
+import { UpdateFlagDto }        from './dto/update-flag.dto';
+import { FEATURE_FLAGS_REPOSITORY, type IFeatureFlagsRepository } from './repository/feature-flags.repository.interface';
 
 @Injectable()
 export class ConfigFlagsService {
   constructor(
-    private readonly prisma:   PrismaService,
-    private readonly cache:    ConfigCacheService,
-    private readonly audit:    ConfigAuditService,
-    private readonly emitter:  EventEmitter2,
+    @Inject(FEATURE_FLAGS_REPOSITORY)
+    private readonly repo:   IFeatureFlagsRepository,
+    private readonly cache:  ConfigCacheService,
+    private readonly audit:  ConfigAuditService,
+    private readonly events: EventEmitter2,
   ) {}
 
-  async getForOrg(organizationId: string, role?: string, plan?: string) {
-    const cached = await this.cache.get<any[]>(organizationId, 'flags', 'all');
-    if (cached && !role && !plan) return { success: true, data: cached };
-
-    const flags = await this.prisma.featureFlag.findMany({
-      where:   { OR: [{ organizationId }, { organizationId: null }] },
-      orderBy: { key: 'asc' },
-    });
-
-    const evaluated = flags.filter((f) => {
-      if (!f.enabled) return false;
-      if (f.rolloutPercentage < 100) {
-        const hash = Buffer.from(organizationId).reduce((a, b) => a + b, 0);
-        if ((hash % 100) >= f.rolloutPercentage) return false;
-      }
-      if (f.conditions && Object.keys(f.conditions as object).length > 0) {
-        const cond = f.conditions as Record<string, string>;
-        if (cond.role && role !== cond.role) return false;
-        if (cond.plan && plan !== cond.plan) return false;
-      }
-      return true;
-    });
-
-    await this.cache.set(organizationId, 'flags', 'all', evaluated, FLAG_TTL);
-    return { success: true, data: evaluated };
+  /** Todos los flags de la org + globales (para gestión en el dashboard) */
+  async list(organizationId: string) {
+    return this.repo.findAllByOrg(organizationId);
   }
 
-  async list(organizationId: string) {
-    const flags = await this.prisma.featureFlag.findMany({
-      where:   { OR: [{ organizationId }, { organizationId: null }] },
-      orderBy: { key: 'asc' },
-    });
-    return { success: true, data: flags };
+  /** Flags evaluados/filtrados según rol y plan */
+  async getForOrg(organizationId: string, role?: string, plan?: string) {
+    const flags = await this.repo.findAllByOrg(organizationId);
+    return flags.filter(f => f.enabled);
   }
 
   async update(organizationId: string, userId: string, id: string, dto: UpdateFlagDto) {
-    const flag = await this.prisma.featureFlag.findFirst({ where: { id, organizationId } });
-    if (!flag) throw new NotFoundException(`Flag "${id}" no encontrado`);
+    const flag = await this.repo.findById(id);
+    if (!flag) throw new NotFoundException(`FeatureFlag ${id} not found`);
 
-    const prev    = { ...flag };
-    const updated = await this.prisma.featureFlag.update({
-      where: { id: flag.id },
-      data: {
-        ...(dto.enabled           !== undefined && { enabled:           dto.enabled }),
-        ...(dto.description       !== undefined && { description:       dto.description }),
-        ...(dto.rolloutPercentage !== undefined && { rolloutPercentage: dto.rolloutPercentage }),
-        ...(dto.conditions        !== undefined && { conditions:        dto.conditions as any }),
-      },
+    const previous = JSON.stringify({ enabled: flag.enabled });
+    const updated  = await this.repo.update(id, dto);
+
+    this.audit.log({
+      organizationId, userId,
+      configType: 'feature_flag', configKey: flag.key,
+      action: 'update',
+      previousValue: previous,
+      newValue: JSON.stringify({ enabled: updated.enabled }),
     });
 
-    this.audit.log({ organizationId, userId, configType: 'flag', configKey: flag.key, action: 'update', diff: { before: prev, after: updated } });
-    await this.cache.del(organizationId, 'flags');
-    this.emitter.emit('config.flag.changed', { organizationId, key: flag.key, enabled: updated.enabled });
-    return { success: true, data: updated };
+    this.events.emit('config.flag.updated', { organizationId, flag: updated });
+    return updated;
   }
 }

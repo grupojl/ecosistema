@@ -5,11 +5,11 @@ import { Loader2, Plus, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useProducts, useDeleteProduct } from '@/features/store/hooks';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+} from '@real/ui';
 
 export default function ProductosPage() {
   const { organizationId } = useAuth();

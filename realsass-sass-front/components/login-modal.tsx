@@ -3,21 +3,21 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useIsMobile } from '@/components/ui/use-mobile'
+import { useIsMobile } from '@real/ui'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog'
+} from '@real/ui'
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-} from '@/components/ui/drawer'
+} from '@real/ui'
 import {
   signInWithGoogle,
   signInWithApple,

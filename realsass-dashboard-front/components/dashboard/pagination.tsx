@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@real/ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PaginationMeta } from '@/types/api';
 

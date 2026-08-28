@@ -1,57 +1,45 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { ConfigAuditService }    from '../config-audit/config-audit.service';
 import { WebhookDeliveryService } from './webhook-delivery.service';
-import { ConfigAuditService } from '../config-audit/config-audit.service';
-import { CreateWebhookDto } from './dto/create-webhook.dto';
-import * as crypto from 'crypto';
-import * as bcrypt from 'bcryptjs';
+import { CreateWebhookDto }      from './dto/create-webhook.dto';
+import { WEBHOOKS_REPOSITORY, type IWebhooksRepository } from './repository/webhooks.repository.interface';
 
 @Injectable()
 export class ConfigWebhooksService {
   constructor(
-    private readonly prisma:    PrismaService,
-    private readonly delivery:  WebhookDeliveryService,
-    private readonly audit:     ConfigAuditService,
+    @Inject(WEBHOOKS_REPOSITORY)
+    private readonly repo:     IWebhooksRepository,
+    private readonly audit:    ConfigAuditService,
+    private readonly delivery: WebhookDeliveryService,
   ) {}
 
-  async create(organizationId: string, userId: string, dto: CreateWebhookDto) {
-    const rawSecret  = crypto.randomBytes(32).toString('hex');
-    const secretHash = await bcrypt.hash(rawSecret, 10);
-    const wh = await this.prisma.webhookEndpoint.create({
-      data: { organizationId, url: dto.url, events: dto.events, secretHash, secretPrefix: rawSecret.substring(0, 6) },
-    });
-    this.audit.log({ organizationId, userId, configType: 'webhook', configKey: wh.id, action: 'create' });
-    return { success: true, data: { ...wh, secret: rawSecret } };
-  }
-
   async list(organizationId: string) {
-    const whs = await this.prisma.webhookEndpoint.findMany({
-      where:   { organizationId },
-      select:  { id: true, url: true, events: true, secretPrefix: true, isActive: true, lastTriggeredAt: true, failureCount: true, createdAt: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { success: true, data: whs };
+    return this.repo.findAllByOrg(organizationId);
   }
 
-  async test(organizationId: string, id: string) {
-    const wh = await this.prisma.webhookEndpoint.findFirst({ where: { id, organizationId } });
-    if (!wh) throw new NotFoundException('Webhook no encontrado');
-    await this.delivery.dispatch(organizationId, 'webhook.test', { organizationId, message: 'Test', timestamp: new Date().toISOString() });
-    return { success: true, message: 'Webhook de prueba encolado' };
+  async create(organizationId: string, userId: string, dto: CreateWebhookDto) {
+    const webhook = await this.repo.create({ organizationId, url: dto.url, events: dto.events });
+    this.audit.log({ organizationId, userId, configType: 'webhook', action: 'create', newValue: dto.url });
+    return webhook;
   }
 
   async remove(organizationId: string, userId: string, id: string) {
-    const wh = await this.prisma.webhookEndpoint.findFirst({ where: { id, organizationId } });
-    if (!wh) throw new NotFoundException('Webhook no encontrado');
-    await this.prisma.webhookEndpoint.delete({ where: { id } });
-    this.audit.log({ organizationId, userId, configType: 'webhook', configKey: id, action: 'delete' });
-    return { success: true, message: 'Webhook eliminado' };
+    const webhook = await this.repo.findById(id);
+    if (!webhook) throw new NotFoundException(`Webhook ${id} not found`);
+    await this.repo.remove(id);
+    this.audit.log({ organizationId, userId, configType: 'webhook', action: 'delete', previousValue: id });
   }
 
   async getLogs(organizationId: string, id: string, take = 50) {
-    const wh = await this.prisma.webhookEndpoint.findFirst({ where: { id, organizationId } });
-    if (!wh) throw new NotFoundException('Webhook no encontrado');
-    const logs = await this.prisma.webhookDeliveryLog.findMany({ where: { webhookId: id }, orderBy: { createdAt: 'desc' }, take });
-    return { success: true, data: logs };
+    const webhook = await this.repo.findById(id);
+    if (!webhook || webhook.organizationId !== organizationId) throw new NotFoundException();
+    return this.repo.getLogs(id, take);
+  }
+
+  async test(organizationId: string, id: string) {
+    const webhook = await this.repo.findById(id);
+    if (!webhook || webhook.organizationId !== organizationId) throw new NotFoundException();
+    await this.delivery.dispatch(webhook, 'test', { test: true });
+    return { ok: true };
   }
 }

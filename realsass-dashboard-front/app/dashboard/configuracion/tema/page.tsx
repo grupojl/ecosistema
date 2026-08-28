@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import { Check, Plus, Trash2, Loader2, AlertCircle, Star, Palette } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@real/ui';
+import { Input } from '@real/ui';
+import { Label } from '@real/ui';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@real/ui';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@real/ui';
+import { Skeleton } from '@real/ui';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useThemes, useCreateTheme, useActivateTheme, useDeleteTheme } from '@/features/config-themes/hooks';

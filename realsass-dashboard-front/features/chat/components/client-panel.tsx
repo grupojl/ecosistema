@@ -1,8 +1,8 @@
 'use client';
 
 import { X, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@real/ui';
+import { ScrollArea } from '@real/ui';
 import { cn } from '@/lib/utils';
 import { CanalBadge } from './canal-badge';
 import { EtapaBadge, ETAPA_CONFIG } from './etapa-badge';

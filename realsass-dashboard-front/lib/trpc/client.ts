@@ -1,33 +1,35 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-'use client';
+/**
+ * lib/trpc/client.ts — realsass-dashboard-front
+ *
+ * Cliente tRPC React para el dashboard de colaboradores.
+ * Conecta con realsass-sass-back en /api/v1/trpc.
+ *
+ * Auth: cookies HttpOnly (ADR-004).
+ *   credentials: 'include' → la cookie __session viaja automáticamente.
+ *   Sin Authorization header — el back lee la cookie directamente.
+ */
+import { createTRPCReact }  from '@trpc/react-query';
+import { httpBatchLink }    from '@trpc/client';
+import type { AppRouter }   from './router-type';
 
-import { createTRPCReact } from '@trpc/react-query';
-import { httpBatchLink }   from '@trpc/client';
-
-// Usamos un tipo vacío para evitar el error de AnyRouter en Docker.
-// En runtime tRPC solo necesita la URL — los tipos son solo para DX local.
-type RouterType = any;
-
-export const trpc = createTRPCReact<RouterType>() as any;
+export const trpc = createTRPCReact<AppRouter>();
 
 export function makeTrpcClient(
-  url: string,
-  getToken:          () => Promise<string | null>,
+  url:               string,
   getOrganizationId: () => string | null = () => null,
 ) {
-  return {
+  return trpc.createClient({
     links: [
       httpBatchLink({
         url,
+        fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
         async headers() {
-          const token = await getToken();
           const orgId = getOrganizationId();
           return {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...(orgId  ? { 'x-organization-id': orgId }      : {}),
+            ...(orgId ? { 'x-organization-id': orgId } : {}),
           };
         },
       }),
     ],
-  };
+  });
 }

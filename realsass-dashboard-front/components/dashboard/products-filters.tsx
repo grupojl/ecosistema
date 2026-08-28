@@ -1,24 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@real/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+} from '@real/ui';
+import { Input } from '@real/ui';
+import { Label } from '@real/ui';
+import { Switch } from '@real/ui';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet';
+} from '@real/ui';
 import type { ProductFilters, ProductCategory } from '@/features/products/types';
 import { X, SlidersHorizontal } from 'lucide-react';
 

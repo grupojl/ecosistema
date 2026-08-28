@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardHeader } from '@real/ui';
+import { Badge } from '@real/ui';
+import { Button } from '@real/ui';
+import { Progress } from '@real/ui';
 import { ChevronDown, ChevronUp, TrendingUp, Eye, MousePointer, DollarSign } from 'lucide-react';
 import type { Campana } from '../types';
 

@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, DM_Serif_Display } from 'next/font/google'
 
 import { AuthProvider } from '@/components/auth-provider-wrapper'
-import { Toaster } from '@/components/ui/toaster'
+import { Toaster } from '@real/ui'
 import './globals.css'
 
 const dmSans  = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
