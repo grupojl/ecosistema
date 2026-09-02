@@ -120,3 +120,41 @@ Cada decisión de degradación debe estar acá antes de llegar a producción.
   ¿El health check devuelve degraded o down?
 - Cuando existan `chat-ia-back` y `pagos-back`: ¿mismo patrón de timeout + 503,
   o tienen SLA distintos que justifican otra decisión?
+
+## Comunicación interna — tRPC/gRPC, nunca REST
+
+**Regla:** Todo consumo interno entre servicios usa tRPC (o gRPC cuando el
+volumen lo justifique). REST se reserva para APIs públicas externas.
+
+```
+✅ Front → Back:          tRPC (httpBatchLink con credentials: include)
+✅ Server Component → Back: createServerCaller() tRPC (sin React)
+✅ Back → Back:           tRPC HTTP (OrganizationsClientService)
+✅ Client Component:       rehidrata desde Server, no fetch propio
+
+❌ Front → Back REST:     bug de arquitectura
+❌ Server Component fetch: bug si existe el procedure tRPC equivalente
+❌ Client fetch manual:    bug si existe el hook tRPC equivalente
+```
+
+**Excepciones permanentes documentadas:**
+
+| Endpoint | Por qué REST |
+|---|---|
+| `POST /auth/session` | Bootstrap cookie HttpOnly — Set-Cookie header (ADR-004) |
+| `DELETE /auth/session` | Revocación cookie HttpOnly — mismo motivo |
+| `GET /health` | Railway healthcheck — no es comunicación de datos |
+| APIs públicas externas | Consumidores externos no tienen cliente tRPC |
+
+## Modelo Server/Client Components
+
+```
+page.tsx (Server Component)
+  ├─ await createCaller().catalog.list({ orgId })  ← tRPC server-side
+  ├─ <Hydrator queryKey={...} initialData={...} />  ← pasar datos al client
+  └─ <ProductList />                                ← client rehidrata
+
+ProductList (Client Component, 'use client')
+  ├─ trpc.catalog.list.useQuery({ orgId })          ← rehidrata desde server
+  └─ NO fetch propio — los datos ya vinieron del server
+```

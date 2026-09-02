@@ -55,3 +55,30 @@ Actualizar este archivo cada vez que se deja algo pendiente a propósito.
 
 - Sin tests (.spec.ts) — S4 no iniciado
 - OpenTelemetry en catalog pero sin configuración visible
+
+## ecommerce-front — migración a tRPC server caller
+
+Todos estos archivos usan fetch REST manual donde debería ir tRPC server caller:
+
+- `lib/store/client.ts` → reemplazar por `createServerCaller().customer.*`
+- `lib/store/resolver.ts` → reemplazar por `customer.resolveStore` procedure
+- `context/customer-context.tsx` → `identifyCustomer()` via `customer.identify` tRPC
+- `lib/ecommerce/index.ts` → eliminar cuando migren páginas `/categoria/` y `/products/`
+
+Bloqueante para completar: agregar en `ecommerce-back`:
+- `customer.resolveStore` procedure (hoy es `GET /store/by-slug/:slug` REST)
+- `customer.identify` procedure (hoy es `POST /customers/identify` REST)
+- `customer.getProducts` / `customer.getCategories` procedures (hoy son REST público)
+
+Prioridad: después de eliminar controllers REST de ecommerce-back (ADR-005).
+
+## dashboard-front — lib/firebase.ts redundante
+
+`realsass-dashboard-front/lib/firebase.ts` es un wrapper de `@real/auth-client`
+similar al que se eliminó de sass-front. Los callers internos del dashboard
+deberían importar directo de `@real/auth-client`.
+
+Verificar callers:
+  grep -rl "from '@/lib/firebase'" realsass-dashboard-front --include="*.tsx" --include="*.ts"
+
+Si todos los callers migran a `@real/auth-client`, eliminar `lib/firebase.ts`.

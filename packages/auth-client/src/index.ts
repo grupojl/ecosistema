@@ -24,3 +24,6 @@ export {
 
 // React
 export { AuthProvider, useAuth } from './react/auth-provider';
+
+// Re-exports de firebase/auth necesarios para auth-context.tsx
+export { onAuthStateChanged, type User } from 'firebase/auth';

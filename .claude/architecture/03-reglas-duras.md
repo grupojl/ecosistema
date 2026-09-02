@@ -37,6 +37,20 @@ Una vez que un módulo migra a Repository, el service no puede importar Prisma.
 → Enforcement objetivo: `dependency-cruiser` rule `no-cross-service-import`
 → Estado: manual
 
+### 🔴 Cero `as any` y `as unknown as` en el monorepo
+Un cast que silencia TypeScript en la capa de datos es un bug de arquitectura,
+no una deuda técnica — puede causar bugs silenciosos en producción.
+
+**En repositories:** usar `toEntity()` privado que mapea Prisma → dominio campo por campo.
+**En routers/services:** tipar los retornos explícitamente — nunca inferir `any`.
+**En el front:** usar `inferRouterOutputs<AppRouter>` — nunca duplicar tipos del back.
+
+Excepción documentada: campos JSONB de Prisma marcados con `// @real/jsonb-cast`.
+Sin ese comentario, cualquier cast es bloqueante.
+→ Enforcement objetivo: ESLint `no-explicit-any` + `no-unsafe-assignment`
+→ Estado: manual hasta S4, ADR-007 como referencia
+→ Molde correcto: `prisma-catalog.repository.ts` en ecommerce-back (sin un solo cast)
+
 ### 🟡 Un test de domain nunca importa @nestjs/* ni @prisma/client
 El domain es lógica pura — si necesita NestJS para testearse, la separación falló.
 → Enforcement objetivo: Jest `moduleNameMapper` que falla si se importa desde dominio

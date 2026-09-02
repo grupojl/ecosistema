@@ -2,43 +2,50 @@
 
 ## Rol
 
-Storefront público multi-tenant, SSG/ISR. Sin Firebase — clientes se
-identifican por `customerId` (via `POST /customers/identify`) + `sessionId`
-en localStorage.
+Storefront público multi-tenant, SSG/ISR con Next.js 15 App Router.
+Sin Firebase — clientes se identifican por `customerId` + `sessionId`.
+
+## Modelo de rendering (canónico)
+
+```
+Server Component (page.tsx, layout.tsx)
+  → tRPC server caller para obtener datos
+  → renderiza HTML con datos
+  → pasa initialData a Client Components via props/HydrationBoundary
+
+Client Component ('use client')
+  → rehidrata con useQuery() misma queryKey
+  → NUNCA hace fetch propio al back
+```
+
+El único fetch manual permitido es `customer.identify` para obtener el
+`customerId` inicial — es el bootstrap del contexto de cliente, equivalente
+a lo que hace `POST /auth/session` para el sistema de auth de owners.
 
 ## Le corresponde
 
-- `/tienda/[slug]/*` — ruta canónica multi-tenant (organizationId resuelto
-  dinámicamente desde el slug, NO hardcodeado por env var)
-- `/categoria/[categoria]`, `/products/[handle]` — rutas legacy sin contexto
-  de tienda, **pendientes de migrar** a `/tienda/[slug]/`
+- `/tienda/[slug]/*` — ruta canónica multi-tenant
+- `/categoria/[categoria]`, `/products/[handle]` — rutas legacy, pendientes de migrar
 - `/checkout`, `/tracking` — flujo de compra y seguimiento
 
 ## Conecta con
 
-- `realsass-ecommerce-back` vía tRPC (customer context) para carrito/perfil/órdenes
-- `realsass-ecommerce-back` vía REST público (`lib/store/client.ts`,
-  `lib/store/resolver.ts`) para resolver slug y listar productos/categorías —
-  documentado como Server Components safe, sin auth
+- `realsass-ecommerce-back` **únicamente vía tRPC** — `EcommerceAppRouter`
+  - Server Components: `createServerCaller()` → procedures de `customer.*`
+  - Client Components: `trpc.customer.*` hooks (rehidratación)
 
-## Estado de migración (gap conocido, documentado en el propio código)
+## Estado de migración pendiente
 
-`lib/ecommerce/index.ts` es un **shim de compatibilidad**: re-exporta desde
-`lib/store/` (cliente canónico, multi-tenant real) para no romper las páginas
-legacy bajo `/categoria/` y `/products/` que todavía importan de `@/lib/ecommerce`.
-TODO explícito en el archivo: migrar esas páginas y eliminar `lib/ecommerce/`.
+- `lib/store/client.ts` — fetch REST manual a eliminar → reemplazar por tRPC server caller
+- `lib/store/resolver.ts` — `resolveStore()` via REST → reemplazar por `trpc.customer.resolveStore`
+- `lib/ecommerce/index.ts` — shim legacy → eliminar cuando migren páginas `/categoria/` y `/products/`
+- `context/customer-context.tsx` — usa `identifyCustomer()` via REST → migrar a `trpc.customer.identify`
 
-`getAllProducts()` en ese shim devuelve array vacío a propósito — no tiene
-`organizationId` disponible en el contexto legacy.
+## Mocks pendientes (capa 4, presentación)
 
-## Mocks pendientes de eliminar (capa 4, presentación)
+- `components/checkout/checkout-flow.tsx` — simula WebAuthn, bloqueado hasta `pagos-back`
+- `lib/services/shipping-service.ts` / `lib/adapters/*` — stubs, bloqueado hasta APIs courier
 
-- `components/checkout/checkout-flow.tsx` — simula autenticación WebAuthn
-- `lib/services/shipping-service.ts` / `lib/adapters/*-adapter.ts` — adapters
-  de shipping (Correo/Envia/Welivery) son stubs con pricing mockeado
+## UI
 
-## UI — estado actual
-
-Todos los componentes UI se importan desde `@real/ui`.
-`components/ui/` fue eliminado — no existe más en este front.
-`lib/utils.ts` re-exporta `cn` desde `@real/ui`.
+Todos los componentes desde `@real/ui`. `lib/utils.ts` re-exporta `cn` desde `@real/ui`.

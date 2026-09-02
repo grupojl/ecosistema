@@ -2,77 +2,55 @@
 
 ## Rol
 
-Catálogo, stock, carrito, órdenes, clientes del storefront. Sirve tanto al
-dashboard de dueños (admin) como al storefront público (customer).
+Catálogo, stock, carrito, órdenes, clientes del storefront.
+Sirve al dashboard (admin) y al storefront (customer) — ambos vía tRPC.
+
+## Principio de comunicación
+
+**Todo consumo interno es tRPC.** No expone REST para fronts ni para otros backs.
+REST solo para `GET /health` (Railway) y futuros webhooks externos.
 
 ## Le corresponde
 
 - `Category`, `Product`, `ProductVariant`, `InventoryItem`
 - `StoreCustomer`, `CustomerAddress`, `CustomerActivityEvent`
 - `Cart`, `CartItem`, `Order`, `OrderItem`, `OrderStatusEvent`
-- Resolver slug → `StoreInfo` para el storefront multi-tenant
-  (`GET /ecommerce/public/by-slug/:slug`)
+- Resolver slug → `StoreInfo` (vía `customer.resolveStore` tRPC — pendiente migrar desde REST)
 - Checkout con reserva de stock atómica dentro de transacción Prisma
-  (`InventoryService.reserveWithinTransaction` usa `$executeRaw` con
-  condición WHERE columna-vs-columna para evitar overselling en concurrencia)
 
 ## NO le corresponde
 
-- Identidad de usuarios, organizaciones, colaboradores (eso es `sass-back`)
+- Identidad de usuarios, organizaciones, colaboradores (`sass-back`)
 - Resolver `organizationId` desde disco/memoria — siempre vía
-  `OrganizationsClientService` (HTTP + Redis cache) hacia `sass-back`
+  `OrganizationsClientService` (tRPC HTTP + Redis cache) hacia `sass-back`
 
 ## Auth/Tenant
 
-**No tiene tabla `Organization` propia** — no usa Prisma para resolver tenant.
-`TenantGuard` (de `@real/auth-server`) llama
-`OrganizationsClientService.getAccess(token, uid, orgId)`, que hace `fetch`
-real a `SASS_BACK_URL` con cache Redis de TTL corto. Ver
-`contracts/organization-access.md` para el contrato completo.
+No tiene tabla `Organization` propia. Resuelve tenant así:
+- Admin (dashboard): `FirebaseAuthGuard` + `TenantGuard` (token Firebase + `x-organization-id`)
+- Customer (storefront): `CustomerGuard` (`x-customer-id` + `x-organization-id`, sin Firebase)
 
-## Dos contextos tRPC independientes (ver `src/trpc/trpc.ts`)
+## Routers tRPC (EcommerceAppRouter)
 
-- **AdminContext**: `uid`, `organizationId`, `role` ('OWNER'|'COLLABORATOR'),
-  `userId` — para el dashboard de dueños/colaboradores
-- **CustomerContext**: `customerId`, `organizationId` — para clientes del
-  storefront público, sin Firebase, identificados por header `x-customer-id`
-  seteado tras `POST /customers/identify`
+- `adminCatalog.*` — OWNER/COLLABORATOR — CRUD productos y categorías
+- `adminInventory.*` — OWNER/COLLABORATOR — stock
+- `adminOrders.*` — OWNER/COLLABORATOR — órdenes
+- `customer.*` — CustomerContext — carrito, órdenes, perfil, catálogo público
 
-## Pendiente explícito (TODO en código)
+## Pendiente (ADR-005 — migración REST → tRPC)
 
-`OrdersService.checkout()` — comentario: "TODO: cuando se conecte
-pasarela-pagos, acá se crea el PaymentIntent... Hoy la orden queda en
-PENDING_PAYMENT." → `pagos-back` todavía no existe como servicio.
+Controllers REST a eliminar:
+- `catalog.controller.ts` → `adminCatalog.*` tRPC (ya existe)
+- `inventory.controller.ts` → `adminInventory.*` tRPC (ya existe)
+- `orders.controller.ts` / `checkout.controller.ts` → `adminOrders.*` tRPC (ya existe)
+- `cart.controller.ts` → `customer.*` tRPC (ya existe)
+- `customers.controller.ts` → `customer.identify` tRPC (pendiente agregar)
+- `store.controller.ts` → `customer.resolveStore` tRPC (pendiente agregar)
+- `public-catalog.controller.ts` → procedures en `customer.*` (pendiente agregar)
+- `activity.controller.ts` → evaluar si tiene consumidor activo
 
-## Módulos principales
+## Deuda consciente
 
-`catalog`, `inventory`, `cart`, `orders` (+ `checkout` controller separado,
-público), `customers`, `activity`, `store`, `organizations-client`, `redis`,
-`prisma`, `trpc`.
-
-## 🎯 Módulo de referencia: catalog (capas 1-4 aplicadas)
-
-`src/catalog/` es el MOLDE VIVO de la arquitectura objetivo. Cualquier
-refactor de otro módulo (`orders`, `inventory`, `cart`, `customers`) debe
-seguir esta misma estructura:
-catalog/
-├── domain/
-│ ├── product.entity.ts # reglas puras — sin NestJS, sin Prisma
-│ ├── product.errors.ts # DomainError tipados
-│ └── product.entity.spec.ts # test SIN mocks (funciones puras)
-├── repository/
-│ ├── catalog.repository.interface.ts # puerto (contrato)
-│ └── prisma-catalog.repository.ts # adaptador (único lugar con Prisma)
-├── catalog.service.ts # application — orquesta domain + repository
-├── catalog.service.spec.ts # test mockeando el Repository, no Prisma
-├── catalog.module.ts # bindea CATALOG_REPOSITORY → PrismaCatalogRepository
-├── catalog.controller.ts # admin (sin cambios de este refactor)
-└── public-catalog.controller.ts # storefront público (sin cambios)
-
-**Principio de inyección:** el Service depende del token
-`CATALOG_REPOSITORY` (Symbol), nunca de `PrismaCatalogRepository`
-directamente. El binding vive solo en `catalog.module.ts`.
-
-**Qué NO se tocó:** el schema de Prisma es el mismo, los controllers son
-los mismos (siguen recibiendo el mismo DTO), el contrato HTTP externo no
-cambió. Este refactor es 100% interno — invisible para los consumidores.
+- `checkout.controller.ts` — `paymentIntentId` en null hasta que exista `pagos-back`
+- DTOs con class-validator en controllers REST legacy (no agregar más)
+- `organizations-client/types/organization-access.types.ts` — duplicado de `@real/auth-server`, eliminar con los controllers

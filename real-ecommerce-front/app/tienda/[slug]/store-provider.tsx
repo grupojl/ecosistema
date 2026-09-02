@@ -4,7 +4,7 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import type { StoreInfo } from '@/lib/store/types'
+import type { StoreInfo } from '@/lib/trpc/types'
 
 const StoreContext = createContext<StoreInfo | null>(null)
 

@@ -1,50 +1,65 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  listCollaborators,
-  inviteCollaborator,
-  removeCollaborator,
-  updateCollaboratorPermissions,
-} from '@/lib/api';
-import type { CollaboratorPermissions } from '@/lib/types';
+/**
+ * hooks/use-collaborators.ts — realsass-sass-front
+ *
+ * Hooks TanStack Query para gestión de colaboradores via tRPC.
+ * Reemplaza las llamadas a lib/api.ts (listCollaborators, inviteCollaborator, etc.)
+ * Tipado completo inferido desde SassAppRouter.
+ */
+import { useQueryClient } from '@tanstack/react-query';
+import { trpc }           from '@/lib/trpc/client';
+
+// ── Lista de colaboradores ────────────────────────────────────────────────────
 
 export function useCollaborators() {
-  return useQuery({
-    queryKey:  ['collaborators'],
-    queryFn:   () => listCollaborators().then(r => r.data),
-    staleTime: 30_000,
+  return trpc.collaborators.list.useQuery(undefined, {
+    staleTime: 30 * 1000,
   });
 }
+
+// ── Invitar colaborador ───────────────────────────────────────────────────────
 
 export function useInviteCollaborator() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: inviteCollaborator,
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['collaborators'] }),
+  const queryClient = useQueryClient();
+  return trpc.collaborators.invite.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['collaborators', 'list']] });
+    },
   });
 }
 
-export function useRemoveCollaborator() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => removeCollaborator(id),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['collaborators'] }),
-  });
-}
+// ── Actualizar permisos ───────────────────────────────────────────────────────
 
 export function useUpdateCollaboratorPermissions() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, perms }: { id: string; perms: Partial<CollaboratorPermissions> }) =>
-      updateCollaboratorPermissions(id, perms),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['collaborators'] }),
+  const queryClient = useQueryClient();
+  return trpc.collaborators.update.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['collaborators', 'list']] });
+    },
   });
 }
 
-export function useAcceptInvitation() {
-  return useMutation({
-    mutationFn: (token: string) => 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/collaborators/invitations/${token}/accept`, {
-        method: 'POST',
-      }).then(r => r.json()),
+// ── Eliminar colaborador ──────────────────────────────────────────────────────
+
+export function useRemoveCollaborator() {
+  const queryClient = useQueryClient();
+  return trpc.collaborators.remove.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['collaborators', 'list']] });
+    },
   });
+}
+
+// ── Aceptar invitación (usuario autenticado) ──────────────────────────────────
+
+export function useAcceptInvitation() {
+  return trpc.collaborators.acceptInvitation.useMutation();
+}
+
+// ── Info de invitación por token (@Public — sin auth requerida) ───────────────
+
+export function useInvitationInfo(token: string | null | undefined) {
+  return trpc.collaborators.getInvitationInfo.useQuery(
+    { token: token! },
+    { enabled: !!token },
+  );
 }

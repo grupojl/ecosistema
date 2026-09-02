@@ -62,8 +62,6 @@ install:
 r:
 	@echo "=== Generando ecosistema.xml... ==="
 	@npx repomix --config repomix.config.json
-	@echo "=== Generando ecosistema-infra.xml... ==="
-	@npx repomix --config repomix.infra.config.json
 	@echo "=== Listo ==="
 
 # -----------------------------------------------------------------

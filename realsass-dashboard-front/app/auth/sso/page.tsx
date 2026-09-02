@@ -1,23 +1,18 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter }           from 'next/navigation';
-import { Loader2, AlertCircle } from 'lucide-react';
+'use client'
+/**
+ * app/auth/sso/page.tsx — realsass-dashboard-front
+ *
+ * Recibe un custom token Firebase generado por sass-back (POST /auth/firebase-sso)
+ * y autentica al colaborador en Firebase para que el AuthProvider haga el sync.
+ *
+ * Migrado de: inicialización Firebase directa en el componente
+ * Ahora usa: @real/auth-client (signInWithCustomToken desde firebase/auth)
+ */
+import { useEffect, useState }     from 'react';
+import { useRouter }               from 'next/navigation';
+import { Loader2, AlertCircle }    from 'lucide-react';
 import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { initializeApp, getApps }                            from 'firebase/app';
-
-// Inicializar Firebase directamente acá para evitar dependencias circulares
-const firebaseConfig = {
-  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-};
-
-const app  = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
-const auth = getAuth(app);
+import { initFirebase }            from '@real/auth-client';
 
 export default function SsoPage() {
   const router = useRouter();
@@ -25,57 +20,54 @@ export default function SsoPage() {
 
   useEffect(() => {
     const run = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const token  = params.get('token');
+
+      if (!token) {
+        setError('Token de autenticación no encontrado en la URL');
+        return;
+      }
+
       try {
-        const params      = new URLSearchParams(window.location.search);
-        const customToken = params.get('token');
+        // Usar @real/auth-client para inicializar Firebase
+        initFirebase();
+        const firebaseAuth = getAuth();
 
-        if (!customToken) {
-          setError('Token no encontrado. Volvé a intentarlo.');
-          return;
-        }
+        // 1. Firebase establece la sesión con el custom token
+        await signInWithCustomToken(firebaseAuth, token);
 
-        // 1. Firebase establece la sesión
-        await signInWithCustomToken(auth, customToken);
-
-        // 2. Esperar que onAuthStateChanged confirme user != null
+        // 2. Esperar confirmación de onAuthStateChanged
         await new Promise<void>((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error('Timeout de sesión')), 8000);
-          const unsub = onAuthStateChanged(auth, (user) => {
-            if (user) {
-              clearTimeout(timeout);
-              unsub();
-              resolve();
-            }
+          const unsub = onAuthStateChanged(firebaseAuth, user => {
+            unsub();
+            if (user) resolve();
+            else reject(new Error('Auth state null después de signInWithCustomToken'));
           });
         });
 
-        // 3. Navegar al dashboard — el AuthProvider va a hacer el sync
+        // 3. Navegar al dashboard — AuthProvider hace el sync automáticamente
         router.replace('/dashboard');
-
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Error al iniciar sesión');
+      } catch (err) {
+        console.error('[sso] Error:', err);
+        setError('No se pudo completar la autenticación. Intentá de nuevo.');
       }
     };
 
     run();
   }, [router]);
 
-  if (error) {
-    return (
-      <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-sm text-destructive text-center max-w-xs">{error}</p>
-        <a href="/login" className="text-xs text-primary underline underline-offset-2">
-          Ir al login
-        </a>
-      </main>
-    );
-  }
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-sm text-center space-y-4">
+        <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground">Iniciando sesión...</p>
-    </main>
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
   );
 }

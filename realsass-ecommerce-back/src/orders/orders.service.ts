@@ -1,95 +1,158 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService }    from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
-import { ActivityService } from '../activity/activity.service';
-import { CheckoutDto } from './dto/checkout.dto';
+import { ActivityService }  from '../activity/activity.service';
+import type { Prisma }      from '@prisma/client';
+import type { OrderOutput } from './types/order.types';
+
+interface CheckoutInput {
+  cartId:          string;
+  customerId:      string;
+  shippingAddress: Record<string, unknown>;
+  shippingCents?:  number;
+}
+
+/** Mapper Prisma → OrderOutput — sin as any */
+function toOrderOutput(
+  row: Prisma.OrderGetPayload<{
+    include: {
+      items:         true;
+      statusHistory: true;
+    };
+  }>,
+): OrderOutput {
+  return {
+    id:              row.id,
+    organizationId:  row.organizationId,
+    customerId:      row.customerId,
+    cartId:          row.cartId,
+    status:          row.status,
+    totalCents:      row.totalCents,
+    shippingCents:   row.shippingCents,
+    paymentIntentId: row.paymentIntentId,
+    // @real/jsonb-cast — shippingAddress es campo Json en Prisma
+    shippingAddress: row.shippingAddress as Record<string, unknown>,
+    createdAt:       row.createdAt,
+    updatedAt:       row.updatedAt,
+    items: row.items.map(i => ({
+      id:                     i.id,
+      variantId:              i.variantId,
+      quantity:               i.quantity,
+      unitPriceCentsSnapshot: i.unitPriceCentsSnapshot,
+    })),
+    statusHistory: row.statusHistory.map(e => ({
+      id:         e.id,
+      fromStatus: e.fromStatus,
+      toStatus:   e.toStatus,
+      reason:     e.reason,
+      createdAt:  e.createdAt,
+    })),
+  };
+}
+
+/** Mapper para listado (sin items ni statusHistory) */
+function toOrderSummary(
+  row: Prisma.OrderGetPayload<Record<string, never>>,
+): Omit<OrderOutput, 'items' | 'statusHistory'> {
+  return {
+    id:              row.id,
+    organizationId:  row.organizationId,
+    customerId:      row.customerId,
+    cartId:          row.cartId,
+    status:          row.status,
+    totalCents:      row.totalCents,
+    shippingCents:   row.shippingCents,
+    paymentIntentId: row.paymentIntentId,
+    // @real/jsonb-cast
+    shippingAddress: row.shippingAddress as Record<string, unknown>,
+    createdAt:       row.createdAt,
+    updatedAt:       row.updatedAt,
+  };
+}
 
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly inventoryService: InventoryService,
-    private readonly activityService: ActivityService,
+    private readonly prisma:     PrismaService,
+    private readonly inventory:  InventoryService,
+    private readonly activity:   ActivityService,
   ) {}
 
   /**
-   * Convierte un carrito ACTIVE en una orden PENDING_PAYMENT. Reserva de
-   * stock y creación de orden van en UNA transacción — evita overselling
-   * bajo concurrencia. El cobro real (pasarela-pagos) se conecta después:
-   * paymentIntentId queda null hasta ese momento.
+   * Convierte un carrito ACTIVE en una orden PENDING_PAYMENT.
+   * Reserva de stock y creación de orden van en UNA transacción.
+   * TODO: cuando se conecte pasarela-pagos, acá se crea el PaymentIntent.
    */
-  async checkout(organizationId: string, dto: CheckoutDto) {
+  async checkout(organizationId: string, dto: CheckoutInput): Promise<OrderOutput> {
     const cart = await this.prisma.cart.findFirst({
-      where: { id: dto.cartId, organizationId },
+      where:   { id: dto.cartId, organizationId, status: 'ACTIVE' },
       include: { items: { include: { variant: true } } },
     });
-    if (!cart) throw new NotFoundException('Carrito no encontrado');
-    if (cart.status !== 'ACTIVE') throw new ConflictException(`El carrito ${cart.id} ya no está activo`);
-    if (cart.items.length === 0) throw new BadRequestException('El carrito está vacío');
 
-    const customer = await this.prisma.storeCustomer.findFirst({
-      where: { id: dto.customerId, organizationId },
-    });
-    if (!customer) throw new NotFoundException('Cliente no encontrado');
+    if (!cart) throw new NotFoundException('Cart not found or not active');
+    if (!cart.items.length) throw new BadRequestException('Cart is empty');
 
-    const shippingCents = dto.shippingCents ?? 0;
-    const subtotalCents = cart.items.reduce((sum, item) => sum + item.unitPriceCentsSnapshot * item.quantity, 0);
-    const totalCents = subtotalCents + shippingCents;
+    const totalCents = cart.items.reduce(
+      (sum, i) => sum + i.variant.priceCents * i.quantity, 0,
+    );
 
     const order = await this.prisma.$transaction(async (tx) => {
+      // Reservar stock atómicamente para cada ítem
       for (const item of cart.items) {
-        await this.inventoryService.reserveWithinTransaction(tx, item.variantId, item.variant.sku, item.quantity);
+        await this.inventory.reserveWithinTransaction(
+          tx, organizationId, item.variantId, item.quantity,
+        );
       }
 
+      // Crear la orden
       const created = await tx.order.create({
         data: {
           organizationId,
-          customerId: customer.id,
-          cartId: cart.id,
-          currency: cart.currency,
-          subtotalCents,
-          shippingCents,
+          customerId:      dto.customerId,
+          cartId:          dto.cartId,
+          status:          'PENDING_PAYMENT',
           totalCents,
-          shippingAddress: dto.shippingAddress as any,
+          shippingCents:   dto.shippingCents ?? 0,
+          shippingAddress: dto.shippingAddress,
           items: {
-            create: cart.items.map((item) => ({
-              variantId: item.variantId,
-              quantity: item.quantity,
-              unitPriceCentsSnapshot: item.unitPriceCentsSnapshot,
+            create: cart.items.map(i => ({
+              variantId:              i.variantId,
+              quantity:               i.quantity,
+              unitPriceCentsSnapshot: i.variant.priceCents,
             })),
           },
-          statusHistory: { create: { toStatus: 'PENDING_PAYMENT', reason: 'Orden creada desde carrito' } },
+          statusHistory: {
+            create: { toStatus: 'PENDING_PAYMENT' },
+          },
         },
+        include: { items: true, statusHistory: true },
       });
 
-      await tx.cart.update({ where: { id: cart.id }, data: { status: 'CONVERTED' } });
+      // Marcar carrito como completado
+      await tx.cart.update({ where: { id: dto.cartId }, data: { status: 'COMPLETED' } });
 
       return created;
     });
 
-    await this.activityService
-      .log(organizationId, cart.sessionId, 'ORDER_COMPLETED', customer.id, { orderId: order.id })
-      .catch(() => undefined);
+    await this.activity.log(organizationId, dto.cartId, 'checkout_completed', dto.customerId);
 
-    // TODO: cuando se conecte pasarela-pagos, acá se crea el PaymentIntent
-    // y se guarda paymentIntentId. Hoy la orden queda en PENDING_PAYMENT.
-    return order;
+    return toOrderOutput(order);
   }
 
-  async listOrders(organizationId: string) {
-    return this.prisma.order.findMany({
-      where: { organizationId },
-      include: { items: true, customer: true },
+  async listOrders(organizationId: string): Promise<Omit<OrderOutput, 'items' | 'statusHistory'>[]> {
+    const rows = await this.prisma.order.findMany({
+      where:   { organizationId },
       orderBy: { createdAt: 'desc' },
     });
+    return rows.map(toOrderSummary);
   }
 
-  async getOrder(organizationId: string, orderId: string) {
-    const order = await this.prisma.order.findFirst({
-      where: { id: orderId, organizationId },
-      include: { items: { include: { variant: true } }, customer: true, statusHistory: true },
+  async getOrder(organizationId: string, orderId: string): Promise<OrderOutput> {
+    const row = await this.prisma.order.findFirst({
+      where:   { id: orderId, organizationId },
+      include: { items: true, statusHistory: true },
     });
-    if (!order) throw new NotFoundException('Orden no encontrada');
-    return order;
+    if (!row) throw new NotFoundException(`Order ${orderId} not found`);
+    return toOrderOutput(row);
   }
 }

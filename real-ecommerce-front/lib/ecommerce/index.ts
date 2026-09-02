@@ -24,7 +24,7 @@ export type {
   StoreProduct  as Product,
   StoreCategory as Category,
   PaginatedResponse,
-} from '@/lib/store/types';
+} from '@/lib/trpc/types';
 
 // formatPrice vive en lib/ecommerce/utils.ts — se mantiene acá hasta
 // que las páginas migren a importarla directamente.

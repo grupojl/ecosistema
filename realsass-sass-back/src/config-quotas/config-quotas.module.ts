@@ -1,5 +1,4 @@
 import { Module }                  from '@nestjs/common';
-import { ConfigQuotasController }  from './config-quotas.controller';
 import { ConfigQuotasService }     from './config-quotas.service';
 import { PrismaQuotasRepository }  from './repository/prisma-quotas.repository';
 import { QUOTAS_REPOSITORY }       from './repository/quotas.repository.interface';
@@ -9,7 +8,7 @@ import { ConfigAuditModule }       from '../config-audit/config-audit.module';
 
 @Module({
   imports:     [PrismaModule, ConfigCacheModule, ConfigAuditModule],
-  controllers: [ConfigQuotasController],
+  
   providers:   [
     ConfigQuotasService,
     { provide: QUOTAS_REPOSITORY, useClass: PrismaQuotasRepository },

@@ -1,7 +1,7 @@
 # ADR-005: Migración completa de REST a tRPC — REST solo para endpoints públicos
 
 **Fecha:** 2026-08-28
-**Estado:** Aceptado
+**Estado:** Implementado — COMPLETO (sass-back + ecommerce-back)
 
 ## Contexto
 

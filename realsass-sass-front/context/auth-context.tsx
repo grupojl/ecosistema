@@ -1,50 +1,57 @@
+'use client'
+/**
+ * context/auth-context.tsx — realsass-sass-front
+ *
+ * Contexto de autenticación global.
+ *
+ * Flujo de login:
+ *   1. Firebase SDK → onAuthStateChanged → user
+ *   2. auth.sync (tRPC) → upsert usuario + custom claims (ADR-003)
+ *   3. getIdToken(true) → token fresco con claims
+ *   4. POST /auth/session (REST) → cookie HttpOnly __session (ADR-004)
+ *      ↑ Este paso es REST intencionalmente — necesita Set-Cookie header
+ *   5. auth.me (tRPC) → perfil completo
+ *   6. Timer de refresh proactivo a los 55 min
+ *
+ * Flujo de logout:
+ *   1. DELETE /auth/session (REST) → revoca cookie HttpOnly
+ *   2. Firebase signOut
+ */
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ReactNode,
+  createContext, useContext, useEffect,
+  useState, useCallback, useRef, type ReactNode,
 } from 'react'
-import { useRouter }               from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, type User } from '@/lib/firebase'
-import { syncUser, getMe }         from '@/lib/api'
-import { AppError }                from '@/lib/errors'
-import type { UserProfile }        from '@/lib/types'
+import { useRouter }                        from 'next/navigation'
+import { auth, onAuthStateChanged, signOut, type User } from '@real/auth-client'
+import { AppError }                         from '@/lib/errors'
 
-// ─── Helpers de session cookie (ADR-004) ──────────────────────────────────────
+// ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
+
+export interface UserProfile {
+  user:           { id: string; email: string | null; displayName: string | null; photoUrl: string | null }
+  organization:   { id: string; name: string | null; slug: string | null } | null
+  collaborations: Array<{ organizationId: string; role: string; permissions: Record<string, boolean> }>
+}
+
+// ─── Helpers de session cookie (ADR-004) — REST por diseño ───────────────────
 
 function getSassBackUrl(): string {
   return process.env.NEXT_PUBLIC_SASS_BACK_URL ?? ''
 }
 
-/**
- * Crea la session cookie HttpOnly en sass-back.
- * Llamado después de syncUser exitoso — el ID token ya es válido y tiene claims.
- * No lanza — si falla, el usuario sigue autenticado con Bearer (degradación aceptable).
- */
 async function createSessionCookie(idToken: string): Promise<void> {
   try {
-    const res = await fetch(`${getSassBackUrl()}/auth/session`, {
+    await fetch(`${getSassBackUrl()}/auth/session`, {
       method:      'POST',
-      credentials: 'include',  // necesario para que el back setee la cookie
+      credentials: 'include',
       headers:     { 'Content-Type': 'application/json' },
       body:        JSON.stringify({ idToken }),
     })
-    if (!res.ok) {
-      console.warn('[auth] createSessionCookie failed', res.status)
-    }
   } catch (err) {
-    console.warn('[auth] createSessionCookie network error', err)
+    console.warn('[auth] createSessionCookie failed', err)
   }
 }
 
-/**
- * Revoca la session cookie en sass-back + limpia la cookie del browser.
- * Llamado antes de signOut de Firebase.
- * No lanza — el logout de Firebase ocurre igual.
- */
 async function deleteSessionCookie(): Promise<void> {
   try {
     await fetch(`${getSassBackUrl()}/auth/session`, {
@@ -52,7 +59,39 @@ async function deleteSessionCookie(): Promise<void> {
       credentials: 'include',
     })
   } catch (err) {
-    console.warn('[auth] deleteSessionCookie network error', err)
+    console.warn('[auth] deleteSessionCookie failed', err)
+  }
+}
+
+// ─── Helpers tRPC imperativo (fuera de hooks — solo en el context) ────────────
+// Usamos fetch directo al endpoint tRPC porque estamos fuera del ciclo de React.
+// Los componentes deben usar useMe() y useSyncUser() de use-auth-trpc.ts.
+
+async function trpcSyncUser(token: string, affiliateCode?: string): Promise<void> {
+  const url   = `${getSassBackUrl()}/api/v1/trpc/auth.sync`
+  const input = { affiliateCode }
+  await fetch(`${url}?input=${encodeURIComponent(JSON.stringify(input))}`, {
+    method:      'POST',
+    credentials: 'include',
+    headers:     {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ json: input }),
+  })
+}
+
+async function trpcGetMe(token: string): Promise<UserProfile | null> {
+  try {
+    const url = `${getSassBackUrl()}/api/v1/trpc/auth.me`
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers:     { 'Authorization': `Bearer ${token}` },
+    })
+    const json = await res.json()
+    return json?.result?.data?.json ?? null
+  } catch {
+    return null
   }
 }
 
@@ -77,10 +116,7 @@ export function useAuth(): AuthContextValue {
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-interface AuthProviderProps {
-  children: ReactNode
-  refCode?: string
-}
+interface AuthProviderProps { children: ReactNode; refCode?: string }
 
 export function AuthProvider({ children, refCode }: AuthProviderProps) {
   const router = useRouter()
@@ -90,51 +126,33 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   const [loading,      setLoading]      = useState(true)
   const [busy,         setBusy]         = useState(false)
 
-  // Ref para el timer de refresh proactivo (antes de los 55 min de expiración)
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  /**
-   * Programa el refresh del token 55 minutos después de la última sincronización.
-   * Firebase tokens expiran a los 60 min; los refrescamos 5 min antes para evitar 401.
-   * Sin esto chat-ia-back rechaza con 403 hasta el refresh natural — ver ADR-003.
-   */
   const scheduleTokenRefresh = useCallback((user: User) => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const freshToken = await user.getIdToken(true)
-        // Renovar también la session cookie con el token fresco
         await createSessionCookie(freshToken)
-      } catch {
-        // Si falla el refresh, el siguiente request recibirá 401 y el guard lo maneja
-      }
-    }, 55 * 60 * 1000) // 55 minutos
+      } catch { /* si falla el refresh el próximo request recibe 401 */ }
+    }, 55 * 60 * 1000)
   }, [])
 
-  /**
-   * Sincroniza el usuario con el backend y crea la session cookie HttpOnly.
-   * Flujo:
-   *   1. syncUser (upsert + custom claims — ADR-003)
-   *   2. getIdToken(true) — fuerza refresh para incluir los claims recién emitidos
-   *   3. createSessionCookie — setea __session HttpOnly (ADR-004)
-   *   4. getMe — carga el perfil completo
-   *   5. scheduleTokenRefresh — programa el próximo refresh proactivo
-   */
   const syncAndLoad = useCallback(async (user: User) => {
     setBusy(true)
     try {
       const token = await user.getIdToken()
-      await syncUser(token, refCode)
+      await trpcSyncUser(token, refCode)
 
-      // Forzar refresh después de syncUser para incluir custom claims recién emitidos.
-      // Sin esto chat-ia-back rechaza con 403 hasta el refresh natural (ADR-003).
+      // Forzar refresh para incluir custom claims recién emitidos (ADR-003)
       const freshToken = await user.getIdToken(true)
 
-      // Crear session cookie HttpOnly con el token fresco que ya tiene los claims
+      // REST — bootstrap del sistema de auth (ADR-004)
       await createSessionCookie(freshToken)
 
-      const me = await getMe(freshToken)
-      setProfile(me)
+      const me = await trpcGetMe(freshToken)
+      if (me) setProfile(me)
+
       scheduleTokenRefresh(user)
     } catch (err) {
       if (err instanceof AppError && err.code === 'AUTH') {
@@ -145,7 +163,6 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     }
   }, [refCode, scheduleTokenRefresh])
 
-  // Escuchar cambios de estado de Firebase auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user)
@@ -157,39 +174,27 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       }
       setLoading(false)
     })
-
     return () => {
       unsubscribe()
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
   }, [syncAndLoad])
 
-  /**
-   * Recarga el perfil desde el backend sin re-sincronizar con Firebase.
-   * Útil después de cambios de organización o actualización de datos.
-   */
   const refreshProfile = useCallback(async () => {
     if (!firebaseUser) return
     setBusy(true)
     try {
       const token = await firebaseUser.getIdToken()
-      const me    = await getMe(token)
-      setProfile(me)
+      const me    = await trpcGetMe(token)
+      if (me) setProfile(me)
     } finally {
       setBusy(false)
     }
   }, [firebaseUser])
 
-  /**
-   * Logout completo:
-   *   1. deleteSessionCookie — revoca tokens en Firebase + limpia __session (ADR-004)
-   *   2. signOut de Firebase — limpia el estado local del SDK
-   *   3. Redirect a home
-   */
   const logout = useCallback(async () => {
     setBusy(true)
     try {
-      // Revocar server-side primero — si falla, continuamos igual
       await deleteSessionCookie()
       await signOut(auth)
       setProfile(null)
@@ -200,14 +205,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [router])
 
   return (
-    <AuthContext.Provider value={{
-      firebaseUser,
-      profile,
-      loading,
-      busy,
-      refreshProfile,
-      logout,
-    }}>
+    <AuthContext.Provider value={{ firebaseUser, profile, loading, busy, refreshProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )
