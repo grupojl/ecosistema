@@ -104,6 +104,16 @@ Cada decisión de degradación debe estar acá antes de llegar a producción.
 | Redis caído | Fallback a MemoryCacheAdapter (ya implementado) | Degradación aceptable, documenta limitación de réplicas |
 | sass-back responde lento (>500ms) | Log de warning + continuar | Alertar sin romper — el TTL de Redis amortigua |
 
+### OrganizationsClientService — comportamiento por tipo de endpoint (S4-A — 2026-09-02)
+
+El timeout de 2s ya configurado es correcto. Lo que varía es la acción
+post-timeout según qué datos maneja el endpoint:
+
+| Escenario | Endpoint | Comportamiento | Razón |
+|---|---|---|---|
+| OrganizationsClientService tarda > 2s | Checkout / admin dashboard | Rechazar con 503 | Datos organizacionales sensibles — seguridad > disponibilidad |
+| OrganizationsClientService tarda > 2s | Catálogo público storefront | Continuar con cache vencida + log warning | Sin datos sensibles — disponibilidad > seguridad estricta |
+
 ### FirebaseAuthGuard (todos los backs)
 
 | Escenario | Comportamiento decidido | Razón |
@@ -112,29 +122,53 @@ Cada decisión de degradación debe estar acá antes de llegar a producción.
 | Token expirado | 401 con `code: TOKEN_EXPIRED` | El front debe forzar refresh y reintentar |
 | Token válido pero claims desactualizados | Servir con claims viejos + log | Aceptable hasta el refresh natural (55 min) — documentado en ADR-003 |
 
-### Decisiones pendientes (deben resolverse antes de lanzamiento)
+### Health check con Firebase Admin (S4-A — 2026-09-02)
 
-- ¿Qué hace `ecommerce-back` si `OrganizationsClientService` tarda más de 2s
-  en un endpoint de checkout? ¿Rechaza o permite continuar con cache vencida?
-- ¿Qué hace `sass-back` si Firebase Admin falla en el endpoint de health check?
-  ¿El health check devuelve degraded o down?
-- Cuando existan `chat-ia-back` y `pagos-back`: ¿mismo patrón de timeout + 503,
-  o tienen SLA distintos que justifican otra decisión?
+| Escenario | Comportamiento decidido | Razón |
+|---|---|---|
+| Firebase Admin SDK no disponible al arranque | No arrancar — crash intencional | Un servicio que no puede verificar identidad no debe servir requests |
+| Firebase Admin SDK cae en runtime | Health check devuelve `degraded`, no `down` | Railway no reinicia en `degraded` — el servicio sigue procesando tokens en cache |
+| Firebase Admin SDK no responde en > 3s (health check) | Health check devuelve `degraded` | No bloquear el endpoint que Railway usa para decidir si reiniciar |
 
-## Comunicación interna — tRPC/gRPC, nunca REST
+Implementación requerida en cada `/health`:
+```ts
+// La distinción degraded vs down es la clave:
+// - down   → Railway reinicia el servicio (evitar por Firebase solo)
+// - degraded → Railway alerta sin reiniciar (correcto cuando Firebase falla en runtime)
+const firebaseOk = await checkFirebaseWithTimeout(3000).catch(() => false);
+return {
+  status:   firebaseOk ? 'ok' : 'degraded',
+  firebase: firebaseOk ? 'ok' : 'degraded',
+  database: await checkPrisma(),
+  redis:    await checkRedis(),
+};
+```
+
+### Servicios futuros: chat-ia-back y pagos-back (S4-A — 2026-09-02)
+
+| Servicio | Timeout | Comportamiento post-timeout | SLA distinto | Razón |
+|---|---|---|---|---|
+| `chat-ia-back` | 2s | 503 | No | Datos organizacionales — mismo criterio que admin |
+| `pagos-back` | 5s | 503 | **Sí** | Transacciones financieras toleran más latencia; un pago que tarda 4s es preferible a un 503 |
+
+**Regla para servicios nuevos:** documentar el comportamiento de degradación
+en esta sección antes de escribir la primera línea de código.
+El patrón default es timeout 2s + 503. Excepciones requieren justificación explícita acá.
+
+## Comunicación interna — tRPC, nunca REST
 
 **Regla:** Todo consumo interno entre servicios usa tRPC (o gRPC cuando el
 volumen lo justifique). REST se reserva para APIs públicas externas.
 
 ```
-✅ Front → Back:          tRPC (httpBatchLink con credentials: include)
+✅ Front → Back:           tRPC (httpBatchLink con credentials: include)
 ✅ Server Component → Back: createServerCaller() tRPC (sin React)
-✅ Back → Back:           tRPC HTTP (OrganizationsClientService)
-✅ Client Component:       rehidrata desde Server, no fetch propio
+✅ Back → Back:            tRPC HTTP (OrganizationsClientService)
+✅ Client Component:        rehidrata desde Server, no fetch propio
 
-❌ Front → Back REST:     bug de arquitectura
-❌ Server Component fetch: bug si existe el procedure tRPC equivalente
-❌ Client fetch manual:    bug si existe el hook tRPC equivalente
+❌ Front → Back REST:      bug de arquitectura
+❌ Server Component fetch:  bug si existe el procedure tRPC equivalente
+❌ Client fetch manual:     bug si existe el hook tRPC equivalente
 ```
 
 **Excepciones permanentes documentadas:**
@@ -151,10 +185,10 @@ volumen lo justifique). REST se reserva para APIs públicas externas.
 ```
 page.tsx (Server Component)
   ├─ await createCaller().catalog.list({ orgId })  ← tRPC server-side
-  ├─ <Hydrator queryKey={...} initialData={...} />  ← pasar datos al client
-  └─ <ProductList />                                ← client rehidrata
+  ├─ <HydrationBoundary state={dehydrate(queryClient)}>
+  └─ <ProductList />                               ← client rehidrata
 
 ProductList (Client Component, 'use client')
-  ├─ trpc.catalog.list.useQuery({ orgId })          ← rehidrata desde server
+  ├─ trpc.catalog.list.useQuery({ orgId })         ← rehidrata desde server
   └─ NO fetch propio — los datos ya vinieron del server
 ```

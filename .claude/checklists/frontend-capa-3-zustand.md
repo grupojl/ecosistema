@@ -15,7 +15,7 @@
 
 ### Enforcement (S4)
 - [ ] Lint rule o code review check: campo en store que también existe en queryKey → bug
-- [ ] Documentar qué estado va a Zustand vs TanStack Query en `conventions/state.md`
+- [x] Documentar qué estado va a Zustand vs TanStack Query en `conventions/state.md` — creado 2026-09-02
 
 ### Mejoras opcionales (S4)
 - [ ] `zustand/middleware persist` para preferencias de UI que deben sobrevivir recarga

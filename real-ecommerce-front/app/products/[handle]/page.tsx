@@ -1,59 +1,22 @@
-import { notFound } from "next/navigation"
-import { ProductGallery } from "@/components/product/product-gallery"
-import { ProductInfo } from "@/components/product/product-info"
-import { WhatsInBox } from "@/components/product/whats-in-box"
-import { IncludedServices } from "@/components/product/included-services"
-import { RelatedProducts } from "@/components/product/related-products"
-import { getProductById, getAllProducts } from "@/lib/ecommerce"
+/**
+ * app/products/[handle]/page.tsx
+ *
+ * Ruta legacy — redirige permanentemente a /tienda/[slug]/productos/[handle].
+ *
+ * La ruta canónica multi-tenant es /tienda/[slug]/productos/[handle].
+ * Sin contexto de slug no podemos resolver la org, así que redirigimos
+ * a la raíz de /tienda/ para que el usuario elija la tienda correcta.
+ *
+ * TODO: cuando no haya más tráfico a /products/, eliminar este archivo.
+ */
+import { redirect } from 'next/navigation';
 
 interface ProductPageProps {
-  params: Promise<{
-    handle: string
-  }>
+  params: Promise<{ handle: string }>;
 }
 
-export default async function ProductPage({ params }: ProductPageProps) {
-  const { handle } = await params
-
-  const product = await getProductById(handle)
-
-  if (!product) {
-    notFound()
-  }
-
-  return (
-    <main className="min-h-screen">
-      <section className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          <ProductGallery images={product.images} productName={product.name} />
-          <ProductInfo product={product} />
-        </div>
-      </section>
-
-      {product.whatsInBox.length > 0 && (
-        <section className="container mx-auto px-4">
-          <WhatsInBox items={product.whatsInBox} />
-        </section>
-      )}
-
-      {product.includedServices && product.includedServices.length > 0 && (
-        <section className="container mx-auto px-4">
-          <IncludedServices services={product.includedServices} />
-        </section>
-      )}
-
-      {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <section className="container mx-auto px-4">
-          <RelatedProducts products={product.relatedProducts} />
-        </section>
-      )}
-    </main>
-  )
-}
-
-export async function generateStaticParams() {
-  const products = await getAllProducts()
-  return products.map((product) => ({
-    handle: product.id,
-  }))
+export default async function ProductLegacyPage({ params }: ProductPageProps) {
+  const { handle } = await params;
+  // 308 Permanent Redirect hacia la ruta canónica de tienda
+  redirect(`/tienda`);
 }

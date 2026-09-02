@@ -1,108 +1,58 @@
-"use client"
+/**
+ * components/header.tsx — real-ecommerce-front
+ *
+ * Header raíz del storefront — aparece en todas las rutas via app/layout.tsx.
+ *
+ * Sin slug ni organizationId en este nivel (layout raíz), por eso no cargamos
+ * categorías aquí. Las categorías van en /tienda/[slug]/layout.tsx.
+ *
+ * ADR-008 + S4-A: sin imports de @/lib/ecommerce (shim eliminado en Fase 1).
+ */
+'use client';
 
-import Link from "next/link"
-import { useState, useEffect } from "react"
-import ShoppingBagModal from "./shopping-bag-modal"
-import { getCategories, type Category } from "@/lib/ecommerce"
+import Link from 'next/link';
+import ShoppingBagModal from './shopping-bag-modal';
+import { useShoppingBagStore } from '@/stores/use-shopping-bag-store';
 
 export default function Header() {
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const cats = await getCategories()
-        setCategories(cats)
-      } finally {
-        setIsLoadingCategories(false)
-      }
-    }
-    fetchCategories()
-  }, [])
-
-  const staticNavItems = [{ label: "Store", href: "/" }]
-
-  const categoryNavItems = categories.map((cat) => ({
-    label: cat.name,
-    href: `/categoria/${cat.handle}`,
-  }))
-
-  const additionalNavItems = [{ label: "Support", href: "#" }]
-
-  const navItems = [...staticNavItems, ...categoryNavItems, ...additionalNavItems]
+  const { isOpen, open, close } = useShoppingBagStore();
 
   return (
-    <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b border-gray-800">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-              />
-            </svg>
-            <span className="text-sm font-semibold text-white tracking-tight">Nimbus Store</span>
-          </Link>
+    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center justify-between px-4">
 
-          <div className="hidden lg:flex items-center space-x-8">
-            {isLoadingCategories ? (
-              <span className="text-sm text-gray-500">Cargando categorías...</span>
-            ) : (
-              navItems.map((item) => (
-                <Link key={item.label} href={item.href} className="text-sm text-gray-300 hover:text-white transition">
-                  {item.label}
-                </Link>
-              ))
-            )}
-          </div>
+        <Link
+          href="/"
+          className="font-semibold text-sm tracking-tight hover:opacity-80 transition-opacity"
+        >
+          Tienda
+        </Link>
 
-          <div className="flex items-center space-x-4">
-            <button className="p-2 hover:bg-gray-900 rounded-full transition">
-              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </button>
+        <button
+          onClick={open}
+          aria-label="Abrir carrito"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+            <line x1="3" x2="21" y1="6" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        </button>
+      </div>
 
-            <div className="relative">
-              <button
-                onClick={() => setIsCartOpen(!isCartOpen)}
-                className="p-2 hover:bg-gray-900 rounded-full transition"
-              >
-                <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                  />
-                </svg>
-              </button>
-
-              {isCartOpen && (
-                <div className="absolute right-0 mt-2 w-96">
-                  <ShoppingBagModal onClose={() => setIsCartOpen(false)} />
-                </div>
-              )}
-            </div>
-
-            <button className="p-2 hover:bg-gray-900 rounded-full transition lg:hidden">
-              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </nav>
+      <ShoppingBagModal onClose={close} />
     </header>
-  )
+  );
 }

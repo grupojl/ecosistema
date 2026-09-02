@@ -2,15 +2,24 @@
  * context/customer-context.tsx
  *
  * Estado del cliente logueado en el storefront.
- * customerId se obtiene tras llamar al endpoint REST público:
- *   POST /ecommerce/public/:orgId/customers/identify
+ * customerId se obtiene llamando a customer.identify (tRPC publicProcedure).
+ * Se persiste en localStorage para que el carrito sobreviva a recargas.
  *
- * Se persiste en localStorage para que el carrito sobreviva
- * a recargas de página.
+ * ADR-005 + ADR-006: 0 fetch REST de negocio en el storefront.
+ * La única excepción documentada es POST/DELETE /auth/session (cookies HttpOnly).
  */
 'use client';
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react';
+import { createStoreCaller } from '@/lib/trpc/server';
+
+// ─── Shape del contexto ────────────────────────────────────────────────────
 
 interface CustomerContextValue {
   customerId:    string | null;
@@ -21,35 +30,55 @@ interface CustomerContextValue {
 
 const CustomerContext = createContext<CustomerContextValue | null>(null);
 
-const ORG_ID = process.env['NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID'] ?? '';
-const API_URL = process.env['NEXT_PUBLIC_ECOMMERCE_API_URL'] ?? '';
+// ─── Helpers de persistencia ───────────────────────────────────────────────
+
+const CUSTOMER_KEY = 'store:customerId';
+const SESSION_KEY  = 'store:sessionId';
 
 function generateSessionId(): string {
-  return crypto.randomUUID();
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+function readStorage(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function writeStorage(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(key, value); } catch { /* silencioso */ }
+}
+
+function clearStorage(...keys: string[]): void {
+  if (typeof window === 'undefined') return;
+  try { keys.forEach(k => localStorage.removeItem(k)); } catch { /* silencioso */ }
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────
 
 export function CustomerProvider({ children }: { children: ReactNode }) {
   const [customerId, setCustomerIdState] = useState<string | null>(null);
-  const [sessionId,  setSessionId]       = useState<string>('');
+  const [sessionId,  setSessionIdState]  = useState<string>('');
 
+  // Restaurar desde localStorage al montar (solo client-side)
   useEffect(() => {
-    // Restaurar customerId y sessionId desde localStorage
-    const storedCustomerId = localStorage.getItem('ecommerce_customer_id');
-    const storedSessionId  = localStorage.getItem('ecommerce_session_id') ?? generateSessionId();
+    const storedCustomerId = readStorage(CUSTOMER_KEY);
+    const storedSessionId  = readStorage(SESSION_KEY) ?? generateSessionId();
 
     if (storedCustomerId) setCustomerIdState(storedCustomerId);
-    setSessionId(storedSessionId);
-    localStorage.setItem('ecommerce_session_id', storedSessionId);
+
+    if (!readStorage(SESSION_KEY)) writeStorage(SESSION_KEY, storedSessionId);
+    setSessionIdState(storedSessionId);
   }, []);
 
   const setCustomerId = (id: string) => {
-    localStorage.setItem('ecommerce_customer_id', id);
     setCustomerIdState(id);
+    writeStorage(CUSTOMER_KEY, id);
   };
 
   const clearCustomer = () => {
-    localStorage.removeItem('ecommerce_customer_id');
     setCustomerIdState(null);
+    clearStorage(CUSTOMER_KEY);
   };
 
   return (
@@ -59,32 +88,39 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCustomerContext() {
+// ─── Hook ──────────────────────────────────────────────────────────────────
+
+export function useCustomerContext(): CustomerContextValue {
   const ctx = useContext(CustomerContext);
-  if (!ctx) throw new Error('useCustomerContext debe usarse dentro de CustomerProvider');
+  if (!ctx) throw new Error('useCustomerContext debe usarse dentro de <CustomerProvider>');
   return ctx;
 }
 
-/**
- * identifyCustomer — llama al endpoint REST público para crear/recuperar
- * el cliente por email. Devuelve el customerId para guardar en context.
- * REST porque es una ruta @Public() sin auth de ningún tipo.
- */
+// ─── identifyCustomer — tRPC publicProcedure ───────────────────────────────
+//
+// Reemplaza el fetch REST a POST /ecommerce/public/:orgId/customers/identify
+// El procedure customer.identify es @Public() en ecommerce-back —
+// no requiere Firebase ni customerId previo.
+//
+// Se llama desde componentes de checkout al capturar el email del cliente.
+// El customerId resultante se persiste en CustomerContext (localStorage).
+
 export async function identifyCustomer(
-  email: string,
-  displayName?: string,
-  phone?: string,
-  cartId?: string,
+  organizationId: string,
+  email:          string,
+  displayName?:   string,
+  phone?:         string,
+  cartId?:        string,
 ): Promise<string> {
-  const res = await fetch(
-    `${API_URL}/ecommerce/public/${ORG_ID}/customers/identify`,
-    {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, displayName, phone, cartId }),
-    },
-  );
-  if (!res.ok) throw new Error('No se pudo identificar al cliente');
-  const body = await res.json();
-  return body?.id ?? body?.data?.id;
+  const caller = createStoreCaller(organizationId);
+
+  const result = await caller.customer.identify({
+    organizationId,
+    email,
+    displayName,
+    phone,
+    cartId: cartId ?? undefined,
+  });
+
+  return result.customerId;
 }

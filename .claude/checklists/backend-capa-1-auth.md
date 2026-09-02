@@ -1,8 +1,9 @@
 # Backend Capa 1 — Auth/Tenant resolution
 # Checklist 10/10
 
-**Score actual: 8.5/10 — nivel Shopify plataforma**
+**Score actual: 9/10 — nivel Shopify plataforma+**
 **Score objetivo: 10/10 — nivel Stripe/Cloudflare**
+**Última actualización:** 2026-09-02
 
 ## ✅ Completado
 
@@ -13,6 +14,12 @@
 - [x] Custom claims Firebase (ADR-003) — refresh proactivo 55 min
 - [x] `SessionService` — revocación server-side real via `revokeRefreshTokens`
 - [x] CORS con `ALLOWED_ORIGINS` explícito — sin wildcard `*`
+- [x] Helmet activo en `main.ts` de ambos backs (sass-back + ecommerce-back)
+- [x] `cookieParser` registrado en sass-back — requerido para leer `__session`
+- [x] `ValidationPipe` global en sass-back
+- [x] `StepUpGuard` para operaciones críticas (rotate/revoke de secrets)
+- [x] `ApiKeyGuard` para rutas internas de config (servicios internos del ecosistema)
+- [x] `ThrottlerGuard` como APP_GUARD en ecommerce-back (rate limiting base)
 
 ## ⏳ Pendiente para 10/10
 
@@ -22,22 +29,28 @@
 - [ ] Unit test `SessionService` — create, verify, revoke
 - [ ] Integration test: request sin cookie → 401; con cookie válida → 200
 - [ ] Integration test: request con cookie revocada → 401
+- [ ] Integration test: `StepUpGuard` — auth_time < 5 min pasa, > 5 min rechaza
 
 ### Enforcement CI (S4)
 - [ ] `dependency-cruiser` rule `no-local-firebase-verify`
   → Falla el build si alguien reimplementa verificación Firebase fuera de `@real/auth-server`
 
-### Decisiones de degradación (documentar antes de lanzamiento)
-- [ ] ¿Qué hace el back si Firebase Admin SDK no está disponible? → 503 o 401
-- [ ] ¿Health check devuelve `degraded` o `down` si Firebase falla?
-- [ ] ¿Qué pasa si `OrganizationsClientService` tarda > 2s en resolver tenant?
+### Decisiones de degradación — resueltas en S4-A
+- [x] Firebase Admin no disponible → 503 al arranque, degraded en runtime — 00-principios.md S4-A
+- [x] Health check → degraded si Firebase falla en runtime (Railway no reinicia) — 00-principios.md S4-A
+- [x] OrganizationsClientService > 2s → 503 en admin/checkout, cache vencida en catálogo público — 00-principios.md S4-A
 
 ## Referencia de archivos
 
 - `packages/auth-server/src/middleware/create-trpc-auth-middleware.ts`
 - `packages/auth-server/src/guards/firebase-auth.guard.ts`
+- `packages/auth-server/src/guards/tenant.guard.ts`
+- `packages/auth-server/src/guards/roles.guard.ts`
 - `packages/auth-server/src/session/session.service.ts`
 - `packages/auth-server/src/session/auth-session.controller.ts`
-- `realsass-sass-back/src/main.ts` — cookieParser + CORS
+- `realsass-sass-back/src/main.ts` — cookieParser + CORS + Helmet + ValidationPipe
+- `realsass-ecommerce-back/src/main.ts` — Helmet + CORS + ThrottlerGuard
+- `realsass-sass-back/src/common/guards/step-up.guard.ts`
+- `realsass-sass-back/src/common/guards/api-key.guard.ts`
 - `decisions/ADR-003-custom-claims.md`
 - `decisions/ADR-004-auth-session-cookies.md`
