@@ -38,13 +38,20 @@ model User {
   displayName    String?
   avatarUrl      String?
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization   Organization?
   affiliateData  AffiliateData?
   collaborations Collaborator[]
 
   @@map("users")
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
 }
 
 model Organization {
@@ -57,7 +64,10 @@ model Organization {
   phone       String?
   address     String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
+
+  status   OrgStatus @default(ACTIVE)  // ADR-010
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   collaborators Collaborator[]
@@ -93,7 +103,8 @@ model Collaborator {
 
   invitedAt  DateTime  @default(now())
   acceptedAt DateTime?
-  updatedAt  DateTime  @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -124,7 +135,8 @@ model AffiliateData {
   balance       Decimal  @default(0) @db.Decimal(10, 2)
   referralCount Int      @default(0)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -149,7 +161,8 @@ model ThemeConfig {
   darkMode        Boolean  @default(false)
   customCSS       String?
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -172,7 +185,8 @@ model SecretConfig {
   rotatedAt      DateTime?
   expiresAt      DateTime?
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -191,7 +205,8 @@ model FeatureFlag {
   rolloutPercentage Int      @default(100)
   conditions        Json     @default("{}")
   createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -211,7 +226,8 @@ model ContentTemplate {
   isSystemDefault Boolean  @default(false)
   variables       Json     @default("[]")
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -229,7 +245,8 @@ model QuotaConfig {
   alertAt        Int       @default(80)
   resetAt        DateTime?
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -251,7 +268,8 @@ model WebhookEndpoint {
   failureCount    Int       @default(0)
   retryPolicy     Json      @default("{\"maxAttempts\":3,\"backoffMs\":1000}")
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  updatedAt   DateTime  @updatedAt
+
 
   organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deliveryLogs  WebhookDeliveryLog[]
