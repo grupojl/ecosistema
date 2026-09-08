@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway: Root Directory = / | Dockerfile Path = realsass-ecommerce-back/Dockerfile
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -22,8 +23,8 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
-COPY realsass-ecommerce-back/          ./realsass-ecommerce-back/
-COPY packages/                         ./packages/
+COPY realsass-ecommerce-back/      ./realsass-ecommerce-back/
+COPY packages/                     ./packages/
 WORKDIR /app/realsass-ecommerce-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
@@ -32,12 +33,13 @@ FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3001
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
 USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "node", "dist/main"]
+EXPOSE 3001
+# prisma migrate deploy antes de arrancar — garantiza migraciones aplicadas
+CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && node dist/main"]

@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway: Root Directory = / | Dockerfile Path = realsass-sass-back/Dockerfile
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -9,7 +10,7 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/auth-server/package.json ./packages/auth-server/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-back/package.json              ./realsass-sass-back/
+COPY realsass-sass-back/package.json   ./realsass-sass-back/
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -22,8 +23,8 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
-COPY realsass-sass-back/                          ./realsass-sass-back/
-COPY packages/                         ./packages/
+COPY realsass-sass-back/           ./realsass-sass-back/
+COPY packages/                     ./packages/
 WORKDIR /app/realsass-sass-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
@@ -35,9 +36,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules                    ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
 USER nestjs
 EXPOSE 3000
-CMD ["dumb-init", "node", "dist/main"]
+# prisma migrate deploy antes de arrancar el servidor — garantiza migraciones aplicadas
+CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && node dist/main"]

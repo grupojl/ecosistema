@@ -1,58 +1,52 @@
 /**
  * components/header.tsx — real-ecommerce-front
  *
- * Header raíz del storefront — aparece en todas las rutas via app/layout.tsx.
+ * ADR-012: Eliminada dependencia de @/lib/ecommerce (eliminada en ADR-008).
+ * Header estático hasta que exista customer.getCategories en EcommerceAppRouter.
  *
- * Sin slug ni organizationId en este nivel (layout raíz), por eso no cargamos
- * categorías aquí. Las categorías van en /tienda/[slug]/layout.tsx.
- *
- * ADR-008 + S4-A: sin imports de @/lib/ecommerce (shim eliminado en Fase 1).
+ * Las categorías por tienda se renderizan en los layouts de /tienda/[slug]/
+ * como Server Components — no necesitan este header genérico.
  */
 'use client';
 
-import Link from 'next/link';
-import ShoppingBagModal from './shopping-bag-modal';
-import { useShoppingBagStore } from '@/stores/use-shopping-bag-store';
+import { useState }             from 'react';
+import Link                     from 'next/link';
+import { ShoppingBagModal }     from './shopping-bag-modal';
+import { useShoppingBagStore }  from '@/stores/use-shopping-bag-store';
 
-export default function Header() {
-  const { isOpen, open, close } = useShoppingBagStore();
+export function Header() {
+  const [bagOpen, setBagOpen] = useState(false);
+  const itemCount = useShoppingBagStore((s) => s.items.length);
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between px-4">
+    <>
+      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <Link href="/" className="text-xl font-bold tracking-tight">
+            Tienda
+          </Link>
 
-        <Link
-          href="/"
-          className="font-semibold text-sm tracking-tight hover:opacity-80 transition-opacity"
-        >
-          Tienda
-        </Link>
-
-        <button
-          onClick={open}
-          aria-label="Abrir carrito"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+          <button
+            onClick={() => setBagOpen(true)}
+            className="relative inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+            aria-label={`Carrito${itemCount > 0 ? ` (${itemCount})` : ''}`}
           >
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-            <line x1="3" x2="21" y1="6" y2="6" />
-            <path d="M16 10a4 4 0 0 1-8 0" />
-          </svg>
-        </button>
-      </div>
-
-      <ShoppingBagModal onClose={close} />
-    </header>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            {itemCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                {itemCount > 9 ? '9+' : itemCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
+      <ShoppingBagModal open={bagOpen} onOpenChange={setBagOpen} />
+    </>
   );
 }

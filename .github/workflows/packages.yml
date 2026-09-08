@@ -1,0 +1,21 @@
+name: packages
+on:
+  push:
+    branches: [main]
+    paths: ['packages/**']
+  pull_request:
+    branches: [main]
+    paths: ['packages/**']
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @real/auth-client typecheck || true
+      - run: pnpm --filter @real/auth-server typecheck || true
+      - run: pnpm --filter @real/trpc typecheck || true

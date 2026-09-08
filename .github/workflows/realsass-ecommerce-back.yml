@@ -1,0 +1,21 @@
+name: realsass-ecommerce-back
+on:
+  push:
+    branches: [main]
+    paths: ['realsass-ecommerce-back/**','packages/auth-server/**','packages/trpc/**']
+  pull_request:
+    branches: [main]
+    paths: ['realsass-ecommerce-back/**','packages/auth-server/**','packages/trpc/**']
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter realsass-ecommerce-back typecheck
+      - run: pnpm --filter realsass-ecommerce-back build
+        env: { DATABASE_URL: "postgresql://build:build@localhost:5432/build" }

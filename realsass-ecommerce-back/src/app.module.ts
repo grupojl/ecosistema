@@ -1,19 +1,19 @@
-import { Module }                     from '@nestjs/common';
-import { APP_GUARD }                  from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ConfigModule }               from '@nestjs/config';
+import { Module }              from '@nestjs/common';
+import { ConfigModule }        from '@nestjs/config';
+import { APP_GUARD }           from '@nestjs/core';
 
-import { PrismaModule }              from './prisma/prisma.module';
-import { RedisModule }               from './redis/redis.module';
+import { PrismaModule }        from './prisma/prisma.module';
+import { RedisModule }         from './redis/redis.module';
+import { HealthModule }        from './health/health.module';
+import { ActivityModule }      from './activity/activity.module';
+import { CatalogModule }       from './catalog/catalog.module';
+import { CartModule }          from './cart/cart.module';
+import { CustomersModule }     from './customers/customers.module';
+import { InventoryModule }     from './inventory/inventory.module';
+import { OrdersModule }        from './orders/orders.module';
+import { StoreModule }         from './store/store.module';
 import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
-import { CatalogModule }             from './catalog/catalog.module';
-import { InventoryModule }           from './inventory/inventory.module';
-import { CustomersModule }           from './customers/customers.module';
-import { ActivityModule }            from './activity/activity.module';
-import { CartModule }                from './cart/cart.module';
-import { OrdersModule }              from './orders/orders.module';
-import { StoreModule }               from './store/store.module';
-import { TrpcModule }                from './trpc/trpc.module';
+import { TrpcModule }          from './trpc/trpc.module';
 
 import {
   FirebaseModule,
@@ -25,34 +25,33 @@ import {
 } from '@real/auth-server';
 
 /**
- * Orden de APP_GUARD importa:
- *   1. FirebaseAuthGuard — verifica identidad (quien sos)
- *   2. TenantGuard       — resuelve organizacion y rol
- *   3. RolesGuard        — aplica RBAC
- *   4. ThrottlerGuard    — rate limiting
+ * app.module.ts — realsass-ecommerce-back
+ *
+ * ADR-005: Sin controllers REST legacy.
+ * Toda la superficie HTTP pasa por TrpcModule (4 routers).
+ * Los módulos de dominio solo exponen Services al TrpcModule.
  */
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
-    FirebaseModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     RedisModule,
+    HealthModule,
+    FirebaseModule,
     OrganizationsClientModule,
-    CatalogModule,
-    InventoryModule,
-    CustomersModule,
     ActivityModule,
+    CatalogModule,
     CartModule,
+    CustomersModule,
+    InventoryModule,
     OrdersModule,
     StoreModule,
     TrpcModule,
   ],
   providers: [
-    { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
-    { provide: APP_GUARD,  useClass: TenantGuard },
-    { provide: APP_GUARD,  useClass: RolesGuard },
-    { provide: APP_GUARD,  useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: FirebaseAuthGuard },
+    { provide: APP_GUARD, useClass: TenantGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
   ],
 })

@@ -1,0 +1,28 @@
+name: real-ecommerce-front
+on:
+  push:
+    branches: [main]
+    paths: ['real-ecommerce-front/**','packages/**']
+  pull_request:
+    branches: [main]
+    paths: ['real-ecommerce-front/**','packages/**']
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '24', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter real-ecommerce-front typecheck
+      - run: pnpm --filter real-ecommerce-front build
+        env:
+          NEXT_PUBLIC_ECOMMERCE_API_URL: http://localhost:3001
+          NEXT_PUBLIC_FIREBASE_API_KEY: build
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: build
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: build
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: build
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: build
+          NEXT_PUBLIC_FIREBASE_APP_ID: build
