@@ -59,6 +59,10 @@ The content is organized as follows:
     backend-capa-5-approuter.md
     backend-capa-6-multitenant.md
     backend-capas-3-4-domain-repo.md
+<<<<<<< HEAD
+=======
+    deploy-railway.md
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     frontend-capa-1-fetch.md
     frontend-capa-2-tanstack.md
     frontend-capa-3-zustand.md
@@ -66,14 +70,23 @@ The content is organized as follows:
     frontend-capa-5-auth.md
     README.md
   contracts/
+<<<<<<< HEAD
+=======
+    internal-api.md
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     organization-access.md
     tenant-context.md
     trpc-routers.md
   conventions/
+<<<<<<< HEAD
     cache-keys.md
     deploy.md
     entorno.md
     state.md
+=======
+    deploy.md
+    entorno.md
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     testing.md
   decisions/
     ADR-001-permisos-jsonb.md
@@ -83,10 +96,14 @@ The content is organized as follows:
     ADR-005-rest-to-trpc.md
     ADR-006-front-cleanup.md
     ADR-007-eliminar-any.md
+<<<<<<< HEAD
     ADR-008-eliminar-componentes-legacy-storefront.md
     ADR-009-s4-tests-ci-hydration.md
     ADR-011-plan-10-10-codigo-estructura.md
     ADR-012-codigo-estructura-definitivo.md
+=======
+    ADR-010-internal-api-superadmin.md
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     TEMPLATE.md
   lifecycle/
     01-fase-desarrollo.md
@@ -242,8 +259,25 @@ real-ecommerce-front/
     layout.tsx
     page.tsx
   components/
+<<<<<<< HEAD
     checkout/
       checkout-flow.tsx
+=======
+    catalog/
+      catalog-closer-look.tsx
+      catalog-features.tsx
+      catalog-footer.tsx
+      catalog-header.tsx
+      catalog-lineup.tsx
+    checkout/
+      checkout-flow.tsx
+    product/
+      included-services.tsx
+      product-gallery.tsx
+      product-info.tsx
+      related-products.tsx
+      whats-in-box.tsx
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     tracking/
       tracking-view.tsx
     footer.tsx
@@ -264,6 +298,10 @@ real-ecommerce-front/
       envia-adapter.ts
       welivery-adapter.ts
     ecommerce/
+<<<<<<< HEAD
+=======
+      index.ts
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
       utils.ts
     services/
       shipping-service.ts
@@ -285,6 +323,10 @@ real-ecommerce-front/
     index.ts
     use-shopping-bag-store.ts
   types/
+<<<<<<< HEAD
+=======
+    product.ts
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     shipping.ts
   components.json
   Dockerfile
@@ -481,7 +523,14 @@ realsass-sass-back/
         quota-exceeded.exception.ts
       guards/
         api-key.guard.ts
+<<<<<<< HEAD
         step-up.guard.ts
+=======
+        internal-api-key.guard.ts
+        step-up.guard.ts
+      pipes/
+        zod-validation.pipe.ts
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     config-audit/
       domain/
         audit-log.entity.ts
@@ -545,8 +594,17 @@ realsass-sass-back/
       webhook-delivery.processor.ts
       webhook-delivery.service.ts
     health/
+<<<<<<< HEAD
       health.controller.ts
       health.module.ts
+=======
+      health-extended.controller.ts
+      health.controller.ts
+      health.module.ts
+    internal/
+      internal-organizations.controller.ts
+      internal.module.ts
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
     organizations/
       domain/
         organization.entity.ts
@@ -672,6 +730,7 @@ tsconfig.base.json
 <files>
 This section contains the contents of the repository's files.
 
+<<<<<<< HEAD
 <file path=".claude/conventions/cache-keys.md">
 # Convención: Claves de Redis con scope de tenant
 
@@ -730,12 +789,211 @@ Hasta entonces: code review manual con esta convención como referencia.
 
 **Fecha:** 2026-09-08
 **Estado:** Aceptado — en ejecución
+=======
+<file path=".claude/checklists/deploy-railway.md">
+# Checklist: Deploy Railway — ecosistema-ms
+
+**Última actualización:** 2026-09-07
+
+---
+
+## Variables por servicio — mínimo para funcionar
+
+### Todos los servicios
+```
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://...
+REDIS_ENABLED=true
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+ALLOWED_ORIGINS=https://tu-front.railway.app
+INTERNAL_API_KEY=<openssl rand -hex 32>   ← ADR-008, misma en los 5 servicios
+```
+
+### chatia-backend (adicionales)
+```
+GROQ_API_KEY=...
+ANALYTICS_GRPC_URL=analytics-backend.railway.internal:5004
+```
+
+### pasarelapagos-backend (adicionales)
+```
+WEBHOOK_SIGNING_SECRET=...
+TENANT_ID=welver
+```
+
+### workers-backend (adicionales)
+```
+CHATIA_GRPC_URL=chatia-backend.railway.internal:5001
+NOTIF_GRPC_URL=notificaciones-backend.railway.internal:5003
+ANALYTICS_GRPC_URL=analytics-backend.railway.internal:5004
+```
+
+---
+
+## Conectar superadmin — bajar mocks de a uno
+
+Una vez que los 5 servicios tienen `INTERNAL_API_KEY`:
+
+```bash
+# 1. Health extendido — sin auth
+curl https://chatia-backend.railway.app/api/v1/health/extended
+# Esperado: { "status": "ok"|"degraded"|"down", "db": true, ... }
+
+# 2. Endpoint interno — con clave
+curl -H "x-internal-api-key: $INTERNAL_API_KEY" \
+  "https://chatia-backend.railway.app/internal/conversations/escalated?ecosystemId=welver"
+# Esperado: array de conversaciones (puede estar vacío si no hay escaladas)
+
+# 3. Si OK → en superadmin Railway dashboard:
+CHATIA_INTERNAL_URL=http://chatia-backend.railway.internal:3000
+# → DemoBadge de chatia desaparece automáticamente en el superadmin
+```
+
+Repetir en orden: chatia → pasarela → notificaciones → analytics → workers
+
+---
+
+## Variables superadmin (grupojl-control-backend)
+
+```
+CHATIA_INTERNAL_URL=http://chatia-backend.railway.internal:3000
+PASARELA_INTERNAL_URL=http://pasarelapagos-backend.railway.internal:3001
+NOTIFICACIONES_INTERNAL_URL=http://notificaciones-backend.railway.internal:3002
+ANALYTICS_INTERNAL_URL=http://analytics-backend.railway.internal:3003
+WORKERS_INTERNAL_URL=http://workers-backend.railway.internal:3004
+INTERNAL_API_KEY=<misma-clave-que-los-5-ms>
+```
+
+---
+
+## railway.json por servicio
+
+```json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "<servicio>/Dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
+```
+
+---
+
+## Verificación pre-deploy
+
+```bash
+pnpm -r build        # 0 errores TypeScript
+git push origin main # Railway deploya automáticamente
+```
+</file>
+
+<file path=".claude/contracts/internal-api.md">
+# Contratos Internal API — welver
+
+> **Estado (2026-09-07):** endpoints implementados en `realsass-sass-back`.
+> Pendiente: migración `add-org-status` + variable `INTERNAL_API_KEY` en Railway.
+
+---
+
+## Auth
+
+```
+Header:   x-internal-api-key: <INTERNAL_API_KEY>
+Env var:  INTERNAL_API_KEY
+Fallo:    401 Unauthorized
+Guard:    InternalApiKeyGuard (src/common/guards/internal-api-key.guard.ts)
+```
+
+Diferente del `api-key.guard.ts` existente (ese es para tenants externos).
+
+---
+
+## Endpoints implementados
+
+### GET /api/v1/health/extended
+
+Sin auth. Consumido por el superadmin para el Command Center.
+
+```ts
+interface ExtendedHealth {
+  status:          'ok' | 'degraded' | 'down';
+  db:              boolean;
+  redis:           boolean;
+  circuitBreakers: Array<{ key: string; status: 'CLOSED' | 'OPEN' | 'HALF_OPEN' }>;
+  dlqDepth:        Record<string, number>;
+}
+```
+
+sass-back no tiene circuit breakers propios — `circuitBreakers: []` siempre.
+
+---
+
+### GET /internal/organizations
+
+Query params:
+- `ecosystemId?` — aceptado pero no filtra (welver es un único ecosistema)
+- `status?` — `ACTIVE | SUSPENDED | BLOCKED`
+- `plan?` — aceptado pero no filtra (campo plan no existe en schema aún)
+- `page?` — default 1
+- `limit?` — default 20, max 100
+
+Retorna:
+```ts
+{
+  data: Array<{
+    id, name, slug, ecosystemId: 'welver', plan: 'STANDARD',
+    status: OrgStatus, ownerEmail, ownerName,
+    collaboratorsCount, enabledProducts, createdAt, updatedAt,
+    lastPaymentAt: null,      // pendiente integración chatia
+    activeConversations: 0,   // pendiente integración chatia
+  }>,
+  meta: { total, page, limit, pages }
+}
+```
+
+---
+
+### GET /internal/organizations/:id
+
+Retorna el detalle completo con `collaborators`, `activeTheme` y `webhooks`.
+
+---
+
+### POST /internal/organizations/:id/suspend
+
+Body: `{ reason: string }` — mínimo 10 caracteres.
+El superadmin registra `AdminAction` antes de llamar este endpoint.
+Retorna `{ success: true, previousStatus, newStatus: 'SUSPENDED', reason }`.
+
+---
+
+### POST /internal/organizations/:id/unsuspend
+
+Body: `{ reason: string }` — mínimo 10 caracteres.
+No reactiva orgs con `status = BLOCKED`.
+Retorna `{ success: true, previousStatus, newStatus: 'ACTIVE', reason }`.
+</file>
+
+<file path=".claude/decisions/ADR-010-internal-api-superadmin.md">
+# ADR-010: Internal API — endpoints /internal/organizations para superadmin
+
+**Fecha:** 2026-09-07
+**Estado:** Aceptado — implementado y verificado en XML 2026-09-07
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 **Repo:** grupojl/welver
 
 ---
 
 ## Contexto
 
+<<<<<<< HEAD
 Sesión del 2026-09-08: el monorepo welver está a 7.8/10 — Top 10% Latam.
 El objetivo de esta sesión es cerrar todos los gaps de código y estructura
 que pueden resolverse sin tests ni observabilidad, llevando el sistema al
@@ -750,11 +1008,20 @@ máximo posible en esas dimensiones.
 | Escalón 3 — Infra | 6/10 | Falta rate limiting · Helmet no verificado · Solo puerto 3000 no verificado |
 | Escalón 4 — DB | 8/10 | Índices organizationId no verificados · prisma migrate deploy no en Dockerfiles |
 | Escalón 10 — Async | 7/10 | Redis cache keys sin scope de organizationId |
+=======
+El superadmin (grupojl/grupojl-control) tiene el `WelverClient` con los
+endpoints `/internal/organizations/*` mockados (ADR-003 grupojl-control).
+Para bajar el mock y conectar con datos reales, `realsass-sass-back` debe
+exponer esos endpoints.
+
+El contrato exacto está en `.claude/contracts/internal-api.md` del superadmin.
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 ---
 
 ## Decisión
 
+<<<<<<< HEAD
 Ejecutar en una única sesión todos los cambios de código, configuración
 e infraestructura que llevan welver al 10/10 en código y estructura.
 
@@ -829,11 +1096,104 @@ y correctitud. El orden debe ir de mayor a menor riesgo, no de menor a mayor esf
 **"Dejar el noImplicitAny false en sass-back"** — descartado. Es un agujero
 en la seguridad de tipos del servicio que maneja identidad y permisos.
 Un `any` implícito en auth o en collaborators puede silenciar un bug crítico.
+=======
+Agregar en `realsass-sass-back`:
+
+1. **`InternalApiKeyGuard`** en `src/common/guards/internal-api-key.guard.ts`
+   Verifica el header `x-internal-api-key` contra `INTERNAL_API_KEY`.
+   Fail-secure: si la env var no está → rechaza todo (401).
+   Diferente del `api-key.guard.ts` existente (ese es para tenants externos).
+
+2. **`GET /api/v1/health/extended`** — sin auth, público.
+   Shape idéntico al de ecosistema-ms para que el superadmin los consuma igual.
+   El `/api/v1/health` original (Railway) no se modifica.
+
+3. **`InternalModule`** en `src/internal/` con 4 endpoints:
+   ```
+   GET  /internal/organizations                         → lista con filtros
+   GET  /internal/organizations/:id                     → detalle
+   POST /internal/organizations/:id/suspend             → acción
+   POST /internal/organizations/:id/unsuspend           → acción
+   ```
+
+4. **Campo `status` en modelo `Organization`** (Prisma):
+   El schema actual no tiene `status`. El superadmin lo necesita para filtrar
+   y mostrar ACTIVE / SUSPENDED / BLOCKED.
+   Migración: `pnpm --filter realsass-sass-back prisma migrate dev --name add-org-status`
+
+---
+
+## Por qué InternalModule en sass-back y no en ecommerce-back
+
+El superadmin gestiona organizaciones como entidades de identidad (quién puede
+usar el sistema, plan, estado de suspensión). Esa lógica vive en sass-back.
+ecommerce-back gestiona tienda — no sabe nada de planes ni suspensiones.
+
+---
+
+## Por qué no reutilizar OrganizationsService existente
+
+`OrganizationsService` está diseñado para operaciones de la org propia del
+usuario autenticado (Firebase). Los endpoints internos del superadmin necesitan
+acceso cross-org sin Firebase. Usar `PrismaService` directamente en los
+controllers internos es correcto — estos controllers no son de negocio de la org,
+son de administración global. No viola Domain/Repository porque no son el dominio
+del tenant.
+
+---
+
+## Relación con el esquema Organization
+
+```prisma
+model Organization {
+  // ... campos existentes ...
+  status  OrgStatus  @default(ACTIVE)  ← NUEVO
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+```
+
+La suspensión es reversible. El bloqueo es permanente (uso futuro).
+El guard de auth del sass-back debe verificar `status !== SUSPENDED` en el
+`TenantGuard` — agregar como DT-016 (deuda consciente, no bloquea este ADR).
+
+---
+
+## Auth del endpoint interno
+
+```
+Header:   x-internal-api-key: <INTERNAL_API_KEY>
+Env var:  INTERNAL_API_KEY
+Fallo:    401 Unauthorized
+```
+
+Misma clave que en ecosistema-ms — un único secreto compartido con el superadmin.
+En Railway: configurar la misma clave en ambos proyectos.
+
+---
+
+## Variables de entorno nuevas
+
+```
+INTERNAL_API_KEY=<shared-with-superadmin>
+```
+
+En el superadmin:
+```
+WELVER_INTERNAL_URL=http://realsass-sass-back.railway.internal:3000
+INTERNAL_API_KEY=<misma-clave>
+```
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 ---
 
 ## Consecuencias
 
+<<<<<<< HEAD
 **Al completar:**
 - `tsc --noEmit` pasa sin errores con strict completo en todos los servicios
 - Los backs no arrancan con variables faltantes (fail-fast al inicio)
@@ -914,6 +1274,176 @@ typecheck + build por servicio con path filters.
 - HydrationBoundary (Frontend 2: 9→10) → sprint S4-D
 - Tests 85% cobertura → sprint S4-E+F
 - Observabilidad → excluido
+=======
+**Ganancia:** WelverClient del superadmin puede conectarse a datos reales
+configurando `WELVER_INTERNAL_URL` — sin tocar código.
+
+**Deuda consciente (DT-016):** `TenantGuard` no verifica `org.status`.
+Una org suspendida puede seguir autenticándose mientras no se agregue esa
+verificación. Prioridad: S4 (antes de tener suspensiones reales en prod).
+
+**Migración requerida:** el campo `status` en Organization requiere ejecutar
+`prisma migrate dev` localmente y `prisma migrate deploy` en Railway.
+</file>
+
+<file path="realsass-sass-back/src/common/guards/internal-api-key.guard.ts">
+// realsass-sass-back/src/common/guards/internal-api-key.guard.ts
+// ADR-010 — guard para endpoints /internal/*.
+// Diferente del api-key.guard.ts existente (ese verifica keys de tenants).
+// Este verifica la clave compartida con el superadmin de GrupoJL.
+import {
+  Injectable, CanActivate, ExecutionContext, UnauthorizedException,
+} from '@nestjs/common';
+import type { Request } from 'express';
+⋮----
+/**
+ * Verifica el header x-internal-api-key contra la env var INTERNAL_API_KEY.
+ * Fail-secure: si INTERNAL_API_KEY no está configurada → rechaza todo.
+ */
+⋮----
+export class InternalApiKeyGuard implements CanActivate
+⋮----
+constructor()
+⋮----
+canActivate(ctx: ExecutionContext): boolean
+</file>
+
+<file path="realsass-sass-back/src/common/pipes/zod-validation.pipe.ts">
+// realsass-sass-back/src/common/pipes/zod-validation.pipe.ts
+// Pipe de validación Zod inline — patrón ecosistema-ms (ADR-001)
+import { PipeTransform, ArgumentMetadata, BadRequestException, Injectable } from '@nestjs/common';
+import { ZodSchema, ZodError } from 'zod';
+⋮----
+export class ZodValidationPipe<T> implements PipeTransform
+⋮----
+constructor(private readonly schema: ZodSchema<T>)
+⋮----
+transform(value: unknown, _: ArgumentMetadata): T
+</file>
+
+<file path="realsass-sass-back/src/health/health-extended.controller.ts">
+// realsass-sass-back/src/health/health-extended.controller.ts
+// ADR-010 — /api/v1/health/extended para superadmin.
+// El /api/v1/health original (Railway healthcheck) NO se toca.
+// sass-back no tiene circuit breakers — solo DB y Redis.
+import { Controller, Get } from '@nestjs/common';
+import { Public }          from '@real/auth-server';
+import { PrismaService }   from '../prisma/prisma.service';
+import { RedisService }    from '../redis/redis.service';
+⋮----
+export class HealthExtendedController
+⋮----
+constructor(
+⋮----
+/**
+   * GET /api/v1/health/extended
+   * Retorna estado extendido que el superadmin consume para el Command Center.
+   * Shape idéntico al de ecosistema-ms para que WelverClient lo maneje igual.
+   */
+⋮----
+async extended(): Promise<
+⋮----
+// sass-back no tiene circuit breakers propios
+// El webhook-delivery.processor usa reintentos BullMQ nativos, no opossum
+</file>
+
+<file path="realsass-sass-back/src/internal/internal-organizations.controller.ts">
+// realsass-sass-back/src/internal/internal-organizations.controller.ts
+// ADR-010 — endpoints de organizaciones para superadmin (GrupoJL).
+//
+// Por qué PrismaService directo y no OrganizationsService:
+//   OrganizationsService opera en el contexto de un usuario autenticado Firebase
+//   (busca por firebaseUid, filtra por userId). Los endpoints internos del
+//   superadmin necesitan acceso cross-org sin Firebase. El domain layer del
+//   tenant no aplica aquí — estos son endpoints de administración global.
+//
+// Shapes exactos: ver .claude/contracts/internal-api.md (grupojl-control)
+import {
+  Controller, Get, Post, Param, Query, Body,
+  UseGuards, HttpCode, HttpStatus,
+} from '@nestjs/common';
+import { ApiTags }               from '@nestjs/swagger';
+import { InternalApiKeyGuard }   from '../common/guards/internal-api-key.guard';
+import { PrismaService }         from '../prisma/prisma.service';
+import { ZodValidationPipe }     from '../common/pipes/zod-validation.pipe';
+import { z }                     from 'zod';
+⋮----
+// ── Schemas de validación ──────────────────────────────────────────────────
+⋮----
+// welver tiene un único ecosistema — el parámetro se acepta pero no filtra
+// (en el futuro, si welver tiene multi-ecosistema, filtrar aquí)
+⋮----
+type ListOrgsInput = z.infer<typeof ListOrgsSchema>;
+⋮----
+type SuspendInput = z.infer<typeof SuspendSchema>;
+⋮----
+// ── Controller ─────────────────────────────────────────────────────────────
+⋮----
+export class InternalOrganizationsController
+⋮----
+constructor(private readonly prisma: PrismaService)
+⋮----
+/**
+   * GET /internal/organizations
+   * Lista paginada con filtros opcionales por status y plan.
+   * El superadmin usa esto en /organizations con filtros de ecosistema.
+   */
+⋮----
+async list(
+    @Query(new ZodValidationPipe(ListOrgsSchema)) q: ListOrgsInput,
+)
+⋮----
+// plan no existe como campo en el schema — usar enabledProducts como proxy
+// cuando se agregue un campo plan real, actualizar este filtro
+⋮----
+ecosystemId:        'welver',     // identificador del ecosistema en el superadmin
+plan:               'STANDARD',   // DT: agregar campo plan al schema
+⋮----
+// lastPaymentAt no existe en el schema actual — deuda pendiente
+⋮----
+activeConversations: 0, // vendrá de chatia-backend cuando se integre
+⋮----
+/**
+   * GET /internal/organizations/:id
+   * Detalle de una organización. El superadmin lo usa en Organization View.
+   */
+⋮----
+async findOne(@Param('id') id: string)
+⋮----
+// Datos de chatia/pagos vendrán de los otros clientes del superadmin
+⋮----
+/**
+   * POST /internal/organizations/:id/suspend
+   * Suspende una organización. Requiere reason de al menos 10 caracteres.
+   * El superadmin registra un AdminAction antes de llamar este endpoint.
+   */
+⋮----
+async suspend(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(SuspendSchema)) body: SuspendInput,
+)
+⋮----
+/**
+   * POST /internal/organizations/:id/unsuspend
+   * Reactiva una organización suspendida.
+   */
+⋮----
+async unsuspend(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(SuspendSchema)) body: SuspendInput,
+)
+</file>
+
+<file path="realsass-sass-back/src/internal/internal.module.ts">
+// realsass-sass-back/src/internal/internal.module.ts
+// ADR-010 — módulo de endpoints internos para superadmin.
+// PrismaModule es @Global() en sass-back — no necesita importarse aquí.
+import { Module }                              from '@nestjs/common';
+import { InternalOrganizationsController }     from './internal-organizations.controller';
+import { InternalApiKeyGuard }                 from '../common/guards/internal-api-key.guard';
+⋮----
+export class InternalModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path=".claude/architecture/01-backend-capas.md">
@@ -941,6 +1471,101 @@ typecheck + build por servicio con path filters.
 Todos los módulos de sass-back siguen la misma estructura.
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/checklists/backend-capa-1-auth.md">
+# Backend Capa 1 — Auth/Tenant resolution
+# Checklist 10/10
+
+**Score actual: 8.5/10 — nivel Shopify plataforma**
+**Score objetivo: 10/10 — nivel Stripe/Cloudflare**
+
+## ✅ Completado
+
+- [x] `createTrpcAuthMiddleware` centralizado en `@real/auth-server`
+- [x] Cookies HttpOnly `__session` — ADR-004 implementado
+- [x] `POST /auth/session` + `DELETE /auth/session` con `cookieParser`
+- [x] `FirebaseAuthGuard` + `TenantGuard` + `RolesGuard` como `APP_GUARD` global
+- [x] Custom claims Firebase (ADR-003) — refresh proactivo 55 min
+- [x] `SessionService` — revocación server-side real via `revokeRefreshTokens`
+- [x] CORS con `ALLOWED_ORIGINS` explícito — sin wildcard `*`
+
+## ⏳ Pendiente para 10/10
+
+### Tests (S4)
+- [ ] Unit test `FirebaseAuthGuard` — token válido, token expirado, token revocado
+- [ ] Unit test `TenantGuard` — org activa, org inexistente, colaborador sin acceso
+- [ ] Unit test `SessionService` — create, verify, revoke
+- [ ] Integration test: request sin cookie → 401; con cookie válida → 200
+- [ ] Integration test: request con cookie revocada → 401
+
+### Enforcement CI (S4)
+- [ ] `dependency-cruiser` rule `no-local-firebase-verify`
+  → Falla el build si alguien reimplementa verificación Firebase fuera de `@real/auth-server`
+
+### Decisiones de degradación (documentar antes de lanzamiento)
+- [ ] ¿Qué hace el back si Firebase Admin SDK no está disponible? → 503 o 401
+- [ ] ¿Health check devuelve `degraded` o `down` si Firebase falla?
+- [ ] ¿Qué pasa si `OrganizationsClientService` tarda > 2s en resolver tenant?
+
+## Referencia de archivos
+
+- `packages/auth-server/src/middleware/create-trpc-auth-middleware.ts`
+- `packages/auth-server/src/guards/firebase-auth.guard.ts`
+- `packages/auth-server/src/session/session.service.ts`
+- `packages/auth-server/src/session/auth-session.controller.ts`
+- `realsass-sass-back/src/main.ts` — cookieParser + CORS
+- `decisions/ADR-003-custom-claims.md`
+- `decisions/ADR-004-auth-session-cookies.md`
+</file>
+
+<file path=".claude/checklists/backend-capa-2-router.md">
+# Backend Capa 2 — Router/Contrato Zod
+# Checklist 10/10
+
+**Score actual: 7/10 — nivel Rappi/Mercado Libre**
+**Score objetivo: 10/10 — nivel Stripe**
+
+## ✅ Completado
+
+- [x] Todo input nuevo usa schema Zod inline junto al router
+- [x] Cero DTOs nuevos con `class-validator`
+- [x] 11 routers tRPC en sass-back — todos los dominios cubiertos
+- [x] 4 routers tRPC en ecommerce-back (adminCatalog, adminInventory, adminOrders, customer)
+
+## ⏳ Pendiente para 10/10
+
+### Eliminar REST legacy ecommerce-back (ADR-005 — BLOQUEANTE)
+- [ ] `catalog.controller.ts` → ya existe `adminCatalog.*` tRPC
+- [ ] `inventory.controller.ts` → ya existe `adminInventory.*` tRPC
+- [ ] `orders.controller.ts` + `checkout.controller.ts` → ya existe `adminOrders.*` tRPC
+- [ ] `cart.controller.ts` → ya existe `customer.*` tRPC
+- [ ] `customers.controller.ts` → agregar `customer.identify` procedure
+- [ ] `store.controller.ts` → agregar `customer.resolveStore` procedure
+- [ ] `public-catalog.controller.ts` → agregar procedures en `customer.*`
+- [ ] `activity.controller.ts` → evaluar si tiene consumidor activo
+
+### Después de eliminar controllers
+- [ ] Eliminar DTOs class-validator de ecommerce-back
+- [ ] Eliminar `organizations-client/types/organization-access.types.ts` (duplicado de `@real/auth-server`)
+
+### Enforcement CI (S4)
+- [ ] ESLint rule `@real/no-new-class-validator`
+  → Falla si alguien agrega un DTO con class-validator en código nuevo
+
+## Regla dura
+
+Un DTO nuevo con `class-validator` en código post-migración es un bug de arquitectura.
+Todo input nuevo = schema Zod colocado junto al router.
+
+## Referencia de archivos
+
+- `realsass-ecommerce-back/src/trpc/routers/` — routers existentes
+- `realsass-ecommerce-back/src/*/` — controllers a eliminar
+- `decisions/ADR-005-rest-to-trpc.md`
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/checklists/backend-capa-5-approuter.md">
 # Backend Capa 5 — Contrato AppRouter tipado
 # Checklist 10/10
@@ -1087,6 +1712,51 @@ modulo/
 - [x] JSONB casts marcados con // @real/jsonb-cast
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/checklists/frontend-capa-1-fetch.md">
+# Frontend Capa 1 — Fetch tRPC exclusivo
+# Checklist 10/10
+
+**Score actual: 7.5/10 — nivel Notion/Linear**
+**Score objetivo: 10/10 — nivel Vercel**
+
+## ✅ Completado
+
+- [x] tRPC exclusivo en sass-front y dashboard-front
+- [x] `credentials: include` — cookie `__session` viaja automáticamente
+- [x] Excepción técnica documentada: `POST/DELETE /auth/session` — ADR-004
+- [x] `chat-ia-client.ts` documentado con TODO explícito (excepción temporal)
+- [x] Sin `lib/api.ts`, `lib/types.ts`, `lib/firebase.ts` en sass-front
+
+## ⏳ Pendiente para 10/10
+
+### ecommerce-front — migración a tRPC server caller (BLOQUEANTE)
+- [ ] Agregar en ecommerce-back: `customer.resolveStore` procedure
+- [ ] Agregar en ecommerce-back: `customer.identify` procedure
+- [ ] Agregar en ecommerce-back: `customer.getProducts` / `customer.getCategories`
+- [x] Reemplazar `lib/store/client.ts` → `createServerCaller().customer.*`
+- [x] Reemplazar `lib/store/resolver.ts` → `customer.resolveStore`
+- [x] lib/store/ migrado a tRPC server caller `identifyCustomer()` → `customer.identify`
+- [ ] Migrar páginas legacy `/categoria/` y `/products/` a `/tienda/[slug]/`
+- [ ] Eliminar `lib/ecommerce/index.ts` (shim) y `lib/store/client.ts`
+
+### Modelo Server/Client Components (S4)
+- [ ] Server Components usan `createServerCaller()` tRPC — no fetch manual
+- [ ] `<HydrationBoundary>` para pasar datos del server al client sin re-fetch
+- [ ] Client Components rehidratan con misma queryKey — cero fetch propio
+
+### Enforcement CI (S4)
+- [ ] ESLint rule `@real/no-bare-fetch`
+  → Falla si hay `fetch()` sin comentario `// TODO(S-x): migrar a tRPC`
+
+## Regla dura
+
+Todo fetch manual sin justificación documentada es un bug de arquitectura.
+Excepción permanente: `POST/DELETE /auth/session` — bootstrap de cookies HttpOnly (ADR-004).
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/checklists/frontend-capa-2-tanstack.md">
 # Frontend Capa 2 — TanStack Query
 # Checklist 10/10
@@ -1122,6 +1792,85 @@ Todo dato de servidor tiene una `queryKey` registrada y vive en TanStack Query.
 Si un dato existe tanto en un store Zustand como en una queryKey → bug de diseño.
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/checklists/frontend-capa-3-zustand.md">
+# Frontend Capa 3 — Zustand (estado UI puro)
+# Checklist 10/10
+
+**Score actual: 8.5/10 — nivel Notion/Figma**
+**Score objetivo: 10/10**
+
+## ✅ Completado
+
+- [x] `useShoppingBagStore` — modal open/close (ecommerce-front)
+- [x] `useSidebarStore` — sidebar mobile open/close (dashboard-front)
+- [x] `useUIStore` — login modal + bottom tab + mobile menu (sass-front)
+- [x] Stores contienen solo estado UI puro — sin datos de servidor duplicados
+
+## ⏳ Pendiente para 10/10
+
+### Enforcement (S4)
+- [ ] Lint rule o code review check: campo en store que también existe en queryKey → bug
+- [ ] Documentar qué estado va a Zustand vs TanStack Query en `conventions/state.md`
+
+### Mejoras opcionales (S4)
+- [ ] `zustand/middleware persist` para preferencias de UI que deben sobrevivir recarga
+  → Ejemplos: tema seleccionado, sidebar colapsado/expandido por el usuario
+  → Solo para preferencias — nunca para datos de servidor
+
+## Regla dura
+
+Zustand es para estado de UI puro: open/close, tabs activos, sidebar.
+El dato (carrito, perfil, config) vive en TanStack Query — nunca duplicado en Zustand.
+</file>
+
+<file path=".claude/checklists/frontend-capa-4-presentacion.md">
+# Frontend Capa 4 — Presentación (componentes sin mocks)
+# Checklist 10/10
+
+**Score actual: 6/10 — nivel startup madura**
+**Score objetivo: 10/10 — nivel Shopify storefront**
+
+## ✅ Completado
+
+- [x] Skeleton + ErrorState + data — 3 estados en páginas migradas
+- [x] `error.tsx` global en raíz de cada app (error boundary Next.js)
+- [x] `@real/ui` como fuente única — 33 componentes, sin duplicación entre fronts
+- [x] Sin arrays literales inline con datos de producción
+
+## ⏳ Pendiente para 10/10
+
+### Mocks bloqueados por servicios externos
+- [ ] `checkout-flow.tsx` — simula WebAuthn → bloqueado hasta `pagos-back`
+- [ ] `lib/adapters/correo-adapter.ts` / `envia-adapter.ts` / `welivery-adapter.ts`
+  → stubs con pricing hardcodeado → bloqueados hasta APIs de courier
+
+### Tests de componentes (S4)
+- [ ] React Testing Library: componentes críticos con los 3 estados
+  → loading (skeleton visible), error (mensaje visible), data (contenido correcto)
+- [ ] Vitest: unit tests de funciones de utilidad (formatters, validators)
+- [ ] Playwright E2E: flujo completo de compra en ecommerce-front
+- [ ] Playwright E2E: flujo de invitación de colaborador en sass-front
+
+### Enforcement CI (S4)
+- [ ] ESLint rule `@real/no-inline-mock-data`
+  → Detecta arrays con > 2 objetos literales en componentes fuera de `*.stories.tsx`
+
+## Contrato de UI — los 3 estados son obligatorios
+
+```tsx
+// ✅ CORRECTO
+if (isLoading) return <Skeleton />
+if (error)     return <ErrorState message={getErrorMessage(error)} />
+return <ComponenteConDatos data={data} />
+
+// ❌ PROHIBIDO — estado de error ignorado
+return <div>{data?.items?.map(...) ?? null}</div>
+```
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/checklists/frontend-capa-5-auth.md">
 # Frontend Capa 5 — Auth compartido
 # Checklist 10/10
@@ -1160,6 +1909,54 @@ Un import de `firebase/auth` o `firebase/app` directo en un componente de págin
 es un bypass del contrato de `@real/auth-client`. Se bloquea en code review.
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/checklists/README.md">
+# Checklists 10/10 por capa
+
+Cada archivo es la guía para llevar esa capa al máximo nivel.
+Estado actual y nivel empresarial comparativo incluidos.
+
+## Backend
+
+| Capa | Archivo | Score actual | Nivel |
+|---|---|---|---|
+| 1 — Auth/Tenant | `backend-capa-1-auth.md` | 8.5/10 | Shopify plataforma |
+| 2 — Router/Zod | `backend-capa-2-router.md` | 7/10 | Rappi/MercadoLibre |
+| 3+4 — Domain/Repo | `backend-capas-3-4-domain-repo.md` | 9/10 | Stripe/Linear internos |
+| 5 — AppRouter tipado | `backend-capa-5-approuter.md` | 9.5/10 | Vercel/PlanetScale |
+| 6 — Multi-tenant | `backend-capa-6-multitenant.md` | 9/10 | Shopify multi-tenant |
+
+## Frontend
+
+| Capa | Archivo | Score actual | Nivel |
+|---|---|---|---|
+| 1 — Fetch tRPC | `frontend-capa-1-fetch.md` | 7.5/10 | Notion/Linear |
+| 2 — TanStack Query | `frontend-capa-2-tanstack.md` | 9/10 | Linear/Vercel |
+| 3 — Zustand | `frontend-capa-3-zustand.md` | 8.5/10 | Notion/Figma |
+| 4 — Presentación | `frontend-capa-4-presentacion.md` | 6/10 | Startup madura |
+| 5 — Auth compartido | `frontend-capa-5-auth.md` | 9.5/10 | Stripe/Auth0 |
+
+## Cómo usar estos archivos
+
+1. Al iniciar una sesión de trabajo, leer el checklist de la capa que se va a trabajar
+2. Los ítems `- [ ]` son tareas concretas para llegar a 10/10
+3. Los ítems `- [x]` están completos — no retroceder
+4. Los marcados con `S4` van al sprint S4 (tests + enforcement CI)
+5. Los marcados como `BLOQUEANTE` deben resolverse antes que cualquier S4
+
+## Progreso hacia 10/10
+
+Las tareas que más impacto tienen en el score global (en orden):
+
+1. **Eliminar controllers REST ecommerce-back** (Capa 2 back: 7→9)
+2. **ecommerce-front tRPC server caller** (Capa 1 front: 7.5→9.5)
+3. **Tests 85% cobertura** (todas las capas: +0.5 cada una)
+4. **Enforcement CI (dependency-cruiser + ESLint)** (todas: +0.5 cada una)
+5. **HydrationBoundary en Server Components** (Capa 2 front: 9→10)
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/contracts/organization-access.md">
 # Contrato: Organization Access (patrón canónico HTTP + cache)
 
@@ -1455,6 +2252,7 @@ correctamente en ese setup y rompe en runtime."*
 - Workspace: pnpm 10 workspaces con catalog único
 </file>
 
+<<<<<<< HEAD
 <file path=".claude/conventions/state.md">
 # Convención: estado del cliente — Zustand vs TanStack Query
 
@@ -1555,6 +2353,8 @@ grep -r "useQuery\|useMutation" --include="*.ts" ./*-front/hooks/
 En S4: ESLint rule `@real/no-server-data-in-zustand` detecta esto automáticamente.
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/conventions/testing.md">
 # Testing
 
@@ -2264,6 +3064,7 @@ Se bloquea en code review sin excepción. Los `// @real/jsonb-cast` son la
 - `decisions/ADR-001-permisos-jsonb.md` — contexto del JSONB en permisos
 </file>
 
+<<<<<<< HEAD
 <file path=".claude/decisions/ADR-008-eliminar-componentes-legacy-storefront.md">
 # ADR-008: Eliminar componentes legacy del storefront (dominio real-estate)
 
@@ -2666,6 +3467,8 @@ S4-G: ⏳ ESLint + dependency-cruiser rules
 - `decisions/ADR-007-eliminar-any.md` — toEntity() como base para tests de domain
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/decisions/TEMPLATE.md">
 # ADR-XXX: Título de la decisión
 
@@ -2698,14 +3501,20 @@ Archivos de código relevantes, PRs, discusiones.
 # Fase 1 — Desarrollo
 ## Escalones 1, 2, 4 — La base que hace cosmético todo lo demás
 
+<<<<<<< HEAD
 **Estado:** ✅ Completo (ADR-011, 2026-09-08)
 **Cuándo:** Completado — pasar a Fase 2
+=======
+**Estado:** 🟡 Avanzado — bloqueantes activos en Escalón 1
+**Cuándo:** Ahora — resolver bloqueantes antes de pasar a Fase 2
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 **Referentes:** Stripe (código) · Twelve-Factor App (config) · PlanetScale (DB)
 
 ---
 
 ## Escalón 1 — Código: Arquitectura y Calidad
 
+<<<<<<< HEAD
 ### Estado actual — 10/10
 
 | Ítem | Estado | Detalle |
@@ -2729,18 +3538,72 @@ grep -r "class-validator" realsass-ecommerce-back/src    # → 0 resultados
 grep -r "class-validator" realsass-sass-back/src         # → 0 resultados
 tsc --noEmit                                             # → 0 errores
 ```
+=======
+### Estado actual — 9/10
+
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| TypeScript strict | ✅ | ADR-007 implementado — `toEntity()` en 11 repositories de sass-back |
+| Domain/Repository sass-back | ✅ | 11 módulos con domain/ + repository/ |
+| Domain/Repository ecommerce-back | ⚠️ Parcial | Solo `catalog/` — cart, orders, customers, inventory pendientes |
+| tRPC exclusivo sass-back | ✅ | 11 routers, Zod inline, sin DTOs class-validator nuevos |
+| tRPC exclusivo ecommerce-back | ⚠️ BLOQUEANTE | Controllers REST legacy pendientes de eliminar (ADR-005) |
+| DTOs class-validator sass-back | ⚠️ Pendiente | Sobreviven en controllers REST legacy a eliminar |
+| Multi-tenant organizationId | ✅ | Respetado en todos los modelos |
+| Sin cross-service imports | ✅ | Dockerfile de cada servicio solo copia su carpeta + packages/ |
+| Sin `as any` repositories | ✅ | ADR-007 implementado |
+| ecommerce-front tRPC server caller | ⚠️ BLOQUEANTE | lib/store/client.ts usa fetch REST (ADR-006) |
+
+### Bloqueantes activos
+
+**[BLOQUEANTE-1] Eliminar controllers REST de ecommerce-back** (ADR-005)
+Los controllers REST de catalog, inventory, orders, cart, customers, store
+deben eliminarse — los routers tRPC ya existen y los reemplazan.
+→ Ver `.claude/checklists/backend-capa-2-router.md`
+→ Ver `.claude/decisions/ADR-005-rest-to-trpc.md`
+
+**[BLOQUEANTE-2] ecommerce-front → tRPC server caller** (ADR-006)
+`lib/store/client.ts`, `lib/store/resolver.ts`, `context/customer-context.tsx`
+usan fetch REST manual donde debe ir tRPC server caller.
+→ Ver `.claude/checklists/frontend-capa-1-fetch.md`
+
+### Pendiente no bloqueante
+
+- Domain/Repository en ecommerce-back: `cart/`, `orders/`, `customers/`, `inventory/`
+  → Ver `.claude/checklists/backend-capas-3-4-domain-repo.md`
+
+### Cómo saber que este escalón está completo
+
+- `grep -r "class-validator" realsass-ecommerce-back/src` → 0 resultados
+- `grep -r "class-validator" realsass-sass-back/src` → 0 resultados
+- `lib/store/client.ts` eliminado — reemplazado por tRPC server caller
+- `cart/`, `orders/`, `customers/` tienen domain/ + repository/
+- `tsc --noEmit` pasa en los 2 backs y los 3 fronts sin errores
+
+### Referente: por qué Stripe
+
+La API de Stripe es el estándar de ergonomía y tipado. Cada method retorna
+un tipo explícito, cada error está tipado, cada input validado con schema.
+En welver, el equivalente es: un ingeniero nuevo puede leer cualquier router
+tRPC y saber exactamente qué acepta, qué valida y qué retorna — sin preguntar.
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 ---
 
 ## Escalón 2 — Configuración y Entorno
 
+<<<<<<< HEAD
 ### Estado actual — 10/10
+=======
+### Estado actual — 9.5/10
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
 | Catalog único pnpm | ✅ | `catalog:` default — sin named catalogs (ADR-002) |
 | Variables por Dockerfile | ✅ | `ARG`/`ENV` declarados en cada Dockerfile |
 | Sin `.env` compartido | ✅ | Cada servicio declara sus propias vars |
+<<<<<<< HEAD
 | CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard |
 | `.env.example` por servicio | ✅ | Creados en ADR-011 |
 | Validación de env al arranque | ✅ | main.ts falla con mensaje claro si falta var — ADR-011 |
@@ -2753,11 +3616,28 @@ ls realsass-sass-back/.env.example        # debe existir
 ls realsass-ecommerce-back/.env.example   # debe existir
 # Arrancar sin DATABASE_URL → debe fallar con mensaje claro
 ```
+=======
+| CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard — sass-back no arranca sin él |
+| Secretos fuera del código | ✅ | Firebase private key via Railway env vars |
+| pnpm 10 + Node 24 | ✅ | Documentado en conventions/entorno.md |
+
+### Pendiente mínimo
+
+- [ ] Verificar que `.env.example` existe en cada servicio con todas las vars requeridas
+- [ ] Validación de env vars al arranque en cada `main.ts` — falla con mensaje claro si falta una var
+
+### Cómo saber que este escalón está completo
+
+- Cada servicio tiene `.env.example` completo y actualizado
+- El servicio falla en arranque con mensaje claro si falta una var obligatoria
+- `git grep -r "PRIVATE_KEY\|-----BEGIN" --include="*.ts"` → 0 resultados con valores reales
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 ---
 
 ## Escalón 4 — Base de Datos y Almacenamiento
 
+<<<<<<< HEAD
 ### Estado actual — 9/10
 
 | Ítem | Estado | Detalle |
@@ -2783,10 +3663,44 @@ grep "migrate deploy" realsass-sass-back/Dockerfile        # debe aparecer
 grep "migrate deploy" realsass-ecommerce-back/Dockerfile   # debe aparecer
 grep "organizationId" realsass-sass-back/prisma/schema.prisma | grep "@@index"
 ```
+=======
+### Estado actual — 8/10
+
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| Prisma ORM | ✅ | Schema declarativo, dos DBs separadas (sass + ecommerce) |
+| Migraciones versionadas | ✅ | `prisma/migrations/` en cada back |
+| DB separada por back | ✅ | `realsass-sass-back` y `realsass-ecommerce-back` tienen `DATABASE_URL` propia |
+| Multi-tenant `organizationId` | ✅ | En todos los modelos con datos de negocio |
+| Índices en `organizationId` | ⚠️ Verificar | Confirmar `@@index([organizationId])` en modelos de alta frecuencia |
+| Backups automáticos | ⚠️ Railway | Verificar política de backups y RPO resultante |
+| Pool de conexiones | ⚠️ Verificar | Con múltiples réplicas Railway, el pool puede ser cuello de botella |
+| `prisma migrate deploy` en Dockerfile | ⚠️ Verificar | Confirmar que migra antes del start, no después |
+
+### Qué hay que hacer
+
+1. **Verificar índices** — todo modelo con `organizationId` de alta frecuencia de consulta
+   debe tener `@@index([organizationId])`. Sin índice = query lento a escala.
+
+2. **Confirmar política de backups Railway** — documentar RPO resultante.
+
+3. **Confirmar orden en Dockerfile** — `prisma migrate deploy` antes del `CMD`.
+
+4. **Pool de conexiones** — documentar límite por servicio. Con N réplicas Railway
+   de cada back, el límite de conexiones de PostgreSQL es `N × pool_size`.
+
+### Cómo saber que este escalón está completo
+
+- Índices en `organizationId` confirmados en ambos schemas
+- `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
+- Backups automáticos confirmados con RPO documentado
+- Límites de pool documentados en `services/realsass-sass-back.md` y `services/realsass-ecommerce-back.md`
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path=".claude/lifecycle/02-fase-estabilizacion.md">
 # Fase 2 — Estabilización
+<<<<<<< HEAD
 
 **Estado:** 🟡 En progreso (ADR-012, 2026-09-08)
 
@@ -2812,6 +3726,164 @@ grep "organizationId" realsass-sass-back/prisma/schema.prisma | grep "@@index"
 | Rollback documentado | ❌ pendiente |
 
 ## Escalón 6 — Observabilidad — excluido por decisión
+=======
+## Escalones 3, 5, 6 — Antes de producción real
+
+**Estado:** 🔴 En curso — escalón 3 parcial, 5 y 6 no iniciados
+**Cuándo:** Antes de que el primer cliente real use el sistema
+**Referentes:** Cloudflare (infra) · Vercel/GitHub (CI/CD) · Datadog (observabilidad)
+
+---
+
+## Escalón 3 — Infraestructura y Red
+
+### Estado actual — Parcial
+
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| HTTPS | ✅ Railway | TLS automático en todos los servicios |
+| CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard en sass-back y ecommerce-back |
+| Cookies HttpOnly | ✅ | ADR-004 implementado — `__session` HttpOnly + SameSite=Strict |
+| Helmet | ⚠️ Verificar | Confirmar que `@nestjs/helmet` está activo en ambos backs |
+| Rate limiting | ❌ No implementado | Ningún back tiene rate limiting configurado |
+| Red privada Railway | ✅ | Los backs se comunican via URL privada Railway |
+| Firewall puertos | ⚠️ Verificar | Confirmar que solo el puerto 3000 es público en cada servicio |
+
+### Qué hay que hacer
+
+1. **Agregar Helmet** — en `main.ts` de cada back:
+   ```ts
+   import helmet from 'helmet';
+   app.use(helmet());
+   ```
+
+2. **Rate limiting** — con `@nestjs/throttler`:
+   - Límite general por IP en todos los endpoints
+   - Límite estricto en `POST /auth/session` — es el endpoint más sensible
+   - Límite por `organizationId` para endpoints de datos
+
+3. **Confirmar puertos Railway** — verificar que solo el 3000 (HTTP) es público.
+   El tRPC no necesita puertos adicionales — viaja sobre HTTP.
+
+### Cómo saber que este escalón está completo
+
+- Helmet activo en los 2 backs
+- Rate limiting activo en endpoints de auth y datos
+- `curl -I https://{servicio}.railway.app` muestra headers de seguridad
+
+---
+
+## Escalón 5 — CI/CD y Despliegues
+
+### Estado actual — ❌ No iniciado
+
+Railway hace deploy automático en push a main. Pero sin CI gate:
+un PR que rompe el build de un front puede llegar a producción.
+
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| Deploy automático Railway | ✅ | Push a main → deploy automático |
+| Typecheck en CI | ❌ | No hay GitHub Actions configurado |
+| Tests en CI | ❌ | No hay tests (S4 pendiente) |
+| Build gate en PR | ❌ | PRs pueden mergearse aunque rompan typecheck |
+| Rollback documentado | ❌ | No hay procedimiento documentado |
+
+### Qué hay que hacer
+
+1. **GitHub Actions por servicio** con path filters:
+
+   ```yaml
+   # .github/workflows/realsass-sass-back.yml
+   name: sass-back
+   on:
+     push:
+       paths:
+         - 'realsass-sass-back/**'
+         - 'packages/**'
+         - 'pnpm-workspace.yaml'
+   jobs:
+     ci:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - uses: pnpm/action-setup@v3
+           with: { version: 10 }
+         - run: pnpm install --frozen-lockfile
+         - run: pnpm --filter realsass-sass-back typecheck
+         - run: pnpm --filter realsass-sass-back build
+   ```
+
+2. **Un workflow por servicio** — 7 workflows:
+   `realsass-sass-back`, `realsass-ecommerce-back`, `realsass-sass-front`,
+   `realsass-dashboard-front`, `real-ecommerce-front`, `packages/auth-server`,
+   `packages/trpc`
+
+3. **Branch protection en GitHub** — main no permite merge si CI falla.
+
+4. **Typecheck cruzado** — cuando cambia un router tRPC de sass-back,
+   correr typecheck de los 3 fronts. Si un procedure cambió y rompe un front,
+   el PR no puede mergearse.
+
+5. **Rollback documentado** — Railway guarda el build anterior. Documentar
+   el procedimiento en `conventions/deploy.md`.
+
+### Cómo saber que este escalón está completo
+
+- 7 workflows de GitHub Actions activos
+- Un PR que rompe `tsc` no puede mergearse a main
+- Rollback documentado y probado al menos una vez
+
+---
+
+## Escalón 6 — Observabilidad y Operaciones
+
+### Estado actual — ❌ No iniciado (OpenTelemetry en roadmap S4)
+
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| Health checks | ✅ | `GET /health` en los 2 backs via `@nestjs/terminus` |
+| Logging estructurado | ⚠️ Verificar | Confirmar formato JSON vs texto plano |
+| Métricas Prometheus | ⚠️ Parcial | Dependencias en catalog pero sin configuración visible |
+| OpenTelemetry | ❌ S4 pendiente | `@opentelemetry/sdk-node` en catalog — no configurado |
+| Correlation ID | ❌ | Sin trazabilidad de requests entre backs |
+| Alertas | ❌ | Sin alertas cuando algo falla |
+| Dashboard | ❌ | Sin visibilidad del estado del sistema |
+
+### Qué hay que hacer
+
+1. **Logging JSON estructurado** — cada log debe incluir:
+   ```json
+   {
+     "level": "error",
+     "service": "realsass-sass-back",
+     "organizationId": "org_123",
+     "correlationId": "req_abc",
+     "message": "Organization not found",
+     "timestamp": "2026-09-01T00:00:00Z"
+   }
+   ```
+
+2. **Correlation ID en tRPC** — generar un `correlationId` en cada request
+   y propagarlo en llamadas HTTP entre backs (sass-back → ecommerce-back).
+
+3. **Métricas Prometheus** — activar la configuración que ya está en catalog:
+   - `http_requests_total` por endpoint y status
+   - `trpc_requests_total` por procedure y resultado
+   - `prisma_query_duration_seconds`
+
+4. **Health check mejorado** — el actual verifica Prisma + memoria.
+   Agregar verificación de Redis.
+
+5. **Alertas básicas** — Railway puede notificar cuando el health check falla.
+   Configurar notificación a email o Slack.
+
+### Cómo saber que este escalón está completo
+
+- Logs son JSON con `organizationId` y `correlationId`
+- Prometheus `/metrics` activo en los 2 backs
+- Un error en ecommerce-back es trazable hasta sass-back en los logs
+- Alerta configurada cuando `/health` falla
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path=".claude/lifecycle/03-fase-hardening.md">
@@ -3101,16 +4173,225 @@ grep "organizationId" realsass-sass-back/prisma/schema.prisma | grep "@@index"
 - Costo marginal documentado antes de cada campaña de adquisición
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/lifecycle/05-tasks.md">
+# Tasks — Cómo escalar a cada fase
+
+Checklist ejecutable para welver/. Cada task tiene ID, qué hacer y criterio de "done".
+En orden de ejecución dentro de cada fase.
+
+---
+
+## FASE 1 — Desarrollo (Escalones 1, 2, 4)
+
+### Escalón 1 — Código
+
+- [ ] **[E1-01]** Eliminar `CatalogController` (REST) de ecommerce-back
+  → Ya existe `adminCatalog.*` router tRPC
+  → Done cuando: el archivo no existe y `pnpm build` pasa
+
+- [ ] **[E1-02]** Eliminar `InventoryController` (REST) de ecommerce-back
+  → Ya existe `adminInventory.*` router tRPC
+
+- [ ] **[E1-03]** Eliminar `OrdersController` + `CheckoutController` (REST) de ecommerce-back
+  → Ya existe `adminOrders.*` router tRPC
+
+- [ ] **[E1-04]** Eliminar `CartController` (REST) de ecommerce-back
+  → Ya existe `customer.*` router tRPC
+
+- [ ] **[E1-05]** Migrar `CustomersController.identify` → procedure `customer.identify`
+  → Done cuando: el procedure existe y el front lo usa
+
+- [ ] **[E1-06]** Agregar `customer.resolveStore` procedure en ecommerce-back
+  → Reemplaza `GET /store/by-slug/:slug` REST
+  → Done cuando: ecommerce-front usa el procedure, no el endpoint REST
+
+- [ ] **[E1-07]** Migrar `lib/store/client.ts` en ecommerce-front a tRPC server caller
+  → Done cuando: el archivo no existe
+
+- [ ] **[E1-08]** Migrar `lib/store/resolver.ts` en ecommerce-front a tRPC server caller
+  → Done cuando: el archivo no existe
+
+- [ ] **[E1-09]** Migrar `context/customer-context.tsx` — `identifyCustomer()` → `trpc.customer.identify`
+  → Done cuando: sin llamadas fetch manuales en el archivo
+
+- [ ] **[E1-10]** Eliminar DTOs class-validator huérfanos de ecommerce-back (post-E1-01 a E1-04)
+  → Done cuando: `grep -r "class-validator" realsass-ecommerce-back/src` → 0 resultados
+
+- [ ] **[E1-11]** Eliminar DTOs class-validator huérfanos de sass-back
+  → `auth/dto/sync.dto.ts`, `organizations/dto/update-organization.dto.ts`, etc.
+  → Done cuando: `grep -r "class-validator" realsass-sass-back/src` → 0 resultados
+
+- [ ] **[E1-12]** Migrar `cart/` de ecommerce-back a Domain + Repository
+  → Molde: `catalog/` del mismo servicio
+  → Done cuando: `cart.service.ts` no importa `PrismaService`
+
+- [ ] **[E1-13]** Migrar `orders/` de ecommerce-back a Domain + Repository
+- [ ] **[E1-14]** Migrar `customers/` de ecommerce-back a Domain + Repository
+- [ ] **[E1-15]** Migrar `inventory/` de ecommerce-back a Domain + Repository
+
+- [ ] **[E1-16]** Verificar scope `organizationId` en todos los queries Prisma
+  → Comando: `grep -rn "findMany\|findFirst" realsass-ecommerce-back/src --include="*.ts" | grep -v "organizationId"`
+  → Done cuando: 0 queries de negocio sin scope de tenant
+
+### Escalón 2 — Configuración
+
+- [ ] **[E2-01]** Verificar ausencia de secretos en el repo
+  → `git grep -r "PRIVATE_KEY\|-----BEGIN" --include="*.ts"` → 0 resultados con valores reales
+
+- [ ] **[E2-02]** Crear `.env.example` en cada servicio (5 servicios)
+  → Incluir: `DATABASE_URL`, `REDIS_URL`, `FIREBASE_*`, `SASS_BACK_URL`, `ALLOWED_ORIGINS`
+
+- [ ] **[E2-03]** Agregar validación de env vars al arranque en `main.ts` de cada back
+  → Done cuando: el back falla con mensaje claro si falta una var obligatoria
+
+### Escalón 4 — Base de Datos
+
+- [ ] **[E4-01]** Auditar índices en schemas de Prisma — `@@index([organizationId])` en modelos de alta frecuencia
+  → Schemas: `realsass-sass-back/prisma/schema.prisma` y `realsass-ecommerce-back/prisma/schema.prisma`
+
+- [ ] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
+
+- [ ] **[E4-03]** Documentar política de backups Railway y RPO en `roadmap/deuda-tecnica.md`
+
+- [ ] **[E4-04]** Documentar límites de pool de conexiones por back en `services/*.md`
+
+---
+
+## FASE 2 — Estabilización (Escalones 3, 5, 6)
+
+### Escalón 3 — Infraestructura
+
+- [ ] **[E3-01]** Agregar `helmet` en `main.ts` de sass-back y ecommerce-back
+- [ ] **[E3-02]** Agregar `@nestjs/throttler` — rate limiting general por IP
+- [ ] **[E3-03]** Rate limiting estricto en `POST /auth/session` (10 req/min por IP)
+- [ ] **[E3-04]** Rate limiting en endpoint de identificación de clientes ecommerce
+- [ ] **[E3-05]** Confirmar que solo el puerto 3000 es público en cada servicio Railway
+
+### Escalón 5 — CI/CD
+
+- [ ] **[E5-01]** Crear `.github/workflows/realsass-sass-back.yml` — typecheck + build
+- [ ] **[E5-02]** Crear `.github/workflows/realsass-ecommerce-back.yml`
+- [ ] **[E5-03]** Crear `.github/workflows/realsass-sass-front.yml`
+- [ ] **[E5-04]** Crear `.github/workflows/realsass-dashboard-front.yml`
+- [ ] **[E5-05]** Crear `.github/workflows/real-ecommerce-front.yml`
+- [ ] **[E5-06]** Crear `.github/workflows/packages.yml` — typecheck de auth-server y trpc
+- [ ] **[E5-07]** Agregar workflow que corre typecheck de los 3 fronts cuando cambia un router tRPC
+- [ ] **[E5-08]** Configurar branch protection en GitHub main — CI obligatorio
+- [ ] **[E5-09]** Documentar procedimiento de rollback en `conventions/deploy.md`
+
+### Escalón 6 — Observabilidad
+
+- [ ] **[E6-01]** Estandarizar logging JSON: `service`, `organizationId`, `correlationId`, `level`, `message`, `timestamp`
+- [ ] **[E6-02]** Implementar propagación de `correlationId` en headers HTTP entre backs
+- [ ] **[E6-03]** Activar configuración de Prometheus/OpenTelemetry que está en catalog
+- [ ] **[E6-04]** Métricas estándar: `http_requests_total`, `trpc_requests_total`, `prisma_query_duration_seconds`
+- [ ] **[E6-05]** Mejorar health check: agregar verificación de Redis
+- [ ] **[E6-06]** Configurar alerta en Railway cuando `/health` falla
+
+---
+
+## FASE 3 — Hardening (Escalones 7, 8, 10)
+
+### Escalón 7 — Seguridad
+
+- [ ] **[E7-01]** Agregar `pnpm audit` en todos los workflows — fallar si hay CVE crítico
+- [ ] **[E7-02]** Configurar Dependabot en GitHub para alertas de vulnerabilidades
+- [ ] **[E7-03]** Auditar usos de `$queryRaw` en Prisma — verificar sin interpolación
+- [ ] **[E7-04]** Agregar logs de seguridad con campo `securityEvent: true`
+- [ ] **[E7-05]** Escribir runbook de respuesta a incidente de seguridad
+
+### Escalón 8 — Privacidad
+
+- [ ] **[E8-01]** Definir y documentar política de retención de datos por tipo
+- [ ] **[E8-02]** Documentar proceso de eliminación de datos a pedido
+- [ ] **[E8-03]** Verificar soft-delete en todos los modelos con datos de usuario
+- [ ] **[E8-04]** Confirmar cifrado en reposo de Railway PostgreSQL y documentarlo
+- [ ] **[E8-05]** Test de cross-tenant: request de org A no retorna datos de org B
+
+### Escalón 10 — Async
+
+- [ ] **[E10-01]** Auditar claves de Redis — todas deben incluir `organizationId` como prefijo
+- [ ] **[E10-02]** Instalar Bull Board para monitoreo de webhook delivery queue
+- [ ] **[E10-03]** Documentar plan de queue para órdenes cuando pagos-back exista
+- [ ] **[E10-04]** Confirmar Redis con persistencia AOF activa
+- [ ] **[E10-05]** Documentar TTL de caché por tipo de dato en `services/realsass-sass-back.md`
+
+---
+
+## FASE 4 — Escala (Escalones 9, 11, 12, 13)
+
+### Escalón 9 — Disaster Recovery
+
+- [ ] **[E9-01]** Definir RTO y RPO por servicio — documentar en este archivo
+- [ ] **[E9-02]** Probar restauración de backup de DB en staging — documentar resultado
+- [ ] **[E9-03]** Escribir runbook para los 3 escenarios más probables de falla
+- [ ] **[E9-04]** Ejecutar drill de recuperación (apagar sass-back) y documentar RTO real
+
+### Escalón 11 — Rendimiento
+
+- [ ] **[E11-01]** Medir latencias actuales: `p50`, `p95`, `p99` por procedure tRPC
+- [ ] **[E11-02]** Agregar `<HydrationBoundary>` en todos los Server Components con prefetch
+- [ ] **[E11-03]** Agregar paginación a todos los procedures de listado sin límite
+- [ ] **[E11-04]** Auditar queries lentas con `EXPLAIN ANALYZE` en ambas DBs
+- [ ] **[E11-05]** Configurar ISR en ecommerce-front para páginas de catálogo público
+
+### Escalón 12 — Alta Disponibilidad
+
+- [ ] **[E12-01]** Configurar 2+ réplicas de sass-back y ecommerce-back en Railway
+- [ ] **[E12-02]** Confirmar que Redis (no MemoryCache) es el caché principal antes de escalar réplicas
+- [ ] **[E12-03]** Implementar health check con 3 estados: ok / degraded / down
+- [ ] **[E12-04]** Chaos drill: apagar sass-back y documentar comportamiento de ecommerce-back
+- [ ] **[E12-05]** Chaos drill: cortar Redis y documentar fallback a MemoryCacheAdapter
+- [ ] **[E12-06]** Documentar comportamientos de degradación decididos en `architecture/00-principios.md`
+
+### Escalón 13 — FinOps
+
+- [ ] **[E13-01]** Configurar dashboard de costos por servicio en Railway
+- [ ] **[E13-02]** Calcular y documentar costo mensual por servicio
+- [ ] **[E13-03]** Configurar escalado automático en Railway para sass-back y ecommerce-back
+- [ ] **[E13-04]** Documentar costo marginal de agregar N organizaciones nuevas
+- [ ] **[E13-05]** Documentar decisión de TTL de caché como balance costo/frescura
+
+---
+
+## Resumen de progreso
+
+| Fase | Tasks totales | Completadas | % |
+|------|--------------|-------------|---|
+| Fase 1 — Desarrollo | 19 | 0 | 0% |
+| Fase 2 — Estabilización | 18 | 0 | 0% |
+| Fase 3 — Hardening | 15 | 0 | 0% |
+| Fase 4 — Escala | 17 | 0 | 0% |
+| **Total** | **69** | **0** | **0%** |
+
+Actualizar este resumen en cada sprint.
+Marcar `- [x]` cuando el criterio de "done" está cumplido, no antes.
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/lifecycle/README.md">
 # Lifecycle — Software de Clase Mundial
 
 Los 13 escalones que llevan welver/ al top 5-10% mundial.
+<<<<<<< HEAD
 **Última actualización:** 2026-09-08 (ADR-011)
+=======
+Organizados en 4 fases de construcción — en orden de ejecución, no de importancia.
+
+## Por qué este orden
+
+El error que mata proyectos es implementar el escalón 9 antes de tener sólido
+el escalón 1. Los escalones más altos son inútiles si los fundamentos fallan.
+Netflix tiene Chaos Engineering porque primero tuvo arquitectura limpia.
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 ## Las 4 fases
 
 | Fase | Cuándo | Escalones | Estado |
 |------|--------|-----------|--------|
+<<<<<<< HEAD
 | [Desarrollo](01-fase-desarrollo.md) | ✅ Completo | 1, 2, 4 | ✅ Completo |
 | [Estabilización](02-fase-estabilizacion.md) | Antes de producción | 3, 5, 6 | 🟡 En curso |
 | [Hardening](03-fase-hardening.md) | Primer ecosistema en prod | 7, 8, 10 | ⚪ Pendiente |
@@ -3130,15 +4411,52 @@ Los 13 escalones que llevan welver/ al top 5-10% mundial.
 | 8 | Cumplimiento Legal y Privacidad | Apple | Hardening | ⚪ Pendiente |
 | 9 | Recuperación ante Desastres | AWS | Escala | ⚪ Pendiente |
 | 10 | Datos Masivos y Async | Kafka · Redis | Hardening | 🟡 8/10 |
+=======
+| [Desarrollo](01-fase-desarrollo.md) | Ahora | 1, 2, 4 | 🟡 Avanzado |
+| [Estabilización](02-fase-estabilizacion.md) | Antes de producción | 3, 5, 6 | 🔴 En curso |
+| [Hardening](03-fase-hardening.md) | Primer ecosistema en prod | 7, 8, 10 | ⚪ Pendiente |
+| [Escala](04-fase-escala.md) | 3 ecosistemas simultáneos | 9, 11, 12, 13 | ⚪ Pendiente |
+
+## Los 13 escalones completos
+
+| # | Escalón | Referente mundial | Fase | Estado welver |
+|---|---------|-------------------|------|---------------|
+| 1 | Código — Arquitectura y Calidad | Stripe · SQLite | Desarrollo | 🟡 9/10 |
+| 2 | Configuración y Entorno | Twelve-Factor App · Heroku | Desarrollo | ✅ 9.5/10 |
+| 3 | Infraestructura y Red | Cloudflare | Estabilización | ⚠️ Parcial |
+| 4 | Base de Datos y Almacenamiento | PlanetScale · Supabase | Desarrollo | 🟡 8/10 |
+| 5 | CI/CD y Despliegues | Vercel · GitHub | Estabilización | ❌ No iniciado |
+| 6 | Observabilidad y Operaciones | Datadog | Estabilización | ❌ No iniciado |
+| 7 | Seguridad Defensiva (SecOps) | Snyk · CrowdStrike | Hardening | ⚪ Pendiente |
+| 8 | Cumplimiento Legal y Privacidad | Apple | Hardening | ⚪ Pendiente |
+| 9 | Recuperación ante Desastres | AWS | Escala | ⚪ Pendiente |
+| 10 | Datos Masivos y Async | Apache Kafka · Redis | Hardening | ⚪ Pendiente |
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 | 11 | Rendimiento Percibido (UX) | Linear · Figma | Escala | ⚪ Pendiente |
 | 12 | Alta Disponibilidad y Chaos | Netflix | Escala | ⚪ Pendiente |
 | 13 | Eficiencia Financiera (FinOps) | Airbnb · Uber | Escala | ⚪ Pendiente |
 
+<<<<<<< HEAD
 ## Posición actual post ADR-011
 
 **Escalones 1+2 completos: Top 5% Latam · Top 15% mundial en código y estructura.**
 El siguiente salto de posición requiere CI/CD (Escalón 5) — activa el enforcement
 automático que hace que la calidad de Escalones 1+2 sea sostenible con el equipo.
+=======
+## Capa 0 — lo que sostiene los 13 escalones
+
+Cultura de ingeniería documentada. ADRs, reglas duras, moldes vivos, checklists.
+Sin esto, los 13 escalones colapsan cuando escala el equipo.
+Welver tiene esto documentado en `.claude/` — es la ventaja diferencial.
+
+## Posición objetivo
+
+Con los 13 escalones sólidos + base documental:
+**Top 5-10% mundial · Top 1% Latinoamérica**
+
+El salto al top 1% mundial lo da el tiempo bajo carga real en producción,
+no una decisión de arquitectura.
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path=".claude/modules/dashboard-front/chat.md">
@@ -4420,6 +5738,124 @@ El sistema tiene **dos motores principales** (backends) y **tres pantallas** (fr
 - [@real/trpc](packages/trpc.md) · [@real/ui](packages/ui.md)
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/roadmap/sprints.md">
+# Sprints — ecosistema-ms
+
+**Última actualización:** 2026-09-07
+
+## Estado de fases
+
+| Fase | Descripción | Estado |
+|------|-------------|--------|
+| FASE 0 | Estructura base .claude/ | ✅ COMPLETO |
+| FASE 1 | Carpetas bloqueantes/dinámicas | ✅ COMPLETO |
+| FASE 2 | ADR-001: DTOs → Zod | ✅ COMPLETO — 0 class-validator residuales |
+| FASE 3 | Contratos gRPC documentados | ✅ COMPLETO |
+| FASE 4 | Domain/Repository MOLDE VIVO | ✅ COMPLETO |
+| FASE 5 | Multi-tenant — auditoría queries | ✅ COMPLETO |
+| FASE 7 | Internal API para superadmin (ADR-008) | ✅ COMPLETO |
+| FASE 6 | Build limpio + Railway | 🔴 PRÓXIMA |
+
+---
+
+## Logros FASE 7 — Internal API superadmin (2026-09-07)
+
+### Archivos creados
+
+| Archivo | Servicio |
+|---------|---------|
+| `src/common/guards/internal-api-key.guard.ts` | los 5 servicios |
+| `src/health/health-extended.controller.ts` | los 5 servicios |
+| `src/internal/internal-conversations.controller.ts` | chatia-backend |
+| `src/internal/internal-payments.controller.ts` | pasarelapagos-backend |
+| `src/internal/internal-metrics.controller.ts` | analytics-backend |
+| `src/internal/internal-dlq.controller.ts` | workers-backend |
+| `src/internal/internal.module.ts` | chatia, pasarela, analytics, workers |
+| `src/common/pipes/zod-validation.pipe.ts` | pasarela, analytics, workers (si no existía) |
+
+### Módulos actualizados
+
+| Archivo | Cambio |
+|---------|--------|
+| `chatia/src/health/health.module.ts` | +HealthExtendedController |
+| `pasarela/src/health/health.module.ts` | +HealthExtendedController +CircuitBreakerService |
+| `notificaciones/src/health/health.module.ts` | +HealthExtendedController +CircuitBreakerService |
+| `analytics/src/health/health.module.ts` | +HealthExtendedController |
+| `workers/src/health/health.module.ts` | +HealthExtendedController +DlqModule +CircuitBreakerService |
+| `pasarela/src/app.module.ts` | +InternalModule |
+| `analytics/src/app.module.ts` | +InternalModule |
+| `workers/src/app.module.ts` | +InternalModule |
+
+### Bug corregido — DT-019
+
+`workers-backend/src/dlq/dlq.service.ts` — `getFailedJobs()` había sido
+appendeado fuera del cierre de clase `DlqService`. Corregido manualmente:
+el método quedó dentro de la clase, un único `}` al final del archivo.
+
+### Endpoints expuestos
+
+| Endpoint | Servicio | Fase superadmin |
+|----------|---------|-----------------|
+| GET /api/v1/health/extended | los 5 | Fase 1 |
+| GET /internal/conversations/escalated | chatia | Fase 2 |
+| GET /internal/conversations/stats | chatia | Fase 2 |
+| GET /internal/payments | pasarela | Fase 2 |
+| GET /internal/payments/:id | pasarela | Fase 3 |
+| POST /internal/payments/:id/retry | pasarela | Fase 3 |
+| GET /internal/metrics/summary | analytics | Fase 3 |
+| GET /internal/jobs/dlq | workers | Fase 3 |
+| POST /internal/jobs/dlq/:id/retry | workers | Fase 3 |
+
+---
+
+## FASE 6 — Build limpio + Railway (PRÓXIMA)
+
+### Paso 1 — Build limpio
+
+```bash
+pnpm -r build
+# Criterio de done: 0 errores TypeScript en los 5 servicios
+```
+
+### Paso 2 — Variables Railway
+
+En cada uno de los 5 servicios Railway:
+```
+INTERNAL_API_KEY=<openssl rand -hex 32>   # misma clave en todos
+```
+
+En superadmin (grupojl-control-backend) Railway:
+```
+CHATIA_INTERNAL_URL=http://chatia-backend.railway.internal:3000
+PASARELA_INTERNAL_URL=http://pasarelapagos-backend.railway.internal:3001
+NOTIFICACIONES_INTERNAL_URL=http://notificaciones-backend.railway.internal:3002
+ANALYTICS_INTERNAL_URL=http://analytics-backend.railway.internal:3003
+WORKERS_INTERNAL_URL=http://workers-backend.railway.internal:3004
+INTERNAL_API_KEY=<misma-clave>
+```
+
+### Paso 3 — Verificar conectividad (una URL a la vez)
+
+```bash
+# Sin auth — debe retornar JSON con status ok/degraded/down
+curl https://chatia-backend.railway.app/api/v1/health/extended
+
+# Con auth — debe retornar datos reales
+curl -H "x-internal-api-key: $INTERNAL_API_KEY" \
+  "https://chatia-backend.railway.app/internal/conversations/escalated?ecosystemId=welver"
+```
+
+### Criterio de done FASE 6
+
+- [ ] `pnpm -r build` → 0 errores TypeScript
+- [ ] Los 5 servicios con `INTERNAL_API_KEY` en Railway
+- [ ] Superadmin con las 6 URLs configuradas
+- [ ] DemoBadge desaparece en Command Center del superadmin
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/services/packages.md">
 # packages/* — librerías compartidas
 
@@ -5707,7 +7143,11 @@ import { Public }                              from '../decorators/public.decora
 import { CurrentUser }                         from '../decorators/current-user.decorator';
 import type { CurrentUserPayload }             from '../types/tenant-context';
 ⋮----
+<<<<<<< HEAD
 export class AuthSessionController
+=======
+export class AuthSessionController {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly sessionService: SessionService)
 ⋮----
@@ -5777,7 +7217,11 @@ export interface VerifiedSession {
   email: string | undefined;
 }
 ⋮----
+<<<<<<< HEAD
 export class SessionService
+=======
+export class SessionService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 /**
    * Crea una Firebase Session Cookie a partir de un ID token.
@@ -5919,12 +7363,54 @@ import { twMerge } from 'tailwind-merge'
 export function cn(...inputs: ClassValue[]): string
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/app/categoria/[categoria]/page.tsx">
+import { CatalogHeader } from "@/components/catalog/catalog-header"
+import { CatalogLineup } from "@/components/catalog/catalog-lineup"
+import { CatalogCloserLook } from "@/components/catalog/catalog-closer-look"
+import { CatalogFeatures } from "@/components/catalog/catalog-features"
+import { CatalogFooter } from "@/components/catalog/catalog-footer"
+import { notFound } from "next/navigation"
+import { getCategories, getCategoryByHandle, getProductsByCategory, formatPrice } from "@/lib/ecommerce"
+⋮----
+interface PageProps {
+  params: Promise<{
+    categoria: string
+  }>
+}
+⋮----
+export default async function CatalogPage(
+⋮----
+export async function generateStaticParams()
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/app/checkout/page.tsx">
 import { CheckoutFlow } from "@/components/checkout/checkout-flow"
 ⋮----
 export default function CheckoutPage()
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/app/products/[handle]/page.tsx">
+import { notFound } from "next/navigation"
+import { ProductGallery } from "@/components/product/product-gallery"
+import { ProductInfo } from "@/components/product/product-info"
+import { WhatsInBox } from "@/components/product/whats-in-box"
+import { IncludedServices } from "@/components/product/included-services"
+import { RelatedProducts } from "@/components/product/related-products"
+import { getProductById, getAllProducts } from "@/lib/ecommerce"
+⋮----
+interface ProductPageProps {
+  params: Promise<{
+    handle: string
+  }>
+}
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/app/tienda/[slug]/categoria/[categoria]/page.tsx">
 // app/tienda/[slug]/categoria/[categoria]/page.tsx
 import { resolveStore, getProducts, getCategoryByHandle } from '@/lib/store'
@@ -6043,12 +7529,75 @@ import ProductHero from "@/components/product-hero"
 export default function Home()
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/components/catalog/catalog-features.tsx">
+interface Feature {
+  id: number
+  title: string
+  description: string
+  icon: string
+}
+⋮----
+interface CatalogFeaturesProps {
+  features: Feature[]
+}
+⋮----
+export function CatalogFeatures(
+</file>
+
+<file path="real-ecommerce-front/components/catalog/catalog-footer.tsx">
+export function CatalogFooter()
+</file>
+
+<file path="real-ecommerce-front/components/catalog/catalog-header.tsx">
+import Link from "next/link";
+import { useState } from "react"
+⋮----
+interface CatalogHeaderProps {
+  title: string
+  models: Array<{ name: string; shortName: string }>
+}
+⋮----
+export function CatalogHeader(
+</file>
+
+<file path="real-ecommerce-front/components/product/product-gallery.tsx">
+import { useState } from "react"
+import Image from "next/image"
+import { cn } from "@/lib/utils"
+⋮----
+interface ProductGalleryProps {
+  images: string[]
+  productName: string
+}
+⋮----
+className=
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/components/footer.tsx">
 import Link from "next/link"
 ⋮----
 export default function Footer()
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/components/header.tsx">
+import Link from "next/link"
+import { useState, useEffect } from "react"
+import ShoppingBagModal from "./shopping-bag-modal"
+import { getCategories, type Category } from "@/lib/ecommerce"
+⋮----
+async function fetchCategories()
+⋮----
+onClick=
+⋮----
+<ShoppingBagModal onClose=
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/components/shopping-bag-modal.tsx">
 {/* Modal Content */}
 ⋮----
@@ -6066,6 +7615,55 @@ import {
 export function ThemeProvider(
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/context/customer-context.tsx">
+/**
+ * context/customer-context.tsx
+ *
+ * Estado del cliente logueado en el storefront.
+ * customerId se obtiene tras llamar al endpoint REST público:
+ *   POST /ecommerce/public/:orgId/customers/identify
+ *
+ * Se persiste en localStorage para que el carrito sobreviva
+ * a recargas de página.
+ */
+⋮----
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+⋮----
+interface CustomerContextValue {
+  customerId:    string | null;
+  sessionId:     string;
+  setCustomerId: (id: string) => void;
+  clearCustomer: () => void;
+}
+⋮----
+function generateSessionId(): string
+⋮----
+export function CustomerProvider(
+⋮----
+// Restaurar customerId y sessionId desde localStorage
+⋮----
+const setCustomerId = (id: string) =>
+⋮----
+const clearCustomer = () =>
+⋮----
+export function useCustomerContext()
+⋮----
+/**
+ * identifyCustomer — llama al endpoint REST público para crear/recuperar
+ * el cliente por email. Devuelve el customerId para guardar en context.
+ * REST porque es una ruta @Public() sin auth de ningún tipo.
+ */
+export async function identifyCustomer(
+  email: string,
+  displayName?: string,
+  phone?: string,
+  cartId?: string,
+): Promise<string>
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/hooks/use-cart.ts">
 /**
  * hooks/use-cart.ts
@@ -6382,6 +7980,57 @@ interface ShoppingBagState {
 }
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/types/product.ts">
+export interface Product {
+  id: string
+  name: string
+  category: string
+  price: number
+  originalPrice?: number
+  description: string
+  images: string[]
+  specifications: Specification[]
+  whatsInBox: BoxItem[]
+  includedServices?: Service[]
+  relatedProducts?: RelatedProduct[]
+  features: string[]
+  colors?: ColorOption[]
+}
+⋮----
+export interface Specification {
+  label: string
+  value: string
+}
+⋮----
+export interface BoxItem {
+  name: string
+  image: string
+}
+⋮----
+export interface Service {
+  name: string
+  description: string
+  icon: string
+  trialDuration?: string
+}
+⋮----
+export interface RelatedProduct {
+  id: string
+  name: string
+  image: string
+  price: number
+  description?: string
+}
+⋮----
+export interface ColorOption {
+  name: string
+  value: string
+}
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/types/shipping.ts">
 export interface ShipmentDetails {
   weight: number // kg
@@ -7004,6 +8653,7 @@ export function canPublish(
  * a excepciones HTTP/tRPC apropiadas. El domain no sabe que existe HTTP.
  */
 ⋮----
+<<<<<<< HEAD
 export abstract class DomainError extends Error
 ⋮----
 export class InvalidHandleError extends DomainError
@@ -7023,6 +8673,27 @@ export class ProductWithoutVariantsError extends DomainError
 constructor()
 ⋮----
 export class CannotPublishWithoutStockError extends DomainError
+=======
+export abstract class DomainError extends Error {
+⋮----
+export class InvalidHandleError extends DomainError {
+⋮----
+constructor(handle: string)
+⋮----
+export class InvalidVariantPriceError extends DomainError {
+⋮----
+constructor(priceCents: number)
+⋮----
+export class DuplicateSkuInProductError extends DomainError {
+⋮----
+constructor(sku: string)
+⋮----
+export class ProductWithoutVariantsError extends DomainError {
+⋮----
+constructor()
+⋮----
+export class CannotPublishWithoutStockError extends DomainError {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(productId: string)
 </file>
@@ -7162,7 +8833,11 @@ import type {
   UpdateProductPatch,
 } from './catalog.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class PrismaCatalogRepository implements CatalogRepository
+=======
+export class PrismaCatalogRepository implements CatalogRepository {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -7584,6 +9259,7 @@ getHello(): string
 </file>
 
 <file path="realsass-ecommerce-back/src/main.ts">
+<<<<<<< HEAD
 import { NestFactory }    from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7601,6 +9277,25 @@ async function bootstrap()
 // ── Validación global ─────────────────────────────────────────────────────
 ⋮----
 // ── Swagger (solo en dev) ─────────────────────────────────────────────────
+=======
+import { NestFactory } from '@nestjs/core';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+⋮----
+async function bootstrap(): Promise<void>
+⋮----
+// ── Seguridad: Helmet ─────────────────────────────────────────────────────
+// crossOriginResourcePolicy: cross-origin permite que el storefront (origen
+// distinto) cargue recursos sin bloqueo adicional de CORP.
+⋮----
+// ── Seguridad: CORS ───────────────────────────────────────────────────────
+// ecommerce-back sirve al storefront público — si no hay origenes explícitos
+// se refleja el Origin del request (origin: true). Distinto a real-back donde
+// el wildcard + credentials es inaceptable porque maneja tokens de identidad.
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/tsconfig.build.json">
@@ -7688,11 +9383,19 @@ export interface UpdateCollaboratorInput {
 </file>
 
 <file path="realsass-sass-back/src/collaborators/domain/collaborator.errors.ts">
+<<<<<<< HEAD
 export class CollaboratorNotFoundError extends Error
 ⋮----
 constructor(id: string)
 ⋮----
 export class CollaboratorAlreadyExistsError extends Error
+=======
+export class CollaboratorNotFoundError extends Error {
+⋮----
+constructor(id: string)
+⋮----
+export class CollaboratorAlreadyExistsError extends Error {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(email: string)
 </file>
@@ -8072,11 +9775,23 @@ signPayload(secret: string, body: string): string
 </file>
 
 <file path="realsass-sass-back/src/health/health.module.ts">
+<<<<<<< HEAD
 // src/health/health.module.ts
 import { Module } from '@nestjs/common';
 import { HealthController } from './health.controller';
 ⋮----
 export class HealthModule {}
+=======
+// realsass-sass-back/src/health/health.module.ts
+import { Module }                   from '@nestjs/common';
+import { TerminusModule }           from '@nestjs/terminus';
+import { HealthController }         from './health.controller';
+import { HealthExtendedController } from './health-extended.controller';
+// PrismaModule y RedisModule son @Global() en sass-back
+// PrismaService y RedisService disponibles sin importar aquí
+⋮----
+export class HealthModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/organizations/domain/organization.entity.ts">
@@ -8125,11 +9840,19 @@ export interface StoreInfo {
 </file>
 
 <file path="realsass-sass-back/src/organizations/domain/organization.errors.ts">
+<<<<<<< HEAD
 export class OrganizationNotFoundError extends Error
 ⋮----
 constructor(identifier: string)
 ⋮----
 export class OrganizationForbiddenError extends Error
+=======
+export class OrganizationNotFoundError extends Error {
+⋮----
+constructor(identifier: string)
+⋮----
+export class OrganizationForbiddenError extends Error {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor()
 </file>
@@ -8951,6 +10674,214 @@ volumes:
 }
 </file>
 
+<<<<<<< HEAD
+=======
+<file path=".claude/architecture/00-principios.md">
+# Principios no negociables
+
+## El monorepo es solo herramienta de desarrollo
+
+pnpm workspaces + `catalog:` único existen para compartir tipos y código entre
+servicios **en local**. En producción, **cada servicio se despliega individual
+y aisladamente en Railway** vía su propio `Dockerfile` + `railway.json`
+(`dockerfilePath` apuntando a esa carpeta).
+
+## Consecuencias de diseño
+
+1. Ningún servicio puede asumir en runtime que los otros viven en el mismo
+   filesystem o proceso.
+2. Los `packages/*` (`@real/auth-server`, `@real/auth-client`, `@real/ui`,
+   `@real/trpc`) se **copian y buildean dentro de cada imagen Docker** — no son
+   un servicio corriendo aparte, son librería compilada al momento del build.
+3. Toda comunicación entre servicios en producción es **HTTP/tRPC de red
+   real**, nunca import directo de un service de otro back.
+   `OrganizationsClientService` (HTTP + Redis cache) es el patrón correcto;
+   un `import { CatalogService } from '../../otro-back/...'` sería un bug de
+   arquitectura aunque el monorepo lo permita compilar.
+4. Variables de entorno (`ARG`/`ENV` en cada Dockerfile) son la única fuente
+   de configuración por servicio — nada de asumir `.env` compartido entre backs.
+
+## Regla de oro para toda decisión nueva
+
+> ¿Esto asume que dos servicios comparten proceso, filesystem o memoria en
+> producción? Si la respuesta es sí, está mal — aunque funcione en el
+> monorepo local. Railway los corre aislados; el contrato entre ellos es
+> HTTP/tRPC + env vars, punto.
+
+## Señales de alarma concretas
+
+### 1. Import que cruza la frontera de un back a otro
+```ts
+// PROHIBIDO
+import { CatalogService } from '../../../realsass-sass-back/src/catalog/catalog.service';
+```
+El Dockerfile de cada servicio solo copia su propia carpeta + `packages/`.
+Esa ruta no existe en la imagen.
+
+### 2. Asumir un filesystem compartido
+```ts
+// PROHIBIDO
+fs.readFileSync('/app/realsass-sass-back/uploads/logo.png')
+```
+Cada contenedor tiene su propio filesystem efímero.
+
+### 3. Estado en memoria compartido entre procesos
+```ts
+// PROHIBIDO para datos cross-request
+let cacheGlobal = new Map();
+```
+En prod son procesos Node separados en containers separados — memoria no se
+comparte, ni con múltiples réplicas del mismo servicio. Usar Redis
+(`RedisService`, `ConfigCacheService`) para esto. Única excepción documentada:
+`MemoryCacheAdapter` en `@real/auth-server`, que explícitamente declara la
+limitación "no se comparte entre instancias del proceso (escala vertical)".
+
+### 4. Llamar un método de servicio en vez de HTTP
+```ts
+// PROHIBIDO
+const access = organizationsService.getOrganizationAccess(uid, orgId);
+
+// CORRECTO — patrón ya usado en el repo
+const access = await this.organizationsClientService.getAccess(token, uid, orgId);
+```
+
+### 5. Rutas relativas en vez de env vars
+```ts
+// PROHIBIDO
+const SASS_BACK_URL = '../realsass-sass-back';
+
+// CORRECTO
+const SASS_BACK_URL = process.env.SASS_BACK_URL;
+```
+
+## Checklist de 3 preguntas antes de escribir código nuevo
+
+1. ¿Este import sale de mi carpeta de servicio + `packages/`? → Si sí, prohibido.
+2. ¿Este dato lo necesito "ya generado por otro back"? → Tiene que llegar por
+   request o llamada HTTP, nunca por disco/memoria compartida.
+3. ¿Si Railway escala este servicio a 3 réplicas, esto se rompe? → Si depende
+   de memoria compartida entre réplicas, va a Redis o Postgres.
+
+## Ejemplo canónico de "bien hecho"
+
+`realsass-ecommerce-back/src/organizations-client/organizations-client.service.ts`:
+- No importa nada de `sass-back`.
+- Hace `fetch` HTTP real a una URL de env var (`SASS_BACK_URL`).
+- Cachea en Redis (no en memoria) con TTL corto.
+- Comentario explícito en el código: "real-back es la única fuente de verdad".
+
+## Degradación y resiliencia entre servicios
+
+**Esta sección documenta decisiones tomadas, no aspiraciones.**
+Cada decisión de degradación debe estar acá antes de llegar a producción.
+
+### OrganizationsClientService (ecommerce-back → sass-back)
+
+| Escenario | Comportamiento decidido | Razón |
+|---|---|---|
+| sass-back no responde (timeout 2s) | Rechazar con 503 | No servir con permisos desconocidos — seguridad > disponibilidad |
+| Redis caído | Fallback a MemoryCacheAdapter (ya implementado) | Degradación aceptable, documenta limitación de réplicas |
+| sass-back responde lento (>500ms) | Log de warning + continuar | Alertar sin romper — el TTL de Redis amortigua |
+
+### FirebaseAuthGuard (todos los backs)
+
+| Escenario | Comportamiento decidido | Razón |
+|---|---|---|
+| Firebase Admin SDK no disponible | Rechazar con 503, no 401 | 401 implica "token inválido", 503 implica "no puedo verificar" — semánticamente distinto |
+| Token expirado | 401 con `code: TOKEN_EXPIRED` | El front debe forzar refresh y reintentar |
+| Token válido pero claims desactualizados | Servir con claims viejos + log | Aceptable hasta el refresh natural (55 min) — documentado en ADR-003 |
+
+### Decisiones pendientes (deben resolverse antes de lanzamiento)
+
+- ¿Qué hace `ecommerce-back` si `OrganizationsClientService` tarda más de 2s
+  en un endpoint de checkout? ¿Rechaza o permite continuar con cache vencida?
+- ¿Qué hace `sass-back` si Firebase Admin falla en el endpoint de health check?
+  ¿El health check devuelve degraded o down?
+- Cuando existan `chat-ia-back` y `pagos-back`: ¿mismo patrón de timeout + 503,
+  o tienen SLA distintos que justifican otra decisión?
+
+## Comunicación interna — tRPC/gRPC, nunca REST
+
+**Regla:** Todo consumo interno entre servicios usa tRPC (o gRPC cuando el
+volumen lo justifique). REST se reserva para APIs públicas externas.
+
+```
+✅ Front → Back:          tRPC (httpBatchLink con credentials: include)
+✅ Server Component → Back: createServerCaller() tRPC (sin React)
+✅ Back → Back:           tRPC HTTP (OrganizationsClientService)
+✅ Client Component:       rehidrata desde Server, no fetch propio
+
+❌ Front → Back REST:     bug de arquitectura
+❌ Server Component fetch: bug si existe el procedure tRPC equivalente
+❌ Client fetch manual:    bug si existe el hook tRPC equivalente
+```
+
+**Excepciones permanentes documentadas:**
+
+| Endpoint | Por qué REST |
+|---|---|
+| `POST /auth/session` | Bootstrap cookie HttpOnly — Set-Cookie header (ADR-004) |
+| `DELETE /auth/session` | Revocación cookie HttpOnly — mismo motivo |
+| `GET /health` | Railway healthcheck — no es comunicación de datos |
+| APIs públicas externas | Consumidores externos no tienen cliente tRPC |
+
+## Modelo Server/Client Components
+
+```
+page.tsx (Server Component)
+  ├─ await createCaller().catalog.list({ orgId })  ← tRPC server-side
+  ├─ <Hydrator queryKey={...} initialData={...} />  ← pasar datos al client
+  └─ <ProductList />                                ← client rehidrata
+
+ProductList (Client Component, 'use client')
+  ├─ trpc.catalog.list.useQuery({ orgId })          ← rehidrata desde server
+  └─ NO fetch propio — los datos ya vinieron del server
+```
+</file>
+
+<file path=".claude/architecture/02-frontend-capas.md">
+# Frontend — 3 apps (sass-front, dashboard-front, ecommerce-front)
+
+| # | Capa | Ideal terminado | Regla dura | Estado hoy |
+|---|------|-----------------|------------|------------|
+| 1 | Fetch | tRPC exclusivo. Server Components usan createServerCaller(). Client Components rehidratan — no fetch propio. REST solo para bootstrap de cookies (ADR-004). | Ningún fetch manual sin justificación documentada. | ✅ sass-front + dashboard-front completos · ⚠️ ecommerce-front: lib/store/client.ts fetch REST pendiente de migrar a tRPC server caller |
+| 2 | TanStack Query | Todo dato de servidor en TanStack Query con queryKey explícita. | Ningún componente hace `useEffect(() => fetch(...))` para datos de servidor. | ✅ use-config.ts + use-auth-trpc.ts (sass-front) · features/*/hooks (dashboard-front) · use-cart + use-customer (ecommerce-front) |
+| 3 | Zustand | Solo estado de UI puro. El dato vive en TanStack Query. | Si un store Zustand tiene un campo que también existe en una queryKey, es bug de diseño. | ✅ useShoppingBagStore (ecommerce) · useSidebarStore (dashboard) · useUIStore (sass) |
+| 4 | Presentación (Component) | Cero datos mock hardcodeados. Estados loading/error/data explícitos. | Un componente con `const products = [...]` inline mergeado a producción es bug. | ⚠️ checkout-flow.tsx mock WebAuthn · adapters shipping stubs — bloqueados por externos |
+| 5 | Auth compartido | `@real/auth-client` como única fuente de Firebase wrapper. | Un `firebase/auth` importado directo en un componente de página es bypass. | ✅ @real/auth-client fuente única en los 3 fronts · cookies HttpOnly (ADR-004) |
+
+## Modelo de rendering — canónico
+
+```
+Server Component (default, sin 'use client')
+  → await createServerCaller().procedure({ ... })
+  → <HydrationBoundary state={dehydrate(queryClient)}>
+      <ClientComponent />
+    </HydrationBoundary>
+
+Client Component ('use client')
+  → trpc.namespace.procedure.useQuery()   ← rehidrata, no refetch inicial
+  → NUNCA fetch propio · NUNCA useEffect con fetch
+```
+
+**Regla dura:** si un dato puede venir del server, viene del server.
+El client solo rehidrata — no es responsable de obtener datos.
+
+## Error boundaries — contrato de UI
+
+Todo dato asíncrono tiene los tres estados obligatorios:
+- `isLoading` → `<Skeleton />`
+- `error` → `<ErrorState message={...} />`
+- `data` → render del componente
+
+## Enforcement objetivo (S4)
+
+- ESLint rule `@real/no-useeffect-fetch`
+- ESLint rule `@real/no-inline-mock-data`
+- ESLint rule `@real/no-bare-fetch` (fetch sin TODO documentado)
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/architecture/03-reglas-duras.md">
 # Reglas duras — checklist de code review
 
@@ -9089,6 +11020,7 @@ Los 3 fronts tienen ambos — confirmar en Railway dashboard cuál está activo.
 5. Si es 🔵 → comentar en el PR, no bloquear.
 </file>
 
+<<<<<<< HEAD
 <file path=".claude/checklists/backend-capa-1-auth.md">
 # Backend Capa 1 — Auth/Tenant resolution
 # Checklist 10/10
@@ -9404,6 +11336,8 @@ Todo componente nuevo que muestre datos del ecommerce:
 ## Score global: 9.2/10 — Top 3% Latam · Top 10% mundial
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path=".claude/decisions/ADR-005-rest-to-trpc.md">
 # ADR-005: Migración completa de REST a tRPC — REST solo para endpoints públicos
 
@@ -9562,6 +11496,7 @@ Una vez eliminados los controllers que los usan:
 - `roadmap/deuda-tecnica.md` — DTOs y archivos pendientes de eliminar
 </file>
 
+<<<<<<< HEAD
 <file path=".claude/lifecycle/05-tasks.md">
 # Tasks — Cómo escalar a cada fase
 
@@ -9873,6 +11808,79 @@ Prioridad inmediata:
 | Frontend 5 — Auth | 9.5 | 10.0 |
 
 (*) Capa 4 llega a ~8.5/10 con tests. El 10/10 requiere `pagos-back` y APIs courier.
+=======
+<file path=".claude/roadmap/deuda-tecnica.md">
+# Deuda técnica — ecosistema-ms
+
+**Última actualización:** 2026-09-07
+
+## ✅ RESUELTOS
+
+| ID | Deuda | Cómo quedó |
+|----|-------|------------|
+| ~~DT-001~~ | dto/ huérfanas (17 carpetas) | Eliminadas |
+| ~~DT-002~~ | class-validator inline (9 archivos) | Migrado a Zod — 0 imports residuales |
+| ~~DT-003~~ | AllExceptionsFilter no registrado | Registrado en chatia + workers main.ts |
+| ~~DT-004~~ | ConversationsService → PrismaService directo | Migrado a IConversationsRepository |
+| ~~DT-005~~ | PaymentsService → PrismaService directo | PrismaService + IPaymentsRepository coexisten (ver nota) |
+| ~~DT-006~~ | reconciliation.service sin tenantId en where | ConfigService + tenantId dentro del where |
+| ~~DT-007~~ | contacts/ sin Domain/Repository | Decidido: no aplicar — scope suficiente con organizationId |
+| ~~DT-008~~ | projects/ sin Domain/Repository | Ídem — imports dto corregidos a schemas.ts |
+| ~~DT-009~~ | campaigns/ sin Domain/Repository | Ídem |
+| ~~DT-011~~ | notifications.service getStats() sin ecosystemId | ecosystemId en StatsQuery + where |
+| ~~DT-012~~ | analytics getConversationsByDay() sin ecosystemId | ecosystemId en firma + controller |
+| ~~DT-013~~ | Timeouts gRPC no definidos | channelOptions/keepalive en 5 módulos grpc-client |
+| ~~DT-014~~ | preferences.service getPreferences() sin ecosystemId | ecosystemId en where |
+| ~~DT-016~~ | contacts.service import roto class-validator | Reescrito usando schemas.ts |
+| ~~DT-017~~ | OrgContext sin tenantId | tenantId agregado a la interface |
+| ~~DT-018~~ | projects.service imports dto legacy rotos | Migrado a schemas.ts |
+| ~~DT-019~~ | getFailedJobs() fuera del cierre de clase DlqService | Corregido manualmente 2026-09-07 — método dentro de la clase, un único `}` al final |
+| ~~DT-A~~ | Sin ZodValidationPipe ni filtros de excepción | Resuelto |
+| ~~DT-B~~ | Controllers con class-validator | Resuelto |
+| ~~DT-C~~ | class-validator en package.json | Resuelto |
+| ~~DT-D~~ | conversations/ sin domain+repository | Resuelto |
+| ~~DT-E~~ | payments/ sin domain+repository | Resuelto |
+| ~~DT-F~~ | Sin contratos gRPC documentados | Resuelto |
+| ~~DT-G~~ | Sin auditoría multi-tenant | Resuelto |
+
+### Nota de arquitectura — DT-005
+
+`PaymentsService` inyecta tanto `PrismaService` como `IPaymentsRepository`:
+- `IPaymentsRepository` → lecturas simples: `findById`, `findByIdempotencyKey`, `list`
+- `PrismaService` directamente → operaciones que requieren `$transaction` multi-tabla
+
+---
+
+## 🔴 PENDIENTE — FASE 6 (bloquea integración real)
+
+| ID | Deuda | Urgencia |
+|----|-------|---------|
+| DT-020 | `INTERNAL_API_KEY` no configurada en Railway en los 5 servicios | Sin esta variable los endpoints /internal/* rechazan todo (fail-secure) |
+| DT-021 | `pnpm -r build` no verificado post-FASE 7 | Confirmar 0 errores TypeScript antes de deployar |
+
+---
+
+## 🟡 PENDIENTE — no urgente
+
+| ID | Deuda | Archivo | Cuándo |
+|----|-------|---------|--------|
+| DT-015 | `Conversation` sin `ecosystemId` directo en schema | `chatia-backend/prisma/schema.prisma` | Antes de 2+ ecosistemas en prod |
+| DT-010 | CircuitBreakerService en memoria (no distribuido) | chatia + pasarelapagos | Al escalar a múltiples instancias |
+
+### DT-015 — cómo resolverlo cuando llegue el momento
+
+```prisma
+model Conversation {
+  ecosystemId    String
+  organizationId String
+  @@index([ecosystemId, organizationId])
+}
+```
+
+```bash
+pnpm --filter chatia-backend prisma migrate dev --name add-ecosystemId-conversation
+```
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path=".claude/services/real-ecommerce-front.md">
@@ -10326,6 +12334,7 @@ private extractToken(req:
 }
 </file>
 
+<<<<<<< HEAD
 <file path="real-ecommerce-front/app/categoria/[categoria]/page.tsx">
 /**
  * app/categoria/[categoria]/page.tsx
@@ -10351,6 +12360,8 @@ export default async function CategoriaLegacyPage(
 // para no crear páginas duplicadas en el sitemap.
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/app/products/[handle]/not-found.tsx">
 import Link from "next/link"
 import { Button } from "@real/ui"
@@ -10358,6 +12369,7 @@ import { Button } from "@real/ui"
 export default function NotFound()
 </file>
 
+<<<<<<< HEAD
 <file path="real-ecommerce-front/app/products/[handle]/page.tsx">
 /**
  * app/products/[handle]/page.tsx
@@ -10381,6 +12393,8 @@ export default async function ProductLegacyPage(
 // 308 Permanent Redirect hacia la ruta canónica de tienda
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/app/tienda/[slug]/store-provider.tsx">
 // app/tienda/[slug]/store-provider.tsx
 // Client Component — provee el contexto de tienda a todos los children.
@@ -10398,6 +12412,38 @@ export function StoreProvider({
 })
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/components/catalog/catalog-closer-look.tsx">
+import { Button } from "@real/ui"
+import { PlayCircle } from "lucide-react"
+⋮----
+interface CloserLookProps {
+  title: string
+  description: string
+}
+⋮----
+export function CatalogCloserLook(
+⋮----
+{/* Video Section */}
+⋮----
+{/* Content Section */}
+</file>
+
+<file path="real-ecommerce-front/components/catalog/catalog-lineup.tsx">
+import { Button } from "@real/ui"
+import { ChevronRight } from "lucide-react"
+import type { Product } from "@/lib/catalog-data"
+import Link from "next/link"
+⋮----
+interface CatalogLineupProps {
+  products: Product[]
+}
+⋮----
+{/* Placeholder image */}
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/components/checkout/checkout-flow.tsx">
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@real/ui"
@@ -10418,6 +12464,58 @@ const handleAuthenticate = async (method: "fingerprint" | "face" | "security-key
 // Simulate API call
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/components/product/included-services.tsx">
+import type { Service } from "@/types/product"
+import { Card, CardContent, CardHeader, CardTitle } from "@real/ui"
+⋮----
+interface IncludedServicesProps {
+  services: Service[]
+}
+</file>
+
+<file path="real-ecommerce-front/components/product/product-info.tsx">
+import { useState } from "react"
+import { Button } from "@real/ui"
+import { Badge } from "@real/ui"
+import { Separator } from "@real/ui"
+import { Check } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { ColorOption, Product } from "@/types/product"
+import Link from "next/link"
+⋮----
+interface ProductInfoProps {
+  product: Product
+}
+⋮----
+className=
+</file>
+
+<file path="real-ecommerce-front/components/product/related-products.tsx">
+import Image from "next/image"
+import Link from "next/link"
+import type { RelatedProduct } from "@/types/product"
+import { Card, CardContent } from "@real/ui"
+import { Button } from "@real/ui"
+⋮----
+interface RelatedProductsProps {
+  products: RelatedProduct[]
+  title?: string
+}
+</file>
+
+<file path="real-ecommerce-front/components/product/whats-in-box.tsx">
+import Image from "next/image"
+import type { BoxItem } from "@/types/product"
+import { Card, CardContent } from "@real/ui"
+⋮----
+interface WhatsInBoxProps {
+  items: BoxItem[]
+}
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/components/tracking/tracking-view.tsx">
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@real/ui"
@@ -10431,6 +12529,7 @@ import Link from "next/link"
 export function TrackingView()
 </file>
 
+<<<<<<< HEAD
 <file path="real-ecommerce-front/components/header.tsx">
 /**
  * components/header.tsx — real-ecommerce-front
@@ -10450,6 +12549,8 @@ import { useShoppingBagStore }  from '@/stores/use-shopping-bag-store';
 onClick=
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/components/product-hero.tsx">
 import { Button } from "@real/ui"
 ⋮----
@@ -10471,6 +12572,7 @@ export default function ProductHero(
 {/* Image Section */}
 </file>
 
+<<<<<<< HEAD
 <file path="real-ecommerce-front/context/customer-context.tsx">
 /**
  * context/customer-context.tsx
@@ -10547,6 +12649,8 @@ export async function identifyCustomer(
 ): Promise<string>
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="real-ecommerce-front/hooks/use-toast.ts">
 // Inspired by react-hot-toast library
 ⋮----
@@ -10608,6 +12712,7 @@ function useToast()
 /**
  * lib/store/client.ts — real-ecommerce-front
  *
+<<<<<<< HEAD
  * ADR-005 + ADR-006: Reemplaza el fetch REST manual por tRPC server caller.
  * Todos los datos del storefront se obtienen via EcommerceAppRouter.
  *
@@ -10650,6 +12755,32 @@ export async function getPublicProducts(
   organizationId: string,
   options?: { limit?: number; cursor?: string },
 ): Promise<StoreProduct[]>
+=======
+ * MIGRADO a tRPC server caller (ADR-005 + ADR-007).
+ *
+ * Los tipos vienen de lib/trpc/types.ts (inferRouterOutputs) — sin duplicación.
+ * Si el back cambia un campo, TypeScript lo detecta aquí automáticamente.
+ */
+import { createStoreCaller } from '@/lib/trpc/server';
+import type { StoreProduct, StoreCategory } from '@/lib/trpc/types';
+⋮----
+export async function getProducts(
+  organizationId: string,
+  params?: { category?: string },
+): Promise<StoreProduct[]>
+⋮----
+export async function getProductByHandle(
+  organizationId: string,
+  handle: string,
+): Promise<StoreProduct | null>
+⋮----
+export async function getCategories(organizationId: string): Promise<StoreCategory[]>
+⋮----
+export async function getCategoryByHandle(
+  organizationId: string,
+  handle: string,
+): Promise<StoreCategory | null>
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="real-ecommerce-front/lib/store/resolver.ts">
@@ -10891,8 +13022,11 @@ toast.success('Secreto copiado');
 ⋮----
 <DeliveryLogsSheet wh=
 ⋮----
+<<<<<<< HEAD
 {/* Confirm delete */}
 ⋮----
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 // ── Sheet de delivery logs ─────────────────────────────────────────────────────
 ⋮----
 </file>
@@ -11033,7 +13167,20 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 ⋮----
+<<<<<<< HEAD
 onClick=
+=======
+export function Pagination(
+⋮----
+onClick={() => onPageChange(page - 1)}
+          disabled={!hasPrevPage}
+          className="h-8 px-2 sm:px-3"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Anterior</span>
+        </Button>
+        <div className="flex items-center gap-1">
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-dashboard-front/components/dashboard/product-modal.tsx">
@@ -11470,7 +13617,11 @@ export interface ApiResponse<T> {
 import { Module } from '@nestjs/common';
 import { ActivityService } from './activity.service';
 ⋮----
+<<<<<<< HEAD
 export class ActivityModule {}
+=======
+export class ActivityModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/cart/cart.module.ts">
@@ -11478,7 +13629,11 @@ import { Module } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { ActivityModule } from '../activity/activity.module';
 ⋮----
+<<<<<<< HEAD
 export class CartModule {}
+=======
+export class CartModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/catalog/catalog.service.ts">
@@ -11510,7 +13665,11 @@ import {
   type CatalogRepository,
 } from './repository/catalog.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class CatalogService
+=======
+export class CatalogService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -11549,7 +13708,11 @@ private toHttpException(err: unknown): never
 import { Module } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 ⋮----
+<<<<<<< HEAD
 export class CustomersModule {}
+=======
+export class CustomersModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/customers/customers.service.ts">
@@ -11562,7 +13725,11 @@ type PrismaCustomer = Prisma.StoreCustomerGetPayload<Record<string, never>>;
 ⋮----
 function toCustomerOutput(row: PrismaCustomer): CustomerOutput
 ⋮----
+<<<<<<< HEAD
 export class CustomersService {
+=======
+export class CustomersService
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -11589,7 +13756,11 @@ async findById(organizationId: string, customerId: string): Promise<CustomerOutp
 import { Module } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 ⋮----
+<<<<<<< HEAD
 export class InventoryModule {}
+=======
+export class InventoryModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/orders/orders.module.ts">
@@ -11598,7 +13769,11 @@ import { OrdersService } from './orders.service';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ActivityModule } from '../activity/activity.module';
 ⋮----
+<<<<<<< HEAD
 export class OrdersModule {}
+=======
+export class OrdersModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/orders/orders.service.ts">
@@ -11635,7 +13810,11 @@ function toOrderSummary(
 ⋮----
 // @real/jsonb-cast
 ⋮----
+<<<<<<< HEAD
 export class OrdersService {
+=======
+export class OrdersService
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -11661,7 +13840,11 @@ async getOrder(organizationId: string, orderId: string): Promise<OrderOutput>
 import { Module } from '@nestjs/common';
 import { StoreService } from './store.service';
 ⋮----
+<<<<<<< HEAD
 export class StoreModule {}
+=======
+export class StoreModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/trpc/routers/customer.router.ts">
@@ -12013,7 +14196,11 @@ import type { AffiliateProfile, AffiliateReferral } from '../domain/affiliate.en
 type PrismaAffiliateData = Prisma.AffiliateDataGetPayload<Record<string, never>>;
 type PrismaUser          = Prisma.UserGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaAffiliateRepository implements IAffiliateRepository {
+=======
+export class PrismaAffiliateRepository implements IAffiliateRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12047,7 +14234,11 @@ export class AffiliatesModule
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
 import { AFFILIATE_REPOSITORY, type IAffiliateRepository } from './repository/affiliate.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class AffiliatesService
+=======
+export class AffiliatesService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12104,7 +14295,11 @@ export interface ProfileForClaims {
   }>;
 }
 ⋮----
+<<<<<<< HEAD
 export class ClaimsService
+=======
+export class ClaimsService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 // ── Emitir claims ─────────────────────────────────────────────────────────
 async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void>
@@ -12134,7 +14329,11 @@ import type {
 ⋮----
 type PrismaCollab = Prisma.CollaboratorGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
+=======
+export class PrismaCollaboratorsRepository implements ICollaboratorsRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12214,7 +14413,11 @@ import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '../domain/a
 ⋮----
 type PrismaAuditLog = Prisma.ConfigAuditLogGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaAuditRepository implements IAuditRepository {
+=======
+export class PrismaAuditRepository implements IAuditRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12241,7 +14444,11 @@ import type { FeatureFlag, UpdateFeatureFlagInput } from '../domain/feature-flag
 ⋮----
 type PrismaFlag = Prisma.FeatureFlagGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
+=======
+export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12264,7 +14471,11 @@ import { EventEmitter2 }        from '@nestjs/event-emitter';
 import { UpdateFlagDto }        from './dto/update-flag.dto';
 import { FEATURE_FLAGS_REPOSITORY, type IFeatureFlagsRepository } from './repository/feature-flags.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigFlagsService
+=======
+export class ConfigFlagsService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12286,7 +14497,11 @@ import type { QuotaConfig } from '../domain/quota.entity';
 ⋮----
 type PrismaQuota = Prisma.QuotaConfigGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaQuotasRepository implements IQuotasRepository {
+=======
+export class PrismaQuotasRepository implements IQuotasRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12309,7 +14524,11 @@ import { QuotaExceededException } from '../common/exceptions/quota-exceeded.exce
 import { EventEmitter2 }        from '@nestjs/event-emitter';
 import { QUOTAS_REPOSITORY, type IQuotasRepository } from './repository/quotas.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigQuotasService
+=======
+export class ConfigQuotasService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12333,7 +14552,11 @@ import type { SecretConfig, CreateSecretInput } from '../domain/secret.entity';
 ⋮----
 type PrismaSecret = Prisma.SecretConfigGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaSecretsRepository implements ISecretsRepository {
+=======
+export class PrismaSecretsRepository implements ISecretsRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12359,7 +14582,11 @@ import { ConfigAuditService }   from '../config-audit/config-audit.service';
 import { CreateSecretDto }      from './dto/create-secret.dto';
 import { SECRETS_REPOSITORY, type ISecretsRepository } from './repository/secrets.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigSecretsService
+=======
+export class ConfigSecretsService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12400,7 +14627,11 @@ import type { ContentTemplate, CreateTemplateInput } from '../domain/template.en
 ⋮----
 type PrismaTemplate = Prisma.ContentTemplateGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaTemplatesRepository implements ITemplatesRepository {
+=======
+export class PrismaTemplatesRepository implements ITemplatesRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12420,7 +14651,11 @@ import { ConfigAuditService }   from '../config-audit/config-audit.service';
 import { CreateTemplateDto }    from './dto/create-template.dto';
 import { TEMPLATES_REPOSITORY, type ITemplatesRepository } from './repository/templates.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigTemplatesService
+=======
+export class ConfigTemplatesService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12444,7 +14679,11 @@ import type { ThemeConfig, CreateThemeInput } from '../domain/theme.entity';
 ⋮----
 type PrismaTheme = Prisma.ThemeConfigGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaThemesRepository implements IThemesRepository {
+=======
+export class PrismaThemesRepository implements IThemesRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12475,7 +14714,11 @@ import { EventEmitter2 }        from '@nestjs/event-emitter';
 import { CreateThemeDto }       from './dto/create-theme.dto';
 import { THEMES_REPOSITORY, type IThemesRepository } from './repository/themes.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigThemesService
+=======
+export class ConfigThemesService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12500,7 +14743,11 @@ import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '..
 type PrismaWebhook = Prisma.WebhookEndpointGetPayload<Record<string, never>>;
 type PrismaLog     = Prisma.WebhookDeliveryLogGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaWebhooksRepository implements IWebhooksRepository {
+=======
+export class PrismaWebhooksRepository implements IWebhooksRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12526,7 +14773,11 @@ import { WebhookDeliveryService } from './webhook-delivery.service';
 import { CreateWebhookDto }      from './dto/create-webhook.dto';
 import { WEBHOOKS_REPOSITORY, type IWebhooksRepository } from './repository/webhooks.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class ConfigWebhooksService
+=======
+export class ConfigWebhooksService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -12565,7 +14816,11 @@ import type { Organization, UpdateOrganizationInput, CreateOrganizationInput, St
 ⋮----
 type PrismaOrg = Prisma.OrganizationGetPayload<Record<string, never>>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaOrganizationsRepository implements IOrganizationsRepository {
+=======
+export class PrismaOrganizationsRepository implements IOrganizationsRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12596,7 +14851,11 @@ import { PrismaOrganizationsRepository }   from './repository/prisma-organizatio
 import { ORGANIZATIONS_REPOSITORY }        from './repository/organizations.repository.interface';
 import { PrismaModule }                    from '../prisma/prisma.module';
 ⋮----
+<<<<<<< HEAD
 export class OrganizationsModule
+=======
+export class OrganizationsModule {}
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/trpc/routers/collaborators.router.ts">
@@ -12747,7 +15006,11 @@ type PrismaUserWithOrg = Prisma.UserGetPayload<{
   };
 }>;
 ⋮----
+<<<<<<< HEAD
 export class PrismaUsersRepository implements IUsersRepository {
+=======
+export class PrismaUsersRepository implements IUsersRepository
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly prisma: PrismaService)
 ⋮----
@@ -12769,6 +15032,7 @@ async getOrganizationAccess(firebaseUid: string, organizationId: string)
 </file>
 
 <file path="realsass-sass-back/src/main.ts">
+<<<<<<< HEAD
 import { NestFactory }    from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -12779,22 +15043,41 @@ import { AppModule }      from './app.module';
 // ── Validación de variables de entorno requeridas ─────────────────────────────
 // Fail-fast: el servicio no arranca con configuración incompleta.
 // Un arranque con vars faltantes causaría errores silenciosos en runtime.
+=======
+import { NestFactory }      from '@nestjs/core';
+import { ValidationPipe }   from '@nestjs/common';
+import helmet               from 'helmet';
+import cookieParser         from 'cookie-parser';
+import { AppModule }        from './app.module';
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 async function bootstrap()
 ⋮----
 // ── Seguridad: CORS ───────────────────────────────────────────────────────
+<<<<<<< HEAD
 // ALLOWED_ORIGINS requerido — validado arriba.
 // credentials: true requerido para cookies HttpOnly (ADR-004).
+=======
+// ALLOWED_ORIGINS requerido — sin él el servidor no arranca.
+// credentials: true + origin explícito → compatible con cookies HttpOnly (ADR-004).
+// credentials: true con origin: '*' es una vulnerabilidad CORS activa.
+⋮----
+credentials: true,  // requerido para cookies HttpOnly (ADR-004)
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 // ── Cookie parser — requerido para leer __session (ADR-004) ───────────────
 ⋮----
 // ── Seguridad: Helmet ─────────────────────────────────────────────────────
 ⋮----
+<<<<<<< HEAD
 contentSecurityPolicy: false, // tRPC + Next.js manejan CSP en el front
 ⋮----
 // ── Validación global ─────────────────────────────────────────────────────
 ⋮----
 // ── Swagger ───────────────────────────────────────────────────────────────
+=======
+// ── Validación global ─────────────────────────────────────────────────────
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-front/app/invite/[token]/page.tsx">
@@ -12979,7 +15262,10 @@ const handleSubmit = async () =>
 // ── Componente principal ──────────────────────────────────────────────────────
 ⋮----
 ? <EmptyState onInvite=
+<<<<<<< HEAD
 ⋮----
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-front/components/navbar.tsx">
@@ -13502,6 +15788,7 @@ catalog:
 }
 </file>
 
+<<<<<<< HEAD
 <file path=".claude/architecture/00-principios.md">
 # Principios no negociables
 
@@ -13955,6 +16242,8 @@ Pendiente consciente: páginas `/tienda/[slug]/` con JSX inline → ver Escalón
 - OpenTelemetry dependencias en catalog pero sin configuración activa — S4-C
 </file>
 
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="packages/auth-client/src/index.ts">
 // Errors
 ⋮----
@@ -14018,6 +16307,41 @@ Pendiente consciente: páginas `/tienda/[slug]/` con JSX inline → ver Escalón
 }
 </file>
 
+<<<<<<< HEAD
+=======
+<file path="real-ecommerce-front/lib/ecommerce/index.ts">
+// real-ecommerce-front/lib/ecommerce/index.ts
+//
+// MIGRACIÓN COMPLETADA: lib/ecommerce/ → lib/store/
+//
+// lib/store/ es el cliente canónico:
+//   - Usa organizationId dinámico (multi-tenant real)
+//   - Server Components safe
+//   - Sin NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID hardcodeado
+//
+// Este archivo re-exporta desde lib/store/ para no romper las páginas
+// bajo app/categoria/ y app/products/ que todavía importan de @/lib/ecommerce.
+//
+// TODO: migrar app/categoria/[categoria]/page.tsx y app/products/[handle]/page.tsx
+//       a importar directamente de @/lib/store/ y eliminar lib/ecommerce/ completo.
+⋮----
+// formatPrice vive en lib/ecommerce/utils.ts — se mantiene acá hasta
+// que las páginas migren a importarla directamente.
+⋮----
+// getProductById es alias de getProductByHandle (el back usa handle como id público)
+⋮----
+// getAllProducts: lib/store/client no tiene equivalente directo sin organizationId.
+// Las páginas que lo llaman (app/products/[handle]/page.tsx) son rutas legacy
+// sin contexto de tienda. Devuelve array vacío hasta que esas páginas migren
+// a la ruta /tienda/[slug]/productos/ que sí tiene organizationId.
+export async function getAllProducts()
+⋮----
+// getProductsByCategory: alias con firma legacy (solo handle, sin organizationId).
+// Solo funciona desde páginas bajo /tienda/[slug]/ donde el organizationId
+// viene del StoreContext. Las páginas bajo /categoria/ deben migrar.
+</file>
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 <file path="realsass-dashboard-front/app/dashboard/chat/page.tsx">
 // app/dashboard/chat/page.tsx — lista de conversaciones del chat-ia-back
 import Link from 'next/link';
@@ -14378,7 +16702,11 @@ import { CatalogService } from './catalog.service';
 import { PrismaCatalogRepository } from './repository/prisma-catalog.repository';
 import { CATALOG_REPOSITORY } from './repository/catalog.repository.interface';
 ⋮----
+<<<<<<< HEAD
 export class CatalogModule {}
+=======
+export class CatalogModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/src/inventory/inventory.service.ts">
@@ -14438,6 +16766,7 @@ async onModuleDestroy(): Promise<void>
 </file>
 
 <file path="realsass-ecommerce-back/src/app.module.ts">
+<<<<<<< HEAD
 import { Module }              from '@nestjs/common';
 import { ConfigModule }        from '@nestjs/config';
 import { APP_GUARD }           from '@nestjs/core';
@@ -14454,6 +16783,24 @@ import { OrdersModule }        from './orders/orders.module';
 import { StoreModule }         from './store/store.module';
 import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
 import { TrpcModule }          from './trpc/trpc.module';
+=======
+import { Module }                     from '@nestjs/common';
+import { APP_GUARD }                  from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ConfigModule }               from '@nestjs/config';
+⋮----
+import { PrismaModule }              from './prisma/prisma.module';
+import { RedisModule }               from './redis/redis.module';
+import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
+import { CatalogModule }             from './catalog/catalog.module';
+import { InventoryModule }           from './inventory/inventory.module';
+import { CustomersModule }           from './customers/customers.module';
+import { ActivityModule }            from './activity/activity.module';
+import { CartModule }                from './cart/cart.module';
+import { OrdersModule }              from './orders/orders.module';
+import { StoreModule }               from './store/store.module';
+import { TrpcModule }                from './trpc/trpc.module';
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 import {
   FirebaseModule,
@@ -14465,6 +16812,7 @@ import {
 } from '@real/auth-server';
 ⋮----
 /**
+<<<<<<< HEAD
  * app.module.ts — realsass-ecommerce-back
  *
  * ADR-005: Sin controllers REST legacy.
@@ -14473,6 +16821,16 @@ import {
  */
 ⋮----
 export class AppModule
+=======
+ * Orden de APP_GUARD importa:
+ *   1. FirebaseAuthGuard — verifica identidad (quien sos)
+ *   2. TenantGuard       — resuelve organizacion y rol
+ *   3. RolesGuard        — aplica RBAC
+ *   4. ThrottlerGuard    — rate limiting
+ */
+⋮----
+export class AppModule {}
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-ecommerce-back/nest-cli.json">
@@ -14529,7 +16887,12 @@ model User {
   displayName    String?
   avatarUrl      String?
   createdAt      DateTime @default(now())
+<<<<<<< HEAD
   updatedAt      DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization   Organization?
   affiliateData  AffiliateData?
@@ -14538,6 +16901,15 @@ model User {
   @@map("users")
 }
 
+<<<<<<< HEAD
+=======
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 model Organization {
   id          String  @id @default(uuid())
   userId      String  @unique
@@ -14548,7 +16920,14 @@ model Organization {
   phone       String?
   address     String?
   createdAt   DateTime @default(now())
+<<<<<<< HEAD
   updatedAt   DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+
+  status   OrgStatus @default(ACTIVE)  // ADR-010
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   collaborators Collaborator[]
@@ -14584,7 +16963,12 @@ model Collaborator {
 
   invitedAt  DateTime  @default(now())
   acceptedAt DateTime?
+<<<<<<< HEAD
   updatedAt  DateTime  @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -14615,7 +16999,12 @@ model AffiliateData {
   balance       Decimal  @default(0) @db.Decimal(10, 2)
   referralCount Int      @default(0)
   createdAt     DateTime @default(now())
+<<<<<<< HEAD
   updatedAt     DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -14640,7 +17029,12 @@ model ThemeConfig {
   darkMode        Boolean  @default(false)
   customCSS       String?
   createdAt       DateTime @default(now())
+<<<<<<< HEAD
   updatedAt       DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -14663,7 +17057,12 @@ model SecretConfig {
   rotatedAt      DateTime?
   expiresAt      DateTime?
   createdAt      DateTime  @default(now())
+<<<<<<< HEAD
   updatedAt      DateTime  @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -14682,7 +17081,12 @@ model FeatureFlag {
   rolloutPercentage Int      @default(100)
   conditions        Json     @default("{}")
   createdAt         DateTime @default(now())
+<<<<<<< HEAD
   updatedAt         DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -14702,7 +17106,12 @@ model ContentTemplate {
   isSystemDefault Boolean  @default(false)
   variables       Json     @default("[]")
   createdAt       DateTime @default(now())
+<<<<<<< HEAD
   updatedAt       DateTime @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -14720,7 +17129,12 @@ model QuotaConfig {
   alertAt        Int       @default(80)
   resetAt        DateTime?
   createdAt      DateTime  @default(now())
+<<<<<<< HEAD
   updatedAt      DateTime  @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -14742,7 +17156,12 @@ model WebhookEndpoint {
   failureCount    Int       @default(0)
   retryPolicy     Json      @default("{\"maxAttempts\":3,\"backoffMs\":1000}")
   createdAt       DateTime  @default(now())
+<<<<<<< HEAD
   updatedAt       DateTime  @updatedAt
+=======
+  updatedAt   DateTime  @updatedAt
+
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
   organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deliveryLogs  WebhookDeliveryLog[]
@@ -14797,7 +17216,11 @@ import { PrismaCollaboratorsRepository }  from './repository/prisma-collaborator
 import { COLLABORATORS_REPOSITORY }       from './repository/collaborators.repository.interface';
 import { PrismaModule }                   from '../prisma/prisma.module';
 ⋮----
+<<<<<<< HEAD
 export class CollaboratorsModule {}
+=======
+export class CollaboratorsModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-audit/config-audit.module.ts">
@@ -14807,7 +17230,11 @@ import { PrismaAuditRepository } from './repository/prisma-audit.repository';
 import { AUDIT_REPOSITORY }      from './repository/audit.repository.interface';
 import { PrismaModule }          from '../prisma/prisma.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigAuditModule {}
+=======
+export class ConfigAuditModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-flags/config-flags.module.ts">
@@ -14819,7 +17246,11 @@ import { PrismaModule }                  from '../prisma/prisma.module';
 import { ConfigCacheModule }             from '../config-cache/config-cache.module';
 import { ConfigAuditModule }             from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigFlagsModule {}
+=======
+export class ConfigFlagsModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-quotas/config-quotas.module.ts">
@@ -14831,7 +17262,11 @@ import { PrismaModule }            from '../prisma/prisma.module';
 import { ConfigCacheModule }       from '../config-cache/config-cache.module';
 import { ConfigAuditModule }       from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigQuotasModule {}
+=======
+export class ConfigQuotasModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-secrets/config-secrets.module.ts">
@@ -14843,7 +17278,11 @@ import { SECRETS_REPOSITORY }       from './repository/secrets.repository.interf
 import { PrismaModule }             from '../prisma/prisma.module';
 import { ConfigAuditModule }        from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigSecretsModule {}
+=======
+export class ConfigSecretsModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-templates/config-templates.module.ts">
@@ -14855,7 +17294,11 @@ import { PrismaModule }              from '../prisma/prisma.module';
 import { ConfigCacheModule }         from '../config-cache/config-cache.module';
 import { ConfigAuditModule }         from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigTemplatesModule {}
+=======
+export class ConfigTemplatesModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-themes/config-themes.module.ts">
@@ -14867,7 +17310,11 @@ import { PrismaModule }            from '../prisma/prisma.module';
 import { ConfigCacheModule }       from '../config-cache/config-cache.module';
 import { ConfigAuditModule }       from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigThemesModule {}
+=======
+export class ConfigThemesModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-webhooks/config-webhooks.module.ts">
@@ -14881,7 +17328,11 @@ import { WEBHOOKS_REPOSITORY }       from './repository/webhooks.repository.inte
 import { PrismaModule }              from '../prisma/prisma.module';
 import { ConfigAuditModule }         from '../config-audit/config-audit.module';
 ⋮----
+<<<<<<< HEAD
 export class ConfigWebhooksModule {}
+=======
+export class ConfigWebhooksModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/organizations/organizations.controller.ts">
@@ -14902,7 +17353,11 @@ import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { Public }                from '@real/auth-server';
 import { OrganizationsService }  from './organizations.service';
 ⋮----
+<<<<<<< HEAD
 export class OrganizationsController {
+=======
+export class OrganizationsController
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(private readonly organizationsService: OrganizationsService)
 ⋮----
@@ -15008,6 +17463,10 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule }         from '@nestjs/event-emitter';
 ⋮----
 import { HealthModule }          from './health/health.module';
+<<<<<<< HEAD
+=======
+import { InternalModule }   from './internal/internal.module';
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 import { PrismaModule }          from './prisma/prisma.module';
 import { RedisModule }           from './redis/redis.module';
 import { AuthModule }            from './auth/auth.module';
@@ -15036,7 +17495,11 @@ import {
 // sass-back NO usa TenantGuard — el TenantContext se resuelve directamente
 // desde Prisma en cada service (sin hop de red).
 ⋮----
+<<<<<<< HEAD
 export class AppModule {}
+=======
+export class AppModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/nest-cli.json">
@@ -15068,7 +17531,10 @@ export class AppModule {}
 
 <file path="realsass-sass-back/tsconfig.json">
 {
+<<<<<<< HEAD
   "extends": "../tsconfig.base.json",
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -15087,8 +17553,17 @@ export class AppModule {}
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
+<<<<<<< HEAD
     "forceConsistentCasingInFileNames": true
   }
+=======
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false
+  },
+  "extends": "../tsconfig.base.json"
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 }
 </file>
 
@@ -15279,7 +17754,11 @@ import { Prisma } from '@prisma/client';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from './repository/organizations.repository.interface';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 ⋮----
+<<<<<<< HEAD
 export class OrganizationsService
+=======
+export class OrganizationsService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -15418,6 +17897,7 @@ async headers()
 /**
  * auth.controller.ts — realsass-sass-back
  *
+<<<<<<< HEAD
  * Endpoints REST de auth — los que NO pueden ir por tRPC:
  *   POST   /auth/session           → crea cookie HttpOnly (ADR-004)
  *   DELETE /auth/session           → revoca cookie HttpOnly (ADR-004)
@@ -15437,12 +17917,37 @@ import { Public }        from '@real/auth-server';
 import { AuthService }   from './auth.service';
 import { UsersService }  from '../users/users.service';
 import type { Request, Response } from 'express';
+=======
+ * REST endpoints que DEBEN quedar en REST (ADR-005):
+ *
+ *   POST /auth/firebase-sso
+ *     Redirect entre fronts tras autenticación Firebase — usa res.redirect().
+ *     No puede ser tRPC porque tRPC no soporta redirects HTTP.
+ *
+ *   GET /auth/organization-access
+ *     Consumido por realsass-ecommerce-back vía HTTP (back-to-back).
+ *     No es un front — no puede usar el cliente tRPC de React.
+ *
+ * TODO cuando existan chat-ia-back y pagos-back:
+ *   Evaluar si organization-access debe moverse a @real/auth-server
+ *   como endpoint compartido en lugar de vivir en sass-back.
+ */
+import {
+  Controller, Post, Get, Body, Query, Res, HttpCode, HttpStatus,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { Public, CurrentUser }   from '@real/auth-server';
+import type { CurrentUserPayload } from '@real/auth-server';
+import { UsersService }           from '../users/users.service';
+import { AuthService }            from './auth.service';
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 export class AuthController
 ⋮----
 constructor(
 ⋮----
 /**
+<<<<<<< HEAD
    * POST /auth/session
    * Recibe ID token de Firebase → emite cookie HttpOnly __session.
    * Rate limiting: 10 req/min por IP (ADR-012 — previene brute force).
@@ -15467,6 +17972,27 @@ async firebaseSso(@Req() req: Request, @Res(
 async getOrganizationAccess(
     @Param('organizationId') organizationId: string,
     @Req() req: Request,
+=======
+   * POST /api/v1/auth/firebase-sso
+   * Redirect entre sass-front y dashboard-front tras auth Firebase.
+   * Mantiene en REST porque necesita res.redirect() — tRPC no lo soporta.
+   */
+⋮----
+async firebaseSso(
+    @Body() body: { idToken: string; redirectTo?: string },
+    @Res() res: Response,
+)
+⋮----
+/**
+   * GET /api/v1/auth/organization-access
+   * Consumido por realsass-ecommerce-back vía HTTP para resolver acceso.
+   * Mantiene en REST porque es back-to-back, no front-to-back.
+   */
+⋮----
+async getOrganizationAccess(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('organizationId') organizationId: string,
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 )
 </file>
 
@@ -15489,7 +18015,11 @@ import { AuthController }                               from './auth.controller'
 import { ClaimsService }                                from './claims.service';
 import { UsersModule }                                  from '../users/users.module';
 ⋮----
+<<<<<<< HEAD
 export class AuthModule
+=======
+export class AuthModule {}
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/src/config-audit/config-audit.service.ts">
@@ -15497,7 +18027,11 @@ import { Injectable, Inject } from '@nestjs/common';
 import { AUDIT_REPOSITORY, type IAuditRepository } from './repository/audit.repository.interface';
 import type { CreateAuditLogInput, AuditLogFilters } from './domain/audit-log.entity';
 ⋮----
+<<<<<<< HEAD
 export class ConfigAuditService
+=======
+export class ConfigAuditService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -15567,7 +18101,11 @@ import { USERS_REPOSITORY }        from './repository/users.repository.interface
 import { PrismaModule }            from '../prisma/prisma.module';
 import { OrganizationsModule }     from '../organizations/organizations.module';
 ⋮----
+<<<<<<< HEAD
 export class UsersModule {}
+=======
+export class UsersModule
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/package.json">
@@ -15798,7 +18336,11 @@ import type { CurrentUserPayload } from '@real/auth-server';
  *   3. refreshClaims()       — reemite claims (cambio de org activa)
  */
 ⋮----
+<<<<<<< HEAD
 export class AuthService
+=======
+export class AuthService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -15848,7 +18390,11 @@ interface UpdateCollaboratorDto {
 ⋮----
 function defaultPermissions(): CollaboratorPermissions
 ⋮----
+<<<<<<< HEAD
 export class CollaboratorsService
+=======
+export class CollaboratorsService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -15889,7 +18435,11 @@ import { Prisma }              from '@prisma/client';
 import { USERS_REPOSITORY, type IUsersRepository } from './repository/users.repository.interface';
 import type { OrganizationAccessResult }            from '@real/auth-server';
 ⋮----
+<<<<<<< HEAD
 export class UsersService
+=======
+export class UsersService {
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 ⋮----
 constructor(
 ⋮----
@@ -16066,7 +18616,10 @@ CMD ["/app/node_modules/.bin/next", "start"]
 <file path="realsass-ecommerce-back/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+<<<<<<< HEAD
 # Railway: Root Directory = / | Dockerfile Path = realsass-ecommerce-back/Dockerfile
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -16089,8 +18642,13 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
+<<<<<<< HEAD
 COPY realsass-ecommerce-back/      ./realsass-ecommerce-back/
 COPY packages/                     ./packages/
+=======
+COPY realsass-ecommerce-back/          ./realsass-ecommerce-back/
+COPY packages/                         ./packages/
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 WORKDIR /app/realsass-ecommerce-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
@@ -16099,22 +18657,34 @@ FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
 WORKDIR /app
 ENV NODE_ENV=production
+<<<<<<< HEAD
 ENV PORT=3001
+=======
+ENV PORT=3000
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
 USER nestjs
+<<<<<<< HEAD
 EXPOSE 3001
 # prisma migrate deploy antes de arrancar — garantiza migraciones aplicadas
 CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && node dist/main"]
+=======
+EXPOSE 3000
+CMD ["dumb-init", "node", "dist/main"]
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-sass-back/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+<<<<<<< HEAD
 # Railway: Root Directory = / | Dockerfile Path = realsass-sass-back/Dockerfile
+=======
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 FROM node:22-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
@@ -16124,7 +18694,11 @@ COPY packages/auth-client/package.json ./packages/auth-client/
 COPY packages/auth-server/package.json ./packages/auth-server/
 COPY packages/ui/package.json          ./packages/ui/
 COPY packages/trpc/package.json        ./packages/trpc/
+<<<<<<< HEAD
 COPY realsass-sass-back/package.json   ./realsass-sass-back/
+=======
+COPY realsass-sass-back/package.json              ./realsass-sass-back/
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 RUN echo "shamefully-hoist=true" >> .npmrc
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -16137,8 +18711,13 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY tsconfig.base.json            ./tsconfig.base.json
 COPY package.json pnpm-workspace.yaml ./
+<<<<<<< HEAD
 COPY realsass-sass-back/           ./realsass-sass-back/
 COPY packages/                     ./packages/
+=======
+COPY realsass-sass-back/                          ./realsass-sass-back/
+COPY packages/                         ./packages/
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 WORKDIR /app/realsass-sass-back
 RUN /app/node_modules/.bin/prisma generate
 RUN /app/node_modules/.bin/nest build
@@ -16150,13 +18729,21 @@ ENV NODE_ENV=production
 ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
+<<<<<<< HEAD
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules                    ./node_modules
+=======
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
 USER nestjs
 EXPOSE 3000
+<<<<<<< HEAD
 # prisma migrate deploy antes de arrancar el servidor — garantiza migraciones aplicadas
 CMD ["dumb-init", "sh", "-c", "npx prisma migrate deploy && node dist/main"]
+=======
+CMD ["dumb-init", "node", "dist/main"]
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 </file>
 
 <file path="realsass-dashboard-front/Dockerfile">

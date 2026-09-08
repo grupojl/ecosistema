@@ -1,46 +1,63 @@
-# Roadmap de sprints
+# Sprints — ecosistema-ms
 
-## S1: fusionar realsass-config-back → realsass-sass-back + adaptar tRPC
+**Última actualización:** 2026-09-07
 
-**Estado: ✅ CERRADO.**
-- Schema de sass-back tiene todos los modelos de config fusionados
-- TenantGuard local resuelve Prisma directo
-- Módulos config-* completos con controllers/services propios
-- auth.* router tRPC: ✅ me, sync, refreshClaims, selectRole
+## Estado de fases
 
-## S2: fusionar realsass-dashboard-back → realsass-ecommerce-back
+| Fase | Descripción | Estado |
+|------|-------------|--------|
+| FASE 0 | Estructura base .claude/ | ✅ COMPLETO |
+| FASE 1 | Carpetas bloqueantes/dinámicas | ✅ COMPLETO |
+| FASE 2 | ADR-001: DTOs → Zod | ✅ COMPLETO — 0 class-validator residuales |
+| FASE 3 | Contratos gRPC documentados | ✅ COMPLETO |
+| FASE 4 | Domain/Repository MOLDE VIVO | ✅ COMPLETO |
+| FASE 5 | Multi-tenant — auditoría queries | ✅ COMPLETO |
+| FASE 7 | Internal API para superadmin (ADR-008) | ✅ COMPLETO |
+| FASE 6 | Build limpio + Railway | 🔴 PRÓXIMA |
 
-**Estado: ✅ CERRADO.**
-realsass-dashboard-back eliminado tras fusionarse en realsass-ecommerce-back.
+---
 
-## S3: implementar @real/auth-client, @real/ui + TanStack Query en fronts
+## Logros FASE 7 — Internal API superadmin (2026-09-07)
 
-**Estado: ✅ CERRADO.**
+### Archivos creados
 
-- `@real/auth-client`: ✅ completo en los 3 fronts
-- `@real/ui`: ✅ 33 componentes shadcn — fuente única, components/ui/ eliminados
-- `@real/auth-server`: ✅ SessionService + AuthSessionController (ADR-004)
-- `@real/trpc`: ✅ SassAppRouter + EcommerceAppRouter tipados
-- Auth cookies HttpOnly (ADR-004): ✅
-- TanStack Query: ✅ en los 3 fronts
-- Zustand: ✅ useShoppingBagStore + useSidebarStore + useUIStore
-- auth.* router tRPC: ✅
+| Archivo | Servicio |
+|---------|---------|
+| `src/common/guards/internal-api-key.guard.ts` | los 5 servicios |
+| `src/health/health-extended.controller.ts` | los 5 servicios |
+| `src/internal/internal-conversations.controller.ts` | chatia-backend |
+| `src/internal/internal-payments.controller.ts` | pasarelapagos-backend |
+| `src/internal/internal-metrics.controller.ts` | analytics-backend |
+| `src/internal/internal-dlq.controller.ts` | workers-backend |
+| `src/internal/internal.module.ts` | chatia, pasarela, analytics, workers |
+| `src/common/pipes/zod-validation.pipe.ts` | pasarela, analytics, workers (si no existía) |
 
-## S4: tests 85% + OpenTelemetry
+### Módulos actualizados
 
+<<<<<<< HEAD
 **Estado: 🔴 ACTIVO — 2026-09-02**
 Dependencias en catalog: `@opentelemetry/sdk-node`,
 `@opentelemetry/auto-instrumentations-node`, `@opentelemetry/exporter-prometheus`.
+=======
+| Archivo | Cambio |
+|---------|--------|
+| `chatia/src/health/health.module.ts` | +HealthExtendedController |
+| `pasarela/src/health/health.module.ts` | +HealthExtendedController +CircuitBreakerService |
+| `notificaciones/src/health/health.module.ts` | +HealthExtendedController +CircuitBreakerService |
+| `analytics/src/health/health.module.ts` | +HealthExtendedController |
+| `workers/src/health/health.module.ts` | +HealthExtendedController +DlqModule +CircuitBreakerService |
+| `pasarela/src/app.module.ts` | +InternalModule |
+| `analytics/src/app.module.ts` | +InternalModule |
+| `workers/src/app.module.ts` | +InternalModule |
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
-## Deuda técnica resuelta en sesiones 2026-08-28
+### Bug corregido — DT-019
 
-**Backend sass-back — Capas 3+4 Domain/Repository (11 módulos):**
-- affiliate, collaborators, config-audit, config-flags, config-quotas
-- config-secrets, config-templates, config-themes, config-webhooks
-- organizations, users
-Cada módulo tiene: domain/*.entity.ts + repository/interface + repository/prisma-impl
-Los services inyectan su repository via @Inject(TOKEN) — sin this.prisma directo.
+`workers-backend/src/dlq/dlq.service.ts` — `getFailedJobs()` había sido
+appendeado fuera del cierre de clase `DlqService`. Corregido manualmente:
+el método quedó dentro de la clase, un único `}` al final del archivo.
 
+<<<<<<< HEAD
 **Frontend:**
 - components/ui/ eliminados de los 3 fronts → imports a @real/ui
 - lib/utils.ts centralizado → cn() desde @real/ui
@@ -115,3 +132,64 @@ Prioridad inmediata:
 | Frontend 5 — Auth | 9.5 | 10.0 |
 
 (*) Capa 4 llega a ~8.5/10 con tests. El 10/10 requiere `pagos-back` y APIs courier.
+=======
+### Endpoints expuestos
+
+| Endpoint | Servicio | Fase superadmin |
+|----------|---------|-----------------|
+| GET /api/v1/health/extended | los 5 | Fase 1 |
+| GET /internal/conversations/escalated | chatia | Fase 2 |
+| GET /internal/conversations/stats | chatia | Fase 2 |
+| GET /internal/payments | pasarela | Fase 2 |
+| GET /internal/payments/:id | pasarela | Fase 3 |
+| POST /internal/payments/:id/retry | pasarela | Fase 3 |
+| GET /internal/metrics/summary | analytics | Fase 3 |
+| GET /internal/jobs/dlq | workers | Fase 3 |
+| POST /internal/jobs/dlq/:id/retry | workers | Fase 3 |
+
+---
+
+## FASE 6 — Build limpio + Railway (PRÓXIMA)
+
+### Paso 1 — Build limpio
+
+```bash
+pnpm -r build
+# Criterio de done: 0 errores TypeScript en los 5 servicios
+```
+
+### Paso 2 — Variables Railway
+
+En cada uno de los 5 servicios Railway:
+```
+INTERNAL_API_KEY=<openssl rand -hex 32>   # misma clave en todos
+```
+
+En superadmin (grupojl-control-backend) Railway:
+```
+CHATIA_INTERNAL_URL=http://chatia-backend.railway.internal:3000
+PASARELA_INTERNAL_URL=http://pasarelapagos-backend.railway.internal:3001
+NOTIFICACIONES_INTERNAL_URL=http://notificaciones-backend.railway.internal:3002
+ANALYTICS_INTERNAL_URL=http://analytics-backend.railway.internal:3003
+WORKERS_INTERNAL_URL=http://workers-backend.railway.internal:3004
+INTERNAL_API_KEY=<misma-clave>
+```
+
+### Paso 3 — Verificar conectividad (una URL a la vez)
+
+```bash
+# Sin auth — debe retornar JSON con status ok/degraded/down
+curl https://chatia-backend.railway.app/api/v1/health/extended
+
+# Con auth — debe retornar datos reales
+curl -H "x-internal-api-key: $INTERNAL_API_KEY" \
+  "https://chatia-backend.railway.app/internal/conversations/escalated?ecosystemId=welver"
+```
+
+### Criterio de done FASE 6
+
+- [ ] `pnpm -r build` → 0 errores TypeScript
+- [ ] Los 5 servicios con `INTERNAL_API_KEY` en Railway
+- [ ] Superadmin con las 6 URLs configuradas
+- [ ] DemoBadge desaparece en Command Center del superadmin
+>>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862

@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule }         from '@nestjs/event-emitter';
 
 import { HealthModule }          from './health/health.module';
+import { InternalModule }   from './internal/internal.module';
 import { PrismaModule }          from './prisma/prisma.module';
 import { RedisModule }           from './redis/redis.module';
 import { AuthModule }            from './auth/auth.module';
@@ -40,6 +41,7 @@ import {
     EventEmitterModule.forRoot({ wildcard: false }),
     FirebaseModule,
     HealthModule,
+    InternalModule,
     PrismaModule,
     RedisModule,
     AuthModule,
