@@ -6,14 +6,14 @@
 
 ## ✅ Completado
 
-- [x] `use-config.ts` — tipado sin any, inferido desde SassAppRouter
-- [x] `use-auth-trpc.ts` — me, sync, refreshClaims, selectRole
-- [x] `use-collaborators.ts` — list, invite, update, remove, accept, getInvitationInfo
-- [x] `features/*/hooks` en dashboard-front — TanStack Query en todas las páginas de datos
-- [x] `use-cart` + `use-customer` en ecommerce-front
-- [x] `staleTime` configurado por entidad según frecuencia de cambio
-- [x] `queryKey` invalidation en mutations — cero datos stale
-- [x] Sin `useEffect(() => fetch(...))` para datos de servidor
+- [ ] `use-config.ts` — tipado sin any, inferido desde SassAppRouter
+- [ ] `use-auth-trpc.ts` — me, sync, refreshClaims, selectRole
+- [ ] `use-collaborators.ts` — list, invite, update, remove, accept, getInvitationInfo
+- [ ] `features/*/hooks` en dashboard-front — TanStack Query en todas las páginas de datos
+- [ ] `use-cart` + `use-customer` en ecommerce-front
+- [ ] `staleTime` configurado por entidad según frecuencia de cambio
+- [ ] `queryKey` invalidation en mutations — cero datos stale
+- [ ] Sin `useEffect(() => fetch(...))` para datos de servidor
 
 ## ⏳ Pendiente para 10/10
 

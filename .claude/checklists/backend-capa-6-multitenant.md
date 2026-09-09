@@ -6,11 +6,11 @@
 
 ## ✅ Completado
 
-- [x] Todo modelo con datos de negocio lleva `organizationId`
-- [x] Todo repository method recibe `organizationId` como parámetro obligatorio
-- [x] TenantContext resuelto una sola vez en Capa 1 — no en cada service
-- [x] ecommerce-back nunca resuelve tenant desde disco — siempre HTTP + Redis cache
-- [x] Permisos JSONB en `Collaborator` — extensible sin migraciones (ADR-001)
+- [ ] Todo modelo con datos de negocio lleva `organizationId`
+- [ ] Todo repository method recibe `organizationId` como parámetro obligatorio
+- [ ] TenantContext resuelto una sola vez en Capa 1 — no en cada service
+- [ ] ecommerce-back nunca resuelve tenant desde disco — siempre HTTP + Redis cache
+- [ ] Permisos JSONB en `Collaborator` — extensible sin migraciones (ADR-001)
 
 ## ⏳ Pendiente para 10/10
 

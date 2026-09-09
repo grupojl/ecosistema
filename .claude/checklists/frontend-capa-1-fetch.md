@@ -7,20 +7,20 @@
 
 ## ✅ Completado
 
-- [x] tRPC exclusivo en sass-front, dashboard-front y ecommerce-front
-- [x] `credentials: include` — cookie `__session` viaja automáticamente
-- [x] Excepción técnica documentada: `POST/DELETE /auth/session` — ADR-004
+- [ ] tRPC exclusivo en sass-front, dashboard-front y ecommerce-front
+- [ ] `credentials: include` — cookie `__session` viaja automáticamente
+- [ ] Excepción técnica documentada: `POST/DELETE /auth/session` — ADR-004
   → REST por diseño — necesita `Set-Cookie` header, tRPC no puede setearlo
-- [x] `chat-ia-client.ts` documentado con TODO explícito (excepción temporal)
-- [x] Sin `lib/api.ts`, `lib/types.ts`, `lib/firebase.ts` en sass-front
-- [x] `lib/firebase.ts` eliminado de dashboard-front — usa `@real/auth-client` directo
-- [x] `lib/store/client.ts` → usa `createStoreCaller().customer.*` (tRPC server caller)
-- [x] `lib/store/resolver.ts` → usa `customer.resolveStore` procedure
-- [x] `context/customer-context.tsx` → `identifyCustomer()` usa `customer.identify` tRPC
-- [x] `lib/ecommerce/index.ts` (shim) eliminado
-- [x] Páginas legacy `/categoria/` y `/products/` → redirect 308 (sin fetch de negocio)
-- [x] `dashboard-front/app/auth/sso/page.tsx` → usa `@real/auth-client` (migrado de Firebase directo)
-- [x] 0 fetch manuales de negocio en los 3 fronts
+- [ ] `chat-ia-client.ts` documentado con TODO explícito (excepción temporal)
+- [ ] Sin `lib/api.ts`, `lib/types.ts`, `lib/firebase.ts` en sass-front
+- [ ] `lib/firebase.ts` eliminado de dashboard-front — usa `@real/auth-client` directo
+- [ ] `lib/store/client.ts` → usa `createStoreCaller().customer.*` (tRPC server caller)
+- [ ] `lib/store/resolver.ts` → usa `customer.resolveStore` procedure
+- [ ] `context/customer-context.tsx` → `identifyCustomer()` usa `customer.identify` tRPC
+- [ ] `lib/ecommerce/index.ts` (shim) eliminado
+- [ ] Páginas legacy `/categoria/` y `/products/` → redirect 308 (sin fetch de negocio)
+- [ ] `dashboard-front/app/auth/sso/page.tsx` → usa `@real/auth-client` (migrado de Firebase directo)
+- [ ] 0 fetch manuales de negocio en los 3 fronts
 
 ## Excepciones permanentes documentadas
 

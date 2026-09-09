@@ -13,7 +13,7 @@ log()  { echo -e "${GREEN}[snapshot]${RESET} $1"; }
 warn() { echo -e "${YELLOW}[warn]${RESET} $1"; }
 
 REPO="grupojl/welver"
-XML_OUT="../claude-context/welver.xml"
+XML_OUT="./ecosistema.xml"
 
 # Crear directorio de output si no existe
 mkdir -p "$(dirname "$XML_OUT")"

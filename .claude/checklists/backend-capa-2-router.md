@@ -7,21 +7,21 @@
 
 ## ✅ Completado
 
-- [x] Todo input nuevo usa schema Zod inline junto al router
-- [x] Cero DTOs nuevos con `class-validator`
-- [x] **12 routers tRPC en sass-back** — todos los dominios cubiertos:
+- [ ] Todo input nuevo usa schema Zod inline junto al router
+- [ ] Cero DTOs nuevos con `class-validator`
+- [ ] **12 routers tRPC en sass-back** — todos los dominios cubiertos:
   auth, organizations, collaborators, configFlags, configQuotas,
   configThemes, configWebhooks, configAudit, configSecrets,
   configTemplates, affiliates + app-router central
-- [x] **4 routers tRPC en ecommerce-back** — adminCatalog, adminInventory, adminOrders, customer
-- [x] `customer.resolveStore` — publicProcedure ✅
-- [x] `customer.identify` — publicProcedure ✅
-- [x] `customer.getProducts` / `customer.getProduct` — publicProcedure ✅
-- [x] Controllers REST legacy de ecommerce-back **eliminados físicamente**
+- [ ] **4 routers tRPC en ecommerce-back** — adminCatalog, adminInventory, adminOrders, customer
+- [ ] `customer.resolveStore` — publicProcedure ✅
+- [ ] `customer.identify` — publicProcedure ✅
+- [ ] `customer.getProducts` / `customer.getProduct` — publicProcedure ✅
+- [ ] Controllers REST legacy de ecommerce-back **eliminados físicamente**
   → Solo queda `app.controller.ts` (hello world de NestJS CLI — sin rutas de negocio)
-- [x] DTOs class-validator de ecommerce-back eliminados con los controllers
-- [x] Interfaces locales en `collaborators.service.ts` sin class-validator
-- [x] `organizations-client/types/organization-access.types.ts` — verificar si fue eliminado
+- [ ] DTOs class-validator de ecommerce-back eliminados con los controllers
+- [ ] Interfaces locales en `collaborators.service.ts` sin class-validator
+- [ ] `organizations-client/types/organization-access.types.ts` — verificar si fue eliminado
 
 ## ⏳ Pendiente para 10/10
 

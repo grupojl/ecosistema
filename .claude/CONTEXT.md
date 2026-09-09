@@ -1,47 +1,53 @@
 # CONTEXT.md — Estado de la sesión activa
 
 **Repo:** grupojl/welver
-**Score actual:** 9.01/10 (ver AUDIT-LAST.md para detalle)
-**Sprint activo:** S8 — Producción (tests + CI verificado)
+**Score actual:** 5.42/10 — medido el 2026-09-09 por `./x.sh docs`
+**Anterior:** 9.01 (delta -3.59)
 
 ---
 
 ## Sesión activa
 
 **Objetivo de esta sesión:**
-Completar HydrationBoundary en storefront (S4-D)
+_(actualizar al empezar)_
 
 **Bloqueante actual:**
-Ninguno
+`realsass-sass-front/lib/config-client.ts` importa `AppRouter`, símbolo que `@real/trpc` no exporta (TS2305). Ese front no compila.
 
 **Última decisión tomada:**
-_(actualizar al tomar decisiones en la sesión)_
+El score lo calcula `x.sh docs` midiendo el repo. Un ADR marcado ✅ Implementado
+no es evidencia — sólo el conteo lo es.
 
 **Próximo paso concreto:**
-Implementar prefetchQuery + dehydrate en real-ecommerce-front/app/tienda/[slug]/page.tsx
+`./x.sh ecommerce-back --dry-run`, revisar el diff, después typecheck del servicio.
 
 ---
 
-## Cómo usar este archivo
+## Estado por dimensión
 
-### Al INICIAR una sesión
-Claude lee este archivo para saber exactamente dónde estamos.
-No hace falta explicar el contexto — está acá.
+| Dimensión | Score |
+|---|---|
+| TypeScript Strict | 1.0 |
+| Arquitectura de capas | 5.5 |
+| Frontend | 5.5 |
+| Seguridad | 8.9 |
+| Config/entorno | 7.3 |
+| CI/CD y tests | 5.9 |
+| Deuda técnica | 4.6 |
 
-### Al CERRAR una sesión
-Actualizar las 4 líneas antes de cerrar:
-- **Objetivo** → qué quedó pendiente para la próxima vez
-- **Bloqueante** → qué impide avanzar (o "Ninguno")
-- **Última decisión** → la decisión más importante que se tomó hoy
-- **Próximo paso** → la primera acción concreta de la próxima sesión
+---
 
-Toma 2 minutos. Evita 20 minutos de calibración en la sesión siguiente.
+## Cómo cerrar una sesión
+
+1. Actualizar las 4 líneas de "Sesión activa" arriba.
+2. Correr `./x.sh docs` — regenera este archivo y `AUDIT-LAST.md` con el score real.
+3. Agregar las decisiones del día a `DECISIONS-LOG.md`.
 
 ---
 
 ## Historial de sesiones
 
-| Fecha | Objetivo | Resultado |
-|-------|----------|-----------|
-| 2026-09-08 | Setup sistema de auditoría + x.sh código/estructura | ✅ AUDIT.md + AUDIT-LAST.md + CLAUDE.md instalados |
-
+| Fecha | Objetivo | Score al cerrar |
+|-------|----------|-----------------|
+| 2026-09-08 | Setup del sistema de auditoría | 9.01 (declarado) |
+| 2026-09-09 | Auditoría por medición automática | 5.42 (medido) |

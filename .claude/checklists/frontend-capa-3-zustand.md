@@ -6,16 +6,16 @@
 
 ## ✅ Completado
 
-- [x] `useShoppingBagStore` — modal open/close (ecommerce-front)
-- [x] `useSidebarStore` — sidebar mobile open/close (dashboard-front)
-- [x] `useUIStore` — login modal + bottom tab + mobile menu (sass-front)
-- [x] Stores contienen solo estado UI puro — sin datos de servidor duplicados
+- [ ] `useShoppingBagStore` — modal open/close (ecommerce-front)
+- [ ] `useSidebarStore` — sidebar mobile open/close (dashboard-front)
+- [ ] `useUIStore` — login modal + bottom tab + mobile menu (sass-front)
+- [ ] Stores contienen solo estado UI puro — sin datos de servidor duplicados
 
 ## ⏳ Pendiente para 10/10
 
 ### Enforcement (S4)
 - [ ] Lint rule o code review check: campo en store que también existe en queryKey → bug
-- [x] Documentar qué estado va a Zustand vs TanStack Query en `conventions/state.md` — creado 2026-09-02
+- [ ] Documentar qué estado va a Zustand vs TanStack Query en `conventions/state.md` — creado 2026-09-02
 
 ### Mejoras opcionales (S4)
 - [ ] `zustand/middleware persist` para preferencias de UI que deben sobrevivir recarga

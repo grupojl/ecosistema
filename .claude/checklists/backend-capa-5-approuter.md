@@ -6,11 +6,11 @@
 
 ## ✅ Completado
 
-- [x] `SassAppRouter` + `EcommerceAppRouter` tipados en `@real/trpc`
-- [x] Cero casts `as any` — type-safety end-to-end
-- [x] Procedure renombrado = build de los 3 fronts falla antes de llegar a Railway
-- [x] 11 routers tRPC en sass-back
-- [x] 4 routers tRPC en ecommerce-back
+- [ ] `SassAppRouter` + `EcommerceAppRouter` tipados en `@real/trpc`
+- [ ] Cero casts `as any` — type-safety end-to-end
+- [ ] Procedure renombrado = build de los 3 fronts falla antes de llegar a Railway
+- [ ] 11 routers tRPC en sass-back
+- [ ] 4 routers tRPC en ecommerce-back
 
 ## ⏳ Pendiente para 10/10
 

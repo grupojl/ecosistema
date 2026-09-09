@@ -1,337 +1,977 @@
 #!/usr/bin/env bash
-# =============================================================================
-# experience-setup.sh — Instala las 3 mejoras de experiencia en .claude/
+# ==============================================================================
+# x.sh — Aplicador de cambios por servicio · monorepo grupojl/welver
 #
-# Ejecutar con el nombre del repo como argumento:
-#   bash experience-setup.sh welver
-#   bash experience-setup.sh ecosistema-ms
-#   bash experience-setup.sh superadmin
+# CONTEXTO
+#   Railway consume este mismo repo de GitHub como 5 servicios independientes.
+#   Un cambio que toca varios directorios dispara N deploys simultáneos y hace
+#   imposible aislar qué rompió qué. Este script aplica cambios de a UN target,
+#   tocando SOLO los archivos de ese servicio, para que el path filter de
+#   Railway/GitHub Actions dispare exactamente un deploy por corrida.
 #
-# Crea en .claude/:
-#   CONTEXT.md       → estado de la sesión activa (actualizar al cerrar)
-#   DECISIONS-LOG.md → historial de decisiones pequeñas tomadas en chat
+# USO
+#   ./x.sh status                      # audita, no escribe nada
+#   ./x.sh <target> [flags]
+#   ./x.sh all --dry-run
 #
-# Crea en la raíz del repo:
-#   snapshot.sh      → actualiza el XML con repomix en un comando
-# =============================================================================
-set -e
-BOLD='\033[1m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; CYAN='\033[0;36m'; RESET='\033[0m'
-log()  { echo -e "${GREEN}[experience-setup]${RESET} $1"; }
-step() { echo -e "\n${BOLD}${CYAN}══ $1${RESET}"; }
-warn() { echo -e "${YELLOW}[warn]${RESET} $1"; }
+# TARGETS
+#   root             package.json raíz — pin de packageManager
+#   packages         packages/trpc — alias AppRouter faltante
+#   sass-back        realsass-sass-back
+#   ecommerce-back   realsass-ecommerce-back
+#   sass-front       realsass-sass-front
+#   dashboard-front  realsass-dashboard-front
+#   ecommerce-front  real-ecommerce-front
+#   docs             .claude/** — audita midiendo el repo y regenera .claude/
+#   clean            borra los .bak-* de corridas anteriores
+#   all              todos, en orden de dependencia
+#
+# FLAGS
+#   --dry-run        muestra el diff que haría, no escribe
+#   --no-backup      no crea .bak
+#   --force          aplica aunque los guards de verificación fallen
+#   --commit         hace git add del scope + commit con mensaje por servicio
+#
+# ORDEN RECOMENDADO (un deploy verificado por vez)
+#   ./x.sh packages --commit   → esperar CI verde
+#   ./x.sh sass-front --commit → esperar deploy verde
+#   ./x.sh ecommerce-back --commit
+#   ...
+#
+# Entorno: Windows + Git Bash · Node 24.x · pnpm 10.x
+# ==============================================================================
 
-REPO=${1:-""}
-if [ -z "$REPO" ]; then
-  echo "Uso: bash experience-setup.sh welver | ecosistema-ms | superadmin"
-  exit 1
-fi
+set -Eeuo pipefail
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Configuración por repo
-# ─────────────────────────────────────────────────────────────────────────────
-case "$REPO" in
-  welver)
-    REPO_FULL="grupojl/welver"
-    REPO_DESC="Monorepo SaaS multi-tenant — 2 backs NestJS + 3 fronts Next.js"
-    XML_OUTPUT="../claude-context/welver.xml"
-    XML_CONFIG="welver-repomix.config.json"
-    SCORE="9.01/10"
-    SPRINT_ACTIVO="S8 — Producción (tests + CI verificado)"
-    OBJETIVO_SESION="Completar HydrationBoundary en storefront (S4-D)"
-    PROXIMO_PASO="Implementar prefetchQuery + dehydrate en real-ecommerce-front/app/tienda/[slug]/page.tsx"
-    ;;
-  ecosistema-ms)
-    REPO_FULL="grupojl/ecosistema-ms"
-    REPO_DESC="5 microservicios NestJS — chatia, pagos, notificaciones, analytics, workers"
-    XML_OUTPUT="../claude-context/ecosistema-ms.xml"
-    XML_CONFIG="ecosistema-ms-repomix.config.json"
-    SCORE="8.44/10"
-    SPRINT_ACTIVO="Sprint Domain/Repository — contacts, messages, agents"
-    OBJETIVO_SESION="Migrar contacts/ a Domain/Repository siguiendo molde de conversations/"
-    PROXIMO_PASO="Crear chatia-backend/src/contacts/domain/contact.entity.ts"
-    ;;
-  superadmin)
-    REPO_FULL="grupojl/grupojl-control"
-    REPO_DESC="Superadmin panel — backend NestJS (4000) + frontend Next.js (3000)"
-    XML_OUTPUT="../claude-context/superadmin.xml"
-    XML_CONFIG="superadmin-repomix.config.json"
-    SCORE="8.68/10"
-    SPRINT_ACTIVO="S8 — Producción (variables Railway + tests + CI)"
-    OBJETIVO_SESION="S8 [P-01]: .env.example + validación arranque + rate limiting auth"
-    PROXIMO_PASO="Crear grupojl-control-backend/.env.example con todas las vars requeridas"
-    ;;
-  *)
-    echo "Repo desconocido: $REPO"
-    echo "Uso: bash experience-setup.sh welver | ecosistema-ms | superadmin"
-    exit 1
-    ;;
-esac
+# ── Config ────────────────────────────────────────────────────────────────────
+readonly PNPM_VERSION="10.30.3"
+readonly ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly TS="$(date +%Y%m%d-%H%M%S)"
 
-step "Instalando mejoras de experiencia en $REPO_FULL"
+DRY_RUN=0
+BACKUP=1
+FORCE=0
+DO_COMMIT=0
+TARGET=""
+CHANGED_FILES=()
+SKIPPED=()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. CONTEXT.md — estado de la sesión activa
-# ─────────────────────────────────────────────────────────────────────────────
-log "Creando .claude/CONTEXT.md"
-cat > .claude/CONTEXT.md << HEREDOC
+# ── Salida ────────────────────────────────────────────────────────────────────
+c_red=$'\033[0;31m'; c_grn=$'\033[0;32m'; c_yel=$'\033[0;33m'
+c_blu=$'\033[0;34m'; c_dim=$'\033[2m';    c_off=$'\033[0m'
+
+log()   { printf '%s\n' "$*"; }
+ok()    { printf '%s  ✓%s %s\n' "$c_grn" "$c_off" "$*"; }
+warn()  { printf '%s  ▲%s %s\n' "$c_yel" "$c_off" "$*"; }
+err()   { printf '%s  ✗%s %s\n' "$c_red" "$c_off" "$*" >&2; }
+skip()  { printf '%s  ·  %s%s\n' "$c_dim" "$*" "$c_off"; SKIPPED+=("$*"); }
+head1() { printf '\n%s── %s %s%s\n' "$c_blu" "$*" "$(printf '─%.0s' $(seq 1 $((60 - ${#1}))))" "$c_off"; }
+
+die() { err "$*"; exit 1; }
+
+trap 'err "Fallo en la línea $LINENO. Nada más se aplicó. Revisá los .bak-$TS si existen."' ERR
+
+# ── Helpers de escritura ──────────────────────────────────────────────────────
+
+# write_file <path> <heredoc-content-via-stdin>
+write_file() {
+  local path="$1" tmp
+  tmp="$(mktemp)"
+  cat > "$tmp"
+
+  if [[ -f "$ROOT/$path" ]] && cmp -s "$tmp" "$ROOT/$path"; then
+    skip "$path ya está en el estado deseado"
+    rm -f "$tmp"; return 0
+  fi
+
+  if (( DRY_RUN )); then
+    log "${c_dim}  --- diff $path${c_off}"
+    diff -u "$ROOT/$path" "$tmp" 2>/dev/null | sed 's/^/      /' || true
+    rm -f "$tmp"; return 0
+  fi
+
+  mkdir -p "$(dirname "$ROOT/$path")"
+  [[ -f "$ROOT/$path" && $BACKUP -eq 1 ]] && cp "$ROOT/$path" "$ROOT/$path.bak-$TS"
+  mv "$tmp" "$ROOT/$path"
+  CHANGED_FILES+=("$path")
+  ok "escrito $path"
+}
+
+# patch_file <path> <sed-expr...> — edición in-place idempotente
+patch_file() {
+  local path="$1"; shift
+  [[ -f "$ROOT/$path" ]] || { skip "$path no existe — nada que parchear"; return 0; }
+
+  local tmp; tmp="$(mktemp)"
+  cp "$ROOT/$path" "$tmp"
+  local expr
+  for expr in "$@"; do sed -i -E "$expr" "$tmp"; done
+
+  if cmp -s "$tmp" "$ROOT/$path"; then
+    skip "$path ya parcheado"
+    rm -f "$tmp"; return 0
+  fi
+
+  if (( DRY_RUN )); then
+    log "${c_dim}  --- diff $path${c_off}"
+    diff -u "$ROOT/$path" "$tmp" | sed 's/^/      /' || true
+    rm -f "$tmp"; return 0
+  fi
+
+  [[ $BACKUP -eq 1 ]] && cp "$ROOT/$path" "$ROOT/$path.bak-$TS"
+  mv "$tmp" "$ROOT/$path"
+  CHANGED_FILES+=("$path")
+  ok "parcheado $path"
+}
+
+remove_file() {
+  local path="$1" reason="${2:-}"
+  [[ -e "$ROOT/$path" ]] || { skip "$path ya no existe"; return 0; }
+  if (( DRY_RUN )); then log "${c_dim}  --- rm $path  ($reason)${c_off}"; return 0; fi
+  [[ $BACKUP -eq 1 ]] && cp "$ROOT/$path" "$ROOT/$path.bak-$TS"
+  rm -f "$ROOT/$path"
+  CHANGED_FILES+=("$path")
+  ok "eliminado $path  ${c_dim}($reason)${c_off}"
+}
+
+# guard <descripción> <comando...> — aborta si el estado real no es el esperado
+guard() {
+  local desc="$1"; shift
+  if "$@" >/dev/null 2>&1; then return 0; fi
+  if (( FORCE )); then warn "guard falló: $desc — continuando por --force"; return 0; fi
+  die "guard falló: $desc. El repo no está en el estado esperado. Revisá manualmente o usá --force."
+}
+
+commit_scope() {
+  local scope="$1" msg="$2"
+  (( DO_COMMIT )) || return 0
+  (( DRY_RUN ))   && { log "${c_dim}  --- git commit -m \"$msg\" (dry-run)${c_off}"; return 0; }
+  (( ${#CHANGED_FILES[@]} )) || { skip "sin cambios — no se commitea"; return 0; }
+  ( cd "$ROOT" && git add -- "${CHANGED_FILES[@]}" && git commit -m "$msg" ) \
+    && ok "commit creado — un solo path scope: $scope"
+}
+
+# ==============================================================================
+# TARGET: root
+# ==============================================================================
+apply_root() {
+  head1 "root — pin de toolchain"
+  # Drift real detectado: Dockerfiles usan pnpm@10.11.1, nixpacks usa pnpm@latest,
+  # el entorno local corre 10.30.3. `--frozen-lockfile` con 3 versiones distintas
+  # de resolver es una bomba de tiempo en builds de Railway.
+  if grep -q '"packageManager"' "$ROOT/package.json"; then
+    skip "packageManager ya declarado en package.json"
+  else
+    patch_file "package.json" \
+      "s/^(\s*)\"private\": true,/\1\"private\": true,\n\1\"packageManager\": \"pnpm@${PNPM_VERSION}\",/"
+  fi
+  warn "Después de esto: alinear a mano el 'corepack prepare pnpm@X' de los 5 Dockerfiles a ${PNPM_VERSION}."
+  commit_scope "root" "chore(root): pin packageManager pnpm@${PNPM_VERSION}"
+}
+
+# ==============================================================================
+# TARGET: packages
+# ==============================================================================
+apply_packages() {
+  head1 "packages/trpc — alias AppRouter"
+  local idx="packages/trpc/src/index.ts"
+  guard "$idx existe" test -f "$ROOT/$idx"
+
+  # BLOQUEANTE: realsass-sass-front/lib/config-client.ts hace
+  #   import type { AppRouter } from '@real/trpc'
+  # pero index.ts sólo exporta SassAppRouter y EcommerceAppRouter → TS2305,
+  # el typecheck del front no compila.
+  # Se agrega el alias como capa de compatibilidad y se corrige el import
+  # en el target sass-front. El alias queda deprecado, no es la solución final.
+  if grep -q "export type AppRouter" "$ROOT/$idx"; then
+    skip "alias AppRouter ya exportado"
+  else
+    if (( DRY_RUN )); then
+      log "${c_dim}  --- append alias AppRouter en $idx${c_off}"
+    else
+      [[ $BACKUP -eq 1 ]] && cp "$ROOT/$idx" "$ROOT/$idx.bak-$TS"
+      cat >> "$ROOT/$idx" <<'TS'
+
+// ── Alias de compatibilidad ───────────────────────────────────────────────────
+// @deprecated Usar SassAppRouter. Existe sólo porque config-client.ts del
+// sass-front importaba `AppRouter`, un símbolo que nunca se exportó (TS2305).
+// Eliminar cuando no queden importadores: grep -rn "AppRouter[^SE]" */lib
+export type AppRouter = _SassAppRouter;
+TS
+      CHANGED_FILES+=("$idx"); ok "alias AppRouter agregado en $idx"
+    fi
+  fi
+
+  warn "ADR-013 pendiente: @real/trpc importa por ruta relativa '../../realsass-*-back/src/...'."
+  warn "  El paquete no es autocontenido — cualquier build que no copie el back falla."
+  commit_scope "packages" "fix(trpc): exportar alias AppRouter — corrige TS2305 en sass-front"
+}
+
+# ==============================================================================
+# TARGET: sass-back
+# ==============================================================================
+apply_sass_back() {
+  head1 "realsass-sass-back"
+  local dto="realsass-sass-back/src/organizations/dto/update-organization.dto.ts"
+
+  # E1-11 figura como done en lifecycle/05-tasks.md pero el archivo sigue vivo.
+  # Sólo se elimina si nadie lo importa — si hay importadores, es trabajo manual.
+  if [[ -f "$ROOT/$dto" ]]; then
+    local users
+    users="$(grep -rl "UpdateOrganizationDto" "$ROOT/realsass-sass-back/src" 2>/dev/null | grep -v "$dto" || true)"
+    if [[ -n "$users" ]]; then
+      warn "UpdateOrganizationDto todavía se importa — NO se elimina automáticamente:"
+      printf '      %s\n' $users
+      warn "  Migrar esos consumidores a Zod inline antes de correr esto de nuevo."
+    else
+      remove_file "$dto" "class-validator huérfano — E1-11"
+    fi
+  else
+    skip "DTO class-validator ya eliminado"
+  fi
+
+  # .dockerignore: presente acá, ausente en ecommerce-back. Se deja como molde.
+  guard ".dockerignore de sass-back existe" test -f "$ROOT/realsass-sass-back/.dockerignore"
+  commit_scope "sass-back" "chore(sass-back): eliminar DTO class-validator huérfano (E1-11)"
+}
+
+# ==============================================================================
+# TARGET: ecommerce-back
+# ==============================================================================
+apply_ecommerce_back() {
+  head1 "realsass-ecommerce-back"
+  local tsc="realsass-ecommerce-back/tsconfig.json"
+  guard "$tsc existe" test -f "$ROOT/$tsc"
+
+  # BLOQUEANTE de calidad: el tsconfig extiende tsconfig.base.json (strict: true)
+  # y después lo desarma. AUDIT-LAST.md declara 10/10 en TypeScript Strict; el
+  # archivo dice lo contrario. Esto es la razón por la que este servicio tolera
+  # `any` implícito sin que el typecheck lo marque.
+  if grep -q '"noImplicitAny": false' "$ROOT/$tsc"; then
+    warn "ATENCIÓN: quitar noImplicitAny:false puede destapar decenas de errores."
+    warn "  Corré 'pnpm --filter realsass-ecommerce-back typecheck' ANTES de commitear."
+    patch_file "$tsc" \
+      '/"noImplicitAny": false,?/d' \
+      '/"strictBindCallApply": false,?/d' \
+      '/"noFallthroughCasesInSwitch": false,?/d' \
+      's/,(\s*)\}/\1}/'
+  else
+    skip "tsconfig ya hereda strict sin overrides"
+  fi
+
+  # Build context = raíz del monorepo. Sin .dockerignore, Docker sube node_modules,
+  # .next y .git de los 5 servicios en cada build de Railway.
+  if [[ ! -f "$ROOT/realsass-ecommerce-back/.dockerignore" ]]; then
+    write_file "realsass-ecommerce-back/.dockerignore" <<'IGN'
+# Build context = raíz del monorepo (welver/).
+# Sin esto Docker sube node_modules y .next de los 5 servicios en cada deploy.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+.git
+.github
+.claude
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+**/*.bak-*
+IGN
+  else
+    skip ".dockerignore ya existe en ecommerce-back"
+  fi
+
+  commit_scope "ecommerce-back" "fix(ecommerce-back): restaurar strict heredado + .dockerignore"
+}
+
+# ==============================================================================
+# TARGET: sass-front
+# ==============================================================================
+apply_sass_front() {
+  head1 "realsass-sass-front"
+
+  # Corrige el import roto en el origen (el alias en @real/trpc es sólo la red).
+  patch_file "realsass-sass-front/lib/config-client.ts" \
+    "s/import type \{ AppRouter \} from '@real\/trpc'/import type { SassAppRouter } from '@real\/trpc'/" \
+    "s/\bAppRouter\b/SassAppRouter/g"
+
+  fix_front_deploy_config "realsass-sass-front"
+  commit_scope "sass-front" "fix(sass-front): importar SassAppRouter — corrige typecheck"
+}
+
+# ==============================================================================
+# TARGET: dashboard-front
+# ==============================================================================
+apply_dashboard_front() {
+  head1 "realsass-dashboard-front"
+  # Único servicio sin railway.json: Railway cae a autodetección de builder,
+  # que no es el Dockerfile que sí existe en el repo.
+  if [[ ! -f "$ROOT/realsass-dashboard-front/railway.json" ]]; then
+    write_file "realsass-dashboard-front/railway.json" <<'JSON'
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "realsass-dashboard-front/Dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
+JSON
+  else
+    skip "railway.json ya existe"
+  fi
+  fix_front_deploy_config "realsass-dashboard-front"
+  commit_scope "dashboard-front" "chore(dashboard-front): railway.json con builder DOCKERFILE"
+}
+
+# ==============================================================================
+# TARGET: ecommerce-front
+# ==============================================================================
+apply_ecommerce_front() {
+  head1 "real-ecommerce-front"
+  if [[ ! -f "$ROOT/real-ecommerce-front/.dockerignore" ]]; then
+    write_file "real-ecommerce-front/.dockerignore" <<'IGN'
+# Build context = raíz del monorepo (welver/).
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+.git
+.github
+.claude
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+**/*.bak-*
+IGN
+  else
+    skip ".dockerignore ya existe"
+  fi
+  fix_front_deploy_config "real-ecommerce-front"
+
+  warn "GAP abierto — HydrationBoundary: 0 ocurrencias en las 4 páginas de tienda/[slug]."
+  warn "  No lo aplica este script: requiere prefetchQuery por página, no es sed."
+  commit_scope "ecommerce-front" "chore(ecommerce-front): .dockerignore + limpieza de config de deploy"
+}
+
+# ── Común a los 3 fronts ──────────────────────────────────────────────────────
+fix_front_deploy_config() {
+  local svc="$1"
+  # nixpacks.toml + railway.json{builder:DOCKERFILE} coexisten: nixpacks queda
+  # muerto pero describe un arranque distinto (standalone/server.js) al del
+  # Dockerfile (next start). Dos fuentes de verdad contradictorias sobre cómo
+  # arranca el servicio es exactamente lo que hace irreproducible un incidente.
+  if [[ -f "$ROOT/$svc/nixpacks.toml" && -f "$ROOT/$svc/railway.json" ]] \
+     && grep -q '"DOCKERFILE"' "$ROOT/$svc/railway.json"; then
+    remove_file "$svc/nixpacks.toml" "railway.json ya fuerza builder DOCKERFILE"
+  else
+    skip "$svc — sin conflicto nixpacks/railway"
+  fi
+}
+
+# ==============================================================================
+# TARGET: clean — borra los .bak-* que dejan las corridas anteriores
+# ==============================================================================
+apply_clean() {
+  head1 "clean — backups de corridas anteriores"
+  local n
+  n=$(find "$ROOT" -name '*.bak-*' -not -path '*/node_modules/*' 2>/dev/null | wc -l | tr -d ' ')
+  (( n )) || { skip "no hay .bak-* que limpiar"; return 0; }
+  if (( DRY_RUN )); then
+    find "$ROOT" -name '*.bak-*' -not -path '*/node_modules/*' | sed "s|$ROOT/|      rm |"
+    return 0
+  fi
+  find "$ROOT" -name '*.bak-*' -not -path '*/node_modules/*' -delete
+  ok "$n backups eliminados"
+}
+
+# ==============================================================================
+# TARGET: status — auditoría de sólo lectura
+# ==============================================================================
+run_status() {
+  head1 "status — verificación de sólo lectura"
+  local fail=0
+  chk() { # chk <descripción> <esperado:ok|bad> <comando...>
+    local d="$1" exp="$2"; shift 2
+    if "$@" >/dev/null 2>&1; then
+      [[ $exp == ok ]] && ok "$d" || { err "$d"; fail=1; }
+    else
+      [[ $exp == bad ]] && ok "$d" || { err "$d"; fail=1; }
+    fi
+  }
+
+  chk "tsconfig.base.json con strict:true"                ok  grep -q '"strict": true' "$ROOT/tsconfig.base.json"
+  chk "ecommerce-back SIN noImplicitAny:false"            bad grep -q '"noImplicitAny": false' "$ROOT/realsass-ecommerce-back/tsconfig.json"
+  chk "0 'as any' reales en backs (ignora comentarios)"    bad bash -c "grep -rn ' as any' '$ROOT/realsass-sass-back/src' '$ROOT/realsass-ecommerce-back/src' 2>/dev/null | grep -v -E '^[^:]+:[0-9]+: *(\\*|//|/\\*)' | grep -q ."
+  chk "0 class-validator en sass-back"                    bad grep -rq "from 'class-validator'" "$ROOT/realsass-sass-back/src"
+  chk "@real/trpc exporta AppRouter"                      ok  grep -q "export type AppRouter" "$ROOT/packages/trpc/src/index.ts"
+  chk "helmet en sass-back"                               ok  grep -q "helmet" "$ROOT/realsass-sass-back/src/main.ts"
+  chk "helmet en ecommerce-back"                          ok  grep -q "helmet" "$ROOT/realsass-ecommerce-back/src/main.ts"
+  chk "@Throttle en auth.controller"                      ok  grep -q "Throttle" "$ROOT/realsass-sass-back/src/auth/auth.controller.ts"
+  chk "migrate deploy en Dockerfile sass-back"            ok  grep -q "migrate deploy" "$ROOT/realsass-sass-back/Dockerfile"
+  chk "migrate deploy en Dockerfile ecommerce-back"       ok  grep -q "migrate deploy" "$ROOT/realsass-ecommerce-back/Dockerfile"
+  chk ".dockerignore en ecommerce-back"                   ok  test -f "$ROOT/realsass-ecommerce-back/.dockerignore"
+  chk ".dockerignore en ecommerce-front"                  ok  test -f "$ROOT/real-ecommerce-front/.dockerignore"
+  chk "railway.json en dashboard-front"                   ok  test -f "$ROOT/realsass-dashboard-front/railway.json"
+  chk "sin named catalogs en pnpm-workspace"              bad grep -qE '^catalogs:' "$ROOT/pnpm-workspace.yaml"
+  chk "packageManager pinneado"                           ok  grep -q '"packageManager"' "$ROOT/package.json"
+  chk "HydrationBoundary en ecommerce-front"              ok  grep -rq "HydrationBoundary" "$ROOT/real-ecommerce-front"
+  chk "existen tests (*.spec.ts)"                         ok  bash -c "find '$ROOT' -name '*.spec.ts' -not -path '*/node_modules/*' | grep -q ."
+  chk "existen workflows de CI"                           ok  bash -c "ls '$ROOT'/.github/workflows/*.yml >/dev/null 2>&1"
+  chk ".env.example en sass-back"                         ok  test -f "$ROOT/realsass-sass-back/.env.example"
+  chk ".env.example en ecommerce-back"                    ok  test -f "$ROOT/realsass-ecommerce-back/.env.example"
+
+  log ""
+  (( fail )) && warn "Hay checks en rojo — son las tasks abiertas, no errores del script." \
+             || ok "Todos los checks en verde."
+  return 0
+}
+
+# ==============================================================================
+# MOTOR DE MEDICIÓN — todo lo que alimenta el score sale de acá.
+#
+# Regla: ninguna función de acá escribe. Sólo miden y exportan variables M_*.
+# Si algo no se puede medir, la variable queda en -1 y el reporte lo marca
+# como no verificado en vez de asumir verde.
+# ==============================================================================
+
+# Conteos crudos ---------------------------------------------------------------
+count_files()  { find "$ROOT/$1" -type f -name "$2" -not -path '*/node_modules/*' \
+                   -not -path '*/dist/*' -not -path '*/.next/*' 2>/dev/null | wc -l | tr -d ' '; }
+
+# grep -rn filtrando líneas que son comentario (`*`, `//`, `/*`)
+grep_code() {
+  local pat="$1"; shift
+  grep -rn --include='*.ts' --include='*.tsx' -E "$pat" "$@" 2>/dev/null \
+    | grep -vE '^[^:]+:[0-9]+: *(\*|//|/\*)' || true
+}
+
+measure() {
+  head1 "midiendo el repo"
+  # Las mediciones son best-effort: un grep sin hits o un directorio ausente es
+  # un dato válido (cero), no un fallo. set -e y el trap se reactivan al salir.
+  set +e; trap - ERR
+
+  # ── D1 · TypeScript strict ──────────────────────────────────────────────────
+  M_NOIMPLICITANY=0
+  grep -q '"noImplicitAny": *false' "$ROOT/realsass-ecommerce-back/tsconfig.json" 2>/dev/null && M_NOIMPLICITANY=1
+  grep -q '"noImplicitAny": *false' "$ROOT/realsass-sass-back/tsconfig.json"      2>/dev/null && M_NOIMPLICITANY=1
+
+  M_ASANY=$(grep_code ' as any|: any\b|<any>' \
+              "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" | wc -l | tr -d ' ')
+  M_ASANY_JUSTIF=$(grep_code ' as any' \
+              "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" \
+              | grep -c '@real/jsonb-cast' || true)
+  M_CLASSVAL=$(grep -rl "from 'class-validator'" \
+              "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" 2>/dev/null | wc -l | tr -d ' ')
+
+  # ── D2 · Capas backend ──────────────────────────────────────────────────────
+  M_SB_MODULES=0; M_SB_DR=0
+  for d in "$ROOT/realsass-sass-back/src"/*/; do
+    case "$(basename "$d")" in common|prisma|redis|trpc|health|config-cache) continue ;; esac
+    M_SB_MODULES=$((M_SB_MODULES+1))
+    [[ -d "$d/domain" && -d "$d/repository" ]] && M_SB_DR=$((M_SB_DR+1))
+  done
+  M_EB_MODULES=0; M_EB_DR=0
+  for d in "$ROOT/realsass-ecommerce-back/src"/*/; do
+    case "$(basename "$d")" in common|prisma|redis|trpc|health|organizations-client) continue ;; esac
+    M_EB_MODULES=$((M_EB_MODULES+1))
+    [[ -d "$d/domain" && -d "$d/repository" ]] && M_EB_DR=$((M_EB_DR+1))
+  done
+  # services que inyectan PrismaService (excluye el propio prisma.service.ts)
+  M_PRISMA_IN_SVC=$(grep -rl "PrismaService" \
+      "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" \
+      --include='*.service.ts' 2>/dev/null | grep -vc 'prisma/prisma.service.ts' || true)
+  M_ANYROUTER=$(grep_code 'AnyRouter| as any' "$ROOT/packages/trpc/src" | wc -l | tr -d ' ')
+
+  # ── D3 · Frontend ───────────────────────────────────────────────────────────
+  M_HYDRATION=$(grep -rl "HydrationBoundary" \
+      "$ROOT/real-ecommerce-front" "$ROOT/realsass-sass-front" "$ROOT/realsass-dashboard-front" \
+      --include='*.tsx' 2>/dev/null | wc -l | tr -d ' ')
+  M_STORE_PAGES=$(count_files "real-ecommerce-front/app" "page.tsx")
+  M_RAWFETCH=$(grep_code '(^|[^a-zA-Z])fetch\(' \
+      "$ROOT/realsass-sass-front/hooks" "$ROOT/realsass-dashboard-front/hooks" 2>/dev/null | wc -l | tr -d ' ')
+  M_TRPC_IMPORT_OK=1
+  grep -rq "import type { AppRouter }" "$ROOT/realsass-sass-front" 2>/dev/null \
+    && ! grep -q "export type AppRouter" "$ROOT/packages/trpc/src/index.ts" 2>/dev/null \
+    && M_TRPC_IMPORT_OK=0
+
+  # ── D4 · Seguridad ──────────────────────────────────────────────────────────
+  M_HELMET=0
+  grep -q helmet "$ROOT/realsass-sass-back/src/main.ts"      2>/dev/null && M_HELMET=$((M_HELMET+1))
+  grep -q helmet "$ROOT/realsass-ecommerce-back/src/main.ts" 2>/dev/null && M_HELMET=$((M_HELMET+1))
+  M_THROTTLE=0; grep -rq "Throttle" "$ROOT/realsass-sass-back/src/auth" 2>/dev/null && M_THROTTLE=1
+  M_MIGRATE=0
+  for f in realsass-sass-back realsass-ecommerce-back; do
+    grep -q "migrate deploy" "$ROOT/$f/Dockerfile" 2>/dev/null && M_MIGRATE=$((M_MIGRATE+1))
+  done
+  M_DOCKERIGNORE=0
+  for f in realsass-sass-back realsass-ecommerce-back realsass-sass-front \
+           realsass-dashboard-front real-ecommerce-front; do
+    [[ -f "$ROOT/$f/.dockerignore" ]] && M_DOCKERIGNORE=$((M_DOCKERIGNORE+1))
+  done
+  M_CORS_WILDCARD=$(grep -rn "origin: *'\*'" "$ROOT"/realsass-*-back/src/main.ts 2>/dev/null | wc -l | tr -d ' ')
+  M_RAWQUERY=$(grep_code '\$queryRaw|\$executeRaw' \
+      "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" | wc -l | tr -d ' ')
+
+  # ── D5 · Config y entorno ───────────────────────────────────────────────────
+  # Exigible en los 2 backs. Los fronts reciben NEXT_PUBLIC_* como build args
+  # en Railway, así que no se penalizan; se cuentan aparte como bonus informativo.
+  M_ENVEXAMPLE=0
+  for f in realsass-sass-back realsass-ecommerce-back; do
+    [[ -f "$ROOT/$f/.env.example" ]] && M_ENVEXAMPLE=$((M_ENVEXAMPLE+1))
+  done
+  M_ENVEXAMPLE_FRONT=0
+  for f in realsass-sass-front realsass-dashboard-front real-ecommerce-front; do
+    [[ -f "$ROOT/$f/.env.example" ]] && M_ENVEXAMPLE_FRONT=$((M_ENVEXAMPLE_FRONT+1))
+  done
+  M_ENVGUARD=0
+  for f in realsass-sass-back realsass-ecommerce-back; do
+    grep -qE "process\.exit|REQUIRED_ENV|faltante|Validación de variables" "$ROOT/$f/src/main.ts" 2>/dev/null \
+      && M_ENVGUARD=$((M_ENVGUARD+1))
+  done
+  M_PKGMGR=0; grep -q '"packageManager"' "$ROOT/package.json" && M_PKGMGR=1
+  M_NAMEDCAT=0; grep -qE '^catalogs:' "$ROOT/pnpm-workspace.yaml" && M_NAMEDCAT=1
+  M_RAILWAY_JSON=0; M_NIXPACKS_CONFLICT=0
+  for f in realsass-sass-back realsass-ecommerce-back realsass-sass-front \
+           realsass-dashboard-front real-ecommerce-front; do
+    [[ -f "$ROOT/$f/railway.json" ]] && M_RAILWAY_JSON=$((M_RAILWAY_JSON+1))
+    [[ -f "$ROOT/$f/nixpacks.toml" && -f "$ROOT/$f/railway.json" ]] \
+      && grep -q '"DOCKERFILE"' "$ROOT/$f/railway.json" 2>/dev/null \
+      && M_NIXPACKS_CONFLICT=$((M_NIXPACKS_CONFLICT+1))
+  done
+  # drift de pnpm entre Dockerfiles / nixpacks / packageManager
+  M_PNPM_VERSIONS=$( { grep -rhoE 'pnpm@[0-9]+\.[0-9]+\.[0-9]+|pnpm@latest' "$ROOT"/*/Dockerfile \
+        "$ROOT"/*/nixpacks.toml "$ROOT/package.json" 2>/dev/null; } | sort -u | wc -l | tr -d ' ')
+
+  # ── D6 · CI/CD y tests ──────────────────────────────────────────────────────
+  M_WORKFLOWS=$(ls "$ROOT"/.github/workflows/*.y*ml 2>/dev/null | wc -l | tr -d ' ')
+  M_WF_TYPECHECK=$(grep -l "typecheck" "$ROOT"/.github/workflows/*.y*ml 2>/dev/null | wc -l | tr -d ' ')
+  M_WF_PATHS=$(grep -l "paths:" "$ROOT"/.github/workflows/*.y*ml 2>/dev/null | wc -l | tr -d ' ')
+  M_WF_TESTS=$(grep -lE "run:.*(jest|vitest|pnpm.*test)" "$ROOT"/.github/workflows/*.y*ml 2>/dev/null | wc -l | tr -d ' ')
+  M_WF_AUDIT=$(grep -l "pnpm audit" "$ROOT"/.github/workflows/*.y*ml 2>/dev/null | wc -l | tr -d ' ')
+  M_SPEC_BACK=$(( $(count_files "realsass-sass-back" "*.spec.ts") + $(count_files "realsass-ecommerce-back" "*.spec.ts") ))
+  M_SPEC_FRONT=$(( $(count_files "realsass-sass-front" "*.test.tsx") \
+                 + $(count_files "realsass-dashboard-front" "*.test.tsx") \
+                 + $(count_files "real-ecommerce-front" "*.test.tsx") \
+                 + $(count_files "real-ecommerce-front" "*.spec.ts") ))
+  M_SPEC_E2E=$(count_files "." "*.e2e-spec.ts")
+  M_COV_THRESHOLD=$(grep -rl "coverageThreshold" "$ROOT"/realsass-*-back 2>/dev/null \
+                    --include='package.json' --include='jest.config*' | wc -l | tr -d ' ')
+  # denominador para densidad de tests: services + routers de negocio
+  M_TESTABLE=$(( $(count_files "realsass-sass-back/src" "*.service.ts") \
+               + $(count_files "realsass-ecommerce-back/src" "*.service.ts") \
+               + $(count_files "realsass-sass-back/src" "*.router.ts") \
+               + $(count_files "realsass-ecommerce-back/src" "*.router.ts") ))
+
+  # ── D7 · Observabilidad y deuda ─────────────────────────────────────────────
+  M_OTEL=$(grep -rl "opentelemetry\|prom-client\|correlationId" \
+      "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" \
+      --include='*.ts' 2>/dev/null | wc -l | tr -d ' ')
+  M_LEGACY=$(grep_code '@/lib/ecommerce|catalog-header|product-gallery' \
+      "$ROOT/real-ecommerce-front" | wc -l | tr -d ' ')
+  M_TODO=$(grep_code 'TODO|FIXME|HACK' \
+      "$ROOT/realsass-sass-back/src" "$ROOT/realsass-ecommerce-back/src" | wc -l | tr -d ' ')
+  M_BAK=$(find "$ROOT" -name '*.bak-*' -not -path '*/node_modules/*' 2>/dev/null | wc -l | tr -d ' ')
+
+  trap 'err "Fallo en la línea $LINENO."' ERR; set -e
+  # normalizar: cualquier medición vacía cuenta como 0
+  local v
+  for v in $(compgen -v M_); do [[ -z "${!v}" ]] && printf -v "$v" '%s' 0; done
+
+  ok "mediciones completas — $M_SB_MODULES+$M_EB_MODULES módulos, $((M_SPEC_BACK+M_SPEC_FRONT)) tests, $M_WORKFLOWS workflows"
+}
+
+# ── Rúbrica: mediciones → score por dimensión ────────────────────────────────
+# Cada dimensión arranca en 10 y descuenta. Los descuentos replican la rúbrica
+# de .claude/AUDIT.md. Se calcula con awk porque bash no hace decimales.
+score() { awk -v s="$1" 'BEGIN{ if(s<0)s=0; if(s>10)s=10; printf "%.1f", s }'; }
+
+compute_scores() {
+  set +e; trap - ERR
+  local d
+  # D1 — TypeScript strict
+  d=10
+  (( M_NOIMPLICITANY )) && d=$(awk -v d=$d 'BEGIN{print d-5}')
+  (( M_CLASSVAL ))      && d=$(awk -v d=$d -v n=$M_CLASSVAL 'BEGIN{print d-(n>2?2:n*1.0)}')
+  local anyunjust=$(( M_ASANY - M_ASANY_JUSTIF )); (( anyunjust < 0 )) && anyunjust=0
+  (( anyunjust ))       && d=$(awk -v d=$d -v n=$anyunjust 'BEGIN{print d-(n>6?3:n*0.5)}')
+  S1=$(score "$d")
+
+  # D2 — Capas backend
+  d=$(awk -v a=$M_SB_DR -v b=$M_SB_MODULES -v c=$M_EB_DR -v e=$M_EB_MODULES \
+        'BEGIN{ t=b+e; if(t==0){print 0; exit} print 10*(a+c)/t }')
+  (( M_PRISMA_IN_SVC > 1 )) && d=$(awk -v d=$d -v n=$M_PRISMA_IN_SVC 'BEGIN{print d-((n-1)*0.3>2?2:(n-1)*0.3)}')
+  (( M_ANYROUTER ))         && d=$(awk -v d=$d 'BEGIN{print d-1}')
+  # el andamiaje de capas 1/2/5 vale aunque falte D+R en algún módulo
+  d=$(awk -v d=$d 'BEGIN{print d*0.75 + 2.5}')
+  S2=$(score "$d")
+
+  # D3 — Frontend
+  d=10
+  (( M_HYDRATION == 0 ))   && d=$(awk -v d=$d 'BEGIN{print d-2.5}')
+  (( M_RAWFETCH ))         && d=$(awk -v d=$d -v n=$M_RAWFETCH 'BEGIN{print d-(n>4?2:n*0.5)}')
+  (( M_TRPC_IMPORT_OK==0 ))&& d=$(awk -v d=$d 'BEGIN{print d-1.5}')
+  S3=$(score "$d")
+
+  # D4 — Seguridad
+  d=10
+  (( M_HELMET < 2 ))        && d=$(awk -v d=$d -v n=$M_HELMET 'BEGIN{print d-(2-n)*1.5}')
+  (( M_THROTTLE == 0 ))     && d=$(awk -v d=$d 'BEGIN{print d-1.5}')
+  (( M_MIGRATE < 2 ))       && d=$(awk -v d=$d -v n=$M_MIGRATE 'BEGIN{print d-(2-n)*1}')
+  (( M_CORS_WILDCARD ))     && d=$(awk -v d=$d 'BEGIN{print d-2}')
+  (( M_DOCKERIGNORE < 5 ))  && d=$(awk -v d=$d -v n=$M_DOCKERIGNORE 'BEGIN{print d-(5-n)*0.3}')
+  (( M_WF_AUDIT == 0 ))     && d=$(awk -v d=$d 'BEGIN{print d-0.5}')
+  S4=$(score "$d")
+
+  # D5 — Config y entorno
+  d=10
+  (( M_ENVEXAMPLE < 2 ))       && d=$(awk -v d=$d -v n=$M_ENVEXAMPLE 'BEGIN{print d-(2-n)*1.2}')
+  (( M_ENVGUARD < 2 ))         && d=$(awk -v d=$d -v n=$M_ENVGUARD 'BEGIN{print d-(2-n)*1}')
+  (( M_PKGMGR == 0 ))          && d=$(awk -v d=$d 'BEGIN{print d-0.8}')
+  (( M_NAMEDCAT ))             && d=$(awk -v d=$d 'BEGIN{print d-2}')
+  (( M_NIXPACKS_CONFLICT ))    && d=$(awk -v d=$d -v n=$M_NIXPACKS_CONFLICT 'BEGIN{print d-n*0.5}')
+  (( M_RAILWAY_JSON < 5 ))     && d=$(awk -v d=$d -v n=$M_RAILWAY_JSON 'BEGIN{print d-(5-n)*0.4}')
+  (( M_PNPM_VERSIONS > 1 ))    && d=$(awk -v d=$d -v n=$M_PNPM_VERSIONS 'BEGIN{print d-(n-1)*0.5}')
+  S5=$(score "$d")
+
+  # D6 — CI/CD y tests
+  d=0
+  (( M_WORKFLOWS ))     && d=$(awk -v d=$d -v n=$M_WORKFLOWS 'BEGIN{print d+(n>=5?3:n*0.6)}')
+  (( M_WF_TYPECHECK ))  && d=$(awk -v d=$d 'BEGIN{print d+1}')
+  (( M_WF_PATHS ))      && d=$(awk -v d=$d 'BEGIN{print d+1}')
+  (( M_WF_TESTS ))      && d=$(awk -v d=$d 'BEGIN{print d+1.5}')
+  # densidad: tests sobre unidades testeables (services + routers)
+  d=$(awk -v d=$d -v t=$((M_SPEC_BACK+M_SPEC_FRONT+M_SPEC_E2E)) -v u=$M_TESTABLE \
+        'BEGIN{ r=(u>0? t/u : 0); if(r>1)r=1; print d + r*2.5 }')
+  (( M_COV_THRESHOLD )) && d=$(awk -v d=$d 'BEGIN{print d+1}')
+  S6=$(score "$d")
+
+  # D7 — Deuda técnica
+  d=10
+  (( M_LEGACY ))                && d=$(awk -v d=$d -v n=$M_LEGACY 'BEGIN{print d-n*0.5}')
+  local missing_dr=$(( (M_SB_MODULES-M_SB_DR) + (M_EB_MODULES-M_EB_DR) ))
+  (( missing_dr ))              && d=$(awk -v d=$d -v n=$missing_dr 'BEGIN{print d-(n*0.3>2.5?2.5:n*0.3)}')
+  (( M_NOIMPLICITANY ))         && d=$(awk -v d=$d 'BEGIN{print d-1}')
+  (( M_OTEL == 0 ))             && d=$(awk -v d=$d 'BEGIN{print d-1}')
+  (( M_TODO > 10 ))             && d=$(awk -v d=$d 'BEGIN{print d-0.5}')
+  (( M_BAK ))                   && d=$(awk -v d=$d 'BEGIN{print d-0.5}')
+  (( M_TRPC_IMPORT_OK == 0 ))   && d=$(awk -v d=$d 'BEGIN{print d-1}')
+  S7=$(score "$d")
+
+  trap 'err "Fallo en la línea $LINENO."' ERR; set -e
+  GLOBAL=$(awk -v a=$S1 -v b=$S2 -v c=$S3 -v e=$S4 -v f=$S5 -v g=$S6 -v h=$S7 \
+    'BEGIN{printf "%.2f", a*0.15+b*0.20+c*0.15+e*0.15+f*0.10+g*0.10+h*0.15}')
+}
+
+# ── Marcado de checkboxes en 05-tasks.md ─────────────────────────────────────
+# Marca [x] sólo lo que una medición respalda. Nunca desmarca a mano:
+# si una task deja de cumplirse, la próxima corrida la vuelve a [ ].
+mark_task() { # mark_task <ID> <0|1>
+  local id="$1" done_="$2" f="$ROOT/.claude/lifecycle/05-tasks.md"
+  [[ -f "$f" ]] || return 0
+  local box="[ ]"; (( done_ )) && box="[x]"
+  sed -i -E "s/^- \[[ x]\] \*\*\[$id\]\*\*/- $box **[$id]**/" "$f"
+}
+
+sync_tasks() {
+  local f="$ROOT/.claude/lifecycle/05-tasks.md"
+  [[ -f "$f" ]] || { skip "05-tasks.md no existe"; return 0; }
+  (( DRY_RUN )) && { log "${c_dim}  --- se marcarían checkboxes en 05-tasks.md${c_off}"; return 0; }
+  [[ $BACKUP -eq 1 ]] && cp "$f" "$f.bak-$TS"
+
+  local no_rest=0
+  [[ $(ls "$ROOT"/realsass-ecommerce-back/src/*/*.controller.ts 2>/dev/null | wc -l) -eq 0 ]] && no_rest=1
+  local dto_gone=0
+  [[ ! -f "$ROOT/realsass-sass-back/src/organizations/dto/update-organization.dto.ts" ]] && dto_gone=1
+
+  mark_task E1-01 "$no_rest";  mark_task E1-02 "$no_rest"
+  mark_task E1-03 "$no_rest";  mark_task E1-04 "$no_rest"
+  mark_task E1-10 "$no_rest";  mark_task E1-11 "$dto_gone"
+  mark_task E1-12 "$([[ -d "$ROOT/realsass-ecommerce-back/src/cart/domain" ]] && echo 1 || echo 0)"
+  mark_task E1-13 "$([[ -d "$ROOT/realsass-ecommerce-back/src/orders/domain" ]] && echo 1 || echo 0)"
+  mark_task E1-14 "$([[ -d "$ROOT/realsass-ecommerce-back/src/customers/domain" ]] && echo 1 || echo 0)"
+  mark_task E1-15 "$([[ -d "$ROOT/realsass-ecommerce-back/src/inventory/domain" ]] && echo 1 || echo 0)"
+  mark_task E2-02 "$(( M_ENVEXAMPLE >= 2 ? 1 : 0 ))"
+  mark_task E2-03 "$(( M_ENVGUARD  >= 2 ? 1 : 0 ))"
+  mark_task E4-02 "$(( M_MIGRATE   >= 2 ? 1 : 0 ))"
+  mark_task E3-01 "$(( M_HELMET    >= 2 ? 1 : 0 ))"
+  mark_task E3-02 "$M_THROTTLE"; mark_task E3-03 "$M_THROTTLE"
+  for i in 01 02 03 04 05 06; do
+    mark_task "E5-$i" "$(( M_WORKFLOWS >= 5 ? 1 : 0 ))"
+  done
+  mark_task E5-07 "$(( M_WF_PATHS >= 5 ? 1 : 0 ))"
+  mark_task E7-01 "$(( M_WF_AUDIT > 0 ? 1 : 0 ))"
+  mark_task E6-01 "$(( M_OTEL > 0 ? 1 : 0 ))"
+  mark_task E6-02 "$(( M_OTEL > 0 ? 1 : 0 ))"
+  mark_task E11-02 "$(( M_HYDRATION > 0 ? 1 : 0 ))"
+
+  # recalcular la tabla de progreso
+  # borrar el footer de la corrida anterior para no acumularlos
+  sed -i '/<!-- generado por x.sh docs/,$d' "$f"
+  local tot don
+  tot=$(grep -c '^- \[[ x]\] \*\*\[' "$f" || echo 0)
+  don=$(grep -c '^- \[x\] \*\*\['     "$f" || echo 0)
+  local pct; pct=$(awk -v d="$don" -v t="$tot" 'BEGIN{printf "%d", (t>0? d*100/t : 0)}')
+  printf '\n<!-- generado por x.sh docs · %s -->\n> **Progreso verificado:** %s/%s tasks (%s%%). Marcado por medición, no por declaración.\n' \
+    "$(date +%F)" "$don" "$tot" "$pct" >> "$f"
+  CHANGED_FILES+=(".claude/lifecycle/05-tasks.md")
+  ok "05-tasks.md sincronizado — $don/$tot verificadas ($pct%)"
+}
+
+# ==============================================================================
+# TARGET: docs — genera .claude/ desde las mediciones
+# ==============================================================================
+apply_docs() {
+  measure
+  compute_scores
+
+  head1 ".claude — auditoría generada por medición"
+  log "  D1 TypeScript strict ....... $S1"
+  log "  D2 Capas backend ........... $S2"
+  log "  D3 Frontend ................ $S3"
+  log "  D4 Seguridad ............... $S4"
+  log "  D5 Config/entorno .......... $S5"
+  log "  D6 CI/CD y tests ........... $S6"
+  log "  D7 Deuda técnica ........... $S7"
+  log ""
+  ok  "SCORE GLOBAL: $GLOBAL/10"
+
+  # Score anterior — tolera el formato viejo (9.01/10) y el generado (**6.91**)
+  local prev=""
+  if [[ -f "$ROOT/.claude/AUDIT-LAST.md" ]]; then
+    prev=$(grep -oE 'Score global:[^0-9]*[0-9]+\.[0-9]+' "$ROOT/.claude/AUDIT-LAST.md" 2>/dev/null \
+             | grep -oE '[0-9]+\.[0-9]+' | head -1) || true
+  fi
+  local delta="n/d"
+  if [[ -n "$prev" ]]; then
+    delta=$(awk -v a="$GLOBAL" -v b="$prev" 'BEGIN{printf "%+.2f", a-b}')
+  else
+    prev="—"
+  fi
+
+  local trpc_status="✅ resuelto"
+  (( M_TRPC_IMPORT_OK == 0 )) && trpc_status="❌ roto — TS2305"
+  local anyunjust=$(( M_ASANY - M_ASANY_JUSTIF )); (( anyunjust < 0 )) && anyunjust=0
+  local missing_dr=$(( (M_SB_MODULES-M_SB_DR) + (M_EB_MODULES-M_EB_DR) ))
+
+  write_file ".claude/AUDIT-LAST.md" <<MD
+# AUDIT-LAST.md — Auditoría de welver/
+
+**Fecha:** $(date +%F)
+**Generado por:** \`./x.sh docs\` — mediciones sobre el árbol de trabajo
+**Protocolo:** \`.claude/AUDIT.md\`
+
+> Este archivo **no se escribe a mano**. Cada score sale de un conteo sobre el
+> repo, con la rúbrica aplicada en \`compute_scores()\` dentro de \`x.sh\`.
+> Para regenerarlo: \`./x.sh docs\`. Para ver los checks sin escribir: \`./x.sh status\`.
+>
+> Lo que un ADR declara implementado **no cuenta como evidencia**. Sólo el conteo.
+
+---
+
+## Scores por dimensión
+
+| # | Dimensión | Score | Peso | Pond. | Medición |
+|---|---|---|---|---|---|
+| 1 | TypeScript Strict | ${S1}/10 | 15% | $(awk -v s=$S1 'BEGIN{printf "%.2f", s*0.15}') | \`noImplicitAny:false\` en algún back: $(( M_NOIMPLICITANY ? 1 : 0 )) · \`any\` sin justificar: ${anyunjust} (de ${M_ASANY} totales, ${M_ASANY_JUSTIF} con \`@real/jsonb-cast\`) · archivos con class-validator: ${M_CLASSVAL} |
+| 2 | Arquitectura de capas | ${S2}/10 | 20% | $(awk -v s=$S2 'BEGIN{printf "%.2f", s*0.20}') | sass-back ${M_SB_DR}/${M_SB_MODULES} módulos con \`domain/\`+\`repository/\` · ecommerce-back ${M_EB_DR}/${M_EB_MODULES} · services con \`PrismaService\` inyectado: ${M_PRISMA_IN_SVC} · \`AnyRouter\`/\`any\` en packages/trpc: ${M_ANYROUTER} |
+| 3 | Frontend — Fetch y estado | ${S3}/10 | 15% | $(awk -v s=$S3 'BEGIN{printf "%.2f", s*0.15}') | archivos con \`HydrationBoundary\`: ${M_HYDRATION} (sobre ${M_STORE_PAGES} \`page.tsx\` en storefront) · \`fetch()\` crudo en hooks: ${M_RAWFETCH} · import \`@real/trpc\`: ${trpc_status} |
+| 4 | Seguridad | ${S4}/10 | 15% | $(awk -v s=$S4 'BEGIN{printf "%.2f", s*0.15}') | helmet ${M_HELMET}/2 · \`@Throttle\` en auth: ${M_THROTTLE} · \`migrate deploy\` ${M_MIGRATE}/2 · CORS wildcard: ${M_CORS_WILDCARD} · \`.dockerignore\` ${M_DOCKERIGNORE}/5 · \`\$queryRaw\`: ${M_RAWQUERY} ⚠️ auditar interpolación · \`pnpm audit\` en CI: ${M_WF_AUDIT} |
+| 5 | Configuración y entorno | ${S5}/10 | 10% | $(awk -v s=$S5 'BEGIN{printf "%.2f", s*0.10}') | \`.env.example\` backs ${M_ENVEXAMPLE}/2 (fronts ${M_ENVEXAMPLE_FRONT}/3, informativo) · fail-fast en main.ts ${M_ENVGUARD}/2 · \`packageManager\`: ${M_PKGMGR} · named catalogs: ${M_NAMEDCAT} · conflicto nixpacks/railway: ${M_NIXPACKS_CONFLICT} · \`railway.json\` ${M_RAILWAY_JSON}/5 · versiones de pnpm distintas: ${M_PNPM_VERSIONS} |
+| 6 | CI/CD y tests | ${S6}/10 | 10% | $(awk -v s=$S6 'BEGIN{printf "%.2f", s*0.10}') | workflows: ${M_WORKFLOWS} (con typecheck ${M_WF_TYPECHECK}, con path filters ${M_WF_PATHS}, que corren tests ${M_WF_TESTS}) · tests backend ${M_SPEC_BACK} · frontend ${M_SPEC_FRONT} · e2e ${M_SPEC_E2E} · unidades testeables ${M_TESTABLE} · \`coverageThreshold\`: ${M_COV_THRESHOLD} |
+| 7 | Deuda técnica | ${S7}/10 | 15% | $(awk -v s=$S7 'BEGIN{printf "%.2f", s*0.15}') | módulos sin D+R: ${missing_dr} · imports legacy: ${M_LEGACY} · archivos con observabilidad: ${M_OTEL} · TODO/FIXME/HACK: ${M_TODO} · \`.bak-*\` sin limpiar: ${M_BAK} |
+
+## Score global: **${GLOBAL}/10**
+
+Anterior: ${prev} · Delta: ${delta}
+
+---
+
+## Cómo leer un delta
+
+Un delta negativo puede significar dos cosas distintas y conviene no confundirlas:
+
+1. **Regresión real** — entró código que empeoró una dimensión.
+2. **Corrección de medición** — antes se puntuaba sobre lo declarado en un ADR y
+   ahora se cuenta sobre archivos. El 9.01 del 2026-09-08 convivía con
+   \`noImplicitAny:false\` en el tsconfig de ecommerce-back: ese score medía intención.
+
+Desde que este archivo lo genera \`x.sh\`, los deltas sólo pueden ser del tipo 1.
+
+---
+
+## Gaps abiertos, ordenados por impacto en el global
+
+$( (( M_NOIMPLICITANY )) && cat <<'G1'
+### `noImplicitAny: false` en ecommerce-back
+`realsass-ecommerce-back/tsconfig.json` extiende `tsconfig.base.json` (strict:true)
+y después lo desarma. Mientras esté, ningún `any` implícito de ese servicio falla
+el typecheck — el score de D1 mide un techo, no el piso real.
+**Cerralo primero:** define cuánto trabajo hay debajo. `./x.sh ecommerce-back`
+**Riesgo:** puede destapar decenas de errores. Correr typecheck antes de commitear.
+G1
+)
+$( (( M_TRPC_IMPORT_OK == 0 )) && cat <<'G2'
+### Import roto de `@real/trpc`
+`realsass-sass-front/lib/config-client.ts` importa `AppRouter`; el paquete sólo
+exporta `SassAppRouter` y `EcommerceAppRouter`. Es TS2305 — ese front no compila.
+`./x.sh packages && ./x.sh sass-front`
+G2
+)
+$( (( M_HYDRATION == 0 )) && cat <<'G3'
+### HydrationBoundary en cero
+Ningún archivo del storefront usa `dehydrate` + `<HydrationBoundary>`. Los Server
+Components hacen prefetch y el cliente vuelve a pedir: loading flash en SSR real.
+No lo aplica `x.sh` — requiere `prefetchQuery` página por página. Task E11-02.
+G3
+)
+$( (( missing_dr > 0 )) && printf '### %s módulos sin Domain/Repository\nLos services van directo a Prisma. Marcado como decisión consciente en E1-12..E1-15;\nsigue siendo defendible hasta que entre pagos-back.\n' "$missing_dr" )
+$( (( M_OTEL == 0 )) && printf '### Observabilidad en cero\n0 archivos con `opentelemetry`, `prom-client` o `correlationId`. Escalón 6 completo\nsin empezar. Sin `correlationId` propagado, un incidente que cruza los dos backs\nno se puede reconstruir.\n' )
+$( (( M_RAWQUERY > 0 )) && printf '### %s usos de `\$queryRaw`/`\$executeRaw`\nNo verificable por conteo: hay que leer cada uno y confirmar que no interpola\ninput del usuario. Task E7-03.\n' "$M_RAWQUERY" )
+
+---
+
+## Lo que este script **no** puede medir
+
+| Ítem | Por qué | Cómo cerrarlo |
+|---|---|---|
+| \`organizationId\` en cada \`where\` | requiere análisis semántico, no grep | test cross-tenant (E8-05) |
+| N+1 / \`include\` explícito | idem | \`EXPLAIN ANALYZE\` (E11-04) |
+| Interpolación en \`\$queryRaw\` | grep detecta el uso, no el riesgo | revisión manual de los ${M_RAWQUERY} usos |
+| Calidad de los tests existentes | cuenta archivos, no asserts | \`coverageThreshold\` en jest.config |
+| Prefijo \`organizationId\` en claves Redis | depende del cuerpo de cada llamada | E10-01 |
+
+La única forma de cerrar la primera fila es un test, no una auditoría. Sigue siendo
+el trabajo de mayor valor pendiente: un \`findMany\` sin \`organizationId\` es fuga de
+datos entre organizaciones y hoy nada lo detecta.
+MD
+
+  write_file ".claude/CONTEXT.md" <<MD
 # CONTEXT.md — Estado de la sesión activa
 
-**Repo:** $REPO_FULL
-**Score actual:** $SCORE (ver AUDIT-LAST.md para detalle)
-**Sprint activo:** $SPRINT_ACTIVO
+**Repo:** grupojl/welver
+**Score actual:** ${GLOBAL}/10 — medido el $(date +%F) por \`./x.sh docs\`
+**Anterior:** ${prev} (delta ${delta})
 
 ---
 
 ## Sesión activa
 
 **Objetivo de esta sesión:**
-$OBJETIVO_SESION
+_(actualizar al empezar)_
 
 **Bloqueante actual:**
-Ninguno
+$( (( M_TRPC_IMPORT_OK == 0 )) && echo "\`realsass-sass-front/lib/config-client.ts\` importa \`AppRouter\`, símbolo que \`@real/trpc\` no exporta (TS2305). Ese front no compila." || echo "Ninguno detectado por medición automática." )
 
 **Última decisión tomada:**
-_(actualizar al tomar decisiones en la sesión)_
+El score lo calcula \`x.sh docs\` midiendo el repo. Un ADR marcado ✅ Implementado
+no es evidencia — sólo el conteo lo es.
 
 **Próximo paso concreto:**
-$PROXIMO_PASO
+$( (( M_NOIMPLICITANY )) && echo "\`./x.sh ecommerce-back --dry-run\`, revisar el diff, después typecheck del servicio." || echo "Ver los gaps abiertos en AUDIT-LAST.md." )
 
 ---
 
-## Cómo usar este archivo
+## Estado por dimensión
 
-### Al INICIAR una sesión
-Claude lee este archivo para saber exactamente dónde estamos.
-No hace falta explicar el contexto — está acá.
+| Dimensión | Score |
+|---|---|
+| TypeScript Strict | ${S1} |
+| Arquitectura de capas | ${S2} |
+| Frontend | ${S3} |
+| Seguridad | ${S4} |
+| Config/entorno | ${S5} |
+| CI/CD y tests | ${S6} |
+| Deuda técnica | ${S7} |
 
-### Al CERRAR una sesión
-Actualizar las 4 líneas antes de cerrar:
-- **Objetivo** → qué quedó pendiente para la próxima vez
-- **Bloqueante** → qué impide avanzar (o "Ninguno")
-- **Última decisión** → la decisión más importante que se tomó hoy
-- **Próximo paso** → la primera acción concreta de la próxima sesión
+---
 
-Toma 2 minutos. Evita 20 minutos de calibración en la sesión siguiente.
+## Cómo cerrar una sesión
+
+1. Actualizar las 4 líneas de "Sesión activa" arriba.
+2. Correr \`./x.sh docs\` — regenera este archivo y \`AUDIT-LAST.md\` con el score real.
+3. Agregar las decisiones del día a \`DECISIONS-LOG.md\`.
 
 ---
 
 ## Historial de sesiones
 
-| Fecha | Objetivo | Resultado |
-|-------|----------|-----------|
-| 2026-09-08 | Setup sistema de auditoría + x.sh código/estructura | ✅ AUDIT.md + AUDIT-LAST.md + CLAUDE.md instalados |
+| Fecha | Objetivo | Score al cerrar |
+|-------|----------|-----------------|
+| 2026-09-08 | Setup del sistema de auditoría | 9.01 (declarado) |
+| $(date +%F) | Auditoría por medición automática | ${GLOBAL} (medido) |
+MD
 
-HEREDOC
-log "  CONTEXT.md creado"
+  sync_tasks
+  commit_scope "docs" "docs(.claude): auditoría medida — score ${GLOBAL}/10 (${delta})"
+}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. DECISIONS-LOG.md — historial de decisiones pequeñas del chat
-# ─────────────────────────────────────────────────────────────────────────────
-log "Creando .claude/DECISIONS-LOG.md"
+# ==============================================================================
+# Dispatcher
+# ==============================================================================
+usage() { sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
-# Contenido específico por repo basado en decisiones reales ya tomadas
-case "$REPO" in
-  welver)
-    DECISIONS_CONTENT='## 2026-09-08 — Sesión ADR-011 + ADR-012
+main() {
+  while (( $# )); do
+    case "$1" in
+      --dry-run)   DRY_RUN=1 ;;
+      --no-backup) BACKUP=0 ;;
+      --force)     FORCE=1 ;;
+      --commit)    DO_COMMIT=1 ;;
+      -h|--help)   usage; exit 0 ;;
+      -*)          die "flag desconocido: $1" ;;
+      *)           TARGET="$1" ;;
+    esac
+    shift
+  done
 
-- **tRPC exclusivo en ecommerce-back:** controllers REST legacy eliminados. Si un endpoint nuevo no puede ir por tRPC (ej: necesita Set-Cookie), va a REST con justificación en el ADR.
-- **lib/store/client.ts usa tRPC server caller:** no fetch REST manual. Excepción documentada: POST /auth/session en auth-context.tsx (necesita Set-Cookie).
-- **Cookie `__session` con `sameSite: strict`:** se eligió strict sobre lax porque los fronts están en subdominios propios, no en dominios de terceros. Si se integra un widget embeddable en otros dominios, revisar esta decisión.
-- **Rate limiting en auth: 10 req/min por IP:** elegido sobre 5 (muy restrictivo para usuarios legítimos) y 20 (poco efectivo contra bots lentos).
-- **Dockerfiles con `dumb-init`:** PID 1 correcto para Node.js en containers. No cambiar a `node dist/main` directo sin revisar manejo de señales.
-- **`prisma migrate deploy` en CMD del Dockerfile:** se eligió sobre un script wrapper separado para mantener el Dockerfile simple. Riesgo aceptado: si la migration falla el container no levanta — esto es el comportamiento correcto.
-- **Componentes legacy del storefront eliminados (ADR-008):** `catalog/` y `product/` — 0 importaciones activas confirmadas antes de eliminar. Si alguien reporta una página rota, revisar si había un import dinámico no detectado por grep estático.
-- **`noImplicitAny: true` en tsconfig.base.json:** heredado por todos los tsconfig del monorepo. Si un servicio nuevo necesita flexibilidad temporal, puede sobrescribir en su tsconfig local con comentario que justifique y fecha de expiración.
-- **Named catalogs pnpm PROHIBIDOS:** `catalog:backend`, `catalog:frontend`, etc. no funcionan en el entorno Windows + Git Bash actual. Solo `catalog:` default. No proponer named catalogs aunque parezca más organizado.'
-    ;;
-  ecosistema-ms)
-    DECISIONS_CONTENT='## 2026-09-08 — Sesión ADR-009 + ADR-010
+  [[ -n "$TARGET" ]] || { usage; exit 1; }
+  [[ -f "$ROOT/pnpm-workspace.yaml" ]] || die "x.sh debe ejecutarse desde la raíz del monorepo."
 
-- **Cache keys: `eco:{ecosystemId}:org:{organizationId}:{type}:{key}`:** el ecosystemId va primero porque es el particionador más alto. No invertir el orden — rompería el patrón de `scan` por ecosistema.
-- **AssistantChatService firma: `{ projectSlug, organizationId, userId, message, channel }`:** esta es la firma real que usan WidgetController y AssistantController. No cambiar sin actualizar ambos callers. La firma alternativa `{ conversationId, ecosystemId, message }` fue propuesta y descartada.
-- **class-validator en notificaciones-backend no migrado en esta sesión:** decisión consciente — sprint dedicado. No agregar Zod a medias en el mismo archivo que tiene class-validator.
-- **`tsconfig.base.json` sin `extends`:** un tsconfig.base.json que se extiende a sí mismo es una paradoja que TypeScript resuelve de forma impredecible. La raíz nunca tiene `extends`.
-- **`strictBindCallApply: true` en tsconfig.base.json:** se activó junto con `noImplicitAny`. Si aparecen errores en decorators de NestJS, el fix es tipado explícito — no desactivar la flag.
-- **opossum como catalog: default:** se eligió `"opossum": "catalog:"` sobre versión directa `"^8.1.4"` para mantener consistencia del monorepo. Si opossum no está en el catalog raíz, agregarlo ahí primero.
-- **DlqModule conectado en QueueModule (no en AppModule):** se conecta en QueueModule porque el DLQ pertenece a la queue, no al módulo de aplicación. Si se mueve a AppModule, los endpoints /queue/dlq/* siguen funcionando pero la responsabilidad queda difusa.
-- **`ecosystemId` en where de `dailyConversationSummary`:** bug de seguridad multi-tenant — dos orgs de distintos ecosistemas con el mismo organizationId podían ver datos mezclados. Siempre doble scope.
-- **gRPC controllers sin lógica de negocio:** la regla es estricta — reciben proto, llaman service, retornan proto. Si un gRPC controller tiene un if de negocio, es un bug de capa.'
-    ;;
-  superadmin)
-    DECISIONS_CONTENT='## 2026-09-08 — Sesión S0–S7
+  (( DRY_RUN )) && warn "DRY-RUN — no se escribe nada."
 
-- **HTTP interno (no gRPC) para Integration Clients:** el superadmin es consumidor administrativo de baja frecuencia. gRPC agregaría complejidad (contratos .proto, codegen) sin beneficio de throughput. Si el superadmin necesita > 100 req/s a un MS, revisar esta decisión (ADR-001).
-- **Sin Domain/Repository en ecosystems, microservices, railway, metrics:** son agregadores de estado externo sin escritura en DB propia. La excepción está documentada en DC-002. Si alguno empieza a escribir en DB, migrar al patrón.
-- **EcosystemsService hardcodeado con 2 ecosistemas:** no justifica DB hasta 4 ecosistemas (DC-003). No crear tabla `ecosystems` hasta entonces.
-- **MockDataProvider con switch por env var (no por feature flag):** elegido sobre feature flags porque es más simple y el switch es permanente hasta que el endpoint real exista. La variable de entorno vacía = mock, configurada = real.
-- **`as AdminActionType` en prisma-audit.repository.ts (DC-005):** cast intencional — Prisma retorna `string` para campos `String` en el schema. La alternativa (Prisma enum) requiere migración. Documentado, no es `as any`.
-- **Puerto 4000 para el backend:** evita colisión con frontend (3000) y con cualquier MS de ecosistema-ms que corra en local. No cambiar sin actualizar Makefile y docker-compose.
-- **`reason: z.string().min(10)` en acciones destructivas:** 10 caracteres mínimo para forzar una justificación real. No bajar a menos — "ok" o "test" no son razones válidas para suspender una org.
-- **DemoBadge en UI mientras USE_MOCK activo:** el operador debe saber que está viendo datos mock. Eliminar el badge solo cuando el client correspondiente esté usando el endpoint real, no antes.
-- **Cookie `secure: process.env.NODE_ENV === "production"`:** en local sin HTTPS las cookies Secure no funcionan. El switch es intencional — no hardcodear `secure: false` en producción.'
-    ;;
-esac
+  case "$TARGET" in
+    status)          run_status ;;
+    clean)           apply_clean ;;
+    root)            apply_root ;;
+    packages)        apply_packages ;;
+    sass-back)       apply_sass_back ;;
+    ecommerce-back)  apply_ecommerce_back ;;
+    sass-front)      apply_sass_front ;;
+    dashboard-front) apply_dashboard_front ;;
+    ecommerce-front) apply_ecommerce_front ;;
+    docs)            apply_docs ;;
+    all)
+      warn "'all' toca los 5 servicios → 5 deploys simultáneos en Railway."
+      warn "Preferí un target por vez. Continuando en 3s… (Ctrl-C para abortar)"
+      sleep 3
+      apply_root; apply_packages; apply_sass_back; apply_ecommerce_back
+      apply_sass_front; apply_dashboard_front; apply_ecommerce_front; apply_docs
+      ;;
+    *) die "target desconocido: $TARGET" ;;
+  esac
 
-cat > .claude/DECISIONS-LOG.md << HEREDOC
-# DECISIONS-LOG.md — Historial de decisiones tomadas en sesiones de chat
+  head1 "resumen"
+  if (( ${#CHANGED_FILES[@]} )); then
+    log "  Archivos tocados (${#CHANGED_FILES[@]}):"
+    printf '    %s\n' "${CHANGED_FILES[@]}"
+  else
+    log "  Sin cambios en disco."
+  fi
+  (( ${#SKIPPED[@]} )) && log "  ${c_dim}Omitidos por idempotencia: ${#SKIPPED[@]}${c_off}"
 
-**Repo:** $REPO_FULL
+  if [[ "$TARGET" != "status" && "$TARGET" != "docs" ]] && (( ${#CHANGED_FILES[@]} )); then
+    log ""
+    warn "Antes de pushear:  pnpm --filter <servicio> typecheck && pnpm --filter <servicio> build"
+  fi
+}
 
-Decisiones pequeñas que no justifican un ADR pero que si se olvidan
-generan conversaciones repetidas o propuestas que ya se descartaron.
-
-**Formato:** al cerrar una sesión, agregar una sección con la fecha
-y las 2-5 decisiones más importantes tomadas. Una línea por decisión,
-en bold el tema, después el razonamiento en una oración.
-
----
-
-$DECISIONS_CONTENT
-
----
-
-## Template para nuevas sesiones
-
-\`\`\`markdown
-## YYYY-MM-DD — Sesión [descripción]
-
-- **[Tema]:** [decisión tomada] porque [razón en una oración]. [Qué revisar si cambia el contexto].
-\`\`\`
-HEREDOC
-log "  DECISIONS-LOG.md creado"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. snapshot.sh — actualiza el XML con repomix en un comando
-# ─────────────────────────────────────────────────────────────────────────────
-log "Creando snapshot.sh en la raíz del repo"
-
-# Detectar si existe repomix config ya en el repo
-REPOMIX_CONFIG=""
-if [ -f "repomix.config.json" ]; then
-  REPOMIX_CONFIG="--config repomix.config.json"
-fi
-
-cat > snapshot.sh << HEREDOC
-#!/usr/bin/env bash
-# =============================================================================
-# snapshot.sh — Actualiza el XML de contexto para Claude
-#
-# Ejecutar desde la RAÍZ del monorepo: bash snapshot.sh
-#
-# Prerequisito: repomix instalado globalmente
-#   npm install -g repomix
-# =============================================================================
-set -e
-GREEN='\033[0;32m'; YELLOW='\033[0;33m'; BOLD='\033[1m'; RESET='\033[0m'
-log()  { echo -e "\${GREEN}[snapshot]\${RESET} \$1"; }
-warn() { echo -e "\${YELLOW}[warn]\${RESET} \$1"; }
-
-REPO="$REPO_FULL"
-XML_OUT="$XML_OUTPUT"
-
-# Crear directorio de output si no existe
-mkdir -p "\$(dirname "\$XML_OUT")"
-
-log "Generando snapshot de \$REPO..."
-log "Output: \$XML_OUT"
-
-# Correr repomix
-if command -v repomix &> /dev/null; then
-  repomix $REPOMIX_CONFIG --output "\$XML_OUT"
-  log "✅ XML generado: \$XML_OUT"
-else
-  warn "repomix no encontrado. Instalar con:"
-  warn "  npm install -g repomix"
-  exit 1
-fi
-
-# Mostrar tamaño del archivo generado
-SIZE=\$(wc -l < "\$XML_OUT" 2>/dev/null || echo "?")
-log "Archivo: \$SIZE líneas"
-
-# Score actual desde AUDIT-LAST.md
-SCORE=\$(grep "^\\*\\*Score global" .claude/AUDIT-LAST.md 2>/dev/null | head -1 || echo "ver AUDIT-LAST.md")
-log "Score actual: \$SCORE"
-
-echo ""
-echo -e "\${BOLD}Próximos pasos:\${RESET}"
-echo "  1. Subir \$XML_OUT a la sesión de Claude"
-echo "  2. Decirle a Claude una de las siguientes:"
-echo ""
-echo "     Auditoría completa:"
-echo "     → 'Ejecutá el protocolo de .claude/AUDIT.md y actualizá AUDIT-LAST.md'"
-echo ""
-echo "     Continuar sesión anterior:"
-echo "     → 'Lee .claude/CONTEXT.md y continuamos'"
-echo ""
-echo "     Nueva feature:"
-echo "     → 'Lee .claude/AUDIT-LAST.md y .claude/CONTEXT.md. Quiero implementar [X]'"
-echo ""
-HEREDOC
-chmod +x snapshot.sh
-log "  snapshot.sh creado"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Actualizar CLAUDE.md para incluir instrucciones de los nuevos archivos
-# ─────────────────────────────────────────────────────────────────────────────
-log "Actualizando .claude/CLAUDE.md con referencia a los nuevos archivos"
-
-# Agregar sección al inicio de CLAUDE.md si no tiene ya la referencia
-if ! grep -q "CONTEXT.md" .claude/CLAUDE.md 2>/dev/null; then
-  # Crear archivo temporal con la sección nueva al inicio
-  TMPFILE=$(mktemp)
-  cat > "$TMPFILE" << 'INNEREOF'
-
-## Archivos de sesión (leer en este orden)
-
-| Archivo | Cuándo leerlo | Para qué |
-|---|---|---|
-| `.claude/CONTEXT.md` | **Siempre primero** | Saber exactamente dónde está la sesión |
-| `.claude/AUDIT-LAST.md` | Siempre | Score actual, gaps, evidencia |
-| `.claude/DECISIONS-LOG.md` | Antes de proponer algo | Verificar que no se descartó ya |
-| `.claude/roadmap/sprints.md` | Al planificar trabajo | Sprint activo y tareas pendientes |
-
-**Al cerrar cada sesión:** actualizar CONTEXT.md con el estado actual (2 minutos).
-
----
-
-INNEREOF
-
-  # Insertar después de la primera línea (el título # CLAUDE.md)
-  FIRST_LINE=$(head -1 .claude/CLAUDE.md)
-  REST=$(tail -n +2 .claude/CLAUDE.md)
-  echo "$FIRST_LINE" > .claude/CLAUDE.md
-  cat "$TMPFILE" >> .claude/CLAUDE.md
-  echo "$REST" >> .claude/CLAUDE.md
-  rm -f "$TMPFILE"
-  log "  CLAUDE.md actualizado con tabla de archivos de sesión"
-else
-  log "  CLAUDE.md ya tiene referencia a CONTEXT.md — sin cambios"
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Verificación final
-# ─────────────────────────────────────────────────────────────────────────────
-step "✅ Experience setup completado para $REPO_FULL"
-echo ""
-echo "Archivos creados/actualizados:"
-echo "  .claude/CONTEXT.md       — estado de sesión activa"
-echo "  .claude/DECISIONS-LOG.md — historial de decisiones del chat"
-echo "  .claude/CLAUDE.md        — actualizado con tabla de archivos"
-echo "  snapshot.sh              — genera el XML con repomix"
-echo ""
-echo -e "${BOLD}Flujo de trabajo recomendado:${RESET}"
-echo ""
-echo "  Antes de una sesión:"
-echo "    bash snapshot.sh"
-echo "    → subir XML a Claude"
-echo "    → 'Lee .claude/CONTEXT.md y continuamos'"
-echo ""
-echo "  Al cerrar una sesión:"
-echo "    → Actualizar .claude/CONTEXT.md (objetivo, decisión, próximo paso)"
-echo "    → Agregar entrada en .claude/DECISIONS-LOG.md si hubo decisiones"
-echo ""
-echo "  Para auditar:"
-echo "    bash snapshot.sh"
-echo "    → subir XML a Claude"
-echo "    → 'Ejecutá el protocolo de .claude/AUDIT.md'"
+main "$@"

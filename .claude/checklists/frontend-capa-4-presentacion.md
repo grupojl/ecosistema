@@ -7,16 +7,16 @@
 
 ## ✅ Completado
 
-- [x] Skeleton + ErrorState + data — 3 estados en todas las páginas con datos async
-- [x] `error.tsx` global en raíz de cada app (error boundary Next.js)
-- [x] `@real/ui` como fuente única — 33 componentes, sin duplicación entre fronts
-- [x] Sin arrays literales inline con datos de producción
-- [x] Componentes legacy de dominio real-estate eliminados (ADR-008)
+- [ ] Skeleton + ErrorState + data — 3 estados en todas las páginas con datos async
+- [ ] `error.tsx` global en raíz de cada app (error boundary Next.js)
+- [ ] `@real/ui` como fuente única — 33 componentes, sin duplicación entre fronts
+- [ ] Sin arrays literales inline con datos de producción
+- [ ] Componentes legacy de dominio real-estate eliminados (ADR-008)
   → `components/catalog/` — eliminado (5 archivos)
   → `components/product/` — eliminado (5 archivos)
   → `types/product.ts` — eliminado (tipos hardcodeados)
-- [x] `components/header.tsx` — sin import de `@/lib/ecommerce` (ADR-008)
-- [x] Solo componentes vivos en el storefront:
+- [ ] `components/header.tsx` — sin import de `@/lib/ecommerce` (ADR-008)
+- [ ] Solo componentes vivos en el storefront:
   → `checkout-flow.tsx` — stub documentado (espera `pagos-back`)
   → `tracking-view.tsx` — funcional
   → `product-hero.tsx` — funcional (landing)

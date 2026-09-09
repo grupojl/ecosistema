@@ -6,13 +6,13 @@
 
 ## ✅ Completado
 
-- [x] 11 módulos sass-back con `domain/` + `repository/`
+- [ ] 11 módulos sass-back con `domain/` + `repository/`
   - affiliate, collaborators, config-audit, config-flags, config-quotas
   - config-secrets, config-templates, config-themes, config-webhooks
   - organizations, users
-- [x] Services inyectan `IRepository` via `@Inject(TOKEN)` — sin `this.prisma` directo
-- [x] `catalog/` en ecommerce-back como molde vivo (Domain + Repository completo)
-- [x] Entidades de dominio puras — sin imports de NestJS ni Prisma
+- [ ] Services inyectan `IRepository` via `@Inject(TOKEN)` — sin `this.prisma` directo
+- [ ] `catalog/` en ecommerce-back como molde vivo (Domain + Repository completo)
+- [ ] Entidades de dominio puras — sin imports de NestJS ni Prisma
 
 ## ⏳ Pendiente para 10/10
 
@@ -54,7 +54,7 @@ modulo/
 
 ## ADR-007 — Eliminar as any / as unknown as (pendiente implementar)
 
-- [x] Agregar `toEntity()` en los 11 repositories de sass-back
+- [ ] Agregar `toEntity()` en los 11 repositories de sass-back
   - prisma-organizations.repository.ts
   - prisma-collaborators.repository.ts
   - prisma-feature-flags.repository.ts
@@ -66,6 +66,6 @@ modulo/
   - prisma-audit.repository.ts
   - prisma-affiliate.repository.ts
   - prisma-users.repository.ts
-- [x] Tipar retornos de OrdersService.listOrders() y CustomersService.findById()
-- [x] lib/store/types.ts eliminado → inferRouterOutputs<AppRouter>
-- [x] JSONB casts marcados con // @real/jsonb-cast
+- [ ] Tipar retornos de OrdersService.listOrders() y CustomersService.findById()
+- [ ] lib/store/types.ts eliminado → inferRouterOutputs<AppRouter>
+- [ ] JSONB casts marcados con // @real/jsonb-cast

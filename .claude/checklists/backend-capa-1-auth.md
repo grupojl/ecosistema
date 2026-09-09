@@ -7,19 +7,19 @@
 
 ## ✅ Completado
 
-- [x] `createTrpcAuthMiddleware` centralizado en `@real/auth-server`
-- [x] Cookies HttpOnly `__session` — ADR-004 implementado
-- [x] `POST /auth/session` + `DELETE /auth/session` con `cookieParser`
-- [x] `FirebaseAuthGuard` + `TenantGuard` + `RolesGuard` como `APP_GUARD` global
-- [x] Custom claims Firebase (ADR-003) — refresh proactivo 55 min
-- [x] `SessionService` — revocación server-side real via `revokeRefreshTokens`
-- [x] CORS con `ALLOWED_ORIGINS` explícito — sin wildcard `*`
-- [x] Helmet activo en `main.ts` de ambos backs (sass-back + ecommerce-back)
-- [x] `cookieParser` registrado en sass-back — requerido para leer `__session`
-- [x] `ValidationPipe` global en sass-back
-- [x] `StepUpGuard` para operaciones críticas (rotate/revoke de secrets)
-- [x] `ApiKeyGuard` para rutas internas de config (servicios internos del ecosistema)
-- [x] `ThrottlerGuard` como APP_GUARD en ecommerce-back (rate limiting base)
+- [ ] `createTrpcAuthMiddleware` centralizado en `@real/auth-server`
+- [ ] Cookies HttpOnly `__session` — ADR-004 implementado
+- [ ] `POST /auth/session` + `DELETE /auth/session` con `cookieParser`
+- [ ] `FirebaseAuthGuard` + `TenantGuard` + `RolesGuard` como `APP_GUARD` global
+- [ ] Custom claims Firebase (ADR-003) — refresh proactivo 55 min
+- [ ] `SessionService` — revocación server-side real via `revokeRefreshTokens`
+- [ ] CORS con `ALLOWED_ORIGINS` explícito — sin wildcard `*`
+- [ ] Helmet activo en `main.ts` de ambos backs (sass-back + ecommerce-back)
+- [ ] `cookieParser` registrado en sass-back — requerido para leer `__session`
+- [ ] `ValidationPipe` global en sass-back
+- [ ] `StepUpGuard` para operaciones críticas (rotate/revoke de secrets)
+- [ ] `ApiKeyGuard` para rutas internas de config (servicios internos del ecosistema)
+- [ ] `ThrottlerGuard` como APP_GUARD en ecommerce-back (rate limiting base)
 
 ## ⏳ Pendiente para 10/10
 
@@ -36,9 +36,9 @@
   → Falla el build si alguien reimplementa verificación Firebase fuera de `@real/auth-server`
 
 ### Decisiones de degradación — resueltas en S4-A
-- [x] Firebase Admin no disponible → 503 al arranque, degraded en runtime — 00-principios.md S4-A
-- [x] Health check → degraded si Firebase falla en runtime (Railway no reinicia) — 00-principios.md S4-A
-- [x] OrganizationsClientService > 2s → 503 en admin/checkout, cache vencida en catálogo público — 00-principios.md S4-A
+- [ ] Firebase Admin no disponible → 503 al arranque, degraded en runtime — 00-principios.md S4-A
+- [ ] Health check → degraded si Firebase falla en runtime (Railway no reinicia) — 00-principios.md S4-A
+- [ ] OrganizationsClientService > 2s → 503 en admin/checkout, cache vencida en catálogo público — 00-principios.md S4-A
 
 ## Referencia de archivos
 

@@ -6,13 +6,13 @@
 
 ## ✅ Completado
 
-- [x] `@real/auth-client` fuente única de Firebase en los 3 fronts
-- [x] Sin imports directos de `firebase/auth` en componentes de página
-- [x] Cookies HttpOnly — XSS no puede exfiltrar el token
-- [x] Refresh proactivo a los 55 min — renueva también la session cookie
-- [x] Revocación server-side real en logout via `revokeRefreshTokens`
-- [x] `lib/firebase.ts` eliminado de sass-front
-- [x] `login-modal.tsx` importa directo de `@real/auth-client`
+- [ ] `@real/auth-client` fuente única de Firebase en los 3 fronts
+- [ ] Sin imports directos de `firebase/auth` en componentes de página
+- [ ] Cookies HttpOnly — XSS no puede exfiltrar el token
+- [ ] Refresh proactivo a los 55 min — renueva también la session cookie
+- [ ] Revocación server-side real en logout via `revokeRefreshTokens`
+- [ ] `lib/firebase.ts` eliminado de sass-front
+- [ ] `login-modal.tsx` importa directo de `@real/auth-client`
 
 ## ⏳ Pendiente para 10/10
 
@@ -22,7 +22,7 @@
   grep -rl "from '@/lib/firebase'" realsass-dashboard-front --include="*.tsx" --include="*.ts"
   ```
 - [ ] Migrar callers a `@real/auth-client` directo
-- [x] `realsass-dashboard-front/lib/firebase.ts` eliminado
+- [ ] `realsass-dashboard-front/lib/firebase.ts` eliminado
 
 ### Tests de integración (S4)
 - [ ] Test: login → cookie seteada → request autenticado → logout → cookie limpia

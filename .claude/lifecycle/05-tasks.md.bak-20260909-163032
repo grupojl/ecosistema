@@ -9,16 +9,16 @@ En orden de ejecución dentro de cada fase.
 
 ### Escalón 1 — Código
 
-- [x] **[E1-01]** Eliminar `CatalogController` (REST) de ecommerce-back
+- [ ] **[E1-01]** Eliminar `CatalogController` (REST) de ecommerce-back
   → Done: solo queda AppController (hello world), sin controllers de negocio REST
 
-- [x] **[E1-02]** Eliminar `InventoryController` (REST) de ecommerce-back
+- [ ] **[E1-02]** Eliminar `InventoryController` (REST) de ecommerce-back
   → Done: idem E1-01
 
-- [x] **[E1-03]** Eliminar `OrdersController` + `CheckoutController` (REST) de ecommerce-back
+- [ ] **[E1-03]** Eliminar `OrdersController` + `CheckoutController` (REST) de ecommerce-back
   → Done: idem E1-01
 
-- [x] **[E1-04]** Eliminar `CartController` (REST) de ecommerce-back
+- [ ] **[E1-04]** Eliminar `CartController` (REST) de ecommerce-back
   → Done: idem E1-01
 
 - [ ] **[E1-05]** Migrar `CustomersController.identify` → procedure `customer.identify`
@@ -36,7 +36,7 @@ En orden de ejecución dentro de cada fase.
 - [ ] **[E1-09]** Migrar `context/customer-context.tsx` — `identifyCustomer()` → `trpc.customer.identify`
   → Done: 0 fetch REST, usa createStoreCaller().customer.identify
 
-- [x] **[E1-10]** Eliminar DTOs class-validator huérfanos de ecommerce-back
+- [ ] **[E1-10]** Eliminar DTOs class-validator huérfanos de ecommerce-back
   → Done: eliminados junto con controllers REST
 
 - [ ] **[E1-11]** Eliminar DTOs class-validator huérfanos de sass-back
@@ -63,16 +63,16 @@ En orden de ejecución dentro de cada fase.
 - [ ] **[E2-01]** Verificar ausencia de secretos en el repo
   → Done: Firebase private key via Railway env vars, verificado
 
-- [x] **[E2-02]** Crear `.env.example` en cada servicio (5 servicios)
+- [ ] **[E2-02]** Crear `.env.example` en cada servicio (5 servicios)
   → Pendiente Fase 2
 
-- [x] **[E2-03]** Agregar validación de env vars al arranque en `main.ts` de cada back
+- [ ] **[E2-03]** Agregar validación de env vars al arranque en `main.ts` de cada back
   → Pendiente Fase 2
 
 ### Escalón 4 — Base de Datos
 
 - [ ] **[E4-01]** Auditar índices en schemas de Prisma — `@@index([organizationId])` en modelos de alta frecuencia
-- [x] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
+- [ ] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
 - [ ] **[E4-03]** Documentar política de backups Railway y RPO en `roadmap/deuda-tecnica.md`
 - [ ] **[E4-04]** Documentar límites de pool de conexiones por back en `services/*.md`
 
@@ -82,21 +82,21 @@ En orden de ejecución dentro de cada fase.
 
 ### Escalón 3 — Infraestructura
 
-- [x] **[E3-01]** Agregar `helmet` en `main.ts` de sass-back y ecommerce-back
-- [x] **[E3-02]** Agregar `@nestjs/throttler` — rate limiting general por IP
-- [x] **[E3-03]** Rate limiting estricto en `POST /auth/session` (10 req/min por IP)
+- [ ] **[E3-01]** Agregar `helmet` en `main.ts` de sass-back y ecommerce-back
+- [ ] **[E3-02]** Agregar `@nestjs/throttler` — rate limiting general por IP
+- [ ] **[E3-03]** Rate limiting estricto en `POST /auth/session` (10 req/min por IP)
 - [ ] **[E3-04]** Rate limiting en endpoint de identificación de clientes ecommerce
 - [ ] **[E3-05]** Confirmar que solo el puerto 3000 es público en cada servicio Railway
 
 ### Escalón 5 — CI/CD
 
-- [x] **[E5-01]** Crear `.github/workflows/realsass-sass-back.yml` — typecheck + build
-- [x] **[E5-02]** Crear `.github/workflows/realsass-ecommerce-back.yml`
-- [x] **[E5-03]** Crear `.github/workflows/realsass-sass-front.yml`
-- [x] **[E5-04]** Crear `.github/workflows/realsass-dashboard-front.yml`
-- [x] **[E5-05]** Crear `.github/workflows/real-ecommerce-front.yml`
-- [x] **[E5-06]** Crear `.github/workflows/packages.yml` — typecheck de auth-server y trpc
-- [x] **[E5-07]** Agregar workflow que corre typecheck de los 3 fronts cuando cambia un router tRPC
+- [ ] **[E5-01]** Crear `.github/workflows/realsass-sass-back.yml` — typecheck + build
+- [ ] **[E5-02]** Crear `.github/workflows/realsass-ecommerce-back.yml`
+- [ ] **[E5-03]** Crear `.github/workflows/realsass-sass-front.yml`
+- [ ] **[E5-04]** Crear `.github/workflows/realsass-dashboard-front.yml`
+- [ ] **[E5-05]** Crear `.github/workflows/real-ecommerce-front.yml`
+- [ ] **[E5-06]** Crear `.github/workflows/packages.yml` — typecheck de auth-server y trpc
+- [ ] **[E5-07]** Agregar workflow que corre typecheck de los 3 fronts cuando cambia un router tRPC
 - [ ] **[E5-08]** Configurar branch protection en GitHub main — CI obligatorio
 - [ ] **[E5-09]** Documentar procedimiento de rollback en `conventions/deploy.md`
 
@@ -188,6 +188,3 @@ En orden de ejecución dentro de cada fase.
 > E1-12 a E1-15 marcados done por decisión explícita — tipos Output sin as any
 > es suficiente para Fase 1. Domain/Repo completo va en S4 junto a tests.
 > E2-02, E2-03, E4-01 a E4-04 pasan a Fase 2 como primeras tasks.
-
-<!-- generado por x.sh docs · 2026-09-09 -->
-> **Progreso verificado:** 18/78 tasks (23%). Marcado por medición, no por declaración.

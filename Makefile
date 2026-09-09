@@ -61,7 +61,7 @@ install:
 # -----------------------------------------------------------------
 r:
 	@echo "=== Generando ecosistema.xml... ==="
-	@npx repomix --config repomix.config.json
+	@bash snapshot.sh
 	@echo "=== Listo ==="
 
 # -----------------------------------------------------------------
