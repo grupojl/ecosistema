@@ -1,92 +1,103 @@
-# Ecosistema Real — Documentación de arquitectura
+# CLAUDE.md — Punto de entrada de cada sesión en welver/
 
-> Este directorio es la memoria persistente del proyecto. Antes de implementar
-> cualquier feature, se consulta esta documentación. No se redefine desde cero
-> lo que ya está decidido acá.
+## Archivos de sesión (leer en este orden)
 
-## Resumen de una línea
+| Archivo | Cuándo leerlo | Para qué |
+|---|---|---|
+| `.claude/CONTEXT.md` | **Siempre primero** | Saber exactamente dónde está la sesión |
+| `.claude/AUDIT-LAST.md` | Siempre | Score actual, gaps, evidencia |
+| `.claude/DECISIONS-LOG.md` | Antes de proponer algo | Verificar que no se descartó ya |
+| `.claude/roadmap/sprints.md` | Al planificar trabajo | Sprint activo y tareas pendientes |
 
-SaaS multi-tenant donde cada organización gestiona su negocio (catálogo, stock,
-órdenes, config, colaboradores) a través de 3 frontends Next.js sobre 2 backends
-NestJS compartidos, con auth/tenant resuelto una sola vez y contrato tipado
-end-to-end vía tRPC.
+**Al cerrar cada sesión:** actualizar CONTEXT.md con el estado actual (2 minutos).
 
-## Principio de comunicación — NO NEGOCIABLE
+---
 
-> **Todo lo interno se comunica via tRPC (o gRPC cuando aplique).
-> REST solo se expone cuando hay una API pública para consumidores externos.**
 
-Esto aplica sin excepción a:
-- Front → Back: tRPC
-- Back → Back: tRPC HTTP o gRPC
-- Server Components → Back: tRPC server caller (no fetch manual)
-- Client Components: rehidratan desde Server Components, no hacen fetch propio
+## Leer SIEMPRE al inicio de una sesión
 
-REST se usa ÚNICAMENTE para:
-1. APIs públicas para consumidores externos (terceros, integraciones)
-2. Webhooks inbound de sistemas externos (Stripe, couriers, etc.)
-3. `POST /auth/session` + `DELETE /auth/session` — bootstrap de cookies HttpOnly
-   (excepción técnica: tRPC no puede setear headers Set-Cookie, ADR-004)
-4. `GET /health` — healthcheck de Railway
+1. **`.claude/AUDIT-LAST.md`** — Estado actual del repo con scores y gaps
+2. **`.claude/checklists/README.md`** — Scores por capa y pendientes
+3. **El ADR más reciente en `.claude/decisions/`** — Último cambio de arquitectura
 
-**Cualquier fetch manual o endpoint REST interno es un bug de arquitectura.**
+Estos tres archivos evitan que Claude asuma el estado del código. Sin leerlos,
+cualquier recomendación parte de un estado que puede estar desactualizado.
 
-## Modelo de rendering — Next.js App Router
+---
 
-```
-Server Component
-  → createServerCaller() tRPC (sin React, sin hooks)
-  → renderiza HTML con datos
-  → pasa datos via props a Client Components
+## Contexto del proyecto
 
-Client Component
-  → rehidrata con useQuery() misma queryKey que el server prefetch
-  → NUNCA hace fetch propio al back
-  → NUNCA llama REST directamente
-```
+**Repo:** grupojl/welver
+**Tipo:** Monorepo SaaS multi-tenant con storefront público
 
-## Contrato vs snapshot
+| Servicio | Rol | Puerto |
+|---|---|---|
+| `realsass-sass-back` | Identidad, orgs, config, auditoría | 3000 |
+| `realsass-ecommerce-back` | Catálogo, stock, órdenes, carrito | 3001 |
+| `realsass-sass-front` | Dashboard dueños (Next.js) | 3000 |
+| `realsass-dashboard-front` | Dashboard colaboradores (Next.js) | 3000 |
+| `real-ecommerce-front` | Storefront público (Next.js SSG/ISR) | 3000 |
+| `packages/auth-server` | Guards, decorators, TenantContext (NestJS) | — |
+| `packages/auth-client` | Firebase auth, apiFetch, AppError | — |
+| `packages/trpc` | Contratos SassAppRouter + EcommerceAppRouter | — |
+| `packages/ui` | shadcn/ui compartidos | — |
 
-Antes de editar cualquier archivo de esta carpeta, identificar a qué grupo pertenece.
+**Stack:** NestJS 11 · Prisma 7 · PostgreSQL · Redis · BullMQ · Firebase Admin
+**Frontend:** Next.js 15 · React 19 · TailwindCSS 4 · TanStack Query · Zustand
+**Auth:** Firebase Authentication (client) + Session Cookies HttpOnly (ADR-004)
+**Inter-servicios:** tRPC 11 end-to-end tipado
 
-### 🔒 No modificables de base (contrato)
+---
 
-Responden a **"¿cómo debería ser esto?"**. Son la fuente de verdad no negociable.
-Se editan solo por decisión explícita de arquitectura, nunca para que "cuadren"
-con una desviación del código real.
+## CRÍTICO — Entorno
 
-- `architecture/` — capas, principios, reglas duras
-- `contracts/` — shapes de tenant-context, organization-access, routers tRPC
-- `decisions/ADR-*.md` — decisiones tomadas e inmutables
+- Windows + Git Bash · Node 24.14.0 · pnpm 10.30.3 · Deploy: Railway
+- Named catalogs (`catalog:backend`, etc.) **NO funcionan** → usar solo `catalog:` default
+- Build context de Docker = raíz del monorepo (siempre `/`)
 
-### 🔄 Dinámicos (snapshot del estado actual)
+---
 
-Responden a **"¿cómo está esto hoy?"**. Se actualizan con cada sesión de trabajo.
+## Convenciones irrenunciables
 
-- `roadmap/sprints.md` — estado de sprints
-- `roadmap/deuda-tecnica.md` — deuda pendiente
-- `services/*.md` — estado actual de cada servicio
+- `any` implícito = bug de diseño — pedir justificación antes de aceptar
+- `class-validator` en código nuevo = prohibido — usar Zod inline
+- Query Prisma sin `organizationId` en el `where` = bug de seguridad crítico
+- `prisma migrate deploy` debe correr antes del servidor en Dockerfiles de backs
+- Redis keys de negocio deben incluir `organizationId` como prefijo (ver `conventions/cache-keys.md`)
+- Lógica de negocio en `domain/` + `application/`, nunca en controllers ni componentes UI
 
-## Stack canónico
+---
 
-**Backend (2 servicios hoy, 6 en roadmap):**
-Node.js · TypeScript strict · NestJS · Prisma ORM · PostgreSQL · Redis · pnpm workspaces · Docker
+## Cómo auditar el repo
 
-**Frontend (3 apps):**
-Next.js 15 App Router · React 19 · TypeScript strict · TailwindCSS · shadcn/ui · TanStack Query · Zustand
+Decirle a Claude: **"Ejecutá el protocolo de .claude/AUDIT.md"**
 
-**Comunicación:**
-tRPC (interno) · gRPC (cuando aplique, futuro) · REST (solo APIs públicas externas)
+El protocolo lee el código real (no la documentación) y produce scores con
+evidencia concreta. Al terminar, actualiza `.claude/AUDIT-LAST.md`.
 
-**Observabilidad:** OpenTelemetry · Prometheus · Grafana (S4)
-**Testing:** Jest · Supertest · Vitest · React Testing Library · Playwright (S4)
-**Seguridad:** Firebase Auth + Session Cookies HttpOnly · RBAC · Helmet · Rate limiting
+---
 
-## Packages compartidos
+## Cómo generar un cambio production-ready
 
-| Package | Rol |
-|---|---|
-| `@real/auth-client` | Firebase wrapper + apiFetch para los 3 fronts |
-| `@real/auth-server` | Guards, middleware, SessionService para los 2 backs |
-| `@real/trpc` | Contratos tRPC — SassAppRouter + EcommerceAppRouter |
-| `@real/ui` | 33 componentes shadcn — fuente única de UI |
+1. Claude lee `AUDIT-LAST.md` para saber el estado actual
+2. Claude identifica el gap a resolver y crea/actualiza el ADR correspondiente
+3. Claude genera el `.sh` con BLOQUE 1 (docs) + BLOQUE 2 (código)
+4. Después de ejecutar el `.sh`, actualizar el XML con repomix y pedir nueva auditoría
+
+---
+
+## ADRs activos
+
+| ADR | Decisión | Estado |
+|---|---|---|
+| ADR-001 | Permisos JSONB en Collaborator | ✅ Implementado |
+| ADR-002 | Catalog único pnpm | ✅ Implementado |
+| ADR-003 | Custom claims Firebase | ✅ Implementado |
+| ADR-004 | Auth session cookies HttpOnly | ✅ Implementado |
+| ADR-005 | REST → tRPC en ecommerce-back | ✅ Implementado |
+| ADR-006 | Front cleanup — lib/store tRPC | ✅ Implementado |
+| ADR-007 | Eliminar as any / toEntity() | ✅ Implementado |
+| ADR-008 | Eliminar componentes legacy storefront | ✅ Implementado |
+| ADR-009 | S4 — tests, CI, HydrationBoundary | 🟡 S4-C completado, S4-D+E pendientes |
+| ADR-011 | Plan 10/10 código y estructura | ✅ Implementado |
+| ADR-012 | Código definitivo — header fix, rate limiting, CI | ✅ Implementado |

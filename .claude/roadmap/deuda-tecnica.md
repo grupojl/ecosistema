@@ -2,7 +2,6 @@
 
 **Última actualización:** 2026-09-07
 
-<<<<<<< HEAD
 ---
 
 ## Escalón 1 — Código: lo que baja el puntaje de 8.5 a 10
@@ -148,38 +147,6 @@ Trigger: antes de que cualquier ecosistema tenga datos de producción reales.
 ---
 
 ## Backend — pendiente (existente)
-=======
-## ✅ RESUELTOS
-
-| ID | Deuda | Cómo quedó |
-|----|-------|------------|
-| ~~DT-001~~ | dto/ huérfanas (17 carpetas) | Eliminadas |
-| ~~DT-002~~ | class-validator inline (9 archivos) | Migrado a Zod — 0 imports residuales |
-| ~~DT-003~~ | AllExceptionsFilter no registrado | Registrado en chatia + workers main.ts |
-| ~~DT-004~~ | ConversationsService → PrismaService directo | Migrado a IConversationsRepository |
-| ~~DT-005~~ | PaymentsService → PrismaService directo | PrismaService + IPaymentsRepository coexisten (ver nota) |
-| ~~DT-006~~ | reconciliation.service sin tenantId en where | ConfigService + tenantId dentro del where |
-| ~~DT-007~~ | contacts/ sin Domain/Repository | Decidido: no aplicar — scope suficiente con organizationId |
-| ~~DT-008~~ | projects/ sin Domain/Repository | Ídem — imports dto corregidos a schemas.ts |
-| ~~DT-009~~ | campaigns/ sin Domain/Repository | Ídem |
-| ~~DT-011~~ | notifications.service getStats() sin ecosystemId | ecosystemId en StatsQuery + where |
-| ~~DT-012~~ | analytics getConversationsByDay() sin ecosystemId | ecosystemId en firma + controller |
-| ~~DT-013~~ | Timeouts gRPC no definidos | channelOptions/keepalive en 5 módulos grpc-client |
-| ~~DT-014~~ | preferences.service getPreferences() sin ecosystemId | ecosystemId en where |
-| ~~DT-016~~ | contacts.service import roto class-validator | Reescrito usando schemas.ts |
-| ~~DT-017~~ | OrgContext sin tenantId | tenantId agregado a la interface |
-| ~~DT-018~~ | projects.service imports dto legacy rotos | Migrado a schemas.ts |
-| ~~DT-019~~ | getFailedJobs() fuera del cierre de clase DlqService | Corregido manualmente 2026-09-07 — método dentro de la clase, un único `}` al final |
-| ~~DT-A~~ | Sin ZodValidationPipe ni filtros de excepción | Resuelto |
-| ~~DT-B~~ | Controllers con class-validator | Resuelto |
-| ~~DT-C~~ | class-validator en package.json | Resuelto |
-| ~~DT-D~~ | conversations/ sin domain+repository | Resuelto |
-| ~~DT-E~~ | payments/ sin domain+repository | Resuelto |
-| ~~DT-F~~ | Sin contratos gRPC documentados | Resuelto |
-| ~~DT-G~~ | Sin auditoría multi-tenant | Resuelto |
-
-### Nota de arquitectura — DT-005
->>>>>>> efe7f06e2d3e68c2c0a774de38ce5f87f5a5b862
 
 `PaymentsService` inyecta tanto `PrismaService` como `IPaymentsRepository`:
 - `IPaymentsRepository` → lecturas simples: `findById`, `findByIdempotencyKey`, `list`
