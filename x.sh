@@ -1,451 +1,685 @@
 #!/usr/bin/env bash
-# =============================================================================
-# x.sh — welver/ — Sincronizar scores en .claude/
+# x.sh — Aplica los documentos de arquitectura de Dockerfile a los 3 monorepos
 #
-# Problema: el score 9.1/10 registrado en ADR-009-s4 viene de ecosistema-ms
-# (chatia/gRPC), no de welver. La auditoría real del código fuente da 8.8/10.
+# Uso: bash x.sh  (desde cualquier lugar — se ubica solo)
+# O via Makefile: make x  (desde dentro de cualquier repo)
 #
-# Este script solo toca .claude/ — no modifica código fuente.
-#
-# BLOQUES:
-#   BLOQUE 1 — Crea ADR-011 documentando la desincronización y el score real
-#   BLOQUE 2 — Actualiza los archivos .claude/ con los scores correctos
-#   BLOQUE 3 — Registra en .claude/roadmap/ el estado post-sincronización
-#
-# USO:
-#   bash x.sh              → los 3 bloques
-#   bash x.sh --bloque 1   → solo el ADR
-#   bash x.sh --bloque 2   → solo actualizar scores
-#   bash x.sh --bloque 3   → solo registrar estado
-# =============================================================================
+# Los 3 archivos que escribe en cada repo:
+#   .claude/architecture/05-dockerfile-backend.md
+#   .claude/architecture/06-dockerfile-frontend.md
+#   .claude/architecture/07-railway-deploy.md
 
-set -eo pipefail
+set -euo pipefail
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-log()    { echo -e "${BLUE}[x.sh]${NC} $*"; }
-ok()     { echo -e "${GREEN}[✓]${NC} $*"; }
-warn()   { echo -e "${YELLOW}[!]${NC} $*"; }
-header() {
-  echo -e "\n${BOLD}${CYAN}══════════════════════════════════════════${NC}"
-  echo -e "${BOLD}${CYAN}  $*${NC}"
-  echo -e "${BOLD}${CYAN}══════════════════════════════════════════${NC}\n"
+info()    { echo -e "${BLUE}[x.sh]${NC} $*"; }
+success() { echo -e "${GREEN}[x.sh]${NC} $*"; }
+warn()    { echo -e "${YELLOW}[x.sh]${NC} $*"; }
+die()     { echo -e "${RED}[x.sh]${NC} $*"; exit 1; }
+
+REPOS=("superadmin" "ecosistema" "ecosistema-ms")
+
+# ─── ubicar la carpeta padre de los 3 repos ──────────────────────────────────
+# Funciona desde: la carpeta padre, dentro de un repo, o donde esté el x.sh
+find_root() {
+  local candidates=(
+    "."                          # ya estamos en la carpeta padre
+    ".."                         # estamos dentro de un repo
+    "$(dirname "${BASH_SOURCE[0]}")/.."  # x.sh está dentro de un repo
+    "$(dirname "${BASH_SOURCE[0]}")"     # x.sh está en la carpeta padre
+  )
+  for candidate in "${candidates[@]}"; do
+    local resolved
+    resolved="$(cd "$candidate" 2>/dev/null && pwd)" || continue
+    # La carpeta padre correcta tiene al menos uno de los 3 repos con .claude/
+    for repo in "${REPOS[@]}"; do
+      if [[ -d "$resolved/$repo/.claude" ]]; then
+        echo "$resolved"
+        return 0
+      fi
+    done
+  done
+  return 1
 }
 
-ARG1="${1:-}"
-ARG2="${2:-}"
-RUN_BLOQUE="${ARG1:-all}"
-if [[ "$ARG1" == "--bloque" && -n "$ARG2" ]]; then
-  RUN_BLOQUE="$ARG2"
-fi
+ROOT=""
+ROOT="$(find_root)" || die "No se encontró la carpeta padre de los repos (superadmin, ecosistema, ecosistema-ms). Verificar estructura."
 
-[[ -f "pnpm-workspace.yaml" ]] || { echo "Ejecutar desde la raíz del monorepo (welver/)"; exit 1; }
+info "Raíz detectada: $ROOT"
 
-# =============================================================================
-# BLOQUE 1 — Crear ADR-011 documentando la desincronización
-# =============================================================================
-bloque_1() {
-  header "BLOQUE 1 — Creando ADR-011: score real auditado"
+# ─── verificar que los repos existen ─────────────────────────────────────────
+info "Verificando repos..."
+for repo in "${REPOS[@]}"; do
+  [[ -d "$ROOT/$repo" ]]         || die "No se encontró $ROOT/$repo"
+  [[ -d "$ROOT/$repo/.claude" ]] || die "$ROOT/$repo/.claude no existe"
+done
+success "Repos encontrados: ${REPOS[*]}"
+echo ""
 
-  mkdir -p .claude/decisions
+# ─── documentos ──────────────────────────────────────────────────────────────
 
-  cat > .claude/decisions/ADR-011-score-real-auditado.md << 'EOF'
-# ADR-011: Score real auditado — welver/ (2026-09-12)
+doc_05_backend() {
+cat << 'MD'
+# 05 — Dockerfile canónico: Backend NestJS + Prisma + pnpm workspace
 
-**Fecha:** 2026-09-12
-**Estado:** Aceptado
-
----
-
-## Problema detectado
-
-El score 9.1/10 registrado en `ADR-009-s4-tests-ci-hydration.md` y en
-`ADR-009-hacia-9-5-codigo.md` **no corresponde a welver/**.
-
-`ADR-009-hacia-9-5-codigo.md` menciona `getAgentMetrics`, `ConversationsService`,
-`gRPC`, `LoggerModule`, `DT-023`, `DT-029` — esas entidades pertenecen a
-**ecosistema-ms** (chatia, analytics, workers). El ADR fue pegado en welver/
-por error y su score de 9.1 quedó como referencia del promedio de este repo.
-
-`checklists/README.md` tiene la tabla de scores por capa correcta pero el
-"promedio de 9.1" en `ADR-009-s4` la contradice.
+> Patrón de referencia permanente para todo backend NestJS del ecosistema GrupoJL.
+> Aplica a: `superadmin-backend`, `realsass-sass-back`, `realsass-ecommerce-back`,
+> `chatia-backend`, `pasarelapagos-backend`, `notificaciones-backend`,
+> `analytics-backend`, `workers-backend`.
+> Lo que está aquí no se redefine por servicio — se parametriza con ARGs.
 
 ---
 
-## Auditoría real — código fuente (2026-09-12)
+## Por qué este patrón y no otro
 
-Basada en lectura directa del XML del repositorio. Excluyendo tests, CI y observabilidad.
+### Imagen base: `node:22-alpine` — no distroless
 
-| Dimensión | Evidencia en código | Score |
-|-----------|--------------------|----|
-| **Arquitectura/Capas** | 11 módulos sass-back con domain+repository+toEntity() ✅. catalog ecommerce-back ídem ✅. cart/orders/customers/inventory de ecommerce-back sin domain ni repository — usan PrismaService directo en el service ⚠️ | **8.5** |
-| **Contratos/Tipado** | SassAppRouter + EcommerceAppRouter sin `as any` ✅. class-validator eliminado del código fuente ✅. DTOs internos (UpdateFlagDto, CreateSecretDto, etc.) no incluidos en el XML — estado no confirmado ⚠️ | **8.5** |
-| **Multi-tenancy** | organizationId en todos los modelos, todos los where, todos los repository methods. @@index([organizationId]) en todos los modelos de alta frecuencia ✅ | **9.5** |
-| **Calidad de código** | toEntity() en todos los repositories confirmados. @real/jsonb-cast marcado. Sin as any verificado en archivos presentes ✅ | **9.0** |
-| **Auth/Seguridad** | HttpOnly cookies, TenantGuard, RolesGuard, StepUpGuard, ApiKeyGuard, CORS sin wildcard, Helmet ✅ | **9.0** |
-| **Comunicación inter-servicio** | OrganizationsClientService: HTTP + Redis cache, timeout 2s, degradación documentada ✅ | **8.5** |
-| **Config/Entorno** | pnpm catalog único ✅. Dockerfiles multi-stage ✅. .env.example creado (ADR-010 C3) ✅. prisma migrate deploy en entrypoint.sh (ADR-010 C2) ✅ | **8.5** |
-| **Frontend** | tRPC end-to-end, TanStack Query, Zustand UI-only ✅. Presentación (Frontend 4) bloqueada estructuralmente por pagos-back y APIs courier ⚠️ | **8.5** |
-| **Documentación .claude/** | Estructura completa, ADRs, checklists, contratos, convenciones ✅. ADR-009-hacia-9-5 de ecosistema-ms mezclado ⚠️ (este ADR lo corrige) | **9.0** |
+Prisma genera binarios nativos del query engine en tiempo de build.
+Alpine usa `musl libc`; Distroless (gcr.io/distroless) usa `glibc` (Debian).
+Si el stage de build es Alpine y el runtime es Distroless, el Prisma Query Engine
+compilado en Alpine **no corre en Distroless** — falla silenciosamente con un error
+de ELF incompatible a las 2am en Railway.
 
-**Promedio auditado: 8.8 / 10**
+Decisión: `node:22-alpine` en todos los stages del backend. Superficie de ataque
+mínima sin el riesgo de incompatibilidad de libc. Revisar si se migra a Debian
+cuando Prisma soporte distroless oficialmente.
+
+### pnpm versión única: `ARG PNPM_VERSION`
+
+Un solo ARG al inicio del Dockerfile es la fuente de verdad de la versión de pnpm.
+Si se actualiza el digest de la imagen base pero no la versión de pnpm (o viceversa),
+el build rompe con un error críptico de corepack. Pin único = un solo lugar para actualizar.
+
+### Estructura de stages: deps → build → runtime
+
+```
+deps    — instala node_modules una vez, con cache mount de pnpm store
+build   — compila TypeScript + genera Prisma client
+runtime — copia solo dist/ + node_modules + prisma/schema.prisma
+```
+
+El stage `deps` copia SOLO los `package.json` (workspace root + packages + servicio)
+antes del `pnpm install`. Esto preserva el layer de dependencias en cache:
+si solo cambia código fuente, Docker reutiliza el layer de `node_modules`.
+
+### `prisma generate` en build, no en runtime
+
+`prisma generate` lee el schema y genera el client TypeScript + los binarios nativos.
+Correrlo en runtime agrega 3-8 segundos al cold start y requiere las herramientas
+de Prisma en la imagen de producción. En build es determinístico y trazable.
+
+El schema `prisma/schema.prisma` sí va en la imagen final. Las migrations NO van
+(solo se corren desde CI/CD o un job separado antes del deploy).
+
+### Cache mounts de BuildKit: comportamiento en Railway
+
+Los cache mounts (`--mount=type=cache`) persisten **dentro de un build** pero
+Railway usa runners efímeros — el cache se descarta entre builds.
+El beneficio real en Railway viene de la **estructura de layers**, no de los mounts.
+Los cache mounts se mantienen en el Dockerfile porque sí aceleran builds locales
+y en GitHub Actions con runner con estado.
+
+### Usuario no-root: obligatorio
+
+CIS Benchmarks y cualquier política SOC2/PCI exigen contenedores sin root.
+Se crea un usuario `nestjs` con UID fijo (1001) para reproducibilidad entre builds.
 
 ---
 
-## Por qué 8.8 y no el 9.1 anterior
+## Template canónico
 
-| Gap real | Impacto |
-|----------|---------|
-| cart/orders/customers/inventory sin domain+repository en ecommerce-back | Arquitectura baja de 9 a 8.5 |
-| DTOs internos (UpdateFlagDto, CreateSecretDto, etc.) no confirmados en XML | Tipado baja de 9 a 8.5 |
-| Frontend 4 (Presentación) estructuralmente en 6/10 | Arrastra el promedio frontend |
-| ADR-009-hacia-9-5-codigo no pertenece a welver | Distorsionaba el score de referencia |
+```dockerfile
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo
+# Reemplazar SERVICE_DIR con el nombre del servicio (ej: chatia-backend)
+
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.11.1
+
+# ─── stage 1: dependencias ────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+# Copiar SOLO package.json antes del install — preserva cache de node_modules.
+# Si solo cambia código fuente, Docker reutiliza el layer de node_modules.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+
+# Ajustar según qué packages locales usa este servicio:
+# COPY packages/auth-server/package.json  ./packages/auth-server/
+# COPY packages/proto/package.json        ./packages/proto/
+# COPY packages/grpc-client/package.json  ./packages/grpc-client/
+COPY <SERVICE_DIR>/package.json           ./<SERVICE_DIR>/
+
+# shamefully-hoist: pone todo en node_modules raíz.
+# Necesario para que NestJS resuelva los packages del workspace.
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+# Cache mount: acelera builds locales y en GitHub Actions.
+# En Railway (runner efímero) no persiste — el beneficio viene del layer cache.
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── stage 2: build ───────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules  ./node_modules
+COPY tsconfig.base.json             ./
+
+# Ajustar según qué packages locales usa este servicio:
+# COPY packages/auth-server/  ./packages/auth-server/
+# COPY packages/proto/        ./packages/proto/
+# COPY packages/grpc-client/  ./packages/grpc-client/
+COPY <SERVICE_DIR>/             ./<SERVICE_DIR>/
+
+WORKDIR /app/<SERVICE_DIR>
+
+# prisma generate en build, no en runtime:
+# - determinístico y trazable
+# - evita 3-8s de cold start en Railway
+# - binarios nativos del query engine compilados para alpine
+RUN pnpm prisma generate
+
+RUN pnpm build
+
+# ─── stage 3: runtime ─────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS runtime
+
+# Usuario no-root — CIS Benchmarks / SOC2 / PCI
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Solo lo necesario en producción:
+COPY --from=build --chown=nestjs:nodejs /app/node_modules               ./node_modules
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/dist          ./<SERVICE_DIR>/dist
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/prisma        ./<SERVICE_DIR>/prisma
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/package.json  ./<SERVICE_DIR>/package.json
+
+USER nestjs
+
+EXPOSE ${PORT}
+
+WORKDIR /app/<SERVICE_DIR>
+
+CMD ["node", "dist/main.js"]
+```
 
 ---
 
-## Score por capa — tabla corregida
+## Reglas permanentes
 
-| Capa | Score anterior (checklists/README) | Score auditado real |
-|------|------------------------------------|---------------------|
-| Backend 1 — Auth/Tenant | 9.0 | **9.0** ✓ |
-| Backend 2 — Router/Zod | 9.0 | **8.5** ↓ (DTOs internos sin confirmar) |
-| Backend 3+4 — Domain/Repo | 9.0 | **8.5** ↓ (ecommerce-back parcial) |
-| Backend 5 — AppRouter | 9.5 | **9.5** ✓ |
-| Backend 6 — Multi-tenant | 9.0 | **9.5** ↑ (índices confirmados) |
-| Frontend 1 — Fetch tRPC | 9.5 | **9.5** ✓ |
-| Frontend 2 — TanStack Query | 9.0 | **9.0** ✓ |
-| Frontend 3 — Zustand | 8.5 | **8.5** ✓ |
-| Frontend 4 — Presentación | 6.0 | **6.0** ✓ |
-| Frontend 5 — Auth | 9.5 | **9.5** ✓ |
-| **Promedio** | **(9.1 — incorrecto, de ecosistema-ms)** | **8.8** |
+1. **`ARG PNPM_VERSION` al inicio** — una sola fuente de verdad. Si se actualiza,
+   se actualiza aquí y se propaga a todos los Dockerfiles.
+
+2. **`pnpm install --frozen-lockfile` siempre** — nunca `--no-frozen-lockfile` en producción.
+   Si el lockfile está desactualizado, el build falla explícitamente.
+
+3. **`prisma generate` en stage `build`, antes de `pnpm build`** — nunca en CMD ni entrypoint.
+
+4. **Solo `prisma/schema.prisma` en runtime** — las migrations NO van en la imagen.
+
+5. **`shamefully-hoist=true` en `.npmrc`** — no es opcional en este stack.
+
+6. **El build context es siempre la raíz del monorepo** — ver `07-railway-deploy.md`.
+
+7. **Nunca `npm install` ni `yarn`** — pnpm es el gestor único del ecosistema.
 
 ---
 
-## Qué se corrige en este x.sh
+## Checklist antes de crear un Dockerfile nuevo
 
-1. `checklists/README.md` — tabla de scores y promedio actualizados
-2. `lifecycle/01-fase-desarrollo.md` — Escalón 1 estado corregido
-3. `decisions/ADR-009-hacia-9-5-codigo.md` — marcado como "NO PERTENECE A WELVER"
-4. `decisions/ADR-009-s4-tests-ci-hydration.md` — promedio corregido de 9.1 a 8.8
-5. `roadmap/deuda-tecnica.md` — agregar gap de ecommerce-back domain/repo
-
-## Lo que NO cambia
-
-Los scores de las capas que están correctos se mantienen igual.
-Este ADR no sube ni baja capas de forma arbitraria — documenta lo que el código dice.
-
-## Próximo hito real
-
-Para llegar a 9.1 **real** en welver, el trabajo concreto es:
-- cart/orders/customers/inventory → domain + repository en ecommerce-back
-- Confirmar DTOs internos (UpdateFlagDto, etc.) — si tienen class-validator, migrar a Zod inline
-
-Para llegar a 9.5+:
-- Lo anterior + S4 (tests 85%, enforcement CI, HydrationBoundary)
-EOF
-
-  ok "ADR-011 creado"
+- [ ] `ARG PNPM_VERSION` definido al inicio con la versión actual del workspace
+- [ ] Solo los `package.json` necesarios copiados en stage `deps` (no el source)
+- [ ] `pnpm install --frozen-lockfile` con cache mount
+- [ ] `prisma generate` antes de `pnpm build` en stage `build`
+- [ ] Stage `runtime` copia solo `dist/`, `node_modules`, `prisma/schema.prisma`, `package.json`
+- [ ] Usuario `nestjs` creado y activado antes del CMD
+- [ ] `WORKDIR` apunta al directorio del servicio en el runtime
+- [ ] `CMD ["node", "dist/main.js"]` — sin shell wrapper innecesario
+MD
 }
 
-# =============================================================================
-# BLOQUE 2 — Actualizar scores en los archivos .claude/ existentes
-# =============================================================================
-bloque_2() {
-  header "BLOQUE 2 — Actualizando scores en .claude/"
+doc_06_frontend() {
+cat << 'MD'
+# 06 — Dockerfile canónico: Frontend Next.js + pnpm workspace
 
-  # ── 2a: checklists/README.md — corregir tabla y promedio ─────────────────
-  README=".claude/checklists/README.md"
-  if [[ -f "$README" ]]; then
-    log "Actualizando $README ..."
-
-    # Corregir Backend 2 — 9.0 → 8.5
-    sed -i 's/| 2 — Router\/Zod | `backend-capa-2-router.md` | 9\/10 | Stripe |/| 2 — Router\/Zod | `backend-capa-2-router.md` | 8.5\/10 | Stripe |/' "$README" 2>/dev/null || true
-
-    # Corregir Backend 3+4 — 9.0 → 8.5
-    sed -i 's/| 3+4 — Domain\/Repo | `backend-capas-3-4-domain-repo.md` | 9\/10 | Stripe\/Linear internos |/| 3+4 — Domain\/Repo | `backend-capas-3-4-domain-repo.md` | 8.5\/10 | Stripe\/Linear internos |/' "$README" 2>/dev/null || true
-
-    # Corregir Backend 6 multi-tenant — 9.0 → 9.5 (índices confirmados)
-    sed -i 's/| 6 — Multi-tenant | `backend-capa-6-multitenant.md` | 9\/10 | Shopify multi-tenant |/| 6 — Multi-tenant | `backend-capa-6-multitenant.md` | 9.5\/10 | Shopify multi-tenant |/' "$README" 2>/dev/null || true
-
-    # Corregir historial — Backend 2
-    sed -i 's/| Backend 2 — Router\/Zod | 7.0 | 9.0 | ⬆️ +2.0 |/| Backend 2 — Router\/Zod | 7.0 | 8.5 | ⬆️ +1.5 |/' "$README" 2>/dev/null || true
-
-    # Corregir historial — Backend 3+4
-    sed -i 's/| Backend 3+4 — Domain\/Repo | 9.0 | 9.0 | — |/| Backend 3+4 — Domain\/Repo | 9.0 | 8.5 | ⬇️ -0.5 (ecommerce-back parcial) |/' "$README" 2>/dev/null || true
-
-    # Corregir historial — Backend 6
-    sed -i 's/| Backend 6 — Multi-tenant | 9.0 | 9.0 | — |/| Backend 6 — Multi-tenant | 9.0 | 9.5 | ⬆️ +0.5 (índices confirmados) |/' "$README" 2>/dev/null || true
-
-    # Reemplazar el párrafo del techo actual
-    sed -i 's/El techo actual sin tests es ~9\.5\/10 en las capas mejores\. Tests y CI son el único camino al 10\/10\./El promedio auditado real es 8.8\/10 (2026-09-12, ver ADR-011). El techo sin tests\/CI es ~9.5\/10 en capas individuales. El camino a 9.1 real: domain+repo en cart\/orders\/customers\/inventory (ecommerce-back)./' "$README" 2>/dev/null || true
-
-    ok "$README actualizado"
-  else
-    warn "$README no encontrado"
-  fi
-
-  # ── 2b: backend-capa-2-router.md — corregir score ────────────────────────
-  CAPA2=".claude/checklists/backend-capa-2-router.md"
-  if [[ -f "$CAPA2" ]]; then
-    log "Actualizando $CAPA2 ..."
-    sed -i 's/\*\*Score actual: 9\/10 — nivel Stripe\*\*/\*\*Score actual: 8.5\/10 — nivel Stripe\*\*/' "$CAPA2" 2>/dev/null || true
-    # Agregar nota de auditoría si no existe
-    if ! grep -q "ADR-011" "$CAPA2" 2>/dev/null; then
-      echo "" >> "$CAPA2"
-      echo "## Nota de auditoría (ADR-011 — 2026-09-12)" >> "$CAPA2"
-      echo "" >> "$CAPA2"
-      echo "Score bajado de 9.0 a 8.5: DTOs internos (UpdateFlagDto, CreateSecretDto, CreateThemeDto," >> "$CAPA2"
-      echo "CreateTemplateDto, CreateWebhookDto) no están en el XML auditado — no se puede confirmar" >> "$CAPA2"
-      echo "si tienen class-validator o son interfaces puras. Hasta confirmarlo, el score refleja la duda." >> "$CAPA2"
-      echo "Verificar: \`grep -r \"class-validator\" realsass-sass-back/src --include=\"*.ts\"\`" >> "$CAPA2"
-    fi
-    ok "$CAPA2 actualizado"
-  else
-    warn "$CAPA2 no encontrado"
-  fi
-
-  # ── 2c: backend-capas-3-4-domain-repo.md — corregir score ────────────────
-  CAPA34=".claude/checklists/backend-capas-3-4-domain-repo.md"
-  if [[ -f "$CAPA34" ]]; then
-    log "Actualizando $CAPA34 ..."
-    sed -i 's/\*\*Score actual: 9\/10 — nivel Stripe\/Linear internos\*\*/\*\*Score actual: 8.5\/10 — nivel Stripe\/Linear internos\*\*/' "$CAPA34" 2>/dev/null || true
-    if ! grep -q "ADR-011" "$CAPA34" 2>/dev/null; then
-      echo "" >> "$CAPA34"
-      echo "## Nota de auditoría (ADR-011 — 2026-09-12)" >> "$CAPA34"
-      echo "" >> "$CAPA34"
-      echo "Score bajado de 9.0 a 8.5: cart, orders, customers, inventory en ecommerce-back" >> "$CAPA34"
-      echo "usan PrismaService directo en el service — sin domain/ ni repository/." >> "$CAPA34"
-      echo "Confirmado en código fuente: CartService, OrdersService, CustomersService importan" >> "$CAPA34"
-      echo "\`PrismaService\` directamente. Solo catalog/ tiene el molde completo." >> "$CAPA34"
-    fi
-    ok "$CAPA34 actualizado"
-  else
-    warn "$CAPA34 no encontrado"
-  fi
-
-  # ── 2d: backend-capa-6-multitenant.md — subir score a 9.5 ───────────────
-  CAPA6=".claude/checklists/backend-capa-6-multitenant.md"
-  if [[ -f "$CAPA6" ]]; then
-    log "Actualizando $CAPA6 ..."
-    sed -i 's/\*\*Score actual: 9\/10 — nivel Shopify multi-tenant\*\*/\*\*Score actual: 9.5\/10 — nivel Shopify multi-tenant\*\*/' "$CAPA6" 2>/dev/null || true
-    if ! grep -q "ADR-011" "$CAPA6" 2>/dev/null; then
-      echo "" >> "$CAPA6"
-      echo "## Nota de auditoría (ADR-011 — 2026-09-12)" >> "$CAPA6"
-      echo "" >> "$CAPA6"
-      echo "Score subido de 9.0 a 9.5: auditoría del schema Prisma confirma @@index([organizationId])" >> "$CAPA6"
-      echo "en todos los modelos de alta frecuencia de ambos backends. No era un gap pendiente." >> "$CAPA6"
-    fi
-    ok "$CAPA6 actualizado"
-  else
-    warn "$CAPA6 no encontrado"
-  fi
-
-  # ── 2e: lifecycle/01-fase-desarrollo.md — corregir estado Escalón 1 ──────
-  FASE1=".claude/lifecycle/01-fase-desarrollo.md"
-  if [[ -f "$FASE1" ]]; then
-    log "Actualizando $FASE1 ..."
-
-    # Escalón 1 — el estado decía 9/10 pero tenía bloqueantes activos que ya se resolvieron
-    sed -i 's/### Estado actual — 9\/10/### Estado actual — 8.5\/10/' "$FASE1" 2>/dev/null || true
-
-    # Corregir los bloqueantes que ya no existen según el código real
-    sed -i 's/| tRPC exclusivo ecommerce-back | ⚠️ BLOQUEANTE | Controllers REST legacy pendientes de eliminar (ADR-005) |/| tRPC exclusivo ecommerce-back | ✅ | Controllers REST eliminados — solo app.controller.ts (hello) |/' "$FASE1" 2>/dev/null || true
-    sed -i 's/| DTOs class-validator sass-back | ⚠️ Pendiente | Sobreviven en controllers REST legacy a eliminar |/| DTOs class-validator sass-back | ✅ | Eliminados — organizations.service usa UpdateOrganizationInput (ADR-010 C1) |/' "$FASE1" 2>/dev/null || true
-    sed -i 's/| ecommerce-front tRPC server caller | ⚠️ BLOQUEANTE | lib\/store\/client.ts usa fetch REST (ADR-006) |/| ecommerce-front tRPC server caller | ✅ | lib\/store\/client.ts usa createStoreCaller() tRPC (ADR-006 resuelto) |/' "$FASE1" 2>/dev/null || true
-
-    # Actualizar prisma migrate deploy e índices que ya se resolvieron
-    sed -i 's/| Índices en `organizationId` | ⚠️ Verificar | Confirmar `@@index(\[organizationId\])` en modelos de alta frecuencia |/| Índices en `organizationId` | ✅ | Confirmados en ambos schemas — ADR-011 |/' "$FASE1" 2>/dev/null || true
-    sed -i 's/| `prisma migrate deploy` en Dockerfile | ⚠️ Verificar | Confirmar que migra antes del start, no después |/| `prisma migrate deploy` en Dockerfile | ✅ | entrypoint.sh en ambos backends — ADR-010 C2 |/' "$FASE1" 2>/dev/null || true
-
-    ok "$FASE1 actualizado"
-  else
-    warn "$FASE1 no encontrado"
-  fi
-
-  # ── 2f: ADR-009-hacia-9-5-codigo.md — marcar como NO pertenece a welver ──
-  ADR009V1=".claude/decisions/ADR-009-hacia-9-5-codigo.md"
-  if [[ -f "$ADR009V1" ]]; then
-    log "Marcando $ADR009V1 como perteneciente a ecosistema-ms ..."
-    # Insertar aviso al inicio del archivo
-    TMPFILE=$(mktemp)
-    cat > "$TMPFILE" << 'ENDWARN'
-> ⚠️ **ESTE ADR NO PERTENECE A WELVER/**
-> Fue pegado por error desde `ecosistema-ms`. Las entidades que menciona
-> (`getAgentMetrics`, `ConversationsService`, `gRPC`, `DT-023`, `DT-029`,
-> `LoggerModule`) no existen en welver/. El score 9.1 que proyecta es el
-> de ecosistema-ms, no el de este repositorio.
-> Score real de welver/ auditado: **8.8/10** — ver `ADR-011-score-real-auditado.md`
+> Patrón de referencia permanente para todo frontend Next.js del ecosistema GrupoJL.
+> Aplica a: `superadmin-frontend`, `realsass-sass-front`,
+> `realsass-dashboard-front`, `real-ecommerce-front`.
+> Lo que está aquí no se redefine por servicio — se parametriza con ARGs y build args.
 
 ---
 
-ENDWARN
-    cat "$ADR009V1" >> "$TMPFILE"
-    mv "$TMPFILE" "$ADR009V1"
-    ok "$ADR009V1 marcado con aviso"
-  else
-    warn "$ADR009V1 no encontrado"
-  fi
+## Por qué este patrón y no otro
 
-  # ── 2g: ADR-009-s4 — corregir la línea del 9.1 ───────────────────────────
-  ADR009S4=".claude/decisions/ADR-009-s4-tests-ci-hydration.md"
-  if [[ -f "$ADR009S4" ]]; then
-    log "Corrigiendo promedio en $ADR009S4 ..."
-    sed -i 's/el código base en un promedio de 9\.1\/10 sobre 10 capas,/el código base en un promedio auditado de 8.8\/10 sobre 10 capas (ver ADR-011 — el 9.1 era de ecosistema-ms),/' "$ADR009S4" 2>/dev/null || true
-    ok "$ADR009S4 corregido"
-  else
-    warn "$ADR009S4 no encontrado"
-  fi
+### `output: standalone` — obligatorio
 
-  # ── 2h: roadmap/deuda-tecnica.md — agregar el gap de domain/repo ─────────
-  DEUDA=".claude/roadmap/deuda-tecnica.md"
-  if [[ -f "$DEUDA" ]]; then
-    log "Agregando gap domain/repo ecommerce-back en $DEUDA ..."
-    if ! grep -q "DT-ECO-01" "$DEUDA" 2>/dev/null; then
-      cat >> "$DEUDA" << 'ENDDEUDA'
+`output: standalone` en `next.config.mjs` hace que Next.js genere en `.next/standalone/`
+un servidor Node.js autocontenido. La imagen final no necesita copiar todos los
+`node_modules` (cientos de MB) — solo lo que Next.js determinó necesario en runtime (~50-80 MB).
+
+**Es un requisito, no una optimización.** Sin él el CMD no funciona en el contexto
+del monorepo (Next.js no sabe dónde está el entry point).
+
+Verificar en cada `next.config.mjs`:
+```js
+const nextConfig = {
+  output: 'standalone',
+};
+```
+
+### `NEXT_PUBLIC_*` como build args — no hay otra forma
+
+Las variables `NEXT_PUBLIC_*` son **inlineadas por el compilador de Next.js en build time**.
+No son variables leídas en runtime — el compilador las sustituye literalmente en el bundle.
+
+Si no se pasan como `ARG` + `ENV` en el stage de build, quedan como `undefined` en el bundle.
+Ningún `ENV` en el stage runtime puede corregirlas — ya están compiladas.
+
+Esto no es configurable — es el comportamiento del compilador de Next.js.
+
+### Copiar `static` y `public` separado del standalone
+
+`output: standalone` NO incluye `.next/static/` ni `public/`.
+Sin estos, la app arranca pero sin CSS, imágenes ni fuentes.
+
+### `HOSTNAME=0.0.0.0` — obligatorio en Railway
+
+Next.js standalone bindea a `127.0.0.1` por default.
+Railway no puede acceder al contenedor si el proceso escucha solo en loopback.
+Sin este ENV el health check falla y Railway revierte el deploy.
 
 ---
 
-## Gap identificado en auditoría ADR-011 (2026-09-12)
+## Variables de entorno
 
-| ID | Gap | Módulos afectados | Impacto en score |
-|----|-----|-------------------|-----------------|
-| DT-ECO-01 | cart, orders, customers, inventory sin domain/ ni repository/ | realsass-ecommerce-back | Arquitectura: 8.5 → 9.0 cuando se resuelva |
-| DT-ECO-02 | DTOs internos no auditados (UpdateFlagDto, CreateSecretDto, etc.) | realsass-sass-back | Contratos/Tipado: 8.5 → 9.0 si no tienen class-validator |
-
-### DT-ECO-01 — Cómo resolverlo
-
-Seguir el molde de `src/catalog/` (el único módulo con patrón completo en ecommerce-back):
-
+**Comunes a todos los frontends** (Firebase):
 ```
-cart/
-├── domain/
-│   ├── cart.entity.ts       # tipos puros, sin Prisma
-│   └── cart.errors.ts
-├── repository/
-│   ├── cart.repository.interface.ts
-│   └── prisma-cart.repository.ts   # único lugar con PrismaService + toEntity()
-├── cart.service.ts          # inyecta ICartRepository via @Inject(TOKEN)
-└── cart.module.ts           # binding { provide: TOKEN, useClass: PrismaCartRepo }
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
 ```
 
-Ídem para orders, customers, inventory.
+Las específicas por servicio van documentadas en `.env.example` de cada servicio.
 
-### DT-ECO-02 — Cómo verificarlo
+---
+
+## Template canónico
+
+```dockerfile
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo
+# Reemplazar SERVICE_DIR con el nombre del servicio (ej: realsass-sass-front)
+
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.11.1
+
+# ─── stage 1: dependencias ────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+
+# Ajustar según qué packages locales usa este frontend:
+# COPY packages/auth-client/package.json  ./packages/auth-client/
+# COPY packages/ui/package.json           ./packages/ui/
+# COPY packages/trpc/package.json         ./packages/trpc/
+COPY <SERVICE_DIR>/package.json           ./<SERVICE_DIR>/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── stage 2: build ───────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+# NEXT_PUBLIC_* DEBEN ser ARG + ENV en este stage.
+# El compilador de Next.js las inlinea en el bundle en build time.
+# Un ENV en el stage runtime NO puede corregirlas — ya están compiladas.
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+# Variables específicas del servicio:
+# ARG NEXT_PUBLIC_API_URL
+# ARG NEXT_PUBLIC_SASS_BACK_URL
+
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+# ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=deps /app/node_modules  ./node_modules
+COPY tsconfig.base.json             ./
+COPY package.json pnpm-workspace.yaml ./
+
+# Ajustar según qué packages locales usa este frontend:
+# COPY packages/auth-client/  ./packages/auth-client/
+# COPY packages/ui/           ./packages/ui/
+# COPY packages/trpc/         ./packages/trpc/
+COPY <SERVICE_DIR>/             ./<SERVICE_DIR>/
+
+WORKDIR /app/<SERVICE_DIR>
+
+RUN /app/node_modules/.bin/next build
+
+# ─── stage 3: runtime ─────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS runtime
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+# HOSTNAME=0.0.0.0 — obligatorio en Railway.
+# Next.js standalone bindea a 127.0.0.1 por default → Railway no puede acceder.
+ENV HOSTNAME=0.0.0.0
+
+# standalone: servidor Node.js autocontenido generado por Next.js.
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/standalone ./
+
+# .next/static y public NO están en standalone — copiarlos es obligatorio.
+# Sin esto la app arranca pero sin CSS, imágenes ni fuentes.
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/static \
+     ./<SERVICE_DIR>/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/public \
+     ./<SERVICE_DIR>/public
+
+USER nextjs
+
+EXPOSE 3000
+
+WORKDIR /app/<SERVICE_DIR>
+
+# standalone genera server.js — no dist/main.js (error común al copiar del backend).
+CMD ["node", "server.js"]
+```
+
+---
+
+## Requisito en `next.config.mjs`
+
+```js
+const nextConfig = {
+  output: 'standalone',
+};
+export default nextConfig;
+```
+
+Sin esto, `node server.js` falla porque `.next/standalone/` no existe.
+
+---
+
+## Reglas permanentes
+
+1. **`output: 'standalone'` en `next.config.mjs`** — prerequisito, verificar primero.
+2. **Toda `NEXT_PUBLIC_*` como `ARG` + `ENV` en stage `build`** — no en runtime.
+3. **Copiar `.next/static` y `public/` siempre** — no están en standalone.
+4. **`HOSTNAME=0.0.0.0` en runtime** — obligatorio en Railway.
+5. **`NEXT_TELEMETRY_DISABLED=1`** — en build y runtime.
+6. **`CMD ["node", "server.js"]`** — standalone genera `server.js`, no `dist/main.js`.
+7. **El build context es siempre la raíz del monorepo** — ver `07-railway-deploy.md`.
+
+---
+
+## Checklist antes de crear un Dockerfile nuevo
+
+- [ ] `output: 'standalone'` en `next.config.mjs` del servicio
+- [ ] Todos los `NEXT_PUBLIC_*` del servicio como `ARG` + `ENV` en stage `build`
+- [ ] `.next/static` copiado al runtime
+- [ ] `public/` copiado al runtime
+- [ ] `HOSTNAME=0.0.0.0` en el stage runtime
+- [ ] `CMD ["node", "server.js"]` (no `dist/main.js`)
+- [ ] Usuario `nextjs` creado y activado
+MD
+}
+
+doc_07_railway() {
+cat << 'MD'
+# 07 — Reglas de deploy en Railway para monorepos pnpm
+
+> Reglas específicas de Railway que contradicen o matizan guías genéricas de Docker.
+> Aplica a los tres monorepos: `superadmin`, `ecosistema`, `ecosistema-ms`.
+
+---
+
+## Configuración del servicio en Railway — reglas fijas
+
+### Root Directory: siempre `/`
+
+Railway permite configurar un "Root Directory" por servicio. **No usar esta opción.**
+
+El build context debe ser la raíz del monorepo porque:
+- El Dockerfile necesita `pnpm-workspace.yaml`, `pnpm-lock.yaml` y `tsconfig.base.json`
+  que están en la raíz.
+- `pnpm install` en un subdirectorio sin el workspace root falla — no puede
+  resolver los packages locales (`@real/auth-client`, `@grupojl/shared-types`, etc.).
+- `shamefully-hoist=true` funciona a nivel workspace, no por servicio.
+
+**Configuración correcta en Railway:**
+```
+Root Directory: /                         ← raíz del monorepo, siempre
+Dockerfile Path: <servicio>/Dockerfile    ← relativo a la raíz
+Build Command: (vacío)                    ← el Dockerfile lo maneja todo
+Start Command: (vacío)                    ← el CMD del Dockerfile lo maneja
+```
+
+### Dockerfile Path por servicio
+
+```
+# superadmin
+superadmin-backend/Dockerfile
+superadmin-frontend/Dockerfile
+
+# ecosistema
+realsass-sass-back/Dockerfile
+realsass-ecommerce-back/Dockerfile
+realsass-sass-front/Dockerfile
+realsass-dashboard-front/Dockerfile
+real-ecommerce-front/Dockerfile
+
+# ecosistema-ms
+chatia-backend/Dockerfile
+pasarelapagos-backend/Dockerfile
+notificaciones-backend/Dockerfile
+analytics-backend/Dockerfile
+workers-backend/Dockerfile
+```
+
+---
+
+## Cache mounts de BuildKit en Railway
+
+**Los cache mounts NO persisten entre builds en Railway.**
+
+Railway usa runners efímeros — cada build empieza desde cero.
+El `--mount=type=cache,target=/root/.local/share/pnpm/store` existe durante
+el build pero se descarta cuando el runner termina.
+
+| Entorno | Cache mount persiste | Beneficio real |
+|---------|---------------------|----------------|
+| Docker Desktop local | ✅ sí | Builds de segundos en re-runs |
+| GitHub Actions (con `actions/cache`) | ✅ sí | Builds más rápidos en CI |
+| Railway | ❌ no | Sin beneficio entre builds |
+
+**Regla:** mantener los cache mounts en el Dockerfile — no hacen daño, sí ayudan
+en local y CI. Para acelerar builds en Railway: asegurar que los `COPY package.json`
+estén ANTES del `COPY` de source code en el stage `deps`.
+
+---
+
+## Variables de entorno en Railway
+
+### Variables de runtime (backend)
+
+Se configuran en Railway como variables del servicio, se leen en runtime:
+```
+DATABASE_URL, REDIS_URL, FIREBASE_PROJECT_ID, INTERNAL_API_KEY, ...
+```
+
+### Variables de build (frontend Next.js)
+
+Las `NEXT_PUBLIC_*` **deben** estar en Railway como **build variables** además de runtime.
+Railway las pasa como `--build-arg` al Dockerfile durante el build.
+
+Si se configuran solo como runtime variables, el bundle de Next.js las tendrá como
+`undefined` — el compilador las inlineó en build time y no hay forma de corregirlo en runtime.
+
+Ver `06-dockerfile-frontend.md` para el razonamiento completo.
+
+---
+
+## Health checks
+
+- Todo backend expone `GET /health` → `200` en < 200ms.
+- Railway debe apuntar el health check a `/health`, no a `/`.
+- `HOSTNAME=0.0.0.0` es obligatorio en frontends Next.js standalone.
+  Sin esto Railway no puede acceder al contenedor y el health check falla.
+
+---
+
+## Redeploy sin cambios de código
+
+Para forzar un redeploy (nuevas variables de entorno, cambio en Railway, etc.):
 
 ```bash
-grep -r "class-validator" realsass-sass-back/src --include="*.ts"
-# Si da 0: los DTOs son interfaces puras → score sube a 9.0
-# Si da N: migrar esos DTOs a Zod inline en los routers
+# Disponible en todos los repos via Makefile:
+make git-empty
+
+# Equivalente manual:
+git commit --allow-empty -m "chore: force redeploy [$(date +%Y-%m-%d)]"
+git push
 ```
-ENDDEUDA
-      ok "$DEUDA actualizado con DT-ECO-01 y DT-ECO-02"
-    else
-      warn "DT-ECO-01 ya existe en $DEUDA"
+
+---
+
+## Deploy coordinado cuando cambia un package compartido
+
+Railway no detecta automáticamente que un servicio necesita rebuild cuando
+cambió un package del workspace — solo detecta cambios en el repositorio.
+
+Cuando se modifica un package compartido (`@grupojl/shared-types`, `@real/auth-client`,
+`@ecosistema-ms/proto`, etc.):
+
+```bash
+# 1. Push del cambio del package
+git push
+
+# 2. Forzar rebuild de todos los servicios afectados
+git commit --allow-empty -m "chore: rebuild services after shared package update"
+git push
+```
+
+---
+
+## Resumen: Railway vs. guías genéricas de Docker
+
+| Guía genérica dice | En Railway es |
+|--------------------|---------------|
+| Cache mounts aceleran CI | No persisten entre builds — estructura de layers es lo que importa |
+| Root Directory al subdirectorio del servicio | Siempre `/` — workspace root es necesario |
+| `NEXT_PUBLIC_*` opcionales en build | Obligatorias en build — el compilador las inlinea |
+| Health check a `/` | Siempre a `/health` — respuesta < 200ms |
+| HOSTNAME no necesario | `HOSTNAME=0.0.0.0` obligatorio en Next.js standalone |
+| Variables de entorno solo en runtime | `NEXT_PUBLIC_*` también en build (build variables en Railway) |
+MD
+}
+
+# ─── función que escribe los 3 archivos en un repo ───────────────────────────
+write_docs() {
+  local repo="$1"
+  local arch_dir="$ROOT/$repo/.claude/architecture"
+
+  info "→ $repo"
+  mkdir -p "$arch_dir"
+
+  local files=("05-dockerfile-backend.md" "06-dockerfile-frontend.md" "07-railway-deploy.md")
+  local funcs=("doc_05_backend" "doc_06_frontend" "doc_07_railway")
+
+  for i in 0 1 2; do
+    local file="${files[$i]}"
+    local func="${funcs[$i]}"
+    local path="$arch_dir/$file"
+
+    if [[ -f "$path" ]]; then
+      warn "  $file ya existe — sobreescribiendo"
     fi
-  else
-    warn "$DEUDA no encontrado"
-  fi
 
-  ok "BLOQUE 2 completado"
+    "$func" > "$path"
+    success "  ✓ $file"
+  done
 }
 
-# =============================================================================
-# BLOQUE 3 — Registrar estado post-sincronización
-# =============================================================================
-bloque_3() {
-  header "BLOQUE 3 — Registrando estado post-sincronización"
+# ─── main ────────────────────────────────────────────────────────────────────
+info "Aplicando documentos de arquitectura Dockerfile a los 3 monorepos..."
+echo ""
 
-  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  mkdir -p .claude/roadmap
-
-  # Detectar qué se aplicó
-  ADR011=$( [[ -f ".claude/decisions/ADR-011-score-real-auditado.md" ]] && echo "✅" || echo "❌" )
-  README_OK=$( grep -q "8\.5\/10" ".claude/checklists/README.md" 2>/dev/null && echo "✅" || echo "❌" )
-  ADR009_WARN=$( grep -q "NO PERTENECE A WELVER" ".claude/decisions/ADR-009-hacia-9-5-codigo.md" 2>/dev/null && echo "✅" || echo "❌" )
-  ADR009S4_OK=$( grep -q "8\.8\/10" ".claude/decisions/ADR-009-s4-tests-ci-hydration.md" 2>/dev/null && echo "✅" || echo "❌" )
-  DEUDA_OK=$( grep -q "DT-ECO-01" ".claude/roadmap/deuda-tecnica.md" 2>/dev/null && echo "✅" || echo "❌" )
-
-  cat > .claude/roadmap/sincronizacion-scores-2026-09-12.md << ENDSYNC
-# Sincronización de scores — welver/
-# Ejecutado: ${TIMESTAMP}
-
-## Problema resuelto
-
-El score 9.1/10 que aparecía en ADR-009-s4 y ADR-009-hacia-9-5-codigo
-pertenecía a **ecosistema-ms**, no a welver/. Se pegó por error.
-
-## Score correcto post-auditoría
-
-| Capa | Score anterior (en .claude/) | Score auditado real |
-|------|------------------------------|---------------------|
-| Backend 1 — Auth/Tenant | 9.0 | **9.0** |
-| Backend 2 — Router/Zod | 9.0 | **8.5** |
-| Backend 3+4 — Domain/Repo | 9.0 | **8.5** |
-| Backend 5 — AppRouter | 9.5 | **9.5** |
-| Backend 6 — Multi-tenant | 9.0 | **9.5** |
-| Frontend 1 — Fetch tRPC | 9.5 | **9.5** |
-| Frontend 2 — TanStack Query | 9.0 | **9.0** |
-| Frontend 3 — Zustand | 8.5 | **8.5** |
-| Frontend 4 — Presentación | 6.0 | **6.0** |
-| Frontend 5 — Auth | 9.5 | **9.5** |
-| **Promedio** | **9.1 (incorrecto)** | **8.8** |
-
-## Archivos actualizados
-
-| Archivo | Estado |
-|---------|--------|
-| .claude/decisions/ADR-011-score-real-auditado.md (nuevo) | ${ADR011} |
-| .claude/checklists/README.md | ${README_OK} |
-| .claude/decisions/ADR-009-hacia-9-5-codigo.md (aviso) | ${ADR009_WARN} |
-| .claude/decisions/ADR-009-s4-tests-ci-hydration.md | ${ADR009S4_OK} |
-| .claude/roadmap/deuda-tecnica.md | ${DEUDA_OK} |
-
-## Qué hace falta para llegar al 9.1 real
-
-1. **DT-ECO-01** — domain+repository en cart, orders, customers, inventory
-   → sube Backend 3+4 de 8.5 a 9.0
-2. **DT-ECO-02** — confirmar/migrar DTOs internos (UpdateFlagDto, etc.)
-   → sube Backend 2 de 8.5 a 9.0
-3. Con esos dos: promedio sería ~9.05/10
-
-## Para el 9.5 real
-
-Lo anterior + S4: tests 85%, GitHub Actions CI gate, HydrationBoundary.
-ENDSYNC
-
-  ok ".claude/roadmap/sincronizacion-scores-2026-09-12.md creado"
-
-  # Resumen final
+for repo in "${REPOS[@]}"; do
+  write_docs "$repo"
   echo ""
-  header "RESUMEN FINAL"
-  echo ""
-  echo -e "  Score anterior en .claude/: ${RED}9.1/10${NC} (de ecosistema-ms — incorrecto)"
-  echo -e "  Score real auditado:        ${GREEN}8.8/10${NC} (welver/ — código fuente real)"
-  echo ""
-  echo -e "  ${ADR011} ADR-011 creado"
-  echo -e "  ${README_OK} checklists/README.md actualizado"
-  echo -e "  ${ADR009_WARN} ADR-009-hacia-9-5 marcado como ecosistema-ms"
-  echo -e "  ${ADR009S4_OK} ADR-009-s4 corregido (9.1 → 8.8)"
-  echo -e "  ${DEUDA_OK} deuda-tecnica.md con DT-ECO-01 y DT-ECO-02"
-  echo ""
-  echo -e "  ${YELLOW}→ Para llegar a 9.1 real: DT-ECO-01 + DT-ECO-02${NC}"
-  echo ""
-  ok "BLOQUE 3 completado"
-}
+done
 
-# =============================================================================
-# EJECUTAR
-# =============================================================================
-case "$RUN_BLOQUE" in
-  "1") bloque_1 ;;
-  "2") bloque_2 ;;
-  "3") bloque_3 ;;
-  "all"|*)
-    bloque_1
-    echo ""
-    bloque_2
-    echo ""
-    bloque_3
-    ;;
-esac 
+# ─── verificación final ───────────────────────────────────────────────────────
+info "Verificando archivos escritos..."
+echo ""
+all_ok=true
+for repo in "${REPOS[@]}"; do
+  for doc in "05-dockerfile-backend.md" "06-dockerfile-frontend.md" "07-railway-deploy.md"; do
+    path="$ROOT/$repo/.claude/architecture/$doc"
+    if [[ -f "$path" ]]; then
+      lines=$(wc -l < "$path")
+      success "  ✓ $repo/.claude/architecture/$doc (${lines}L)"
+    else
+      echo -e "${RED}[x.sh]${NC}  ✗ $path — NO encontrado"
+      all_ok=false
+    fi
+  done
+done
+
+echo ""
+if $all_ok; then
+  success "9 archivos escritos correctamente en los 3 monorepos."
+  echo ""
+  info "Siguiente paso — hacer push en cada repo:"
+  echo "    cd $ROOT/superadmin    && make g"
+  echo "    cd $ROOT/ecosistema    && make g"
+  echo "    cd $ROOT/ecosistema-ms && make g"
+else
+  die "Algunos archivos no se escribieron correctamente."
+fi
