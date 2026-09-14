@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# x.sh — Aplica los documentos de arquitectura de Dockerfile a los 3 monorepos
+# x.sh — Aplica los documentos de arquitectura a los 3 monorepos
 #
 # Uso: bash x.sh  (desde cualquier lugar — se ubica solo)
 # O via Makefile: make x  (desde dentro de cualquier repo)
 #
-# Los 3 archivos que escribe en cada repo:
-#   .claude/architecture/05-dockerfile-backend.md
-#   .claude/architecture/06-dockerfile-frontend.md
-#   .claude/architecture/07-railway-deploy.md
+# Archivos que escribe en cada repo (.claude/architecture/):
+#   05-dockerfile-backend.md
+#   06-dockerfile-frontend.md
+#   07-railway-deploy.md
+#   08-testing-norte.md
+#   09-observabilidad-norte.md
 
 set -euo pipefail
 
@@ -25,18 +27,16 @@ die()     { echo -e "${RED}[x.sh]${NC} $*"; exit 1; }
 REPOS=("superadmin" "ecosistema" "ecosistema-ms")
 
 # ─── ubicar la carpeta padre de los 3 repos ──────────────────────────────────
-# Funciona desde: la carpeta padre, dentro de un repo, o donde esté el x.sh
 find_root() {
   local candidates=(
-    "."                          # ya estamos en la carpeta padre
-    ".."                         # estamos dentro de un repo
-    "$(dirname "${BASH_SOURCE[0]}")/.."  # x.sh está dentro de un repo
-    "$(dirname "${BASH_SOURCE[0]}")"     # x.sh está en la carpeta padre
+    "."
+    ".."
+    "$(dirname "${BASH_SOURCE[0]}")/.."
+    "$(dirname "${BASH_SOURCE[0]}")"
   )
   for candidate in "${candidates[@]}"; do
     local resolved
     resolved="$(cd "$candidate" 2>/dev/null && pwd)" || continue
-    # La carpeta padre correcta tiene al menos uno de los 3 repos con .claude/
     for repo in "${REPOS[@]}"; do
       if [[ -d "$resolved/$repo/.claude" ]]; then
         echo "$resolved"
@@ -48,11 +48,9 @@ find_root() {
 }
 
 ROOT=""
-ROOT="$(find_root)" || die "No se encontró la carpeta padre de los repos (superadmin, ecosistema, ecosistema-ms). Verificar estructura."
+ROOT="$(find_root)" || die "No se encontró la carpeta padre de los repos (superadmin, ecosistema, ecosistema-ms)."
 
 info "Raíz detectada: $ROOT"
-
-# ─── verificar que los repos existen ─────────────────────────────────────────
 info "Verificando repos..."
 for repo in "${REPOS[@]}"; do
   [[ -d "$ROOT/$repo" ]]         || die "No se encontró $ROOT/$repo"
@@ -224,20 +222,12 @@ CMD ["node", "dist/main.js"]
 
 ## Reglas permanentes
 
-1. **`ARG PNPM_VERSION` al inicio** — una sola fuente de verdad. Si se actualiza,
-   se actualiza aquí y se propaga a todos los Dockerfiles.
-
+1. **`ARG PNPM_VERSION` al inicio** — una sola fuente de verdad.
 2. **`pnpm install --frozen-lockfile` siempre** — nunca `--no-frozen-lockfile` en producción.
-   Si el lockfile está desactualizado, el build falla explícitamente.
-
 3. **`prisma generate` en stage `build`, antes de `pnpm build`** — nunca en CMD ni entrypoint.
-
 4. **Solo `prisma/schema.prisma` en runtime** — las migrations NO van en la imagen.
-
 5. **`shamefully-hoist=true` en `.npmrc`** — no es opcional en este stack.
-
 6. **El build context es siempre la raíz del monorepo** — ver `07-railway-deploy.md`.
-
 7. **Nunca `npm install` ni `yarn`** — pnpm es el gestor único del ecosistema.
 
 ---
@@ -291,8 +281,6 @@ No son variables leídas en runtime — el compilador las sustituye literalmente
 
 Si no se pasan como `ARG` + `ENV` en el stage de build, quedan como `undefined` en el bundle.
 Ningún `ENV` en el stage runtime puede corregirlas — ya están compiladas.
-
-Esto no es configurable — es el comportamiento del compilador de Next.js.
 
 ### Copiar `static` y `public` separado del standalone
 
@@ -379,7 +367,6 @@ ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-# ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules  ./node_modules
@@ -411,11 +398,9 @@ ENV PORT=3000
 # Next.js standalone bindea a 127.0.0.1 por default → Railway no puede acceder.
 ENV HOSTNAME=0.0.0.0
 
-# standalone: servidor Node.js autocontenido generado por Next.js.
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/standalone ./
 
 # .next/static y public NO están en standalone — copiarlos es obligatorio.
-# Sin esto la app arranca pero sin CSS, imágenes ni fuentes.
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/static \
      ./<SERVICE_DIR>/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/public \
@@ -430,19 +415,6 @@ WORKDIR /app/<SERVICE_DIR>
 # standalone genera server.js — no dist/main.js (error común al copiar del backend).
 CMD ["node", "server.js"]
 ```
-
----
-
-## Requisito en `next.config.mjs`
-
-```js
-const nextConfig = {
-  output: 'standalone',
-};
-export default nextConfig;
-```
-
-Sin esto, `node server.js` falla porque `.next/standalone/` no existe.
 
 ---
 
@@ -528,19 +500,15 @@ workers-backend/Dockerfile
 
 **Los cache mounts NO persisten entre builds en Railway.**
 
-Railway usa runners efímeros — cada build empieza desde cero.
-El `--mount=type=cache,target=/root/.local/share/pnpm/store` existe durante
-el build pero se descarta cuando el runner termina.
-
 | Entorno | Cache mount persiste | Beneficio real |
 |---------|---------------------|----------------|
 | Docker Desktop local | ✅ sí | Builds de segundos en re-runs |
 | GitHub Actions (con `actions/cache`) | ✅ sí | Builds más rápidos en CI |
 | Railway | ❌ no | Sin beneficio entre builds |
 
-**Regla:** mantener los cache mounts en el Dockerfile — no hacen daño, sí ayudan
-en local y CI. Para acelerar builds en Railway: asegurar que los `COPY package.json`
-estén ANTES del `COPY` de source code en el stage `deps`.
+Mantener los cache mounts en el Dockerfile — no hacen daño, sí ayudan en local y CI.
+Para acelerar builds en Railway: asegurar que los `COPY package.json` estén ANTES
+del `COPY` de source code en el stage `deps`.
 
 ---
 
@@ -556,10 +524,8 @@ DATABASE_URL, REDIS_URL, FIREBASE_PROJECT_ID, INTERNAL_API_KEY, ...
 ### Variables de build (frontend Next.js)
 
 Las `NEXT_PUBLIC_*` **deben** estar en Railway como **build variables** además de runtime.
-Railway las pasa como `--build-arg` al Dockerfile durante el build.
-
-Si se configuran solo como runtime variables, el bundle de Next.js las tendrá como
-`undefined` — el compilador las inlineó en build time y no hay forma de corregirlo en runtime.
+Si se configuran solo como runtime variables, el bundle tendrá `undefined` — el compilador
+las inlineó en build time y no hay forma de corregirlo en runtime.
 
 Ver `06-dockerfile-frontend.md` para el razonamiento completo.
 
@@ -570,19 +536,14 @@ Ver `06-dockerfile-frontend.md` para el razonamiento completo.
 - Todo backend expone `GET /health` → `200` en < 200ms.
 - Railway debe apuntar el health check a `/health`, no a `/`.
 - `HOSTNAME=0.0.0.0` es obligatorio en frontends Next.js standalone.
-  Sin esto Railway no puede acceder al contenedor y el health check falla.
 
 ---
 
 ## Redeploy sin cambios de código
 
-Para forzar un redeploy (nuevas variables de entorno, cambio en Railway, etc.):
-
 ```bash
-# Disponible en todos los repos via Makefile:
 make git-empty
-
-# Equivalente manual:
+# o manualmente:
 git commit --allow-empty -m "chore: force redeploy [$(date +%Y-%m-%d)]"
 git push
 ```
@@ -592,16 +553,10 @@ git push
 ## Deploy coordinado cuando cambia un package compartido
 
 Railway no detecta automáticamente que un servicio necesita rebuild cuando
-cambió un package del workspace — solo detecta cambios en el repositorio.
-
-Cuando se modifica un package compartido (`@grupojl/shared-types`, `@real/auth-client`,
-`@ecosistema-ms/proto`, etc.):
+cambió un package del workspace.
 
 ```bash
-# 1. Push del cambio del package
 git push
-
-# 2. Forzar rebuild de todos los servicios afectados
 git commit --allow-empty -m "chore: rebuild services after shared package update"
 git push
 ```
@@ -612,16 +567,436 @@ git push
 
 | Guía genérica dice | En Railway es |
 |--------------------|---------------|
-| Cache mounts aceleran CI | No persisten entre builds — estructura de layers es lo que importa |
+| Cache mounts aceleran CI | No persisten entre builds — estructura de layers importa |
 | Root Directory al subdirectorio del servicio | Siempre `/` — workspace root es necesario |
 | `NEXT_PUBLIC_*` opcionales en build | Obligatorias en build — el compilador las inlinea |
 | Health check a `/` | Siempre a `/health` — respuesta < 200ms |
 | HOSTNAME no necesario | `HOSTNAME=0.0.0.0` obligatorio en Next.js standalone |
-| Variables de entorno solo en runtime | `NEXT_PUBLIC_*` también en build (build variables en Railway) |
+| Variables de entorno solo en runtime | `NEXT_PUBLIC_*` también en build |
 MD
 }
 
-# ─── función que escribe los 3 archivos en un repo ───────────────────────────
+doc_08_testing() {
+cat << 'MD'
+# 08 — Norte de testing: qué testear y por qué
+
+> Referentes: **Stripe** (tests sobre efectos de dinero), **Google** (Beyoncé Rule —
+> toda invariante tiene un test que la rompe deliberadamente),
+> **Vercel** (E2E pragmático — paths críticos, no cobertura decorativa).
+>
+> Aplica a los tres monorepos. Los ejemplos usan el stack real del ecosistema.
+
+---
+
+## El principio que unifica los tres referentes
+
+**Stripe:** un test que solo prueba el happy path de un pago no protege nada.
+El test que importa es el que verifica qué pasa cuando el provider falla.
+
+**Google (Beyoncé Rule):** "if you liked it you should have put a test on it."
+Toda invariante de negocio que te importa tiene un test que la rompe deliberadamente.
+Si `ecosystemId` es obligatorio en toda query, hay un test que lo omite y verifica
+que los datos de otro tenant no aparecen — no que "falla graciosamente".
+
+**Vercel:** no unit tests de componentes que solo prueban que React renderiza.
+E2E en los 3-5 paths que, si se rompen, el negocio para. El resto es ruido.
+
+---
+
+## Regla 1 — Services: testear invariantes de negocio, no implementación
+
+### Qué NO testear
+
+```ts
+// ❌ Test que prueba la implementación — se rompe si refactorizás Prisma
+it('llama a prisma.payment.create', async () => {
+  await service.createPayment(input);
+  expect(prisma.payment.create).toHaveBeenCalled(); // inútil
+});
+```
+
+### Qué SÍ testear
+
+```ts
+// ✅ Invariante de dominio — tenant isolation (Google Beyoncé Rule)
+it('nunca retorna datos de otro tenant', async () => {
+  await seedPayment({ organizationId: 'org-A', ecosystemId: 'eco-1' });
+
+  const result = await service.listPayments({
+    organizationId: 'org-B', // tenant diferente
+    ecosystemId:    'eco-1',
+  });
+
+  expect(result.data).toHaveLength(0); // org-B no ve los datos de org-A
+});
+
+// ✅ Invariante de negocio — fallback cuando el provider falla (Stripe)
+it('activa el provider de fallback cuando el CB está abierto', async () => {
+  cbService.forceOpen('mercadopago');
+
+  const result = await service.processPayment(paymentInput);
+
+  expect(result.provider).toBe('stripe'); // usó el fallback
+  expect(result.status).toBe('SUCCESS');
+});
+
+// ✅ Invariante de audit — la acción se registra ANTES de ejecutar
+it('crea AdminAction antes de suspender la org', async () => {
+  const auditSpy = jest.spyOn(auditService, 'create');
+  const suspendSpy = jest.spyOn(orgClient, 'suspend');
+
+  // Forzar fallo en la ejecución
+  suspendSpy.mockRejectedValueOnce(new Error('timeout'));
+
+  await expect(service.suspendOrg(input)).rejects.toThrow();
+
+  // El audit debe existir aunque la acción haya fallado
+  expect(auditSpy).toHaveBeenCalledBefore(suspendSpy);
+});
+```
+
+---
+
+## Regla 2 — Guards: testear allowlist y tenant isolation
+
+Los guards son el límite del sistema. Un bug acá no lo detecta el usuario — lo
+detecta el atacante. Cobertura 100% sin excepción.
+
+```ts
+// ✅ AdminGuard — UID no autorizado recibe 403, no 401
+it('rechaza UID fuera de la allowlist con 403', async () => {
+  const ctx = mockContext({ uid: 'uid-no-autorizado' });
+  await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+});
+
+// ✅ TenantGuard — ecosystemId del token no coincide con el recurso
+it('bloquea acceso cross-tenant', async () => {
+  const ctx = mockContext({
+    ecosystemId: 'eco-1',         // token del ecosistema 1
+    params: { ecosystemId: 'eco-2' }, // intentando acceder al ecosistema 2
+  });
+  await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+});
+
+// ✅ FirebaseAuthGuard — token expirado recibe 401
+it('rechaza token expirado con 401', async () => {
+  firebaseAdmin.verifyIdToken.mockRejectedValueOnce(
+    new Error('Firebase ID token has expired')
+  );
+  const ctx = mockContext({ token: 'token-expirado' });
+  await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+});
+```
+
+---
+
+## Regla 3 — E2E (Playwright): solo los paths que paran el negocio
+
+No E2E de cada feature. Solo los 3-5 flows que, si se rompen, el negocio para.
+Vercel llama a esto "smoke tests" — la pregunta es "¿está encendido?", no "¿funciona todo?".
+
+### Paths críticos por repo
+
+**superadmin:**
+```
+1. Login Firebase → redirige a /dashboard (auth rota = nadie entra)
+2. Dashboard con 0 alertas → muestra "Todo operativo" (render roto = ceguera operativa)
+3. Suspender org → ConfirmDialog → audit trail creado (acción destructiva sin audit = violación)
+```
+
+**ecosistema (welver):**
+```
+1. Login → dashboard de la org (auth rota = todos los clientes bloqueados)
+2. Crear producto → aparece en storefront (catalog roto = ventas paradas)
+3. Checkout → orden creada → stock decrementado (flujo de dinero roto = pérdida directa)
+```
+
+**ecosistema-ms:**
+```
+1. Mensaje entrante → respuesta del agente IA (chatia roto = todos los chats muertos)
+2. Pago iniciado → procesado por provider → webhook recibido (pasarela rota = cobros parados)
+3. Job encolado → procesado → DLQ vacía (workers rotos = acumulación silenciosa)
+```
+
+### Estructura de E2E
+
+```
+e2e/
+  auth.spec.ts          ← login / logout / redirect
+  critical-flows.spec.ts ← los paths que paran el negocio
+  # nada más — no E2E de cada página
+```
+
+---
+
+## Cobertura mínima por capa
+
+| Capa | Cobertura | Qué se mide |
+|------|-----------|-------------|
+| Guards | 100% | Todos los casos de rechazo |
+| Domain services (invariantes) | 85% | Paths de error, tenant isolation, efectos de dinero |
+| Integration clients / adapters | 80% | Fallbacks, CB abierto, timeout |
+| Controllers HTTP | 70% | Contratos de entrada/salida (Supertest) |
+| Frontend hooks | 70% | Lógica de estado, no render |
+| E2E | 3-5 flows | Paths que paran el negocio |
+
+**Lo que no se mide:** cobertura de líneas en componentes UI, getters/setters triviales,
+módulos de configuración de NestJS, factories de testing.
+
+---
+
+## Señal de que el test está bien escrito
+
+Un test está bien escrito si:
+1. Su nombre describe **qué invariante protege**, no qué función llama.
+2. Si lo borrás y el código se rompe en producción, el test lo hubiera detectado.
+3. Si refactorizás la implementación sin cambiar el comportamiento, el test sigue pasando.
+
+Un test está mal escrito si:
+1. Prueba que `prisma.findMany` fue llamado.
+2. Solo cubre el happy path.
+3. Se rompe cuando movés código a otro archivo sin cambiar lógica.
+MD
+}
+
+doc_09_observabilidad() {
+cat << 'MD'
+# 09 — Norte de observabilidad: qué instrumentar y por qué
+
+> Referentes: **Honeycomb** (observabilidad real — entender cualquier estado en
+> producción sin deployar código nuevo), **Datadog** (qué ve el operador en el
+> dashboard), **Shopify** (trazabilidad de jobs BullMQ desde el request original).
+>
+> Aplica a los tres monorepos. Los ejemplos usan el stack real del ecosistema.
+
+---
+
+## El principio de Honeycomb (Charity Majors)
+
+> "Observabilidad real es: dado cualquier estado que tu sistema pueda tener
+> en producción, ¿podés entender qué pasó sin deployar código nuevo?"
+
+Para este ecosistema eso significa: cuando el DLQ de workers-backend se satura,
+el trace de un job fallido muestra exactamente qué paso falló, con qué payload,
+en qué intento, originado por qué request HTTP, de qué organización.
+
+Eso no lo da logging estructurado solo. Requiere trazas distribuidas con contexto
+propagado entre servicios.
+
+---
+
+## Qué genera un span — regla por límite de servicio
+
+Un span va en cada lugar donde el tiempo es observable y el fallo es accionable.
+
+### Límites obligatorios
+
+```
+Request HTTP entrante         → span automático via @opentelemetry/instrumentation-http
+Query Prisma                  → span automático via @opentelemetry/instrumentation-prisma
+Llamada gRPC saliente         → span manual en el GrpcClient
+Llamada gRPC entrante         → span automático via @grpc/grpc-js instrumentation
+Job BullMQ encolado           → span manual en el service que encola
+Job BullMQ procesado          → span manual en el Processor
+Llamada a provider externo    → span manual en el Adapter (MercadoPago, Stripe, SendGrid, etc.)
+Circuit Breaker — estado      → evento en el span del Adapter (no span propio)
+Cache Redis — hit/miss        → atributo en el span del caller (no span propio)
+```
+
+### Lo que NO genera un span
+
+```
+Getters/setters internos      → ruido sin valor operativo
+Logs de arranque              → van en logs estructurados, no en trazas
+Health check polling          → excluir del sampler (genera >95% del tráfico sin valor)
+```
+
+---
+
+## Atributos obligatorios en todo span de negocio
+
+Honeycomb y Datadog son inútiles si los spans no tienen contexto para filtrar.
+Todo span que toca datos de negocio lleva:
+
+```ts
+span.setAttributes({
+  'tenant.ecosystem_id':    ecosystemId,    // filtro primario multi-tenant
+  'tenant.organization_id': organizationId, // filtro secundario
+  'service.name':           'chatia-backend', // automático via SDK
+  'request.id':             correlationId,   // propagado desde el request HTTP original
+});
+```
+
+El `correlationId` se genera una vez en el API Gateway o en el primer request HTTP
+y se propaga en todos los spans downstream — incluidos gRPC y BullMQ jobs.
+
+---
+
+## Propagación de traceId en BullMQ (patrón Shopify)
+
+Shopify documentó que un job en background sin el traceId del request que lo originó
+es un job huérfano — imposible de trazar en un incidente.
+
+```ts
+// ✅ Al encolar el job — propagar el contexto de tracing
+import { context, propagation } from '@opentelemetry/api';
+
+async scheduleJob(payload: JobPayload): Promise<void> {
+  const carrier: Record<string, string> = {};
+  propagation.inject(context.active(), carrier); // inyecta traceId en el carrier
+
+  await this.queue.add('process-payment', {
+    ...payload,
+    _traceCarrier: carrier, // viaja con el job
+  });
+}
+
+// ✅ Al procesar el job — restaurar el contexto
+async process(job: Job<JobPayload>): Promise<void> {
+  const parentCtx = propagation.extract(
+    context.active(),
+    job.data._traceCarrier ?? {}
+  );
+
+  return context.with(parentCtx, async () => {
+    const span = tracer.startSpan('job.process-payment');
+    // el span es hijo del request HTTP que originó el job
+    try {
+      await this.doWork(job.data);
+      span.setStatus({ code: SpanStatusCode.OK });
+    } catch (err) {
+      span.recordException(err as Error);
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw err;
+    } finally {
+      span.end();
+    }
+  });
+}
+```
+
+---
+
+## Qué activa una alerta vs. qué es solo contexto
+
+### Alerta (acción requerida en < 15 minutos)
+
+```
+Circuit Breaker OPEN en provider de pagos     → alerta CRÍTICA
+                                                 (cobros parados)
+DLQ depth > 100 jobs                          → alerta CRÍTICA
+                                                 (procesamiento detenido)
+Health check DOWN en cualquier servicio       → alerta CRÍTICA
+Error rate > 5% en últimos 5 minutos          → alerta WARNING
+Latencia P95 > 2s en endpoints de pago        → alerta WARNING
+Circuit Breaker OPEN en Groq/LLM              → alerta WARNING
+                                                 (chat degradado, no parado)
+```
+
+### Contexto (visible en dashboard, no alerta)
+
+```
+Cache hit/miss rate                           → métrica de eficiencia
+Latencia P50 de queries Prisma                → baseline de salud
+Número de jobs procesados por hora            → throughput normal
+Número de requests por tenant/ecosistema      → distribución de carga
+```
+
+**Regla Datadog:** si no cambia una decisión operativa en los próximos 15 minutos,
+no es una alerta — es una métrica de dashboard.
+
+---
+
+## Métricas custom obligatorias (Prometheus)
+
+```ts
+// Contadores — para alertas de rate
+superadmin_admin_actions_total{action, ecosystem_id, status}
+payment_processed_total{provider, country, status}
+notification_sent_total{channel, status}
+job_processed_total{queue, status}
+
+// Histogramas — para alertas de latencia
+payment_provider_duration_seconds{provider, country}
+grpc_call_duration_seconds{service, method}
+llm_response_duration_seconds{model}
+
+// Gauges — para alertas de estado
+circuit_breaker_state{service, key}   // 0=closed, 1=half-open, 2=open
+dlq_depth{queue}                      // jobs en DLQ por cola
+```
+
+---
+
+## Health check extendido — formato canónico
+
+El `GET /health` básico de `@nestjs/terminus` dice "arriba/abajo".
+El health extendido dice "arriba, degradado, y por qué".
+
+```json
+GET /health → {
+  "status": "ok" | "degraded" | "down",
+  "db":     { "status": "up", "latencyMs": 4 },
+  "redis":  { "status": "up", "latencyMs": 1 },
+  "circuit_breakers": {
+    "mercadopago": "closed",
+    "stripe":      "closed",
+    "groq-llm":    "open"     ← visible en superadmin Command Center
+  },
+  "queues": {
+    "payments":      { "waiting": 0, "dlq": 0 },
+    "notifications": { "waiting": 12, "dlq": 0 }
+  },
+  "uptime":  3600,
+  "version": "1.2.3"
+}
+```
+
+`status: "degraded"` cuando el servicio funciona pero con capacidad reducida
+(un CB abierto, Redis lento, queue acumulando). Railway no revierte el deploy
+con degraded — pero superadmin lo muestra como alerta WARNING.
+
+---
+
+## Correlation ID — implementación mínima
+
+Sin correlation ID, un error en workers-backend es invisible desde el request
+HTTP de welver que lo originó.
+
+```ts
+// middleware global en main.ts de cada servicio
+app.use((req, res, next) => {
+  const correlationId =
+    req.headers['x-correlation-id'] as string ??
+    crypto.randomUUID();
+  req.headers['x-correlation-id'] = correlationId;
+  res.setHeader('x-correlation-id', correlationId);
+  // propagar al contexto de OpenTelemetry
+  const span = trace.getActiveSpan();
+  span?.setAttribute('request.id', correlationId);
+  next();
+});
+
+// Al llamar a otro servicio (HTTP o gRPC), propagar el header
+headers['x-correlation-id'] = correlationId;
+```
+
+---
+
+## Señal de que la observabilidad está bien implementada
+
+1. Dado un pago fallido en producción, podés llegar al span del provider en < 2 minutos
+   sin grep en los logs del servidor.
+2. Dado un job atascado en DLQ, podés trazar el request HTTP que lo originó.
+3. Cuando el CB de Groq se abre, el operador lo ve en superadmin en < 15 segundos
+   sin revisar Railway logs.
+4. Podés filtrar todos los spans de una organización específica por `tenant.organization_id`.
+
+Si alguno de estos cuatro no es posible, la observabilidad está incompleta.
+MD
+}
+
+# ─── función que escribe los archivos en un repo ─────────────────────────────
 write_docs() {
   local repo="$1"
   local arch_dir="$ROOT/$repo/.claude/architecture"
@@ -629,10 +1004,22 @@ write_docs() {
   info "→ $repo"
   mkdir -p "$arch_dir"
 
-  local files=("05-dockerfile-backend.md" "06-dockerfile-frontend.md" "07-railway-deploy.md")
-  local funcs=("doc_05_backend" "doc_06_frontend" "doc_07_railway")
+  local files=(
+    "05-dockerfile-backend.md"
+    "06-dockerfile-frontend.md"
+    "07-railway-deploy.md"
+    "08-testing-norte.md"
+    "09-observabilidad-norte.md"
+  )
+  local funcs=(
+    "doc_05_backend"
+    "doc_06_frontend"
+    "doc_07_railway"
+    "doc_08_testing"
+    "doc_09_observabilidad"
+  )
 
-  for i in 0 1 2; do
+  for i in 0 1 2 3 4; do
     local file="${files[$i]}"
     local func="${funcs[$i]}"
     local path="$arch_dir/$file"
@@ -647,7 +1034,7 @@ write_docs() {
 }
 
 # ─── main ────────────────────────────────────────────────────────────────────
-info "Aplicando documentos de arquitectura Dockerfile a los 3 monorepos..."
+info "Aplicando documentos de arquitectura a los 3 monorepos..."
 echo ""
 
 for repo in "${REPOS[@]}"; do
@@ -659,8 +1046,15 @@ done
 info "Verificando archivos escritos..."
 echo ""
 all_ok=true
+DOCS=(
+  "05-dockerfile-backend.md"
+  "06-dockerfile-frontend.md"
+  "07-railway-deploy.md"
+  "08-testing-norte.md"
+  "09-observabilidad-norte.md"
+)
 for repo in "${REPOS[@]}"; do
-  for doc in "05-dockerfile-backend.md" "06-dockerfile-frontend.md" "07-railway-deploy.md"; do
+  for doc in "${DOCS[@]}"; do
     path="$ROOT/$repo/.claude/architecture/$doc"
     if [[ -f "$path" ]]; then
       lines=$(wc -l < "$path")
@@ -674,7 +1068,7 @@ done
 
 echo ""
 if $all_ok; then
-  success "9 archivos escritos correctamente en los 3 monorepos."
+  success "15 archivos escritos correctamente en los 3 monorepos."
   echo ""
   info "Siguiente paso — hacer push en cada repo:"
   echo "    cd $ROOT/superadmin    && make g"

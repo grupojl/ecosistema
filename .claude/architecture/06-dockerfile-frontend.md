@@ -33,8 +33,6 @@ No son variables leídas en runtime — el compilador las sustituye literalmente
 Si no se pasan como `ARG` + `ENV` en el stage de build, quedan como `undefined` en el bundle.
 Ningún `ENV` en el stage runtime puede corregirlas — ya están compiladas.
 
-Esto no es configurable — es el comportamiento del compilador de Next.js.
-
 ### Copiar `static` y `public` separado del standalone
 
 `output: standalone` NO incluye `.next/static/` ni `public/`.
@@ -120,7 +118,6 @@ ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-# ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules  ./node_modules
@@ -152,11 +149,9 @@ ENV PORT=3000
 # Next.js standalone bindea a 127.0.0.1 por default → Railway no puede acceder.
 ENV HOSTNAME=0.0.0.0
 
-# standalone: servidor Node.js autocontenido generado por Next.js.
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/standalone ./
 
 # .next/static y public NO están en standalone — copiarlos es obligatorio.
-# Sin esto la app arranca pero sin CSS, imágenes ni fuentes.
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/static \
      ./<SERVICE_DIR>/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/public \
@@ -171,19 +166,6 @@ WORKDIR /app/<SERVICE_DIR>
 # standalone genera server.js — no dist/main.js (error común al copiar del backend).
 CMD ["node", "server.js"]
 ```
-
----
-
-## Requisito en `next.config.mjs`
-
-```js
-const nextConfig = {
-  output: 'standalone',
-};
-export default nextConfig;
-```
-
-Sin esto, `node server.js` falla porque `.next/standalone/` no existe.
 
 ---
 

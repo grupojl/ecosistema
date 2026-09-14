@@ -157,20 +157,12 @@ CMD ["node", "dist/main.js"]
 
 ## Reglas permanentes
 
-1. **`ARG PNPM_VERSION` al inicio** — una sola fuente de verdad. Si se actualiza,
-   se actualiza aquí y se propaga a todos los Dockerfiles.
-
+1. **`ARG PNPM_VERSION` al inicio** — una sola fuente de verdad.
 2. **`pnpm install --frozen-lockfile` siempre** — nunca `--no-frozen-lockfile` en producción.
-   Si el lockfile está desactualizado, el build falla explícitamente.
-
 3. **`prisma generate` en stage `build`, antes de `pnpm build`** — nunca en CMD ni entrypoint.
-
 4. **Solo `prisma/schema.prisma` en runtime** — las migrations NO van en la imagen.
-
 5. **`shamefully-hoist=true` en `.npmrc`** — no es opcional en este stack.
-
 6. **El build context es siempre la raíz del monorepo** — ver `07-railway-deploy.md`.
-
 7. **Nunca `npm install` ni `yarn`** — pnpm es el gestor único del ecosistema.
 
 ---
