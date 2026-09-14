@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
+import type { UpdateOrganizationInput } from './domain/organization.entity';
 import { Prisma } from '@prisma/client';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from './repository/organizations.repository.interface';
-import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
@@ -22,7 +22,7 @@ export class OrganizationsService {
     return org;
   }
 
-  async updateMyOrganization(firebaseUid: string, dto: UpdateOrganizationDto) {
+  async updateMyOrganization(firebaseUid: string, dto: UpdateOrganizationInput) {
     const org = await this.repo.findByFirebaseUid(firebaseUid);
     if (!org) throw new NotFoundException('Organization not found');
     return this.repo.update(org.id, dto);

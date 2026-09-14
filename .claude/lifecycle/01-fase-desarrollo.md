@@ -9,7 +9,7 @@
 
 ## Escalón 1 — Código: Arquitectura y Calidad
 
-### Estado actual — 9/10
+### Estado actual — 8.5/10
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
@@ -17,12 +17,12 @@
 | Domain/Repository sass-back | ✅ | 11 módulos con domain/ + repository/ |
 | Domain/Repository ecommerce-back | ⚠️ Parcial | Solo `catalog/` — cart, orders, customers, inventory pendientes |
 | tRPC exclusivo sass-back | ✅ | 11 routers, Zod inline, sin DTOs class-validator nuevos |
-| tRPC exclusivo ecommerce-back | ⚠️ BLOQUEANTE | Controllers REST legacy pendientes de eliminar (ADR-005) |
-| DTOs class-validator sass-back | ⚠️ Pendiente | Sobreviven en controllers REST legacy a eliminar |
+| tRPC exclusivo ecommerce-back | ✅ | Controllers REST eliminados — solo app.controller.ts (hello) |
+| DTOs class-validator sass-back | ✅ | Eliminados — organizations.service usa UpdateOrganizationInput (ADR-010 C1) |
 | Multi-tenant organizationId | ✅ | Respetado en todos los modelos |
 | Sin cross-service imports | ✅ | Dockerfile de cada servicio solo copia su carpeta + packages/ |
 | Sin `as any` repositories | ✅ | ADR-007 implementado |
-| ecommerce-front tRPC server caller | ⚠️ BLOQUEANTE | lib/store/client.ts usa fetch REST (ADR-006) |
+| ecommerce-front tRPC server caller | ✅ | lib/store/client.ts usa createStoreCaller() tRPC (ADR-006 resuelto) |
 
 ### Bloqueantes activos
 
@@ -74,7 +74,7 @@ tRPC y saber exactamente qué acepta, qué valida y qué retorna — sin pregunt
 
 ### Pendiente mínimo
 
-- [ ] Verificar que `.env.example` existe en cada servicio con todas las vars requeridas
+- [x] `.env.example` creado en sass-back y ecommerce-back — E2-02 con todas las vars requeridas
 - [ ] Validación de env vars al arranque en cada `main.ts` — falla con mensaje claro si falta una var
 
 ### Cómo saber que este escalón está completo
@@ -95,10 +95,10 @@ tRPC y saber exactamente qué acepta, qué valida y qué retorna — sin pregunt
 | Migraciones versionadas | ✅ | `prisma/migrations/` en cada back |
 | DB separada por back | ✅ | `realsass-sass-back` y `realsass-ecommerce-back` tienen `DATABASE_URL` propia |
 | Multi-tenant `organizationId` | ✅ | En todos los modelos con datos de negocio |
-| Índices en `organizationId` | ⚠️ Verificar | Confirmar `@@index([organizationId])` en modelos de alta frecuencia |
+| Índices en `organizationId` | ✅ | Confirmados en ambos schemas — ADR-011 |
 | Backups automáticos | ⚠️ Railway | Verificar política de backups y RPO resultante |
 | Pool de conexiones | ⚠️ Verificar | Con múltiples réplicas Railway, el pool puede ser cuello de botella |
-| `prisma migrate deploy` en Dockerfile | ⚠️ Verificar | Confirmar que migra antes del start, no después |
+| `prisma migrate deploy` en Dockerfile | ✅ | entrypoint.sh en ambos backends — ADR-010 C2 |
 
 ### Qué hay que hacer
 

@@ -1,7 +1,7 @@
 # Backend Capa 2 — Router/Contrato Zod
 # Checklist 10/10
 
-**Score actual: 9/10 — nivel Stripe**
+**Score actual: 8.5/10 — nivel Stripe**
 **Score objetivo: 10/10**
 **Última actualización:** 2026-09-02
 
@@ -48,3 +48,10 @@ Un controller REST nuevo en un módulo de dominio (fuera de trpc/) = bug de arqu
 - `realsass-ecommerce-back/src/trpc/app-router.ts` — 4 routers registrados
 - `realsass-ecommerce-back/src/trpc/routers/customer.router.ts` — procedures públicos
 - `decisions/ADR-005-rest-to-trpc.md`
+
+## Nota de auditoría (ADR-011 — 2026-09-12)
+
+Score bajado de 9.0 a 8.5: DTOs internos (UpdateFlagDto, CreateSecretDto, CreateThemeDto,
+CreateTemplateDto, CreateWebhookDto) no están en el XML auditado — no se puede confirmar
+si tienen class-validator o son interfaces puras. Hasta confirmarlo, el score refleja la duda.
+Verificar: `grep -r "class-validator" realsass-sass-back/src --include="*.ts"`

@@ -209,3 +209,49 @@ Pendiente consciente: páginas `/tienda/[slug]/` con JSX inline → ver Escalón
 
 - Sin tests (.spec.ts) — S4-E y S4-F no iniciados
 - OpenTelemetry dependencias en catalog pero sin configuración activa — S4-C
+
+---
+
+## ADR-009 (hacia 9.5/10)
+
+| ID | Deuda | Servicio | Estado |
+|----|-------|----------|--------|
+| DT-027 | `main.ts` con ValidationPipe global contradice ADR-001 | todos | ✅ x.sh |
+| DT-028 | packages/logger y metrics no importados en app.module | todos | ✅ x.sh |
+| DT-029 | ConversationsService usa `this.prisma` directo (viola ADR-002) | chatia | ✅ x.sh |
+| ~~DT-023~~ | getAgentMetrics carga 100K rows en memoria | analytics | ✅ x.sh |
+
+---
+
+## Gap identificado en auditoría ADR-011 (2026-09-12)
+
+| ID | Gap | Módulos afectados | Impacto en score |
+|----|-----|-------------------|-----------------|
+| DT-ECO-01 | cart, orders, customers, inventory sin domain/ ni repository/ | realsass-ecommerce-back | Arquitectura: 8.5 → 9.0 cuando se resuelva |
+| DT-ECO-02 | DTOs internos no auditados (UpdateFlagDto, CreateSecretDto, etc.) | realsass-sass-back | Contratos/Tipado: 8.5 → 9.0 si no tienen class-validator |
+
+### DT-ECO-01 — Cómo resolverlo
+
+Seguir el molde de `src/catalog/` (el único módulo con patrón completo en ecommerce-back):
+
+```
+cart/
+├── domain/
+│   ├── cart.entity.ts       # tipos puros, sin Prisma
+│   └── cart.errors.ts
+├── repository/
+│   ├── cart.repository.interface.ts
+│   └── prisma-cart.repository.ts   # único lugar con PrismaService + toEntity()
+├── cart.service.ts          # inyecta ICartRepository via @Inject(TOKEN)
+└── cart.module.ts           # binding { provide: TOKEN, useClass: PrismaCartRepo }
+```
+
+Ídem para orders, customers, inventory.
+
+### DT-ECO-02 — Cómo verificarlo
+
+```bash
+grep -r "class-validator" realsass-sass-back/src --include="*.ts"
+# Si da 0: los DTOs son interfaces puras → score sube a 9.0
+# Si da N: migrar esos DTOs a Zod inline en los routers
+```

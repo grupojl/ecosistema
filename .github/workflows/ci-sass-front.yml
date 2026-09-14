@@ -1,0 +1,28 @@
+name: CI — realsass-sass-front
+
+on:
+  push:
+    paths:
+      - 'realsass-sass-front/**'
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'realsass-sass-front/**'
+      - 'packages/**'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter realsass-sass-front typecheck
+      - run: pnpm --filter realsass-sass-front lint
+      - run: pnpm --filter realsass-sass-front build

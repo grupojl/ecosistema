@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Con Fase 1 cerrada y el código base en un promedio de 9.1/10 sobre 10 capas,
+Con Fase 1 cerrada y el código base en un promedio auditado de 8.8/10 sobre 10 capas (ver ADR-011 — el 9.1 era de ecosistema-ms),
 el único camino al 10/10 en todas las capas es el mismo conjunto de trabajo:
 tests con cobertura mínima 85%, reglas de enforcement en CI, y el modelo
 correcto de Server/Client Components con HydrationBoundary.

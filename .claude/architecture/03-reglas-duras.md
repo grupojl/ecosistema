@@ -133,3 +133,87 @@ Los 3 fronts tienen ambos — confirmar en Railway dashboard cuál está activo.
 3. Si es 🔴 y está violada → bloquear el merge.
 4. Si es 🟡 y está violada → aprobar con ticket de deuda creado.
 5. Si es 🔵 → comentar en el PR, no bloquear.
+
+
+---
+
+## Validación (post ADR-002)
+
+### 🔴 Cero imports de class-validator en código nuevo
+```bash
+grep -rn "class-validator\|class-transformer" src --include="*.ts"
+# → 0 resultados post-migración
+```
+Todo DTO nuevo usa `z.object({})` + `z.infer<typeof Schema>`.
+
+### 🔴 Query params con tipo union validados en runtime
+```ts
+// INCORRECTO — TypeScript no valida strings en runtime
+@Query('ecosystem') ecosystem: 'welver' | 'ecosistema-ms'
+
+// CORRECTO — Zod valida en el pipe global
+// En el DTO: z.enum(['welver', 'ecosistema-ms'])
+```
+
+---
+
+## Tests (post ADR-003)
+
+### 🔴 Todo módulo nuevo incluye tests
+Antes de mergear un módulo: service.spec.ts (unit) + controller.spec.ts (integration).
+Sin tests → PR bloqueado, no es negociable.
+
+### 🟡 Cobertura mínima 85% en paths críticos
+Paths críticos: guards, audit.service, base.client.
+Bajar de 85% en estos archivos → deuda con ticket y fecha.
+
+---
+
+## Observabilidad (post ADR-004)
+
+### 🟡 fetchWithCache instrumentado con span
+Todo Integration Client nuevo que extiende BaseIntegrationClient hereda
+el span automáticamente — no requiere trabajo extra.
+Un client que hace fetch fuera de fetchWithCache no tiene trace → 🔴 bug.
+
+
+---
+
+## Validación (post ADR-002)
+
+### 🔴 Cero imports de class-validator en código nuevo
+```bash
+grep -rn "class-validator\|class-transformer" src --include="*.ts"
+# → 0 resultados post-migración
+```
+Todo DTO nuevo usa `z.object({})` + `z.infer<typeof Schema>`.
+
+### 🔴 Query params con tipo union validados en runtime
+```ts
+// INCORRECTO — TypeScript no valida strings en runtime
+@Query('ecosystem') ecosystem: 'welver' | 'ecosistema-ms'
+
+// CORRECTO — Zod valida en el pipe global
+// En el DTO: z.enum(['welver', 'ecosistema-ms'])
+```
+
+---
+
+## Tests (post ADR-003)
+
+### 🔴 Todo módulo nuevo incluye tests
+Antes de mergear un módulo: service.spec.ts (unit) + controller.spec.ts (integration).
+Sin tests → PR bloqueado, no es negociable.
+
+### 🟡 Cobertura mínima 85% en paths críticos
+Paths críticos: guards, audit.service, base.client.
+Bajar de 85% en estos archivos → deuda con ticket y fecha.
+
+---
+
+## Observabilidad (post ADR-004)
+
+### 🟡 fetchWithCache instrumentado con span
+Todo Integration Client nuevo que extiende BaseIntegrationClient hereda
+el span automáticamente — no requiere trabajo extra.
+Un client que hace fetch fuera de fetchWithCache no tiene trace → 🔴 bug.

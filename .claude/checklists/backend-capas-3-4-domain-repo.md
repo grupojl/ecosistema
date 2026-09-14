@@ -1,7 +1,7 @@
 # Backend Capas 3+4 — Domain/Application + Repository
 # Checklist 10/10
 
-**Score actual: 9/10 — nivel Stripe/Linear internos**
+**Score actual: 8.5/10 — nivel Stripe/Linear internos**
 **Score objetivo: 10/10 — nivel plataforma Shopify**
 
 ## ✅ Completado
@@ -69,3 +69,10 @@ modulo/
 - [x] Tipar retornos de OrdersService.listOrders() y CustomersService.findById()
 - [x] lib/store/types.ts eliminado → inferRouterOutputs<AppRouter>
 - [x] JSONB casts marcados con // @real/jsonb-cast
+
+## Nota de auditoría (ADR-011 — 2026-09-12)
+
+Score bajado de 9.0 a 8.5: cart, orders, customers, inventory en ecommerce-back
+usan PrismaService directo en el service — sin domain/ ni repository/.
+Confirmado en código fuente: CartService, OrdersService, CustomersService importan
+`PrismaService` directamente. Solo catalog/ tiene el molde completo.

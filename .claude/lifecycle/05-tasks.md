@@ -188,3 +188,25 @@ En orden de ejecución dentro de cada fase.
 > E1-12 a E1-15 marcados done por decisión explícita — tipos Output sin as any
 > es suficiente para Fase 1. Domain/Repo completo va en S4 junto a tests.
 > E2-02, E2-03, E4-01 a E4-04 pasan a Fase 2 como primeras tasks.
+
+---
+
+## ADR-010 — Roadmap 10/10 (2026-09-12)
+
+### Bloque 1 — .claude/ actualizado
+- [x] ADR-010 creado en decisions/
+- [x] tests-roadmap.md creado en checklists/
+- [x] observabilidad-roadmap.md creado en checklists/
+- [x] ci-cd-roadmap.md creado en checklists/
+
+### Bloque 2 — Cambios en código (pendiente x.sh bloque 2)
+- [ ] [B1] Controllers REST legacy eliminados (ecommerce-back)
+- [ ] [B2] Domain/Repository: cart, orders, customers (ecommerce-back)
+- [ ] [B3] ecommerce-front → tRPC server caller (lib/store/client.ts)
+- [ ] [B4] joi eliminado de sass-back
+- [x] [CI] 7 GitHub Actions workflows generados
+- [x] [OBS] OpenTelemetry instalado en sass-back (molde)
+- [x] [TEST] jest.config.js con coverageThreshold: 85 en ambos backends
+
+### Bloque 3 — Registro de logros (pendiente x.sh bloque 3)
+- [ ] Checklist de completados actualizado post-ejecución

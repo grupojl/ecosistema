@@ -1,7 +1,7 @@
 # Backend Capa 6 — Multi-tenant como invariante transversal
 # Checklist 10/10
 
-**Score actual: 9/10 — nivel Shopify multi-tenant**
+**Score actual: 9.5/10 — nivel Shopify multi-tenant**
 **Score objetivo: 10/10**
 
 ## ✅ Completado
@@ -34,3 +34,8 @@ no un code smell. Se bloquea el PR — no se mergea con ticket de deuda.
 - `decisions/ADR-001-permisos-jsonb.md`
 - `contracts/tenant-context.md`
 - `contracts/organization-access.md`
+
+## Nota de auditoría (ADR-011 — 2026-09-12)
+
+Score subido de 9.0 a 9.5: auditoría del schema Prisma confirma @@index([organizationId])
+en todos los modelos de alta frecuencia de ambos backends. No era un gap pendiente.

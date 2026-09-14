@@ -1,0 +1,29 @@
+name: CI — tRPC contract gate
+
+on:
+  push:
+    paths:
+      - 'realsass-sass-back/src/trpc/**'
+      - 'realsass-ecommerce-back/src/trpc/**'
+      - 'packages/trpc/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'realsass-sass-back/src/trpc/**'
+      - 'realsass-ecommerce-back/src/trpc/**'
+      - 'packages/trpc/**'
+
+jobs:
+  typecheck-fronts:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        front: [realsass-sass-front, realsass-dashboard-front, real-ecommerce-front]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter ${{ matrix.front }} typecheck

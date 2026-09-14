@@ -10,10 +10,10 @@ Estado actual y nivel empresarial comparativo incluidos.
 | Capa | Archivo | Score actual | Nivel |
 |---|---|---|---|
 | 1 — Auth/Tenant | `backend-capa-1-auth.md` | 9/10 | Shopify plataforma+ |
-| 2 — Router/Zod | `backend-capa-2-router.md` | 9/10 | Stripe |
-| 3+4 — Domain/Repo | `backend-capas-3-4-domain-repo.md` | 9/10 | Stripe/Linear internos |
+| 2 — Router/Zod | `backend-capa-2-router.md` | 8.5/10 | Stripe |
+| 3+4 — Domain/Repo | `backend-capas-3-4-domain-repo.md` | 8.5/10 | Stripe/Linear internos |
 | 5 — AppRouter tipado | `backend-capa-5-approuter.md` | 9.5/10 | Vercel/PlanetScale |
-| 6 — Multi-tenant | `backend-capa-6-multitenant.md` | 9/10 | Shopify multi-tenant |
+| 6 — Multi-tenant | `backend-capa-6-multitenant.md` | 9.5/10 | Shopify multi-tenant |
 
 ## Frontend
 
@@ -30,10 +30,10 @@ Estado actual y nivel empresarial comparativo incluidos.
 | Capa | Score base | Score actual | Delta |
 |---|---|---|---|
 | Backend 1 — Auth/Tenant | 8.5 | 9.0 | ⬆️ +0.5 |
-| Backend 2 — Router/Zod | 7.0 | 9.0 | ⬆️ +2.0 |
-| Backend 3+4 — Domain/Repo | 9.0 | 9.0 | — |
+| Backend 2 — Router/Zod | 7.0 | 8.5 | ⬆️ +1.5 |
+| Backend 3+4 — Domain/Repo | 9.0 | 8.5 | ⬇️ -0.5 (ecommerce-back parcial) |
 | Backend 5 — AppRouter | 9.5 | 9.5 | — |
-| Backend 6 — Multi-tenant | 9.0 | 9.0 | — |
+| Backend 6 — Multi-tenant | 9.0 | 9.5 | ⬆️ +0.5 (índices confirmados) |
 | Frontend 1 — Fetch tRPC | 7.5 | 9.5 | ⬆️ +2.0 |
 | Frontend 2 — TanStack Query | 9.0 | 9.0 | — |
 | Frontend 3 — Zustand | 8.5 | 8.5 | — |
@@ -56,7 +56,7 @@ Lo único que mueve el score en todas las capas de 9→10 es la misma cosa:
 3. **HydrationBoundary en Server Components** — Frontend 2: 9→10
 4. **Presentación** — Frontend 4: bloqueado por pagos-back y APIs courier externos
 
-El techo actual sin tests es ~9.5/10 en las capas mejores. Tests y CI son el único camino al 10/10.
+El promedio auditado real es 8.8/10 (2026-09-12, ver ADR-011). El techo sin tests/CI es ~9.5/10 en capas individuales. El camino a 9.1 real: domain+repo en cart/orders/customers/inventory (ecommerce-back).
 
 ---
 

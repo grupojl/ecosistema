@@ -38,6 +38,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         .
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
+COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
+COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
 USER nestjs
 EXPOSE 3000
-CMD ["dumb-init", "node", "dist/main"]
+CMD ["dumb-init", "/app/entrypoint.sh"]
