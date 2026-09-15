@@ -1,45 +1,76 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-sass-back/Dockerfile
+# VPS/AWS  → docker build -f realsass-sass-back/Dockerfile .
+#
+# HTTP:  3000 (identidad, orgs, colaboradores, config, auditoría)
+# BullMQ: webhook-delivery
+# Auth: cookies HttpOnly (ADR-004) — SESSION_COOKIE_SECRET requerida
+# Ref: .claude/architecture/05-dockerfile-backend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/auth-server/package.json ./packages/auth-server/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-back/package.json              ./realsass-sass-back/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile --ignore-scripts
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY realsass-sass-back/                          ./realsass-sass-back/
-COPY packages/                         ./packages/
-WORKDIR /app/realsass-sass-back
-RUN /app/node_modules/.bin/prisma generate
-RUN /app/node_modules/.bin/nest build
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS deps
 
-FROM node:22-alpine AS runner
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+# dumb-init para manejo correcto de señales en Docker (PID 1)
 RUN apk add --no-cache dumb-init
+
 WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-server/package.json  ./packages/auth-server/
+COPY realsass-sass-back/package.json    ./realsass-sass-back/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-sass-back,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY packages/auth-server/              ./packages/auth-server/
+COPY realsass-sass-back/                ./realsass-sass-back/
+
+WORKDIR /app/realsass-sass-back
+
+# prisma generate ANTES de nest build — genera query engine nativo (musl libc)
+RUN pnpm prisma generate
+RUN pnpm build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS runtime
+
+RUN apk add --no-cache dumb-init
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app/realsass-sass-back
+
 ENV NODE_ENV=production
 ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
+
+# @real/auth-server queda compilado dentro de dist/ — no se copia por separado
+COPY --from=build --chown=nestjs:nodejs /app/node_modules                        ../node_modules
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/dist             ./dist
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/prisma           ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/package.json     ./package.json
+COPY --chown=nestjs:nodejs realsass-sass-back/entrypoint.sh                      ./entrypoint.sh
+
 USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "/app/entrypoint.sh"]
+EXPOSE ${PORT}
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT}/health || exit 1
+
+# dumb-init maneja señales → prisma migrate deploy → node dist/main.js
+CMD ["dumb-init", "/app/realsass-sass-back/entrypoint.sh"]

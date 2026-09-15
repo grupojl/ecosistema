@@ -1,45 +1,75 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-ecommerce-back/Dockerfile
+# VPS/AWS  → docker build -f realsass-ecommerce-back/Dockerfile .
+#
+# HTTP:  3001 (catálogo, stock, carrito, órdenes, clientes)
+# tRPC:  EcommerceAppRouter — contrato tipado con los frontends
+# Inter-servicio: organizations-client → sass-back HTTP
+# Ref: .claude/architecture/05-dockerfile-backend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/auth-server/package.json ./packages/auth-server/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile --ignore-scripts
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY realsass-ecommerce-back/          ./realsass-ecommerce-back/
-COPY packages/                         ./packages/
-WORKDIR /app/realsass-ecommerce-back
-RUN /app/node_modules/.bin/prisma generate
-RUN /app/node_modules/.bin/nest build
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS deps
 
-FROM node:22-alpine AS runner
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 RUN apk add --no-cache dumb-init
+
 WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-server/package.json      ./packages/auth-server/
+COPY packages/trpc/package.json             ./packages/trpc/
+COPY realsass-ecommerce-back/package.json   ./realsass-ecommerce-back/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-ecommerce-back,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY packages/auth-server/              ./packages/auth-server/
+COPY packages/trpc/                     ./packages/trpc/
+COPY realsass-ecommerce-back/           ./realsass-ecommerce-back/
+
+WORKDIR /app/realsass-ecommerce-back
+
+RUN pnpm prisma generate
+RUN pnpm build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM node:${NODE_VERSION}-alpine AS runtime
+
+RUN apk add --no-cache dumb-init
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app/realsass-ecommerce-back
+
 ENV NODE_ENV=production
-ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
+# Puerto 3001 — evita colisión con sass-back en el mismo host (VPS/local)
+ENV PORT=3001
+
+COPY --from=build --chown=nestjs:nodejs /app/node_modules                            ../node_modules
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist            ./dist
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma          ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json    ./package.json
+COPY --chown=nestjs:nodejs realsass-ecommerce-back/entrypoint.sh                     ./entrypoint.sh
+
 USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "/app/entrypoint.sh"]
+EXPOSE ${PORT}
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:${PORT}/health || exit 1
+
+CMD ["dumb-init", "/app/realsass-ecommerce-back/entrypoint.sh"]
