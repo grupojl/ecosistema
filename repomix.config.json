@@ -48,6 +48,8 @@
     "realsass-ecommerce-back/tsconfig.build.json",
     "realsass-ecommerce-back/nest-cli.json",
     "realsass-ecommerce-back/prisma/schema.prisma",
+    "realsass-sass-back/entrypoint.sh",
+    "realsass-ecommerce-back/entrypoint.sh",
 
     "realsass-sass-front/Dockerfile",
     "realsass-sass-front/.dockerignore",

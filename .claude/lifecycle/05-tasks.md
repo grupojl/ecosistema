@@ -72,7 +72,7 @@ En orden de ejecución dentro de cada fase.
 ### Escalón 4 — Base de Datos
 
 - [ ] **[E4-01]** Auditar índices en schemas de Prisma — `@@index([organizationId])` en modelos de alta frecuencia
-- [ ] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
+- [x] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
 - [ ] **[E4-03]** Documentar política de backups Railway y RPO en `roadmap/deuda-tecnica.md`
 - [ ] **[E4-04]** Documentar límites de pool de conexiones por back en `services/*.md`
 

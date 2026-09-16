@@ -1,11 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 # Railway  → Root Directory: /  |  Dockerfile Path: real-ecommerce-front/Dockerfile
-# VPS/AWS  → docker build -f real-ecommerce-front/Dockerfile --build-arg ... .
 #
 # Storefront público (SSG/ISR): tienda, catálogo, carrito, checkout, tracking
-# Clientes finales — sin Firebase login (identificación por email en checkout)
-# Multi-tenant: cada tienda se resuelve por slug → /tienda/[slug]
 # PREREQUISITO: output: 'standalone' en next.config.mjs
 # Ref: .claude/architecture/06-dockerfile-frontend.md
 
@@ -13,7 +10,7 @@ ARG NODE_VERSION=22
 ARG PNPM_VERSION=10.30.3
 
 # ─── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS deps
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
@@ -31,15 +28,13 @@ RUN --mount=type=cache,id=pnpm-ecommerce-front,target=/root/.local/share/pnpm/st
     pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS build
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app
 
-# URL del motor de ecommerce — requerida para SSG y fetch server-side
 ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-# Firebase solo para contexto de cliente (no login) — pueden ser vacíos
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -68,7 +63,7 @@ WORKDIR /app/real-ecommerce-front
 RUN /app/node_modules/.bin/next build
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS runtime
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs

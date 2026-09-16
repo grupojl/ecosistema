@@ -5,17 +5,16 @@
 #
 # HTTP:  3001 (catálogo, stock, carrito, órdenes, clientes)
 # tRPC:  EcommerceAppRouter — contrato tipado con los frontends
-# Inter-servicio: organizations-client → sass-back HTTP
 # Ref: .claude/architecture/05-dockerfile-backend.md
 
 ARG NODE_VERSION=22
 ARG PNPM_VERSION=10.30.3
 
 # ─── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS deps
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 RUN apk add --no-cache dumb-init
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app
 
@@ -30,7 +29,7 @@ RUN --mount=type=cache,id=pnpm-ecommerce-back,target=/root/.local/share/pnpm/sto
     pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS build
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
@@ -48,7 +47,7 @@ RUN pnpm prisma generate
 RUN pnpm build
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS runtime
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
 
 RUN apk add --no-cache dumb-init
 RUN addgroup --system --gid 1001 nodejs \
@@ -57,7 +56,6 @@ RUN addgroup --system --gid 1001 nodejs \
 WORKDIR /app/realsass-ecommerce-back
 
 ENV NODE_ENV=production
-# Puerto 3001 — evita colisión con sass-back en el mismo host (VPS/local)
 ENV PORT=3001
 
 COPY --from=build --chown=nestjs:nodejs /app/node_modules                            ../node_modules
@@ -67,9 +65,9 @@ COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.jso
 COPY --chown=nestjs:nodejs realsass-ecommerce-back/entrypoint.sh                     ./entrypoint.sh
 
 USER nestjs
-EXPOSE ${PORT}
+EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:${PORT}/health || exit 1
+  CMD wget -qO- http://localhost:3001/health || exit 1
 
 CMD ["dumb-init", "/app/realsass-ecommerce-back/entrypoint.sh"]

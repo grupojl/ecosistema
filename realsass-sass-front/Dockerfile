@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 # Railway  → Root Directory: /  |  Dockerfile Path: realsass-sass-front/Dockerfile
-# VPS/AWS  → docker build -f realsass-sass-front/Dockerfile --build-arg ... .
 #
 # Dashboard de dueños (OWNER): landing pública + /profile + /settings
 # PREREQUISITO: output: 'standalone' en next.config.mjs
@@ -11,7 +10,7 @@ ARG NODE_VERSION=22
 ARG PNPM_VERSION=10.30.3
 
 # ─── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS deps
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
@@ -29,22 +28,19 @@ RUN --mount=type=cache,id=pnpm-sass-front,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS build
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app
 
-# NEXT_PUBLIC_* inlineadas en compile-time — no recuperables desde runtime ENV
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-# URL del backend de identidad (sass-back)
 ARG NEXT_PUBLIC_SASS_BACK_URL
-# URL del dashboard de colaboradores (para SSO redirect)
 ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL
 
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
@@ -69,7 +65,7 @@ WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS runtime
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
@@ -79,10 +75,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-# CRÍTICO: Next.js standalone bindea a 127.0.0.1 — sin esto el healthcheck falla
 ENV HOSTNAME=0.0.0.0
 
-# standalone NO incluye .next/static/ ni public/ — copiar por separado
 COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone      ./
 COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/.next/static          ./realsass-sass-front/.next/static
 COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/public                ./realsass-sass-front/public

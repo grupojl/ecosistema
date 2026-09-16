@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
 # Railway  → Root Directory: /  |  Dockerfile Path: realsass-dashboard-front/Dockerfile
-# VPS/AWS  → docker build -f realsass-dashboard-front/Dockerfile --build-arg ... .
 #
-# Dashboard de colaboradores (COLLABORATOR): /dashboard/tienda, /dashboard/chat, etc.
+# Dashboard de colaboradores (ADMIN/MEMBER): gestión de orgs, tiendas, pedidos
 # PREREQUISITO: output: 'standalone' en next.config.mjs
 # Ref: .claude/architecture/06-dockerfile-frontend.md
 
@@ -11,7 +10,7 @@ ARG NODE_VERSION=22
 ARG PNPM_VERSION=10.30.3
 
 # ─── Stage 1: deps ────────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS deps
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
@@ -29,7 +28,7 @@ RUN --mount=type=cache,id=pnpm-dashboard-front,target=/root/.local/share/pnpm/st
     pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS build
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
 
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
@@ -41,13 +40,9 @@ ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-# URL del motor de identidad
 ARG NEXT_PUBLIC_SASS_BACK_URL
-# URL del motor de ecommerce (productos, pedidos)
 ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-# URL de la tienda pública (preview de storefront)
 ARG NEXT_PUBLIC_STORE_FRONT_URL
-# URL del dashboard del dueño (sass-front — para links cruzados)
 ARG NEXT_PUBLIC_SASS_FRONT_URL
 
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
@@ -74,7 +69,7 @@ WORKDIR /app/realsass-dashboard-front
 RUN /app/node_modules/.bin/next build
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM node:${NODE_VERSION}-alpine AS runtime
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs

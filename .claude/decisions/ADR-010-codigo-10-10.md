@@ -26,17 +26,11 @@ grep -r "class-validator" realsass-sass-back/src --include="*.ts"
 # → 0 resultados
 ```
 
-### Gap C2 — Dockerfiles sin prisma migrate deploy
+### ~~Gap C2~~ — Dockerfiles sin prisma migrate deploy — ✅ RESUELTO (2026-09-16)
 
-Ambos Dockerfiles (sass-back, ecommerce-back) terminan con:
-```dockerfile
-CMD ["dumb-init", "node", "dist/main"]
-```
-Sin `prisma migrate deploy` antes del arranque, las migraciones pendientes
-no se aplican en Railway al deployar. Riesgo: schema desincronizado en producción.
-
-**Solución:** reemplazar `CMD` con un entrypoint shell que ejecute migrate y luego el servidor.
-
+Ambos Dockerfiles usan `CMD ["dumb-init", "/app/<servicio>/entrypoint.sh"]`.
+Los `entrypoint.sh` ejecutan `prisma migrate deploy` + `exec node dist/main.js`.
+`--platform=linux/amd64` en cada FROM. Auditado — score Docker 10/10.
 ### Gap C3 — .env.example ausente
 
 Ningún servicio tiene `.env.example`. Un desarrollador nuevo no puede arrancar
@@ -81,3 +75,15 @@ Un README no puede ser parseado automáticamente ni copiado directamente.
 - `trpc/routers/organizations.router.ts` — schema Zod ya inline (el DTO era redundante)
 - `lifecycle/01-fase-desarrollo.md` — Escalón 1 y Escalón 2
 - `lifecycle/02-fase-estabilizacion.md` — Escalón 4 (prisma migrate deploy)
+
+---
+
+## Estado de implementación (2026-09-16)
+
+| Gap | Estado | Evidencia |
+|-----|--------|-----------|
+| C1 — class-validator en update-organization.dto.ts | ✅ RESUELTO | `grep class-validator realsass-sass-back/src` → 0 |
+| C2 — Dockerfiles sin migrate deploy | ✅ RESUELTO | entrypoint.sh auditado en ecosistema.xml — 10/10 |
+| C3 — .env.example ausente | ⏳ Pendiente Fase 2 | [E2-02] en lifecycle/05-tasks.md |
+
+**Score Docker/Deploy actual:** 10/10

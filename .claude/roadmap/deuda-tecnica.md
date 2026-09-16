@@ -105,21 +105,14 @@ Done cuando: todo modelo con `organizationId` de alta frecuencia tiene
 `@@index([organizationId])` o `@@index([organizationId, <campo_de_filtro>])`.
 Trigger: antes de que cualquier ecosistema supere 10.000 registros por tabla.
 
-### prisma migrate deploy antes del CMD en Dockerfiles sin confirmar
+### ~~prisma migrate deploy antes del CMD~~ — ✅ RESUELTO (2026-09-16)
 
-No se verificó que ambos Dockerfiles corran `prisma migrate deploy` antes del
-`CMD` de arranque. Si no está, la app puede arrancar con schema desactualizado.
+Ambos backends tienen `entrypoint.sh` con `prisma migrate deploy` + `exec node dist/main.js`.
+CMD: `["dumb-init", "/app/<servicio>/entrypoint.sh"]`. `--platform=linux/amd64` en cada FROM.
+Auditado en ecosistema.xml — 10/10 en dimensión Docker.
 
-Verificación manual:
-```bash
-grep -A3 "migrate" realsass-sass-back/Dockerfile
-grep -A3 "migrate" realsass-ecommerce-back/Dockerfile
-```
-
-Done cuando: ambos Dockerfiles tienen `RUN pnpm prisma migrate deploy` (o equivalente)
-antes del `CMD` o `ENTRYPOINT` de la aplicación.
-Trigger: antes del primer deploy a producción con datos reales.
-
+Ver: `realsass-sass-back/entrypoint.sh`, `realsass-ecommerce-back/entrypoint.sh`
+Ver: `architecture/05-dockerfile-backend.md`
 ### Pool de conexiones sin documentar por servicio
 
 Prisma gestiona el pool automáticamente pero con límites por defecto que pueden

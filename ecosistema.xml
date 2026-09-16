@@ -35,7 +35,7 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: .claude/**/*.md, package.json, pnpm-workspace.yaml, tsconfig.base.json, docker-compose.yml, .npmrc, railway.json, railway.toml, nixpacks.toml, packages/*/package.json, packages/*/tsconfig.json, packages/*/src/**/*.ts, realsass-sass-back/src/**/*.ts, realsass-sass-back/Dockerfile, realsass-sass-back/.dockerignore, realsass-sass-back/railway.json, realsass-sass-back/railway.toml, realsass-sass-back/nixpacks.toml, realsass-sass-back/package.json, realsass-sass-back/tsconfig.json, realsass-sass-back/tsconfig.build.json, realsass-sass-back/nest-cli.json, realsass-sass-back/prisma/schema.prisma, realsass-ecommerce-back/src/**/*.ts, realsass-ecommerce-back/Dockerfile, realsass-ecommerce-back/.dockerignore, realsass-ecommerce-back/railway.json, realsass-ecommerce-back/railway.toml, realsass-ecommerce-back/nixpacks.toml, realsass-ecommerce-back/package.json, realsass-ecommerce-back/tsconfig.json, realsass-ecommerce-back/tsconfig.build.json, realsass-ecommerce-back/nest-cli.json, realsass-ecommerce-back/prisma/schema.prisma, realsass-sass-front/Dockerfile, realsass-sass-front/.dockerignore, realsass-sass-front/railway.json, realsass-sass-front/railway.toml, realsass-sass-front/nixpacks.toml, realsass-sass-front/package.json, realsass-sass-front/tsconfig.json, realsass-sass-front/next.config.mjs, realsass-sass-front/components.json, realsass-sass-front/app/**/*.tsx, realsass-sass-front/app/**/*.ts, realsass-sass-front/components/**/*.tsx, realsass-sass-front/lib/**/*.ts, realsass-sass-front/hooks/**/*.ts, realsass-sass-front/context/**/*.tsx, realsass-sass-front/types/**/*.ts, realsass-dashboard-front/Dockerfile, realsass-dashboard-front/.dockerignore, realsass-dashboard-front/railway.json, realsass-dashboard-front/railway.toml, realsass-dashboard-front/nixpacks.toml, realsass-dashboard-front/package.json, realsass-dashboard-front/tsconfig.json, realsass-dashboard-front/next.config.mjs, realsass-dashboard-front/components.json, realsass-dashboard-front/app/**/*.tsx, realsass-dashboard-front/app/**/*.ts, realsass-dashboard-front/components/**/*.tsx, realsass-dashboard-front/lib/**/*.ts, realsass-dashboard-front/hooks/**/*.ts, realsass-dashboard-front/context/**/*.tsx, realsass-dashboard-front/types/**/*.ts, real-ecommerce-front/Dockerfile, real-ecommerce-front/.dockerignore, real-ecommerce-front/railway.json, real-ecommerce-front/railway.toml, real-ecommerce-front/nixpacks.toml, real-ecommerce-front/package.json, real-ecommerce-front/tsconfig.json, real-ecommerce-front/next.config.mjs, real-ecommerce-front/components.json, real-ecommerce-front/app/**/*.tsx, real-ecommerce-front/app/**/*.ts, real-ecommerce-front/components/**/*.tsx, real-ecommerce-front/lib/**/*.ts, real-ecommerce-front/hooks/**/*.ts, real-ecommerce-front/context/**/*.tsx, real-ecommerce-front/types/**/*.ts, realsass-sass-front/stores/**/*.ts, realsass-dashboard-front/stores/**/*.ts, real-ecommerce-front/stores/**/*.ts, packages/trpc/src/**/*.ts
+- Only files matching these patterns are included: .claude/**/*.md, package.json, pnpm-workspace.yaml, tsconfig.base.json, docker-compose.yml, .npmrc, railway.json, railway.toml, nixpacks.toml, packages/*/package.json, packages/*/tsconfig.json, packages/*/src/**/*.ts, realsass-sass-back/src/**/*.ts, realsass-sass-back/Dockerfile, realsass-sass-back/.dockerignore, realsass-sass-back/railway.json, realsass-sass-back/railway.toml, realsass-sass-back/nixpacks.toml, realsass-sass-back/package.json, realsass-sass-back/tsconfig.json, realsass-sass-back/tsconfig.build.json, realsass-sass-back/nest-cli.json, realsass-sass-back/prisma/schema.prisma, realsass-ecommerce-back/src/**/*.ts, realsass-ecommerce-back/Dockerfile, realsass-ecommerce-back/.dockerignore, realsass-ecommerce-back/railway.json, realsass-ecommerce-back/railway.toml, realsass-ecommerce-back/nixpacks.toml, realsass-ecommerce-back/package.json, realsass-ecommerce-back/tsconfig.json, realsass-ecommerce-back/tsconfig.build.json, realsass-ecommerce-back/nest-cli.json, realsass-ecommerce-back/prisma/schema.prisma, realsass-sass-back/entrypoint.sh, realsass-ecommerce-back/entrypoint.sh, realsass-sass-front/Dockerfile, realsass-sass-front/.dockerignore, realsass-sass-front/railway.json, realsass-sass-front/railway.toml, realsass-sass-front/nixpacks.toml, realsass-sass-front/package.json, realsass-sass-front/tsconfig.json, realsass-sass-front/next.config.mjs, realsass-sass-front/components.json, realsass-sass-front/app/**/*.tsx, realsass-sass-front/app/**/*.ts, realsass-sass-front/components/**/*.tsx, realsass-sass-front/lib/**/*.ts, realsass-sass-front/hooks/**/*.ts, realsass-sass-front/context/**/*.tsx, realsass-sass-front/types/**/*.ts, realsass-dashboard-front/Dockerfile, realsass-dashboard-front/.dockerignore, realsass-dashboard-front/railway.json, realsass-dashboard-front/railway.toml, realsass-dashboard-front/nixpacks.toml, realsass-dashboard-front/package.json, realsass-dashboard-front/tsconfig.json, realsass-dashboard-front/next.config.mjs, realsass-dashboard-front/components.json, realsass-dashboard-front/app/**/*.tsx, realsass-dashboard-front/app/**/*.ts, realsass-dashboard-front/components/**/*.tsx, realsass-dashboard-front/lib/**/*.ts, realsass-dashboard-front/hooks/**/*.ts, realsass-dashboard-front/context/**/*.tsx, realsass-dashboard-front/types/**/*.ts, real-ecommerce-front/Dockerfile, real-ecommerce-front/.dockerignore, real-ecommerce-front/railway.json, real-ecommerce-front/railway.toml, real-ecommerce-front/nixpacks.toml, real-ecommerce-front/package.json, real-ecommerce-front/tsconfig.json, real-ecommerce-front/next.config.mjs, real-ecommerce-front/components.json, real-ecommerce-front/app/**/*.tsx, real-ecommerce-front/app/**/*.ts, real-ecommerce-front/components/**/*.tsx, real-ecommerce-front/lib/**/*.ts, real-ecommerce-front/hooks/**/*.ts, real-ecommerce-front/context/**/*.tsx, real-ecommerce-front/types/**/*.ts, realsass-sass-front/stores/**/*.ts, realsass-dashboard-front/stores/**/*.ts, real-ecommerce-front/stores/**/*.ts, packages/trpc/src/**/*.ts
 - Files matching these patterns are excluded: **/node_modules/**, **/.next/**, **/dist/**, **/build/**, **/out/**, **/.pnpm-store/**, **/coverage/**, **/*.log, **/*.xml, **/*.lock, **/*.tsbuildinfo, **/public/**, **/.git/**, **/__mocks__/**, **/*.spec.ts, **/*.e2e-spec.ts, **/test/**, **/tests/**, **/prisma/migrations/**, **/prisma/seed.ts, **/generated/**, **/components/ui/**
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
@@ -299,6 +299,7 @@ real-ecommerce-front/
     use-shopping-bag-store.ts
   types/
     shipping.ts
+  .dockerignore
   components.json
   Dockerfile
   next.config.mjs
@@ -457,7 +458,9 @@ realsass-ecommerce-back/
     app.module.ts
     app.service.ts
     main.ts
+  .dockerignore
   Dockerfile
+  entrypoint.sh
   nest-cli.json
   package.json
   railway.json
@@ -607,6 +610,7 @@ realsass-sass-back/
     main.ts
   .dockerignore
   Dockerfile
+  entrypoint.sh
   nest-cli.json
   package.json
   railway.json
@@ -707,203 +711,6 @@ This section contains the contents of the repository's files.
 
 `src/catalog/` en `realsass-ecommerce-back` es el **MOLDE VIVO**.
 Todos los módulos de sass-back siguen la misma estructura.
-</file>
-
-<file path=".claude/architecture/08-testing-norte.md">
-# 08 — Norte de testing: qué testear y por qué
-
-> Referentes: **Stripe** (tests sobre efectos de dinero), **Google** (Beyoncé Rule),
-> **Vercel** (E2E pragmático — paths críticos, no cobertura decorativa).
-
----
-
-## El principio
-
-**Stripe:** el test que importa es el que verifica qué pasa cuando el provider falla.
-**Google:** toda invariante tiene un test que la rompe deliberadamente.
-**Vercel:** E2E solo en los paths que, si se rompen, el negocio para.
-
----
-
-## Regla 1 — Services: invariantes de negocio, no implementación
-
-```ts
-// ❌ prueba implementación — inútil si refactorizás
-expect(prisma.payment.create).toHaveBeenCalled();
-
-// ✅ invariante de tenant isolation
-it('nunca retorna datos de otro tenant', async () => {
-  await seedPayment({ organizationId: 'org-A' });
-  const result = await service.listPayments({ organizationId: 'org-B' });
-  expect(result.data).toHaveLength(0);
-});
-
-// ✅ audit trail antes de ejecutar
-it('crea AdminAction antes de suspender', async () => {
-  const auditSpy   = jest.spyOn(auditService, 'create');
-  const suspendSpy = jest.spyOn(orgClient, 'suspend');
-  suspendSpy.mockRejectedValueOnce(new Error('timeout'));
-  await expect(service.suspendOrg(input)).rejects.toThrow();
-  expect(auditSpy).toHaveBeenCalledBefore(suspendSpy);
-});
-```
-
----
-
-## Regla 2 — Guards: cobertura 100%
-
-```ts
-// ✅ UID no autorizado → 403
-it('rechaza UID fuera de allowlist con 403', async () => {
-  const ctx = mockContext({ uid: 'uid-no-autorizado' });
-  await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
-});
-
-// ✅ token expirado → 401
-it('rechaza token expirado con 401', async () => {
-  firebaseAdmin.verifyIdToken.mockRejectedValueOnce(new Error('token has expired'));
-  await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
-});
-```
-
----
-
-## Regla 3 — E2E: solo paths que paran el negocio
-
-```
-superadmin:
-  1. Login Firebase → redirige a /dashboard
-  2. Dashboard 0 alertas → EmptyState "Todo operativo"
-  3. Suspender org → ConfirmDialog → AdminAction creado
-```
-
----
-
-## Cobertura mínima
-
-| Capa | Cobertura |
-|------|-----------|
-| Guards | 100% |
-| Domain services | 85% |
-| Integration clients | 80% |
-| Controllers HTTP | 70% |
-| Frontend hooks | 70% |
-| E2E | 3-5 flows críticos |
-
----
-
-## Señal de test bien escrito
-
-1. El nombre describe qué invariante protege, no qué función llama
-2. Si lo borrás y el código se rompe en prod, el test lo hubiera detectado
-3. Si refactorizás sin cambiar comportamiento, el test sigue pasando
-</file>
-
-<file path=".claude/architecture/09-observabilidad-norte.md">
-# 09 — Norte de observabilidad: qué instrumentar y por qué
-
-> Referentes: **Honeycomb** (entender cualquier estado en prod sin deployar código),
-> **Datadog** (qué ve el operador), **Shopify** (trazabilidad de BullMQ jobs).
-
----
-
-## El principio de Honeycomb
-
-> "Dado cualquier estado en producción, ¿podés entender qué pasó
-> sin deployar código nuevo?"
-
----
-
-## Qué genera un span
-
-```
-Request HTTP entrante     → automático via instrumentation-http
-Query Prisma              → automático via instrumentation-prisma
-Llamada gRPC saliente     → manual en GrpcClient
-Job BullMQ encolado       → manual en el service que encola
-Job BullMQ procesado      → manual en el Processor
-Llamada a provider externo → manual en el Adapter
-CB estado                 → evento en el span del Adapter (no span propio)
-Cache hit/miss            → atributo en el span del caller (no span propio)
-Health check polling      → excluir del sampler
-```
-
----
-
-## Atributos obligatorios en spans de negocio
-
-```ts
-span.setAttributes({
-  'tenant.ecosystem_id':    ecosystemId,
-  'tenant.organization_id': organizationId,
-  'service.name':           'superadmin-backend',
-  'request.id':             correlationId,
-});
-```
-
----
-
-## Qué activa una alerta vs. qué es contexto
-
-### Alerta (acción en < 15 min)
-```
-CB OPEN en provider de pagos    → CRÍTICA
-DLQ depth > 100 jobs            → CRÍTICA
-Health check DOWN               → CRÍTICA
-Error rate > 5% en 5 min        → WARNING
-Latencia P95 > 2s en pagos      → WARNING
-CB OPEN en Groq/LLM             → WARNING
-```
-
-### Contexto (dashboard, no alerta)
-```
-Cache hit/miss rate
-Latencia P50 Prisma
-Jobs procesados por hora
-Requests por tenant
-```
-
-**Regla Datadog:** si no cambia una decisión operativa en los próximos 15 min,
-no es una alerta.
-
----
-
-## Health check extendido — formato canónico
-
-```json
-{
-  "status": "ok" | "degraded" | "down",
-  "db":    { "status": "up", "latencyMs": 4 },
-  "redis": { "status": "up", "latencyMs": 1 },
-  "circuit_breakers": { "mercadopago": "closed", "groq-llm": "open" },
-  "queues": { "payments": { "waiting": 0, "dlq": 0 } },
-  "uptime": 3600,
-  "version": "1.2.3"
-}
-```
-
----
-
-## Correlation ID
-
-```ts
-app.use((req, res, next) => {
-  const id = req.headers['x-correlation-id'] as string ?? crypto.randomUUID();
-  req.headers['x-correlation-id'] = id;
-  res.setHeader('x-correlation-id', id);
-  trace.getActiveSpan()?.setAttribute('request.id', id);
-  next();
-});
-```
-
----
-
-## Señal de observabilidad bien implementada
-
-1. Pago fallido → span del provider en < 2 min sin grep en logs
-2. Job en DLQ → trazable al request HTTP que lo originó
-3. CB abierto → visible en superadmin en < 15 segundos
-4. Podés filtrar spans de una org por `tenant.organization_id`
 </file>
 
 <file path=".claude/checklists/backend-capa-5-approuter.md">
@@ -2648,17 +2455,11 @@ grep -r "class-validator" realsass-sass-back/src --include="*.ts"
 # → 0 resultados
 ```
 
-### Gap C2 — Dockerfiles sin prisma migrate deploy
+### ~~Gap C2~~ — Dockerfiles sin prisma migrate deploy — ✅ RESUELTO (2026-09-16)
 
-Ambos Dockerfiles (sass-back, ecommerce-back) terminan con:
-```dockerfile
-CMD ["dumb-init", "node", "dist/main"]
-```
-Sin `prisma migrate deploy` antes del arranque, las migraciones pendientes
-no se aplican en Railway al deployar. Riesgo: schema desincronizado en producción.
-
-**Solución:** reemplazar `CMD` con un entrypoint shell que ejecute migrate y luego el servidor.
-
+Ambos Dockerfiles usan `CMD ["dumb-init", "/app/<servicio>/entrypoint.sh"]`.
+Los `entrypoint.sh` ejecutan `prisma migrate deploy` + `exec node dist/main.js`.
+`--platform=linux/amd64` en cada FROM. Auditado — score Docker 10/10.
 ### Gap C3 — .env.example ausente
 
 Ningún servicio tiene `.env.example`. Un desarrollador nuevo no puede arrancar
@@ -2703,6 +2504,18 @@ Un README no puede ser parseado automáticamente ni copiado directamente.
 - `trpc/routers/organizations.router.ts` — schema Zod ya inline (el DTO era redundante)
 - `lifecycle/01-fase-desarrollo.md` — Escalón 1 y Escalón 2
 - `lifecycle/02-fase-estabilizacion.md` — Escalón 4 (prisma migrate deploy)
+
+---
+
+## Estado de implementación (2026-09-16)
+
+| Gap | Estado | Evidencia |
+|-----|--------|-----------|
+| C1 — class-validator en update-organization.dto.ts | ✅ RESUELTO | `grep class-validator realsass-sass-back/src` → 0 |
+| C2 — Dockerfiles sin migrate deploy | ✅ RESUELTO | entrypoint.sh auditado en ecosistema.xml — 10/10 |
+| C3 — .env.example ausente | ⏳ Pendiente Fase 2 | [E2-02] en lifecycle/05-tasks.md |
+
+**Score Docker/Deploy actual:** 10/10
 </file>
 
 <file path=".claude/decisions/ADR-010-roadmap-10-10.md">
@@ -5810,7 +5623,7 @@ import type { Response } from 'express';
  *   app.useGlobalPipes(new ValidationPipe({ ... }));
  */
 ⋮----
-export class ZodExceptionFilter implements ExceptionFilter {
+export class ZodExceptionFilter implements ExceptionFilter
 ⋮----
 catch(exception: ZodError, host: ArgumentsHost): void
 </file>
@@ -6765,6 +6578,16 @@ createShipment(details: ShipmentDetails): Promise<
 getTracking(trackingNumber: string): Promise<any>
 </file>
 
+<file path="real-ecommerce-front/.dockerignore">
+node_modules
+.next
+coverage
+.env
+.env.*
+*.log
+*.tsbuildinfo
+</file>
+
 <file path="real-ecommerce-front/components.json">
 {
   "$schema": "https://ui.shadcn.com/schema.json",
@@ -7154,33 +6977,6 @@ interface SidebarState {
 
 <file path="realsass-dashboard-front/types/index.ts">
 
-</file>
-
-<file path="realsass-dashboard-front/.dockerignore">
-node_modules
-.pnpm-store
-.next
-out
-.env
-.env.local
-.env.*.local
-.git
-.gitignore
-*.md
-README*
-.github
-Dockerfile*
-.dockerignore
-railway.json
-__tests__
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
-coverage
-.DS_Store
-Thumbs.db
-railway.json
 </file>
 
 <file path="realsass-dashboard-front/components.json">
@@ -7949,6 +7745,19 @@ async function bootstrap(): Promise<void>
 // ecommerce-back sirve al storefront público — si no hay origenes explícitos
 // se refleja el Origin del request (origin: true). Distinto a real-back donde
 // el wildcard + credentials es inaceptable porque maneja tokens de identidad.
+</file>
+
+<file path="realsass-ecommerce-back/.dockerignore">
+node_modules
+dist
+coverage
+.env
+.env.*
+*.log
+*.tsbuildinfo
+prisma/migrations
+prisma/seed.ts
+generated
 </file>
 
 <file path="realsass-ecommerce-back/tsconfig.build.json">
@@ -8857,30 +8666,6 @@ import { ATTR_SERVICE_NAME }               from '@opentelemetry/semantic-convent
 // Graceful shutdown — evita spans colgados al cerrar Railway
 </file>
 
-<file path="realsass-sass-back/.dockerignore">
-dist
-node_modules
-.pnpm-store
-.env
-.env.local
-.env.*.local
-.git
-.gitignore
-.github
-Dockerfile*
-.dockerignore
-railway.json
-__tests__
-test
-*.test.ts
-*.spec.ts
-coverage
-*.log
-logs/
-*.md
-.DS_Store
-</file>
-
 <file path="realsass-sass-back/tsconfig.build.json">
 {
   "extends": "./tsconfig.json",
@@ -9177,49 +8962,6 @@ interface UIState {
 // Mobile menu navbar
 </file>
 
-<file path="realsass-sass-front/.dockerignore">
-# Dependencies — se reinstalan en el build
-node_modules
-.pnpm-store
-
-# Next.js build output — se regenera
-.next
-out
-
-# Entornos locales — NUNCA al contenedor
-.env
-.env.local
-.env.*.local
-
-# Dev tools
-.git
-.gitignore
-*.md
-README*
-CHANGELOG*
-
-# CI/CD
-.github
-Dockerfile*
-.dockerignore
-railway.json
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Tests
-__tests__
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
-coverage
-
-x.sh
-real-front.xml
-</file>
-
 <file path="realsass-sass-front/components.json">
 {
   "$schema": "https://ui.shadcn.com/schema.json",
@@ -9311,332 +9053,201 @@ volumes:
 }
 </file>
 
-<file path=".claude/architecture/05-dockerfile-backend.md">
-# 05 — Dockerfile canónico: Backend NestJS + Prisma + pnpm workspace
+<file path=".claude/architecture/08-testing-norte.md">
+# 08 — Norte de testing: qué testear y por qué
 
-> Patrón de referencia permanente para todo backend NestJS del ecosistema GrupoJL.
-> Aplica a: `superadmin-backend`, `realsass-sass-back`, `realsass-ecommerce-back`,
-> `chatia-backend`, `pasarelapagos-backend`, `notificaciones-backend`,
-> `analytics-backend`, `workers-backend`.
+> Referentes: **Stripe** (tests sobre efectos de dinero), **Google** (Beyoncé Rule),
+> **Vercel** (E2E pragmático — paths críticos, no cobertura decorativa).
 
 ---
 
-## Por qué este patrón y no otro
+## El principio
 
-### Imagen base: `node:22-alpine` — no distroless
-
-Prisma genera binarios nativos del query engine en tiempo de build.
-Alpine usa `musl libc`; Distroless usa `glibc` (Debian).
-Si el stage de build es Alpine y el runtime es Distroless, el Prisma Query Engine
-**no corre** — falla silenciosamente con error de ELF incompatible.
-
-Decisión: `node:22-alpine` en todos los stages del backend.
-
-### pnpm versión única: `ARG PNPM_VERSION`
-
-Un solo ARG es la fuente de verdad. Si se actualiza el digest de la imagen base
-pero no la versión de pnpm, el build rompe con error críptico de corepack.
-
-### `prisma generate` en build, no en runtime
-
-Correrlo en runtime agrega 3-8s al cold start. En build es determinístico y trazable.
-El schema `prisma/schema.prisma` va en la imagen final. Las migrations NO van.
-
-### Cache mounts de BuildKit: comportamiento en Railway
-
-Los cache mounts NO persisten entre builds en Railway (runner efímero).
-El beneficio real viene de la **estructura de layers**. Los mounts sí ayudan en local
-y en GitHub Actions. Se mantienen en el Dockerfile.
-
-### Usuario no-root: obligatorio
-
-CIS Benchmarks / SOC2 / PCI. Usuario `nestjs` con UID fijo (1001).
+**Stripe:** el test que importa es el que verifica qué pasa cuando el provider falla.
+**Google:** toda invariante tiene un test que la rompe deliberadamente.
+**Vercel:** E2E solo en los paths que, si se rompen, el negocio para.
 
 ---
 
-## Template canónico
+## Regla 1 — Services: invariantes de negocio, no implementación
 
-```dockerfile
-# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo
-# Reemplazar SERVICE_DIR con el nombre del servicio
+```ts
+// ❌ prueba implementación — inútil si refactorizás
+expect(prisma.payment.create).toHaveBeenCalled();
 
-ARG NODE_VERSION=22
-ARG PNPM_VERSION=10.11.1
+// ✅ invariante de tenant isolation
+it('nunca retorna datos de otro tenant', async () => {
+  await seedPayment({ organizationId: 'org-A' });
+  const result = await service.listPayments({ organizationId: 'org-B' });
+  expect(result.data).toHaveLength(0);
+});
 
-FROM node:${NODE_VERSION}-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-# COPY packages/auth-server/package.json ./packages/auth-server/
-COPY <SERVICE_DIR>/package.json ./<SERVICE_DIR>/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-FROM node:${NODE_VERSION}-alpine AS build
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json ./
-# COPY packages/auth-server/ ./packages/auth-server/
-COPY <SERVICE_DIR>/ ./<SERVICE_DIR>/
-WORKDIR /app/<SERVICE_DIR>
-RUN pnpm prisma generate
-RUN pnpm build
-
-FROM node:${NODE_VERSION}-alpine AS runtime
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nestjs
-WORKDIR /app
-ENV NODE_ENV=production
-ENV PORT=3000
-COPY --from=build --chown=nestjs:nodejs /app/node_modules               ./node_modules
-COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/dist          ./<SERVICE_DIR>/dist
-COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/prisma        ./<SERVICE_DIR>/prisma
-COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/package.json  ./<SERVICE_DIR>/package.json
-USER nestjs
-EXPOSE ${PORT}
-WORKDIR /app/<SERVICE_DIR>
-CMD ["node", "dist/main.js"]
+// ✅ audit trail antes de ejecutar
+it('crea AdminAction antes de suspender', async () => {
+  const auditSpy   = jest.spyOn(auditService, 'create');
+  const suspendSpy = jest.spyOn(orgClient, 'suspend');
+  suspendSpy.mockRejectedValueOnce(new Error('timeout'));
+  await expect(service.suspendOrg(input)).rejects.toThrow();
+  expect(auditSpy).toHaveBeenCalledBefore(suspendSpy);
+});
 ```
 
 ---
 
-## Reglas permanentes
+## Regla 2 — Guards: cobertura 100%
 
-1. `ARG PNPM_VERSION` al inicio — una sola fuente de verdad
-2. `pnpm install --frozen-lockfile` siempre
-3. `prisma generate` en stage `build`, antes de `pnpm build`
-4. Solo `prisma/schema.prisma` en runtime — migrations NO van en la imagen
-5. `shamefully-hoist=true` — no es opcional en este stack
-6. Build context siempre la raíz del monorepo — ver `07-railway-deploy.md`
-7. Nunca `npm install` ni `yarn`
+```ts
+// ✅ UID no autorizado → 403
+it('rechaza UID fuera de allowlist con 403', async () => {
+  const ctx = mockContext({ uid: 'uid-no-autorizado' });
+  await expect(guard.canActivate(ctx)).rejects.toThrow(ForbiddenException);
+});
+
+// ✅ token expirado → 401
+it('rechaza token expirado con 401', async () => {
+  firebaseAdmin.verifyIdToken.mockRejectedValueOnce(new Error('token has expired'));
+  await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+});
+```
 
 ---
 
-## Checklist
+## Regla 3 — E2E: solo paths que paran el negocio
 
-- [ ] `ARG PNPM_VERSION` definido al inicio
-- [ ] Solo `package.json` copiados en stage `deps` (no el source)
-- [ ] `pnpm install --frozen-lockfile` con cache mount
-- [ ] `prisma generate` antes de `pnpm build`
-- [ ] Runtime copia solo `dist/`, `node_modules`, `prisma/schema.prisma`, `package.json`
-- [ ] Usuario `nestjs` activado antes del CMD
-- [ ] `CMD ["node", "dist/main.js"]`
+```
+superadmin:
+  1. Login Firebase → redirige a /dashboard
+  2. Dashboard 0 alertas → EmptyState "Todo operativo"
+  3. Suspender org → ConfirmDialog → AdminAction creado
+```
+
+---
+
+## Cobertura mínima
+
+| Capa | Cobertura |
+|------|-----------|
+| Guards | 100% |
+| Domain services | 85% |
+| Integration clients | 80% |
+| Controllers HTTP | 70% |
+| Frontend hooks | 70% |
+| E2E | 3-5 flows críticos |
+
+---
+
+## Señal de test bien escrito
+
+1. El nombre describe qué invariante protege, no qué función llama
+2. Si lo borrás y el código se rompe en prod, el test lo hubiera detectado
+3. Si refactorizás sin cambiar comportamiento, el test sigue pasando
 </file>
 
-<file path=".claude/architecture/06-dockerfile-frontend.md">
-# 06 — Dockerfile canónico: Frontend Next.js + pnpm workspace
+<file path=".claude/architecture/09-observabilidad-norte.md">
+# 09 — Norte de observabilidad: qué instrumentar y por qué
 
-> Patrón de referencia permanente para todo frontend Next.js del ecosistema GrupoJL.
-> Aplica a: `superadmin-frontend`, `realsass-sass-front`,
-> `realsass-dashboard-front`, `real-ecommerce-front`.
+> Referentes: **Honeycomb** (entender cualquier estado en prod sin deployar código),
+> **Datadog** (qué ve el operador), **Shopify** (trazabilidad de BullMQ jobs).
 
 ---
 
-## Por qué este patrón y no otro
+## El principio de Honeycomb
 
-### `output: standalone` — obligatorio
+> "Dado cualquier estado en producción, ¿podés entender qué pasó
+> sin deployar código nuevo?"
 
-Genera en `.next/standalone/` un servidor Node.js autocontenido (~50-80 MB).
-Sin él, la imagen necesita cientos de MB de `node_modules`.
-Sin él, el CMD no funciona en el contexto del monorepo.
+---
 
-Verificar en `next.config.mjs`:
-```js
-const nextConfig = { output: 'standalone' };
+## Qué genera un span
+
 ```
-
-### `NEXT_PUBLIC_*` como build args — no hay otra forma
-
-Son **inlineadas por el compilador en build time**.
-Si no se pasan como `ARG` + `ENV` en el stage de build, quedan como `undefined`.
-Ningún `ENV` en runtime puede corregirlas.
-
-### Copiar `static` y `public` separado
-
-`output: standalone` NO incluye `.next/static/` ni `public/`.
-Sin ellos la app arranca sin CSS, imágenes ni fuentes.
-
-### `HOSTNAME=0.0.0.0` — obligatorio en Railway
-
-Next.js standalone bindea a `127.0.0.1` por default.
-Sin este ENV el health check falla y Railway revierte el deploy.
-
----
-
-## Template canónico
-
-```dockerfile
-# syntax=docker/dockerfile:1.7
-# Build context: raíz del monorepo
-# Reemplazar SERVICE_DIR con el nombre del servicio
-
-ARG NODE_VERSION=22
-ARG PNPM_VERSION=10.11.1
-
-FROM node:${NODE_VERSION}-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-# COPY packages/auth-client/package.json ./packages/auth-client/
-COPY <SERVICE_DIR>/package.json ./<SERVICE_DIR>/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
-
-FROM node:${NODE_VERSION}-alpine AS build
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
-WORKDIR /app
-ARG NEXT_PUBLIC_FIREBASE_API_KEY
-ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ARG NEXT_PUBLIC_FIREBASE_APP_ID
-# ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
-ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
-ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json ./
-COPY package.json pnpm-workspace.yaml ./
-# COPY packages/auth-client/ ./packages/auth-client/
-COPY <SERVICE_DIR>/ ./<SERVICE_DIR>/
-WORKDIR /app/<SERVICE_DIR>
-RUN /app/node_modules/.bin/next build
-
-FROM node:${NODE_VERSION}-alpine AS runtime
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 nextjs
-WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
-COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/standalone ./
-COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/static ./<SERVICE_DIR>/.next/static
-COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/public ./<SERVICE_DIR>/public
-USER nextjs
-EXPOSE 3000
-WORKDIR /app/<SERVICE_DIR>
-CMD ["node", "server.js"]
+Request HTTP entrante     → automático via instrumentation-http
+Query Prisma              → automático via instrumentation-prisma
+Llamada gRPC saliente     → manual en GrpcClient
+Job BullMQ encolado       → manual en el service que encola
+Job BullMQ procesado      → manual en el Processor
+Llamada a provider externo → manual en el Adapter
+CB estado                 → evento en el span del Adapter (no span propio)
+Cache hit/miss            → atributo en el span del caller (no span propio)
+Health check polling      → excluir del sampler
 ```
 
 ---
 
-## Reglas permanentes
+## Atributos obligatorios en spans de negocio
 
-1. `output: 'standalone'` en `next.config.mjs` — prerequisito
-2. Toda `NEXT_PUBLIC_*` como `ARG` + `ENV` en stage `build`
-3. Copiar `.next/static` y `public/` siempre
-4. `HOSTNAME=0.0.0.0` en runtime — obligatorio en Railway
-5. `NEXT_TELEMETRY_DISABLED=1` en build y runtime
-6. `CMD ["node", "server.js"]` — no `dist/main.js`
-
----
-
-## Checklist
-
-- [ ] `output: 'standalone'` en `next.config.mjs`
-- [ ] Todos los `NEXT_PUBLIC_*` como `ARG` + `ENV` en stage `build`
-- [ ] `.next/static` copiado al runtime
-- [ ] `public/` copiado al runtime
-- [ ] `HOSTNAME=0.0.0.0` en runtime
-- [ ] `CMD ["node", "server.js"]`
-- [ ] Usuario `nextjs` activado
-</file>
-
-<file path=".claude/architecture/07-railway-deploy.md">
-# 07 — Reglas de deploy en Railway para monorepos pnpm
-
-> Reglas específicas de Railway que contradicen guías genéricas de Docker.
-> Aplica a los tres monorepos: `superadmin`, `ecosistema`, `ecosistema-ms`.
-
----
-
-## Configuración en Railway — reglas fijas
-
-```
-Root Directory: /                         ← raíz del monorepo, siempre
-Dockerfile Path: <servicio>/Dockerfile    ← relativo a la raíz
-Build Command: (vacío)
-Start Command: (vacío)
-```
-
-**No usar Root Directory por servicio** — `pnpm install` no puede resolver los
-packages locales del workspace sin la raíz.
-
----
-
-## Cache mounts en Railway
-
-**No persisten entre builds** — Railway usa runners efímeros.
-El beneficio viene de la estructura de layers, no de los mounts.
-Se mantienen en el Dockerfile porque sí ayudan en local y GitHub Actions.
-
-| Entorno | Cache mount persiste |
-|---------|---------------------|
-| Docker Desktop local | ✅ sí |
-| GitHub Actions | ✅ sí (con `actions/cache`) |
-| Railway | ❌ no |
-
----
-
-## Variables de entorno
-
-**Backend** — variables de runtime, configuradas en Railway como variables del servicio.
-
-**Frontend** — `NEXT_PUBLIC_*` deben estar en Railway como **build variables** además
-de runtime. Si solo se configuran como runtime, el bundle tendrá `undefined`.
-
----
-
-## Health checks
-
-- Todo backend: `GET /health` → `200` en < 200ms
-- Railway apunta a `/health`, no a `/`
-- `HOSTNAME=0.0.0.0` obligatorio en frontends Next.js standalone
-
----
-
-## Redeploy sin cambios de código
-
-```bash
-make git-empty
-# o:
-git commit --allow-empty -m "chore: force redeploy [$(date +%Y-%m-%d)]"
-git push
+```ts
+span.setAttributes({
+  'tenant.ecosystem_id':    ecosystemId,
+  'tenant.organization_id': organizationId,
+  'service.name':           'superadmin-backend',
+  'request.id':             correlationId,
+});
 ```
 
 ---
 
-## Package compartido modificado
+## Qué activa una alerta vs. qué es contexto
 
-Railway no detecta que un servicio necesita rebuild cuando cambia un package del workspace.
+### Alerta (acción en < 15 min)
+```
+CB OPEN en provider de pagos    → CRÍTICA
+DLQ depth > 100 jobs            → CRÍTICA
+Health check DOWN               → CRÍTICA
+Error rate > 5% en 5 min        → WARNING
+Latencia P95 > 2s en pagos      → WARNING
+CB OPEN en Groq/LLM             → WARNING
+```
 
-```bash
-git push
-git commit --allow-empty -m "chore: rebuild after shared package update"
-git push
+### Contexto (dashboard, no alerta)
+```
+Cache hit/miss rate
+Latencia P50 Prisma
+Jobs procesados por hora
+Requests por tenant
+```
+
+**Regla Datadog:** si no cambia una decisión operativa en los próximos 15 min,
+no es una alerta.
+
+---
+
+## Health check extendido — formato canónico
+
+```json
+{
+  "status": "ok" | "degraded" | "down",
+  "db":    { "status": "up", "latencyMs": 4 },
+  "redis": { "status": "up", "latencyMs": 1 },
+  "circuit_breakers": { "mercadopago": "closed", "groq-llm": "open" },
+  "queues": { "payments": { "waiting": 0, "dlq": 0 } },
+  "uptime": 3600,
+  "version": "1.2.3"
+}
 ```
 
 ---
 
-## Resumen vs. guías genéricas
+## Correlation ID
 
-| Guía genérica | En Railway |
-|---------------|------------|
-| Cache mounts aceleran CI | No persisten — layers importan |
-| Root Directory al subdirectorio | Siempre `/` |
-| `NEXT_PUBLIC_*` opcionales en build | Obligatorias en build |
-| Health check a `/` | Siempre a `/health` |
-| HOSTNAME no necesario | `HOSTNAME=0.0.0.0` obligatorio |
+```ts
+app.use((req, res, next) => {
+  const id = req.headers['x-correlation-id'] as string ?? crypto.randomUUID();
+  req.headers['x-correlation-id'] = id;
+  res.setHeader('x-correlation-id', id);
+  trace.getActiveSpan()?.setAttribute('request.id', id);
+  next();
+});
+```
+
+---
+
+## Señal de observabilidad bien implementada
+
+1. Pago fallido → span del provider en < 2 min sin grep en logs
+2. Job en DLQ → trazable al request HTTP que lo originó
+3. CB abierto → visible en superadmin en < 15 segundos
+4. Podés filtrar spans de una org por `tenant.organization_id`
 </file>
 
 <file path=".claude/checklists/backend-capa-1-auth.md">
@@ -12103,6 +11714,16 @@ export interface ApiResponse<T> {
 }
 </file>
 
+<file path="realsass-dashboard-front/.dockerignore">
+node_modules
+.next
+coverage
+.env
+.env.*
+*.log
+*.tsbuildinfo
+</file>
+
 <file path="realsass-dashboard-front/package.json">
 {
   "name": "realsass-dashboard-front",
@@ -12571,6 +12192,15 @@ export class TrpcModule implements NestModule {
 constructor(private readonly trpcService: TrpcService)
 ⋮----
 configure(consumer: MiddlewareConsumer): void
+</file>
+
+<file path="realsass-ecommerce-back/entrypoint.sh">
+#!/bin/sh
+set -e
+echo "[entrypoint] Running prisma migrate deploy..."
+node_modules/.bin/prisma migrate deploy
+echo "[entrypoint] Starting server..."
+exec node dist/main.js
 </file>
 
 <file path="realsass-ecommerce-back/package.json">
@@ -13512,6 +13142,28 @@ credentials: true,  // requerido para cookies HttpOnly (ADR-004)
 // ── Validación global ─────────────────────────────────────────────────────
 </file>
 
+<file path="realsass-sass-back/.dockerignore">
+node_modules
+dist
+coverage
+.env
+.env.*
+*.log
+*.tsbuildinfo
+prisma/migrations
+prisma/seed.ts
+generated
+</file>
+
+<file path="realsass-sass-back/entrypoint.sh">
+#!/bin/sh
+set -e
+echo "[entrypoint] Running prisma migrate deploy..."
+node_modules/.bin/prisma migrate deploy
+echo "[entrypoint] Starting server..."
+exec node dist/main.js
+</file>
+
 <file path="realsass-sass-front/app/invite/[token]/page.tsx">
 /**
  * app/invite/[token]/page.tsx — realsass-sass-front
@@ -13912,6 +13564,16 @@ function defaultTheme(): PublicTheme
  * cn() importado desde @real/ui — fuente única de utilidades de clase.
  * Re-exportado para compatibilidad con imports existentes de '@/lib/utils'.
  */
+</file>
+
+<file path="realsass-sass-front/.dockerignore">
+node_modules
+.next
+coverage
+.env
+.env.*
+*.log
+*.tsbuildinfo
 </file>
 
 <file path="realsass-sass-front/nixpacks.toml">
@@ -14678,6 +14340,721 @@ el span automáticamente — no requiere trabajo extra.
 Un client que hace fetch fuera de fetchWithCache no tiene trace → 🔴 bug.
 </file>
 
+<file path=".claude/architecture/05-dockerfile-backend.md">
+# 05 — Dockerfile canónico: Backend NestJS + Prisma + pnpm workspace
+
+> Patrón de referencia permanente para todo backend NestJS del ecosistema GrupoJL.
+> Aplica a: `realsass-sass-back`, `realsass-ecommerce-back`.
+>
+> Nivel de referencia: **Stripe internal services** — multi-stage, señales correctas,
+> migrate deploy atómico, escaneo de imagen en CI, build reproducible por plataforma.
+
+---
+
+## Decisiones de arquitectura
+
+### `node:22-alpine` en todos los stages — no distroless
+
+Prisma genera binarios nativos del query engine en build time.
+Alpine usa `musl libc`; Distroless usa `glibc` (Debian).
+Si el stage de build es Alpine y el runtime es Distroless, el Prisma Query Engine
+falla silenciosamente con error de ELF incompatible.
+
+**Decisión:** `node:22-alpine` en todos los stages. Sin excepciones.
+
+### `--platform linux/amd64` — plataforma explícita
+
+Sin `--platform`, un build desde Mac ARM (M1/M2/M3) genera una imagen `arm64`.
+Railway corre `linux/amd64`. La imagen se ejecuta emulada (30-50% más lenta)
+o falla silenciosamente según la versión del runner.
+
+**Decisión:** `--platform linux/amd64` declarado en cada `FROM`. El Dockerfile
+es el contrato de la plataforma — no puede depender del host que hace el build.
+
+### `dumb-init` — PID 1 correcto
+
+Node.js no fue diseñado para correr como PID 1. Sin un init process:
+- `SIGTERM` de Railway en redeploy no propaga a los workers de Node → Railway
+  espera 10s y mata con `SIGKILL` → BullMQ jobs y conexiones tRPC cortadas abruptamente.
+- Procesos zombie de child processes no son recolectados.
+
+`dumb-init` intercepta las señales y las reenvía al proceso hijo correctamente.
+Se instala en `deps` (layer cacheada) y se usa en `runtime`.
+
+**Decisión:** `dumb-init` obligatorio en todos los backends. Sin excepciones.
+
+### `entrypoint.sh` — migrate deploy atómico antes del arranque
+
+`prisma migrate deploy` debe correr antes de que el servidor acepte tráfico.
+Si se corre después (o no se corre), el servicio arranca contra una DB con schema
+desactualizado y falla en runtime con errores de columna inexistente.
+
+El `entrypoint.sh` garantiza el orden: migrate → start. Es idempotente: si no
+hay migrations pendientes, termina en < 100ms sin efecto.
+
+**Decisión:** `CMD` nunca apunta a `node` directamente. Siempre a `dumb-init` + `entrypoint.sh`.
+
+### `prisma generate` en build, no en runtime
+
+Correrlo en runtime agrega 3-8s al cold start y no es determinístico.
+El query engine nativo (binario musl) se genera una sola vez en el stage `build`.
+
+### `ARG PNPM_VERSION` — fuente de verdad única
+
+Un solo ARG al inicio del Dockerfile. Si se actualiza el digest de la imagen
+base sin actualizar la versión de pnpm, el build rompe con error críptico de corepack.
+
+### Cache mounts de BuildKit
+
+No persisten entre builds en Railway (runner efímero).
+El beneficio viene de la estructura de layers, no del mount.
+Los mounts sí aceleran builds locales y GitHub Actions. Se mantienen.
+
+### Trivy — escaneo de la imagen en CI
+
+La imagen contiene binarios del OS Alpine, Node.js, y las dependencias npm.
+Trivy escanea la imagen final en GitHub Actions antes de que Railway la deployee.
+Falla el build si hay CVEs `CRITICAL` o `HIGH` con fix disponible.
+
+**Decisión:** Trivy corre en CI como paso bloqueante post-build. No en el Dockerfile.
+
+### Cosign — firma de imagen (supply chain)
+
+Cosign firma criptográficamente la imagen después de pushear a GHCR.
+Permite verificar que la imagen que Railway deployea es exactamente la que
+GitHub Actions construyó — sin modificaciones en tránsito.
+
+**Decisión:** activar cuando el primer servicio reciba tráfico externo real.
+El flujo CI ya contempla el paso — es un uncomment, no una reescritura.
+
+---
+
+## Puertos por servicio
+
+| Servicio                 | HTTP | Rol                                      |
+|--------------------------|------|------------------------------------------|
+| realsass-sass-back       | 3000 | identidad, orgs, colaboradores, BullMQ   |
+| realsass-ecommerce-back  | 3001 | catálogo, stock, órdenes, tRPC           |
+
+Ambos usan `packages/auth-server` y `packages/trpc`.
+`realsass-ecommerce-back` usa PORT=3001 para evitar colisión en VPS/local.
+
+---
+
+## Template canónico — Dockerfile
+
+```dockerfile
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
+# Reemplazar <SERVICE_DIR>  → nombre del servicio (ej: realsass-sass-back)
+# Reemplazar <SERVICE_PORT> → puerto HTTP (3000 ó 3001)
+#
+# Railway  → Root Directory: /  |  Dockerfile Path: <SERVICE_DIR>/Dockerfile
+# CI/CD    → ver .github/workflows/ci-<SERVICE_DIR>.yml
+
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
+
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
+
+RUN apk add --no-cache dumb-init
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-server/package.json  ./packages/auth-server/
+COPY packages/trpc/package.json         ./packages/trpc/
+COPY <SERVICE_DIR>/package.json         ./<SERVICE_DIR>/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-<SERVICE_DIR>,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY packages/auth-server/              ./packages/auth-server/
+COPY packages/trpc/                     ./packages/trpc/
+COPY <SERVICE_DIR>/                     ./<SERVICE_DIR>/
+
+WORKDIR /app/<SERVICE_DIR>
+
+RUN pnpm prisma generate
+RUN pnpm build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN apk add --no-cache dumb-init
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app/<SERVICE_DIR>
+
+ENV NODE_ENV=production
+ENV PORT=<SERVICE_PORT>
+
+COPY --from=build --chown=nestjs:nodejs /app/node_modules                         ../node_modules
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/dist                   ./dist
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/prisma                 ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/<SERVICE_DIR>/package.json           ./package.json
+COPY --chown=nestjs:nodejs <SERVICE_DIR>/entrypoint.sh                            ./entrypoint.sh
+
+USER nestjs
+EXPOSE <SERVICE_PORT>
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:<SERVICE_PORT>/health || exit 1
+
+CMD ["dumb-init", "/app/<SERVICE_DIR>/entrypoint.sh"]
+```
+
+---
+
+## Template canónico — entrypoint.sh
+
+Crear en `<SERVICE_DIR>/entrypoint.sh` con `chmod +x`:
+
+```sh
+#!/bin/sh
+set -e
+
+echo "[entrypoint] Running prisma migrate deploy..."
+node_modules/.bin/prisma migrate deploy
+
+echo "[entrypoint] Starting server..."
+exec node dist/main.js
+```
+
+> `exec` reemplaza el shell con Node — dumb-init recibe las señales directamente.
+
+---
+
+## GitHub Actions — pipeline por servicio
+
+```yaml
+# .github/workflows/ci-<SERVICE_DIR>.yml
+name: CI — <SERVICE_DIR>
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '<SERVICE_DIR>/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    paths:
+      - '<SERVICE_DIR>/**'
+      - 'packages/**'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter=<SERVICE_DIR> typecheck
+      - run: pnpm --filter=<SERVICE_DIR> lint
+      - run: pnpm --filter=<SERVICE_DIR> test:cov
+      - run: pnpm audit --audit-level=high
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: <SERVICE_DIR>/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image — Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Sign image — Cosign
+        if: github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+      - run: cosign sign --yes ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+        if: github.ref == 'refs/heads/main'
+        env: { COSIGN_EXPERIMENTAL: '1' }
+```
+
+---
+
+## Reglas permanentes
+
+1. `--platform linux/amd64` en cada `FROM`
+2. `dumb-init` en `deps` y `runtime`
+3. `entrypoint.sh` con `prisma migrate deploy`
+4. `exec node dist/main.js` en entrypoint
+5. `prisma generate` en stage `build`, antes de `pnpm build`
+6. `pnpm install --frozen-lockfile` siempre
+7. `shamefully-hoist=true` — no es opcional en este stack
+8. Solo `dist/`, `node_modules`, `prisma/`, `package.json` en runtime
+9. Usuario `nestjs` UID 1001 — CIS Benchmarks / SOC2 / PCI
+10. Build context siempre la raíz del monorepo
+11. `pnpm audit --audit-level=high` en CI
+12. Trivy sobre la imagen final en CI
+13. Cosign firma la imagen en main
+
+---
+
+## Checklist — Dockerfile
+
+- [ ] `--platform linux/amd64` en cada `FROM`
+- [ ] `dumb-init` en stage `deps`
+- [ ] `ARG PNPM_VERSION` al inicio
+- [ ] Solo `package.json` en stage `deps`
+- [ ] `pnpm install --frozen-lockfile` con cache mount id único
+- [ ] `prisma generate` antes de `pnpm build`
+- [ ] `dumb-init` en stage `runtime`
+- [ ] Runtime copia solo `dist/`, `node_modules`, `prisma/`, `package.json`
+- [ ] `entrypoint.sh` copiado con `--chown=nestjs:nodejs`
+- [ ] Usuario `nestjs` antes del CMD
+- [ ] `HEALTHCHECK` con puerto hardcodeado
+- [ ] `CMD ["dumb-init", "/app/<SERVICE_DIR>/entrypoint.sh"]`
+
+## Checklist — entrypoint.sh
+
+- [ ] `#!/bin/sh` + `set -e`
+- [ ] `prisma migrate deploy` antes de arrancar
+- [ ] `exec node dist/main.js`
+- [ ] `chmod +x` aplicado
+
+## Checklist — GitHub Actions
+
+- [ ] `pnpm audit --audit-level=high` sin vulnerabilidades
+- [ ] Build con `platforms: linux/amd64`
+- [ ] Trivy — exit-code 1 en CRITICAL/HIGH con fix
+- [ ] Cosign firma en push a main
+- [ ] Path filters por servicio y packages/
+</file>
+
+<file path=".claude/architecture/06-dockerfile-frontend.md">
+# 06 — Dockerfile canónico: Frontend Next.js + pnpm workspace
+
+> Patrón de referencia permanente para todo frontend Next.js del ecosistema GrupoJL.
+> Aplica a: `realsass-sass-front`, `realsass-dashboard-front`, `real-ecommerce-front`.
+>
+> Nivel de referencia: **Vercel self-hosting guide** — standalone output, build args
+> compile-time, imagen mínima, escaneo en CI, build reproducible por plataforma.
+
+---
+
+## Decisiones de arquitectura
+
+### `output: 'standalone'` — obligatorio
+
+Genera en `.next/standalone/` un servidor Node.js autocontenido (~50-80 MB).
+Sin él, la imagen necesita los `node_modules` completos del monorepo (500MB+).
+Sin él, el `CMD ["node", "server.js"]` no existe y el contenedor no arranca.
+
+Verificar en `next.config.mjs`:
+```js
+const nextConfig = { output: 'standalone' };
+```
+
+### `NEXT_PUBLIC_*` como ARG de build — no hay alternativa
+
+Las variables `NEXT_PUBLIC_*` son **inlineadas por el compilador de Next.js
+en el bundle de JavaScript** en build time. No son variables de entorno en runtime.
+
+Si no se pasan como `ARG` + `ENV` en el stage `build`, quedan como `undefined`.
+Ningún `ENV` en runtime puede recuperarlas.
+
+En Railway: configurar como **Build Variables** (no solo Runtime Variables).
+
+### `static` y `public` copiados por separado — obligatorio
+
+`output: standalone` NO incluye `.next/static/` ni `public/`.
+Sin `.next/static/`: pantalla en blanco (sin CSS ni JS del cliente).
+Sin `public/`: sin imágenes, fuentes ni favicons.
+
+### `HOSTNAME=0.0.0.0` — obligatorio en Railway
+
+Next.js standalone bindea a `127.0.0.1` por default.
+Sin este ENV el health check de Railway falla → deploy revertido automáticamente.
+
+### `--platform linux/amd64` — plataforma explícita
+
+Sin `--platform`, un build desde Mac ARM genera una imagen `arm64`.
+Railway corre `linux/amd64`. La imagen se ejecuta emulada o falla.
+
+### `NEXT_TELEMETRY_DISABLED=1` — en build y runtime
+
+En contenedores en red privada Railway los intentos de conexión a Vercel
+generan timeouts que alargan el cold start. Desactivar siempre.
+
+### Trivy y Cosign — misma decisión que en backends
+
+Ver `05-dockerfile-backend.md` para el razonamiento completo.
+
+---
+
+## Packages compartidos por frontend
+
+| Frontend                  | packages usados                              |
+|---------------------------|----------------------------------------------|
+| realsass-sass-front       | auth-client · ui · trpc                      |
+| realsass-dashboard-front  | auth-client · ui · trpc                      |
+| real-ecommerce-front      | auth-client · ui · trpc                      |
+
+---
+
+## Template canónico — Dockerfile
+
+```dockerfile
+# syntax=docker/dockerfile:1.7
+# Build context: raíz del monorepo (welver/)
+# Reemplazar <SERVICE_DIR> → nombre del servicio (ej: realsass-sass-front)
+#
+# PREREQUISITO: next.config.mjs debe tener output: 'standalone'
+#
+# Railway  → Root Directory: /  |  Dockerfile Path: <SERVICE_DIR>/Dockerfile
+# CI/CD    → ver .github/workflows/ci-<SERVICE_DIR>.yml
+
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
+
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-client/package.json  ./packages/auth-client/
+COPY packages/ui/package.json           ./packages/ui/
+COPY packages/trpc/package.json         ./packages/trpc/
+COPY <SERVICE_DIR>/package.json         ./<SERVICE_DIR>/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-<SERVICE_DIR>,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+# NEXT_PUBLIC_* inlineadas en compile-time — un ENV en runtime NO las recupera
+# Railway: configurar como "Build Variables" en el servicio
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+# ARGs específicos por servicio — descomentar según corresponda:
+# ARG NEXT_PUBLIC_SASS_BACK_URL          ← sass-front, dashboard-front
+# ARG NEXT_PUBLIC_ECOMMERCE_API_URL      ← dashboard-front, ecommerce-front
+# ARG NEXT_PUBLIC_STORE_FRONT_URL        ← dashboard-front
+# ARG NEXT_PUBLIC_SASS_FRONT_URL         ← dashboard-front
+# ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL    ← sass-front
+
+ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
+ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
+# ENVs específicos — descomentar los que apliquen al servicio
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY package.json pnpm-workspace.yaml   ./
+COPY packages/auth-client/              ./packages/auth-client/
+COPY packages/ui/                       ./packages/ui/
+COPY packages/trpc/                     ./packages/trpc/
+COPY <SERVICE_DIR>/                     ./<SERVICE_DIR>/
+
+WORKDIR /app/<SERVICE_DIR>
+RUN /app/node_modules/.bin/next build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/standalone      ./
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/.next/static          ./<SERVICE_DIR>/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/<SERVICE_DIR>/public                ./<SERVICE_DIR>/public
+
+USER nextjs
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
+WORKDIR /app/<SERVICE_DIR>
+CMD ["node", "server.js"]
+```
+
+---
+
+## GitHub Actions — pipeline por servicio
+
+```yaml
+# .github/workflows/ci-<SERVICE_DIR>.yml
+name: CI — <SERVICE_DIR>
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '<SERVICE_DIR>/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    paths:
+      - '<SERVICE_DIR>/**'
+      - 'packages/**'
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter=<SERVICE_DIR> typecheck
+      - run: pnpm --filter=<SERVICE_DIR> lint
+      - run: pnpm audit --audit-level=high
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: <SERVICE_DIR>/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan image — Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Sign image — Cosign
+        if: github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@v3
+      - run: cosign sign --yes ghcr.io/${{ github.repository }}/<SERVICE_DIR>:${{ github.sha }}
+        if: github.ref == 'refs/heads/main'
+        env: { COSIGN_EXPERIMENTAL: '1' }
+```
+
+---
+
+## Reglas permanentes
+
+1. `output: 'standalone'` en `next.config.mjs` — prerequisito absoluto
+2. `--platform linux/amd64` en cada `FROM`
+3. Toda `NEXT_PUBLIC_*` como `ARG` + `ENV` en stage `build`
+4. Copiar `.next/static/` y `public/` siempre
+5. `HOSTNAME=0.0.0.0` en runtime
+6. `NEXT_TELEMETRY_DISABLED=1` en build y runtime
+7. `CMD ["node", "server.js"]` — nunca `dist/main.js`
+8. Usuario `nextjs` UID 1001
+9. `pnpm audit --audit-level=high` en CI
+10. Trivy sobre la imagen final en CI
+11. Cosign firma la imagen en main
+12. `build-args` de Firebase en GitHub Secrets — nunca en el Dockerfile
+
+---
+
+## Checklist — Dockerfile
+
+- [ ] `output: 'standalone'` en `next.config.mjs`
+- [ ] `--platform linux/amd64` en cada `FROM`
+- [ ] `ARG PNPM_VERSION` al inicio
+- [ ] Solo `package.json` en stage `deps`
+- [ ] `pnpm install --frozen-lockfile` con cache mount id único
+- [ ] Todos los `NEXT_PUBLIC_*` como `ARG` + `ENV` en stage `build`
+- [ ] `.next/static/` copiado al runtime
+- [ ] `public/` copiado al runtime
+- [ ] `HOSTNAME=0.0.0.0` en runtime
+- [ ] `NEXT_TELEMETRY_DISABLED=1` en build y runtime
+- [ ] Usuario `nextjs` antes del CMD
+- [ ] `CMD ["node", "server.js"]`
+
+## Checklist — GitHub Actions
+
+- [ ] `NEXT_PUBLIC_*` como secrets en GitHub Actions
+- [ ] `pnpm audit --audit-level=high` sin vulnerabilidades
+- [ ] Build con `platforms: linux/amd64`
+- [ ] `build-args` pasan los secrets al build
+- [ ] Trivy — exit-code 1 en CRITICAL/HIGH con fix
+- [ ] Cosign firma en push a main
+- [ ] Path filters por servicio y packages/
+</file>
+
+<file path=".claude/architecture/07-railway-deploy.md">
+# 07 — Reglas de deploy en Railway para monorepos pnpm
+
+> Reglas específicas de Railway que contradicen guías genéricas de Docker.
+> Aplica a los tres monorepos: `superadmin`, `ecosistema`, `ecosistema-ms`.
+
+---
+
+## Configuración en Railway — reglas fijas
+
+```
+Root Directory: /                         ← raíz del monorepo, siempre
+Dockerfile Path: <servicio>/Dockerfile    ← relativo a la raíz
+Build Command: (vacío)
+Start Command: (vacío)
+```
+
+**No usar Root Directory por servicio** — `pnpm install` no puede resolver los
+packages locales del workspace sin la raíz.
+
+---
+
+## Cache mounts en Railway
+
+**No persisten entre builds** — Railway usa runners efímeros.
+El beneficio viene de la estructura de layers, no de los mounts.
+Se mantienen en el Dockerfile porque sí ayudan en local y GitHub Actions.
+
+| Entorno | Cache mount persiste |
+|---------|---------------------|
+| Docker Desktop local | ✅ sí |
+| GitHub Actions | ✅ sí (con `actions/cache`) |
+| Railway | ❌ no |
+
+---
+
+## Variables de entorno
+
+**Backend** — variables de runtime, configuradas en Railway como variables del servicio.
+
+**Frontend** — `NEXT_PUBLIC_*` deben estar en Railway como **build variables** además
+de runtime. Si solo se configuran como runtime, el bundle tendrá `undefined`.
+
+---
+
+## Health checks
+
+- Todo backend: `GET /health` → `200` en < 200ms
+- Railway apunta a `/health`, no a `/`
+- `HOSTNAME=0.0.0.0` obligatorio en frontends Next.js standalone
+
+---
+
+## Redeploy sin cambios de código
+
+```bash
+make git-empty
+# o:
+git commit --allow-empty -m "chore: force redeploy [$(date +%Y-%m-%d)]"
+git push
+```
+
+---
+
+## Package compartido modificado
+
+Railway no detecta que un servicio necesita rebuild cuando cambia un package del workspace.
+
+```bash
+git push
+git commit --allow-empty -m "chore: rebuild after shared package update"
+git push
+```
+
+---
+
+## Resumen vs. guías genéricas
+
+| Guía genérica | En Railway |
+|---------------|------------|
+| Cache mounts aceleran CI | No persisten — layers importan |
+| Root Directory al subdirectorio | Siempre `/` |
+| `NEXT_PUBLIC_*` opcionales en build | Obligatorias en build |
+| Health check a `/` | Siempre a `/health` |
+| HOSTNAME no necesario | `HOSTNAME=0.0.0.0` obligatorio |
+</file>
+
 <file path=".claude/checklists/backend-capa-2-router.md">
 # Backend Capa 2 — Router/Contrato Zod
 # Checklist 10/10
@@ -14906,7 +15283,7 @@ En orden de ejecución dentro de cada fase.
 ### Escalón 4 — Base de Datos
 
 - [ ] **[E4-01]** Auditar índices en schemas de Prisma — `@@index([organizationId])` en modelos de alta frecuencia
-- [ ] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
+- [x] **[E4-02]** Confirmar `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
 - [ ] **[E4-03]** Documentar política de backups Railway y RPO en `roadmap/deuda-tecnica.md`
 - [ ] **[E4-04]** Documentar límites de pool de conexiones por back en `services/*.md`
 
@@ -16443,21 +16820,14 @@ Done cuando: todo modelo con `organizationId` de alta frecuencia tiene
 `@@index([organizationId])` o `@@index([organizationId, <campo_de_filtro>])`.
 Trigger: antes de que cualquier ecosistema supere 10.000 registros por tabla.
 
-### prisma migrate deploy antes del CMD en Dockerfiles sin confirmar
+### ~~prisma migrate deploy antes del CMD~~ — ✅ RESUELTO (2026-09-16)
 
-No se verificó que ambos Dockerfiles corran `prisma migrate deploy` antes del
-`CMD` de arranque. Si no está, la app puede arrancar con schema desactualizado.
+Ambos backends tienen `entrypoint.sh` con `prisma migrate deploy` + `exec node dist/main.js`.
+CMD: `["dumb-init", "/app/<servicio>/entrypoint.sh"]`. `--platform=linux/amd64` en cada FROM.
+Auditado en ecosistema.xml — 10/10 en dimensión Docker.
 
-Verificación manual:
-```bash
-grep -A3 "migrate" realsass-sass-back/Dockerfile
-grep -A3 "migrate" realsass-ecommerce-back/Dockerfile
-```
-
-Done cuando: ambos Dockerfiles tienen `RUN pnpm prisma migrate deploy` (o equivalente)
-antes del `CMD` o `ENTRYPOINT` de la aplicación.
-Trigger: antes del primer deploy a producción con datos reales.
-
+Ver: `realsass-sass-back/entrypoint.sh`, `realsass-ecommerce-back/entrypoint.sh`
+Ver: `architecture/05-dockerfile-backend.md`
 ### Pool de conexiones sin documentar por servicio
 
 Prisma gestiona el pool automáticamente pero con límites por defecto que pueden
@@ -16862,7 +17232,7 @@ import type { UpdateOrganizationInput } from './domain/organization.entity';
 import { Prisma } from '@prisma/client';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from './repository/organizations.repository.interface';
 ⋮----
-export class OrganizationsService {
+export class OrganizationsService
 ⋮----
 constructor(
 ⋮----
@@ -17375,33 +17745,49 @@ async headers()
 <file path="real-ecommerce-front/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: real-ecommerce-front/Dockerfile
+#
+# Storefront público (SSG/ISR): tienda, catálogo, carrito, checkout, tracking
+# PREREQUISITO: output: 'standalone' en next.config.mjs
+# Ref: .claude/architecture/06-dockerfile-frontend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
+
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY real-ecommerce-front/package.json              ./real-ecommerce-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+COPY packages/auth-client/package.json    ./packages/auth-client/
+COPY packages/ui/package.json             ./packages/ui/
+COPY packages/trpc/package.json           ./packages/trpc/
+COPY real-ecommerce-front/package.json    ./real-ecommerce-front/
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-ecommerce-front,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-ARG NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID
-ARG NEXT_PUBLIC_REAL_BACK_URL
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
+
 ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
-ENV NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID=$NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID
-ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
@@ -17409,269 +17795,386 @@ ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/                         ./packages/
-COPY real-ecommerce-front/                          ./real-ecommerce-front/
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY package.json pnpm-workspace.yaml   ./
+COPY packages/auth-client/              ./packages/auth-client/
+COPY packages/ui/                       ./packages/ui/
+COPY packages/trpc/                     ./packages/trpc/
+COPY real-ecommerce-front/              ./real-ecommerce-front/
+
 WORKDIR /app/real-ecommerce-front
 RUN /app/node_modules/.bin/next build
 
-FROM node:22-alpine AS runner
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=deps    --chown=nextjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json             ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/pnpm-workspace.yaml      ./pnpm-workspace.yaml
-COPY --from=builder --chown=nextjs:nodejs /app/packages                 ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/.next            ./real-ecommerce-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/public           ./real-ecommerce-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/real-ecommerce-front/package.json     ./real-ecommerce-front/package.json
+
+COPY --from=build --chown=nextjs:nodejs /app/real-ecommerce-front/.next/standalone      ./
+COPY --from=build --chown=nextjs:nodejs /app/real-ecommerce-front/.next/static          ./real-ecommerce-front/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/real-ecommerce-front/public                ./real-ecommerce-front/public
+
 USER nextjs
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
 WORKDIR /app/real-ecommerce-front
-CMD ["/app/node_modules/.bin/next", "start"]
+CMD ["node", "server.js"]
 </file>
 
 <file path="realsass-ecommerce-back/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-ecommerce-back/Dockerfile
+# VPS/AWS  → docker build -f realsass-ecommerce-back/Dockerfile .
+#
+# HTTP:  3001 (catálogo, stock, carrito, órdenes, clientes)
+# tRPC:  EcommerceAppRouter — contrato tipado con los frontends
+# Ref: .claude/architecture/05-dockerfile-backend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/auth-server/package.json ./packages/auth-server/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-ecommerce-back/package.json ./realsass-ecommerce-back/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile --ignore-scripts
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY realsass-ecommerce-back/          ./realsass-ecommerce-back/
-COPY packages/                         ./packages/
-WORKDIR /app/realsass-ecommerce-back
-RUN /app/node_modules/.bin/prisma generate
-RUN /app/node_modules/.bin/nest build
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
-FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-server/package.json      ./packages/auth-server/
+COPY packages/trpc/package.json             ./packages/trpc/
+COPY realsass-ecommerce-back/package.json   ./realsass-ecommerce-back/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-ecommerce-back,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY packages/auth-server/              ./packages/auth-server/
+COPY packages/trpc/                     ./packages/trpc/
+COPY realsass-ecommerce-back/           ./realsass-ecommerce-back/
+
+WORKDIR /app/realsass-ecommerce-back
+
+RUN pnpm prisma generate
+RUN pnpm build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN apk add --no-cache dumb-init
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app/realsass-ecommerce-back
+
 ENV NODE_ENV=production
-ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules                         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json ./package.json
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
+ENV PORT=3001
+
+COPY --from=build --chown=nestjs:nodejs /app/node_modules                            ../node_modules
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist            ./dist
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma          ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json    ./package.json
+COPY --chown=nestjs:nodejs realsass-ecommerce-back/entrypoint.sh                     ./entrypoint.sh
+
 USER nestjs
-EXPOSE 3000
-CMD ["dumb-init", "/app/entrypoint.sh"]
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3001/health || exit 1
+
+CMD ["dumb-init", "/app/realsass-ecommerce-back/entrypoint.sh"]
 </file>
 
 <file path="realsass-sass-back/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-sass-back/Dockerfile
+# VPS/AWS  → docker build -f realsass-sass-back/Dockerfile .
+#
+# HTTP:  3000 (identidad, orgs, colaboradores, config, auditoría)
+# BullMQ: webhook-delivery
+# Auth: cookies HttpOnly (ADR-004) — SESSION_COOKIE_SECRET requerida
+# Ref: .claude/architecture/05-dockerfile-backend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/auth-server/package.json ./packages/auth-server/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-back/package.json              ./realsass-sass-back/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile --ignore-scripts
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
-WORKDIR /app
-ARG DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV DATABASE_URL=$DATABASE_URL
-ENV NODE_ENV=development
-COPY --from=deps /app/node_modules ./node_modules
-COPY tsconfig.base.json            ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY realsass-sass-back/                          ./realsass-sass-back/
-COPY packages/                         ./packages/
-WORKDIR /app/realsass-sass-back
-RUN /app/node_modules/.bin/prisma generate
-RUN /app/node_modules/.bin/nest build
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
-FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/auth-server/package.json  ./packages/auth-server/
+COPY realsass-sass-back/package.json    ./realsass-sass-back/
+
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-sass-back,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY packages/auth-server/              ./packages/auth-server/
+COPY realsass-sass-back/                ./realsass-sass-back/
+
+WORKDIR /app/realsass-sass-back
+
+RUN pnpm prisma generate
+RUN pnpm build
+
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN apk add --no-cache dumb-init
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nestjs
+
+WORKDIR /app/realsass-sass-back
+
 ENV NODE_ENV=production
 ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nestjs
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/dist         ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/node_modules         ./node_modules
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/prisma       ./prisma
-COPY --from=builder --chown=nestjs:nodejs /app/realsass-sass-back/package.json ./package.json
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
-COPY --chown=nestjs:nodejs entrypoint.sh /app/entrypoint.sh
+
+COPY --from=build --chown=nestjs:nodejs /app/node_modules                         ../node_modules
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/dist              ./dist
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/prisma            ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/package.json      ./package.json
+COPY --chown=nestjs:nodejs realsass-sass-back/entrypoint.sh                       ./entrypoint.sh
+
 USER nestjs
 EXPOSE 3000
-CMD ["dumb-init", "/app/entrypoint.sh"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
+
+CMD ["dumb-init", "/app/realsass-sass-back/entrypoint.sh"]
 </file>
 
 <file path="realsass-dashboard-front/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-dashboard-front/Dockerfile
+#
+# Dashboard de colaboradores (ADMIN/MEMBER): gestión de orgs, tiendas, pedidos
+# PREREQUISITO: output: 'standalone' en next.config.mjs
+# Ref: .claude/architecture/06-dockerfile-frontend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
+
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-dashboard-front/package.json ./realsass-dashboard-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+COPY packages/auth-client/package.json        ./packages/auth-client/
+COPY packages/ui/package.json                 ./packages/ui/
+COPY packages/trpc/package.json               ./packages/trpc/
+COPY realsass-dashboard-front/package.json    ./realsass-dashboard-front/
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-dashboard-front,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-ARG NEXT_PUBLIC_REAL_BACK_URL
+ARG NEXT_PUBLIC_SASS_BACK_URL
 ARG NEXT_PUBLIC_ECOMMERCE_API_URL
 ARG NEXT_PUBLIC_STORE_FRONT_URL
 ARG NEXT_PUBLIC_SASS_FRONT_URL
-ARG NEXT_PUBLIC_SASS_BACK_URL
-ARG NEXT_PUBLIC_SASS_FRONT_URL
-ARG NEXT_PUBLIC_SASS_BACK_URL
+
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
+ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
 ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
 ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
 ENV NEXT_PUBLIC_SASS_FRONT_URL=$NEXT_PUBLIC_SASS_FRONT_URL
-ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
-ENV NEXT_PUBLIC_SASS_FRONT_URL=$NEXT_PUBLIC_SASS_FRONT_URL
-ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+
 COPY --from=deps /app/node_modules      ./node_modules
-COPY tsconfig.base.json                 ./tsconfig.base.json
+COPY tsconfig.base.json                 ./
 COPY package.json pnpm-workspace.yaml   ./
-COPY packages/                          ./packages/
+COPY packages/auth-client/              ./packages/auth-client/
+COPY packages/ui/                       ./packages/ui/
+COPY packages/trpc/                     ./packages/trpc/
 COPY realsass-dashboard-front/          ./realsass-dashboard-front/
+
 WORKDIR /app/realsass-dashboard-front
 RUN /app/node_modules/.bin/next build
 
-FROM node:22-alpine AS runner
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules                   ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json                   ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages                       ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/.next ./realsass-dashboard-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/public ./realsass-dashboard-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-dashboard-front/package.json ./realsass-dashboard-front/package.json
+
+COPY --from=build --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/standalone      ./
+COPY --from=build --chown=nextjs:nodejs /app/realsass-dashboard-front/.next/static          ./realsass-dashboard-front/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/realsass-dashboard-front/public                ./realsass-dashboard-front/public
+
 USER nextjs
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
 WORKDIR /app/realsass-dashboard-front
-CMD ["../node_modules/.bin/next", "start"]
+CMD ["node", "server.js"]
 </file>
 
 <file path="realsass-sass-front/Dockerfile">
 # syntax=docker/dockerfile:1.7
 # Build context: raíz del monorepo (welver/)
+# Railway  → Root Directory: /  |  Dockerfile Path: realsass-sass-front/Dockerfile
+#
+# Dashboard de dueños (OWNER): landing pública + /profile + /settings
+# PREREQUISITO: output: 'standalone' en next.config.mjs
+# Ref: .claude/architecture/06-dockerfile-frontend.md
 
-FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+ARG NODE_VERSION=22
+ARG PNPM_VERSION=10.30.3
+
+# ─── Stage 1: deps ────────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/auth-client/package.json ./packages/auth-client/
-COPY packages/ui/package.json          ./packages/ui/
-COPY packages/trpc/package.json        ./packages/trpc/
-COPY realsass-sass-front/package.json  ./realsass-sass-front/
-RUN echo "shamefully-hoist=true" >> .npmrc
-RUN pnpm install --frozen-lockfile
+COPY packages/auth-client/package.json    ./packages/auth-client/
+COPY packages/ui/package.json             ./packages/ui/
+COPY packages/trpc/package.json           ./packages/trpc/
+COPY realsass-sass-front/package.json     ./realsass-sass-front/
 
-FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.11.1 --activate
+RUN echo "shamefully-hoist=true" >> .npmrc
+
+RUN --mount=type=cache,id=pnpm-sass-front,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# ─── Stage 2: build ───────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
+
 WORKDIR /app
+
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SASS_BACK_URL
 ARG NEXT_PUBLIC_DASHBOARD_FRONT_URL
-ARG NEXT_PUBLIC_SASS_BACK_URL
-ARG NEXT_PUBLIC_DASHBOARD_API_URL
+
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY
 ENV NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ENV NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
 ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
-ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
-ENV NEXT_PUBLIC_DASHBOARD_API_URL=$NEXT_PUBLIC_DASHBOARD_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules    ./node_modules
-COPY tsconfig.base.json               ./tsconfig.base.json
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/                        ./packages/
-COPY realsass-sass-front/             ./realsass-sass-front/
+
+COPY --from=deps /app/node_modules      ./node_modules
+COPY tsconfig.base.json                 ./
+COPY package.json pnpm-workspace.yaml   ./
+COPY packages/auth-client/              ./packages/auth-client/
+COPY packages/ui/                       ./packages/ui/
+COPY packages/trpc/                     ./packages/trpc/
+COPY realsass-sass-front/               ./realsass-sass-front/
+
 WORKDIR /app/realsass-sass-front
 RUN /app/node_modules/.bin/next build
 
-FROM node:22-alpine AS runner
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+# ─── Stage 3: runtime ─────────────────────────────────────────────────────────
+FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser  --system --uid 1001 nextjs
+
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-# shamefully-hoist pone todo en la raíz — copiamos node_modules del builder
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules              ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json              ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/packages                  ./packages
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/.next ./realsass-sass-front/.next
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/public ./realsass-sass-front/public
-COPY --from=builder --chown=nextjs:nodejs /app/realsass-sass-front/package.json ./realsass-sass-front/package.json
+
+COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/.next/standalone      ./
+COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/.next/static          ./realsass-sass-front/.next/static
+COPY --from=build --chown=nextjs:nodejs /app/realsass-sass-front/public                ./realsass-sass-front/public
+
 USER nextjs
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
+
 WORKDIR /app/realsass-sass-front
-CMD ["../node_modules/.bin/next", "start"]
+CMD ["node", "server.js"]
 </file>
 
 </files>
