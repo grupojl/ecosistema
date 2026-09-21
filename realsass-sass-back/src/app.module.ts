@@ -1,4 +1,7 @@
-import { Module }                     from '@nestjs/common';
+import { LoggerModule }    from 'nestjs-pino';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { Module, type NestModule, type MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';                     from '@nestjs/common';
 import { ConfigModule }               from '@nestjs/config';
 import { APP_GUARD }                  from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -37,6 +40,8 @@ import {
 
 @Module({
   imports: [
+    PrometheusModule.register({ path: '/metrics', defaultMetrics: { enabled: true } }),
+    LoggerModule.forRoot({ pinoHttp: { level: process.env['LOG_LEVEL'] ?? (process.env['NODE_ENV'] !== 'production' ? 'debug' : 'info'), transport: process.env['NODE_ENV'] !== 'production' ? { target: 'pino-pretty', options: { colorize: true } } : undefined } }),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
     EventEmitterModule.forRoot({ wildcard: false }),
@@ -68,4 +73,8 @@ import {
     { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}
