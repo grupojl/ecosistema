@@ -36,6 +36,7 @@ export class OrdersService {
     private readonly ordersRepository: IOrdersRepository,
     private readonly inventory: InventoryService,
     private readonly activity:  ActivityService,
+    private readonly orgsClient: OrganizationsClientService,
   ) {}
 
   // ── Lecturas — todas via repository ───────────────────────────────────────
