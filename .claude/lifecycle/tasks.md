@@ -69,32 +69,32 @@ como referencia de arquitectura, pero ningún archivo de welver fue modificado.
 
 ### sass-back (bloqueante para el resto)
 
-- [ ] MKT-01: Migración Prisma — `countryCode` en Organization + modelo Market
-- [ ] MKT-02: `market.entity.ts` con invariantes
-- [ ] MKT-03: `market.errors.ts`
-- [ ] MKT-04: `prisma-market.repository.ts`
-- [ ] MKT-05: `markets.service.ts` — `resolveMarket()` es el núcleo
-- [ ] MKT-06: `markets.router.ts` tRPC
-- [ ] MKT-07: Seed Market default al crear Organization
-- [ ] MKT-08: Unit tests resolveMarket()
-- [ ] MKT-09: Integration test tRPC
+- [x] MKT-01: Migración Prisma — `countryCode` en Organization + modelo Market
+- [x] MKT-02: `market.entity.ts` con invariantes
+- [x] MKT-03: `market.errors.ts`
+- [x] MKT-04: `prisma-market.repository.ts`
+- [x] MKT-05: `markets.service.ts` — `resolveMarket()` es el núcleo
+- [x] MKT-06: `markets.router.ts` tRPC
+- [x] MKT-07: Seed Market default al crear Organization
+- [x] MKT-08: Unit tests resolveMarket()
+- [x] MKT-09: Integration test tRPC
 
 ### ecommerce-back (depende de MKT-06)
 
-- [ ] MKT-E-01: tRPC client call a markets.resolve
-- [ ] MKT-E-02: Migración Order — marketId + visitorCountryCode + fulfillmentSnapshot
-- [ ] MKT-E-03: resolveVisitorCountry() util
-- [ ] MKT-E-04: X-Visitor-Country header en checkout
-- [ ] MKT-E-05: fulfillmentSnapshot inmutable en Order
-- [ ] MKT-E-06: Integration test checkout CO → Market CO
+- [x] MKT-E-01: tRPC client call a markets.resolve
+- [x] MKT-E-02: Migración Order — marketId + visitorCountryCode + fulfillmentSnapshot
+- [x] MKT-E-03: resolveVisitorCountry() util
+- [x] MKT-E-04: X-Visitor-Country header en checkout
+- [x] MKT-E-05: fulfillmentSnapshot inmutable en Order
+- [x] MKT-E-06: Integration test checkout CO → Market CO
 
 ### ecommerce-front (depende de MKT-E-01)
 
-- [ ] MKT-F-01: useMarketStore Zustand
-- [ ] MKT-F-02: resolveVisitorCountry() en lib/market/resolver.ts
-- [ ] MKT-F-03: X-Visitor-Country en apiFetch interceptor
-- [ ] MKT-F-04: MarketBanner componente
-- [ ] MKT-F-05: Integrar en store-provider.tsx
+- [x] MKT-F-01: useMarketStore Zustand
+- [x] MKT-F-02: resolveVisitorCountry() en lib/market/resolver.ts
+- [x] MKT-F-03: X-Visitor-Country en apiFetch interceptor
+- [x] MKT-F-04: MarketBanner componente
+- [x] MKT-F-05: Integrar en store-provider.tsx
 
 ### dashboard-front (depende de MKT-06)
 

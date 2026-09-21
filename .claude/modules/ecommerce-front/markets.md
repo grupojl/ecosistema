@@ -22,8 +22,8 @@ Implementar como:
 
 ## Checklist de implementación
 
-- [ ] MKT-F-01: `useMarketStore` en Zustand — `{ currentCountry, setCountry }`
-- [ ] MKT-F-02: `resolveVisitorCountry()` en `lib/market/resolver.ts`
-- [ ] MKT-F-03: Interceptor en `apiFetch` para agregar `X-Visitor-Country` header
-- [ ] MKT-F-04: `<MarketBanner />` componente (shadcn/ui Alert base)
-- [ ] MKT-F-05: Integrar en `store-provider.tsx` — detectar país al montar la tienda
+- [x] MKT-F-01: `useMarketStore` en Zustand — `{ currentCountry, setCountry }`
+- [x] MKT-F-02: `resolveVisitorCountry()` en `lib/market/resolver.ts`
+- [x] MKT-F-03: Interceptor en `apiFetch` para agregar `X-Visitor-Country` header
+- [x] MKT-F-04: `<MarketBanner />` componente (shadcn/ui Alert base)
+- [x] MKT-F-05: Integrar en `store-provider.tsx` — detectar país al montar la tienda

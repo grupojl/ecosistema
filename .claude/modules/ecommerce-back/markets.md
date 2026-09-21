@@ -50,12 +50,12 @@ function resolveVisitorCountry(request: NextRequest): string {
 
 ## Checklist de implementación
 
-- [ ] MKT-E-01: tRPC client call a `markets.resolve` desde `OrganizationsClientService`
-- [ ] MKT-E-02: Migración Prisma — `marketId` + `visitorCountryCode` + `fulfillmentSnapshot` en `Order`
-- [ ] MKT-E-03: `resolveVisitorCountry()` util en real-ecommerce-front
-- [ ] MKT-E-04: Pasar `X-Visitor-Country` header en requests de checkout desde el front
-- [ ] MKT-E-05: Guardar `fulfillmentSnapshot` al crear Order (inmutable)
-- [ ] MKT-E-06: Test de integración — checkout con CO resuelve Market CO, sin Market CO resuelve default
+- [x] MKT-E-01: tRPC client call a `markets.resolve` desde `OrganizationsClientService`
+- [x] MKT-E-02: Migración Prisma — `marketId` + `visitorCountryCode` + `fulfillmentSnapshot` en `Order`
+- [x] MKT-E-03: `resolveVisitorCountry()` util en real-ecommerce-front
+- [x] MKT-E-04: Pasar `X-Visitor-Country` header en requests de checkout desde el front
+- [x] MKT-E-05: Guardar `fulfillmentSnapshot` al crear Order (inmutable)
+- [x] MKT-E-06: Test de integración — checkout con CO resuelve Market CO, sin Market CO resuelve default
 
 ## Regla de oro
 

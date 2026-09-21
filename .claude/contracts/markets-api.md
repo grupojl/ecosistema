@@ -1,3 +1,5 @@
+> **Estado:** ✅ IMPLEMENTADO — 2026-09-21
+>
 # Contratos: Markets API
 
 ## tRPC procedures (sass-back → todos los consumidores)

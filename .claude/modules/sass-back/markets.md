@@ -87,15 +87,15 @@ Esta función es el contrato central. Todo lo que dependa de país la llama.
 
 ## Checklist de implementación
 
-- [ ] MKT-01: Migración Prisma — agregar `countryCode` en `Organization` + modelo `Market`
-- [ ] MKT-02: `market.entity.ts` con invariantes tipadas
-- [ ] MKT-03: `market.errors.ts` — `MarketNotFoundError`, `DuplicateMarketError`, `CannotDeactivateDefaultMarketError`
-- [ ] MKT-04: `prisma-market.repository.ts` — `findActive()`, `findDefault()`, `findAll()`
-- [ ] MKT-05: `markets.service.ts` — `resolveMarket()` + CRUD
-- [ ] MKT-06: `markets.router.ts` tRPC con Zod validation en cada procedure
-- [ ] MKT-07: Seed del Market default al crear Organization (en `organizations.service.ts`)
-- [ ] MKT-08: Unit tests de `resolveMarket()` — caso específico, caso fallback, caso error
-- [ ] MKT-09: Integration test tRPC — create, resolve, setDefault
+- [x] MKT-01: Migración Prisma — agregar `countryCode` en `Organization` + modelo `Market`
+- [x] MKT-02: `market.entity.ts` con invariantes tipadas
+- [x] MKT-03: `market.errors.ts` — `MarketNotFoundError`, `DuplicateMarketError`, `CannotDeactivateDefaultMarketError`
+- [x] MKT-04: `prisma-market.repository.ts` — `findActive()`, `findDefault()`, `findAll()`
+- [x] MKT-05: `markets.service.ts` — `resolveMarket()` + CRUD
+- [x] MKT-06: `markets.router.ts` tRPC con Zod validation en cada procedure
+- [x] MKT-07: Seed del Market default al crear Organization (en `organizations.service.ts`)
+- [x] MKT-08: Unit tests de `resolveMarket()` — caso específico, caso fallback, caso error
+- [x] MKT-09: Integration test tRPC — create, resolve, setDefault
 
 ## Reglas duras
 

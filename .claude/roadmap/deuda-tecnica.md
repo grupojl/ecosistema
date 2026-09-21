@@ -47,3 +47,19 @@ Trigger: antes de onboardear al primer colaborador externo.
 - DTOs con class-validator en controllers REST legacy — no agregar más
 - `checkout.controller.ts` — paymentIntentId en null hasta pagos-back
 - Storefront pages /tienda/[slug]/ con JSX inline — pendiente design system
+
+---
+
+## Sprint Markets — ADR-014 ✅ COMPLETADO 2026-09-21
+
+- [x] sass-back: MKT-01..09 — modelo Market + resolveMarket() + tRPC router
+- [x] ecommerce-back: MKT-E-01..06 — resolveMarket consumer + Order fields
+- [x] ecommerce-front: MKT-F-01..05 — useMarketStore + MarketBanner + detector
+- [x] @real/trpc: MarketDTO + FulfillmentConfig exportados
+- [x] Wiring: MarketsModule en AppModule + TrpcModule, marketsService en handler
+- [x] Internal: GET /internal/organizations/:id/markets para superadmin
+
+### Pendiente siguiente sprint
+- [ ] MKT-D-01..04: UI gestión Markets en dashboard-front
+- [ ] Migraciones Prisma en sass-back + ecommerce-back (requiere DB)
+- [ ] Checkout patch (MARKETS_CHECKOUT_PATCH.md) en orders.service.ts
