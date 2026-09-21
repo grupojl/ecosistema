@@ -68,6 +68,7 @@ export class OrdersService {
     customerId:      string;
     shippingAddress: Record<string, unknown>;
     shippingCents?:  number;
+    visitorCountryCode?: string; // ISO 3166-1 alpha-2 — ADR-014
   }) {
     const { organizationId, sessionId, cartId, customerId, shippingAddress, shippingCents = 0 } = input;
 
@@ -117,6 +118,9 @@ export class OrdersService {
           totalCents:      total,
           currency:        cart.items[0]?.variant.currency ?? "ARS",
           shippingAddress: shippingAddress as Prisma.InputJsonValue,
+          marketId:             market.id,
+          visitorCountryCode:   input.visitorCountryCode ?? null,
+          fulfillmentSnapshot:  market.fulfillmentConfig as Prisma.InputJsonValue,
           items: {
             create: cart.items.map(i => ({
               variantId:  i.variantId,

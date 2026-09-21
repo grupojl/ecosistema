@@ -193,7 +193,8 @@ export function createCustomerRouter(
           postalCode: z.string(),
           country:    z.string(),
         }),
-        shippingCents: z.number().int().nonnegative().optional(),
+        shippingCents:       z.number().int().nonnegative().optional(),
+        visitorCountryCode:  z.string().length(2).toUpperCase().optional(), // ADR-014
       }))
       .mutation(({ ctx, input }) =>
         ordersService.checkout(ctx.organizationId!, {
