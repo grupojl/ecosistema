@@ -63,3 +63,21 @@ Trigger: antes de onboardear al primer colaborador externo.
 - [ ] MKT-D-01..04: UI gestión Markets en dashboard-front
 - [ ] Migraciones Prisma en sass-back + ecommerce-back (requiere DB)
 - [ ] Checkout patch (MARKETS_CHECKOUT_PATCH.md) en orders.service.ts
+
+---
+
+## Observabilidad ✅ COMPLETADA 2026-09-21
+
+- [x] OBS-W-01/02: LoggerModule + PrometheusModule en sass-back
+- [x] OBS-W-03: CorrelationIdMiddleware en sass-back
+- [x] OBS-W-04: Health check extendido sass-back
+- [x] OBS-W-05/06: LoggerModule + PrometheusModule en ecommerce-back
+- [x] OBS-W-07: CorrelationIdMiddleware en ecommerce-back
+- [x] OBS-W-08: Health check extendido ecommerce-back
+- [x] OBS-W-09: GitHub Actions CI (5 workflows con path filters)
+- [x] Catalog raíz: nestjs-pino + pino-pretty + prometheus
+
+### Pendiente (infraestructura — no código)
+- [ ] pnpm install para regenerar lockfile
+- [ ] Branch protection en GitHub
+- [ ] OTEL_EXPORTER_OTLP_ENDPOINT en Railway
