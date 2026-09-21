@@ -1,61 +1,81 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { InsufficientStockError } from './errors/insufficient-stock.error';
+// realsass-ecommerce-back/src/inventory/inventory.service.ts
+// ECO-BACK-04: refactorizado para usar IInventoryRepository.
+//
+// EXCEPCIÓN DOCUMENTADA (ADR-007 / ECO-BACK-04):
+// reserveWithinTransaction() recibe tx: Prisma.TransactionClient porque
+// orders.service.ts lo llama dentro de su $transaction de checkout.
+// El UPDATE atómico necesita correr en la misma transacción que la orden.
+// Todo lo demás usa IInventoryRepository.
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import { PrismaService }     from "../prisma/prisma.service.js";
+import { InsufficientStockError } from "./errors/insufficient-stock.error.js";
+import {
+  INVENTORY_REPOSITORY,
+  type IInventoryRepository,
+} from "./repository/inventory.repository.interface.js";
+import type { Prisma } from "@prisma/client";
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    // Excepción documentada: reserveWithinTransaction($tx)
+    private readonly prisma: PrismaService,
+    @Inject(INVENTORY_REPOSITORY)
+    private readonly inventoryRepository: IInventoryRepository,
+  ) {}
 
-  async setStock(organizationId: string, variantId: string, quantityAvailable: number) {
-    const inventory = await this.prisma.inventoryItem.findFirst({ where: { variantId, organizationId } });
-    if (!inventory) throw new NotFoundException('Variante no encontrada para esta organización');
+  // ── Lecturas — via repository ──────────────────────────────────────────────
 
-    return this.prisma.inventoryItem.update({ where: { variantId }, data: { quantityAvailable } });
+  async getStock(organizationId: string, variantId: string) {
+    const inv = await this.inventoryRepository.findByVariant(organizationId, variantId);
+    if (!inv) throw new NotFoundException(`Inventario no encontrado para variante ${variantId}`);
+    return inv;
   }
 
-  /**
-   * Reserva stock de forma ATÓMICA dentro de una transacción Prisma existente.
-   *
-   * Usa $executeRaw con una condición WHERE columna-vs-columna para evitar
-   * overselling bajo concurrencia. El UPDATE adquiere el row lock en Postgres
-   * y evalúa la condición de stock de forma atómica — no hay ventana de
-   * tiempo entre el check y el write como en el patrón read-check-update.
-   *
-   * Si rowsAffected === 0: la condición no se cumplió (stock insuficiente).
-   * Se hace un SELECT de diagnóstico solo en el path de error para devolver
-   * un mensaje informativo sin pagar ese costo en el path feliz.
-   */
+  async getBulkStock(organizationId: string, variantIds: string[]) {
+    return this.inventoryRepository.findManyByVariants(organizationId, variantIds);
+  }
+
+  async setStock(organizationId: string, variantId: string, quantity: number) {
+    const exists = await this.inventoryRepository.findByVariant(organizationId, variantId);
+    if (!exists) throw new NotFoundException(`Inventario no encontrado para variante ${variantId}`);
+    return this.inventoryRepository.setAvailable(organizationId, variantId, quantity);
+  }
+
+  async release(organizationId: string, variantId: string, quantity: number) {
+    return this.inventoryRepository.release(organizationId, variantId, quantity);
+  }
+
+  // ── reserveWithinTransaction — excepción documentada: recibe tx Prisma ────
+  // Solo este método usa PrismaService. El $executeRaw garantiza atomicidad
+  // dentro de la transacción de checkout de OrdersService.
+
   async reserveWithinTransaction(
-    tx: Prisma.TransactionClient,
+    tx:        Prisma.TransactionClient,
     variantId: string,
-    sku: string,
-    quantity: number,
+    sku:       string,
+    quantity:  number,
   ): Promise<void> {
-    // UPDATE atómico: solo actualiza si (quantity_available - quantity_reserved) >= quantity
     const rowsAffected = await tx.$executeRaw`
-      UPDATE inventory_items
-      SET    quantity_reserved = quantity_reserved + ${quantity}
-      WHERE  variant_id        = ${variantId}
-        AND  (quantity_available - quantity_reserved) >= ${quantity}
+      UPDATE "Inventory"
+      SET    "quantityAvailable" = "quantityAvailable" - ${quantity},
+             "quantityReserved"  = "quantityReserved"  + ${quantity}
+      WHERE  "variantId" = ${variantId}
+        AND ("quantityAvailable" - "quantityReserved") >= ${quantity}
     `;
 
     if (rowsAffected === 0) {
-      // Path de error (frío): leer stock actual solo para el mensaje.
-      const inventory = await tx.inventoryItem.findUnique({ where: { variantId } });
-      const available = (inventory?.quantityAvailable ?? 0) - (inventory?.quantityReserved ?? 0);
+      // Path de error (frío): leer stock actual solo para el mensaje
+      const current = await tx.inventory.findFirst({ where: { variantId } });
+      const available = current
+        ? (current.quantityAvailable - current.quantityReserved)
+        : 0;
       throw new InsufficientStockError(sku, quantity, available);
     }
-  }
-
-  async releaseWithinTransaction(
-    tx: Prisma.TransactionClient,
-    variantId: string,
-    quantity: number,
-  ): Promise<void> {
-    await tx.inventoryItem.update({
-      where: { variantId },
-      data: { quantityReserved: { decrement: quantity } },
-    });
   }
 }

@@ -1,250 +1,49 @@
-# Deuda técnica — lista viva
+# Deuda técnica — welver
 
-Actualizar este archivo cada vez que se deja algo pendiente a propósito.
+Última actualización: 2026-09-19
 
 ---
 
-## Escalón 1 — Código: lo que baja el puntaje de 8.5 a 10
+## Cerrado en sesión 2026-09-19 ✅
 
-### Domain/Repository pendiente en ecommerce-back (decisión consciente — S4)
+- [x] InternalModule con pause-store/resume-store en realsass-sass-back
+- [x] Prisma schema limpio (OrgStatus + StoreStatus solo en Organization)
+- [x] ecommerceEnabled: org.storeStatus === 'ACTIVE'
+- [x] GET /organizations/public/by-slug/:slug expuesto
 
-Los 4 módulos siguen con `PrismaService` directo en el service.
-La decisión fue diferirlos a S4 porque los tipos Output sin `as any` son
-suficientes para Fase 1. Cuando se implementen, seguir el molde de `catalog/`.
+---
 
-| Módulo | Trigger para resolver | Molde |
-|--------|----------------------|-------|
-| `cart/` — `CartService` importa `PrismaService` | S4-E (tests de domain) | `catalog/` de ecommerce-back |
-| `orders/` — `OrdersService` importa `PrismaService` | S4-E | `catalog/` de ecommerce-back |
-| `customers/` — `CustomersService` importa `PrismaService` | S4-E | `catalog/` de ecommerce-back |
-| `inventory/` — `InventoryService` importa `PrismaService` | S4-E | `catalog/` de ecommerce-back |
+## Pendiente activo — P0 para producción
 
-Comando de verificación cuando se resuelva:
+### [WEL-01] Migración Prisma — BLOQUEANTE
 ```bash
-grep -rn "PrismaService" realsass-ecommerce-back/src --include="*.service.ts" \
-  | grep -v "catalog\|prisma.service\|prisma.module"
+cd realsass-sass-back
+pnpm prisma migrate dev --name add-superadmin-org-fields
 ```
-Done cuando: 0 resultados.
+Sin esta migración, el deploy en Railway falla al arrancar
+(entrypoint.sh corre `prisma migrate deploy` al inicio).
 
-### collaborators.service.ts — PrismaService para transacciones
-
-`collaborators.service.ts` mantiene `PrismaService` para la transacción
-de invitación (`Collaborator + Invitation` atómico).
-Eliminar cuando `ICollaboratorsRepository` soporte `tx?: Prisma.TransactionClient`.
-→ `collaborators/repository/collaborators.repository.interface.ts`
-
-### collaborators.service.ts — any en buildPermissionsPatch
-
-`collaborators.service.ts` usa `any` en `buildPermissionsPatch`.
-Pendiente tipar con Zod cuando se migre completamente a tRPC.
-→ `decisions/ADR-001-permisos-jsonb.md`
-
-### Páginas /tienda/[slug]/ con JSX inline
-
-Las páginas del storefront canónico tienen JSX inline sin componentes de
-presentación dedicados. Aceptable mientras el design system del storefront
-no esté definido. Cuando se extraigan, usar tipos de `EcommerceAppRouter`.
-→ `decisions/ADR-008-eliminar-componentes-legacy-storefront.md`
+### [WEL-02] INTERNAL_API_KEY en Railway
+Variable de entorno en realsass-sass-back.
+Sin esto, grupojl-control recibe 403 en /internal/organizations.
 
 ---
 
-## Escalón 2 — Configuración: lo que baja el puntaje de 8.0 a 10
+## Pendiente activo — P1
 
-### .env.example ausente en todos los servicios
+### [WEL-03] HydrationBoundary en dashboard-front
+- realsass-dashboard-front/app/dashboard/tienda/productos/page.tsx
+- realsass-dashboard-front/app/dashboard/tienda/pedidos/page.tsx
+Patrón documentado en .claude/decisions/ADR-009.
 
-Ningún servicio tiene `.env.example`. Sin él, un desarrollador nuevo no sabe
-qué variables configurar sin leer el código fuente o preguntar.
-
-| Servicio | Variables requeridas a documentar |
-|----------|----------------------------------|
-| `realsass-sass-back` | `DATABASE_URL`, `REDIS_URL`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `ALLOWED_ORIGINS`, `INTERNAL_API_KEY` |
-| `realsass-ecommerce-back` | `DATABASE_URL`, `REDIS_URL`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `SASS_BACK_URL`, `ALLOWED_ORIGINS` |
-| `realsass-sass-front` | `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_SASS_BACK_URL` |
-| `realsass-dashboard-front` | Mismas que sass-front + `NEXT_PUBLIC_ECOMMERCE_BACK_URL` |
-| `real-ecommerce-front` | `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_ECOMMERCE_BACK_URL` |
-
-Done cuando: cada servicio tiene `.env.example` con todas las variables y descripción.
-Trigger: antes de onboardear al primer colaborador externo o antes de S4-C (CI).
-
-### Validación de env vars al arranque en main.ts
-
-Ningún `main.ts` valida que las variables requeridas existan al arrancar.
-Si falta `DATABASE_URL`, el servicio arranca y falla en el primer query — no al inicio.
-
-Patrón correcto a implementar en cada `main.ts`:
-```ts
-const REQUIRED = ['DATABASE_URL', 'FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL',
-                  'FIREBASE_PRIVATE_KEY', 'ALLOWED_ORIGINS'];
-for (const key of REQUIRED) {
-  if (!process.env[key]) throw new Error(`Missing required env var: ${key}`);
-}
-```
-
-Done cuando: el servicio falla en arranque con mensaje claro si falta una variable.
-Trigger: antes de S4-C (CI) — el workflow necesita saber qué variables configurar.
+### [WEL-04] GitHub Actions — 7 workflows
+Documentados en .claude/decisions/ADR-013.
+Trigger: antes de onboardear al primer colaborador externo.
 
 ---
 
-## Escalón 4 — Base de Datos: lo que baja el puntaje de 7.5 a 10
+## Deuda conocida — no urgente
 
-### Índices compuestos sin auditar en Prisma schemas
-
-Los modelos de alta frecuencia de consulta pueden no tener `@@index([organizationId])`.
-Sin índice, un query que tarda 2ms con 100 registros tarda 2s con 100.000.
-
-Comando de auditoría:
-```bash
-# Ver modelos con organizationId sin indice explicito
-grep -A5 "organizationId" realsass-sass-back/prisma/schema.prisma \
-  | grep -v "@@index"
-grep -A5 "organizationId" realsass-ecommerce-back/prisma/schema.prisma \
-  | grep -v "@@index"
-```
-
-Done cuando: todo modelo con `organizationId` de alta frecuencia tiene
-`@@index([organizationId])` o `@@index([organizationId, <campo_de_filtro>])`.
-Trigger: antes de que cualquier ecosistema supere 10.000 registros por tabla.
-
-### ~~prisma migrate deploy antes del CMD~~ — ✅ RESUELTO (2026-09-16)
-
-Ambos backends tienen `entrypoint.sh` con `prisma migrate deploy` + `exec node dist/main.js`.
-CMD: `["dumb-init", "/app/<servicio>/entrypoint.sh"]`. `--platform=linux/amd64` en cada FROM.
-Auditado en ecosistema.xml — 10/10 en dimensión Docker.
-
-Ver: `realsass-sass-back/entrypoint.sh`, `realsass-ecommerce-back/entrypoint.sh`
-Ver: `architecture/05-dockerfile-backend.md`
-### Pool de conexiones sin documentar por servicio
-
-Prisma gestiona el pool automáticamente pero con límites por defecto que pueden
-ser cuello de botella con múltiples réplicas en Railway.
-Con N réplicas, el total de conexiones = N × pool_size.
-
-Done cuando: cada servicio tiene documentado en `services/<servicio>.md`:
-- Pool size actual (default Prisma o configurado explícitamente)
-- Límite de conexiones de PostgreSQL en Railway
-- Máximo de réplicas seguro antes de saturar el pool
-Trigger: antes de configurar más de 1 réplica en Railway (Escalón 12).
-
-### Política de backups Railway sin verificar formalmente
-
-No se verificó ni documentó la política de backups de Railway PostgreSQL:
-- ¿Cada cuánto hace backup automático?
-- ¿Cuántos días de retención?
-- ¿Se probó alguna restauración?
-
-Done cuando: en este archivo existe:
-- RPO documentado por servicio (ej: "Railway hace backup cada 24h → RPO = 24h")
-- Al menos una restauración de backup probada en staging con resultado documentado
-Trigger: antes de que cualquier ecosistema tenga datos de producción reales.
-
----
-
-## Backend — pendiente (existente)
-
-- [ecommerce-back] `OrdersService.checkout()` deja `paymentIntentId` en null
-  — `pagos-back` no existe todavía.
-
-- [todos] DTOs con class-validator sobreviven en controllers REST legacy
-  — no se agrega class-validator a código nuevo (Capa 2 completa solo en tRPC).
-
-## Frontend — pendiente (existente)
-
-- [ecommerce-front] `checkout-flow.tsx` simula autenticación WebAuthn
-  — bloqueado hasta integración real con pasarela de pagos.
-
-- [ecommerce-front] Adapters de shipping (correo, envia, welivery) son stubs
-  con pricing hardcodeado — bloqueado hasta APIs de courier disponibles.
-
-- [dashboard-front] `lib/chat-ia-client.ts` fetch manual hacia chat-ia-back
-  — eliminar cuando chat-ia-back tenga router tRPC.
-
----
-
-## Auth — gaps resueltos ✅
-
-- Token Firebase sin refresh automático → resuelto con timer proactivo 55min
-- Token en memoria/localStorage → resuelto con cookies HttpOnly (ADR-004)
-- CORS con origin wildcard → resuelto con ALLOWED_ORIGINS en main.ts
-
-## @real/ui — resuelto ✅
-
-- 33 componentes shadcn instalados en packages/ui/src/components/
-- components/ui/ eliminados de los 3 fronts
-- imports migrados a @real/ui
-
-## Backend Domain/Repository — resuelto ✅
-
-- 11 módulos de sass-back con domain/ + repository/
-- Services inyectan IRepository via @Inject(TOKEN)
-- Molde: catalog/ en ecommerce-back (referencia canónica)
-
-## ecommerce-front — migración a tRPC server caller — resuelto ✅
-
-Resuelto en sesión 2026-09-02:
-- `lib/store/client.ts` → ✅ usa `createStoreCaller().customer.*`
-- `lib/store/resolver.ts` → ✅ usa `customer.resolveStore` procedure
-- `context/customer-context.tsx` → ✅ `identifyCustomer()` usa `customer.identify` tRPC
-- `lib/ecommerce/index.ts` → ✅ eliminado
-- `app/categoria/[categoria]/page.tsx` → ✅ redirect 308
-- `app/products/[handle]/page.tsx` → ✅ redirect 308
-
-## dashboard-front — lib/firebase.ts — resuelto ✅
-
-`realsass-dashboard-front/lib/firebase.ts` eliminado.
-`app/auth/sso/page.tsx` migrado a `@real/auth-client`.
-
-## ecommerce-front — componentes storefront legacy — resuelto ✅ (ADR-008)
-
-10 componentes del dominio real-estate eliminados en 2026-09-02.
-Pendiente consciente: páginas `/tienda/[slug]/` con JSX inline → ver Escalón 1 arriba.
-
-## Testing / Observabilidad — S4 pendiente
-
-- Sin tests (.spec.ts) — S4-E y S4-F no iniciados
-- OpenTelemetry dependencias en catalog pero sin configuración activa — S4-C
-
----
-
-## ADR-009 (hacia 9.5/10)
-
-| ID | Deuda | Servicio | Estado |
-|----|-------|----------|--------|
-| DT-027 | `main.ts` con ValidationPipe global contradice ADR-001 | todos | ✅ x.sh |
-| DT-028 | packages/logger y metrics no importados en app.module | todos | ✅ x.sh |
-| DT-029 | ConversationsService usa `this.prisma` directo (viola ADR-002) | chatia | ✅ x.sh |
-| ~~DT-023~~ | getAgentMetrics carga 100K rows en memoria | analytics | ✅ x.sh |
-
----
-
-## Gap identificado en auditoría ADR-011 (2026-09-12)
-
-| ID | Gap | Módulos afectados | Impacto en score |
-|----|-----|-------------------|-----------------|
-| DT-ECO-01 | cart, orders, customers, inventory sin domain/ ni repository/ | realsass-ecommerce-back | Arquitectura: 8.5 → 9.0 cuando se resuelva |
-| DT-ECO-02 | DTOs internos no auditados (UpdateFlagDto, CreateSecretDto, etc.) | realsass-sass-back | Contratos/Tipado: 8.5 → 9.0 si no tienen class-validator |
-
-### DT-ECO-01 — Cómo resolverlo
-
-Seguir el molde de `src/catalog/` (el único módulo con patrón completo en ecommerce-back):
-
-```
-cart/
-├── domain/
-│   ├── cart.entity.ts       # tipos puros, sin Prisma
-│   └── cart.errors.ts
-├── repository/
-│   ├── cart.repository.interface.ts
-│   └── prisma-cart.repository.ts   # único lugar con PrismaService + toEntity()
-├── cart.service.ts          # inyecta ICartRepository via @Inject(TOKEN)
-└── cart.module.ts           # binding { provide: TOKEN, useClass: PrismaCartRepo }
-```
-
-Ídem para orders, customers, inventory.
-
-### DT-ECO-02 — Cómo verificarlo
-
-```bash
-grep -r "class-validator" realsass-sass-back/src --include="*.ts"
-# Si da 0: los DTOs son interfaces puras → score sube a 9.0
-# Si da N: migrar esos DTOs a Zod inline en los routers
-```
+- DTOs con class-validator en controllers REST legacy — no agregar más
+- `checkout.controller.ts` — paymentIntentId en null hasta pagos-back
+- Storefront pages /tienda/[slug]/ con JSX inline — pendiente design system

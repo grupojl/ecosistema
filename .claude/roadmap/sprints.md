@@ -115,3 +115,17 @@ Prioridad inmediata:
 | Frontend 5 — Auth | 9.5 | 10.0 |
 
 (*) Capa 4 llega a ~8.5/10 con tests. El 10/10 requiere `pagos-back` y APIs courier.
+
+---
+
+## Sesión 2026-09-17 — Domain/Repository ecommerce-back cerrado
+
+**DT-ECO-01 CERRADO:** cart, orders, customers, inventory migrados a @Inject(TOKEN).
+
+Excepciones documentadas (mismo patrón que welver y ecosistema-ms):
+- `OrdersService.checkout()` mantiene PrismaService para $transaction multi-tabla
+- `InventoryService.reserveWithinTransaction()` mantiene PrismaService para $executeRaw atómico
+
+**Pendiente activo:**
+- S4-D: HydrationBoundary en dashboard-front/tienda/productos y pedidos (ECO-FRONT-01)
+- S4-C: GitHub Actions 7 workflows (ECO-BACK-01)

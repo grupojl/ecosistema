@@ -90,3 +90,70 @@ tRPC (interno) · gRPC (cuando aplique, futuro) · REST (solo APIs públicas ext
 | `@real/auth-server` | Guards, middleware, SessionService para los 2 backs |
 | `@real/trpc` | Contratos tRPC — SassAppRouter + EcommerceAppRouter |
 | `@real/ui` | 33 componentes shadcn — fuente única de UI |
+
+---
+
+## Integración con marketing-backend — contexto (2026-09-19)
+
+**welver NO tiene código de marketing.** El microservicio vive en ecosistema-ms.
+
+### Qué sí hace welver en este contexto
+
+`realsass-sass-back` (pasarelapagos-backend de welver) **no existe** —
+welver no tiene pasarela de pagos propia. El fire-forget de atribución
+fue implementado en `pasarelapagos-backend` de **ecosistema-ms**.
+
+### Resumen de qué vive donde
+
+| Componente | Repo | Estado |
+|-----------|------|--------|
+| `marketing-backend` (servicio completo) | ecosistema-ms | ✅ |
+| Fire-forget en `WebhookProcessor` | ecosistema-ms / pasarelapagos-backend | ✅ |
+| `MarketingClient` en superadmin | superadmin | ✅ |
+| Contrato documentado en welver | welver / .claude | ✅ (solo doc) |
+
+### Por qué hay contratos de marketing en este .claude
+
+El `tasks.md` tenía un pendiente de fire-forget para `pasarelapagos-backend`.
+Ese pendiente fue documentado aquí por error de contexto — en realidad
+corresponde a ecosistema-ms, no a welver. Ya está resuelto.
+
+Ver `.claude/contracts/marketing-integration.md` para el contrato completo.
+
+---
+
+## Markets — expansión global (ADR-014)
+
+### El norte: Shopify Markets
+
+Shopify resolvió la expansión global como entidad de dominio, no como config de envío.
+Adoptamos su filosofía: el dueño **declara** en qué países opera; el sistema **resuelve**.
+
+### Principio de resolución
+
+```
+resolveMarket(organizationId, visitorCountryCode)
+  → Market específico del país  (si existe y está activo)
+  → Market default de la org    (fallback siempre disponible)
+  → NUNCA null, NUNCA bloqueo
+```
+
+### Bounded contexts
+
+| Repo | Rol |
+|------|-----|
+| `realsass-sass-back` | OWNER del modelo Market — CRUD, resolveMarket() |
+| `realsass-ecommerce-back` | CONSUMER — llama resolveMarket() en checkout, guarda snapshot |
+| `real-ecommerce-front` | DETECTOR — detecta país del visitante, envía X-Visitor-Country |
+| `realsass-dashboard-front` | UI — gestión de Markets del dueño |
+
+### Lo que NO modelamos (y por qué)
+
+- Precios por Market → Stripe maneja multi-moneda
+- Idioma por Market → Next.js i18n
+- Impuestos por Market → Stripe Tax
+- Restricciones de productos por país → over-engineering para escala actual
+
+### Siguiente paso
+
+Ver ADR-014 y los checklists MKT-01..09 en `.claude/modules/sass-back/markets.md`

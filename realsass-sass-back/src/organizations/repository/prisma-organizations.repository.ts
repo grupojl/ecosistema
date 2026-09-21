@@ -62,7 +62,7 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
       description:      org.description,
       logoUrl:          org.logoUrl,
       website:          org.website,
-      ecommerceEnabled: !!ep['ecommerce'],
+      ecommerceEnabled: org.storeStatus === 'ACTIVE',
     };
   }
 

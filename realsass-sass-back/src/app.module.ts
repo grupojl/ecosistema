@@ -20,6 +20,7 @@ import { ConfigSecretsModule }   from './config-secrets/config-secrets.module';
 import { ConfigTemplatesModule } from './config-templates/config-templates.module';
 import { ConfigQuotasModule }    from './config-quotas/config-quotas.module';
 import { ConfigWebhooksModule }  from './config-webhooks/config-webhooks.module';
+import { InternalModule }    from './internal/internal.module';
 import { TrpcModule }            from './trpc/trpc.module';
 
 import {
@@ -55,6 +56,7 @@ import {
     ConfigTemplatesModule,
     ConfigQuotasModule,
     ConfigWebhooksModule,
+    InternalModule,
     TrpcModule,
   ],
   providers: [

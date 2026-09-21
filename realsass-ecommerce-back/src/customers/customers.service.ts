@@ -1,76 +1,118 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
-import type { CustomerOutput, IdentifyCustomerOutput } from './types/customer.types';
+// realsass-ecommerce-back/src/customers/customers.service.ts
+// ECO-BACK-03: refactorizado para usar ICustomersRepository via @Inject.
+// PrismaService eliminado — toda la persistencia va por el repository.
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import {
+  CUSTOMERS_REPOSITORY,
+  type ICustomersRepository,
+} from "./repository/customers.repository.interface.js";
+import {
+  assertValidEmail,
+  CustomerNotFoundError,
+  InvalidEmailError,
+} from "./domain/customer.errors.js";
 
-type PrismaCustomer = Prisma.StoreCustomerGetPayload<Record<string, never>>;
-
-function toCustomerOutput(row: PrismaCustomer): CustomerOutput {
-  return {
-    id:             row.id,
-    organizationId: row.organizationId,
-    email:          row.email,
-    displayName:    row.displayName,
-    phone:          row.phone,
-    createdAt:      row.createdAt,
-    updatedAt:      row.updatedAt,
-  };
+export interface IdentifyCustomerOutput {
+  customerId: string;
+  sessionId:  string;
+  isNew:      boolean;
 }
 
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(CUSTOMERS_REPOSITORY)
+    private readonly customersRepository: ICustomersRepository,
+  ) {}
 
-  /**
-   * Identifica (o crea) al cliente por email, scoped a la organización.
-   * Si viene cartId, adopta el carrito anónimo al cliente identificado.
-   */
   async identify(
     organizationId: string,
-    email:          string,
-    displayName?:   string,
+    sessionId:      string,
+    email?:         string,
+    name?:          string,
     phone?:         string,
     cartId?:        string,
   ): Promise<IdentifyCustomerOutput> {
-    const existing = await this.prisma.storeCustomer.findFirst({
-      where: { organizationId, email },
-    });
-
-    let customer: PrismaCustomer;
-    let isNew = false;
-
-    if (existing) {
-      customer = existing;
-      // Actualizar datos si vinieron
-      if (displayName || phone) {
-        customer = await this.prisma.storeCustomer.update({
-          where: { id: existing.id },
-          data:  { ...(displayName ? { displayName } : {}), ...(phone ? { phone } : {}) },
-        });
+    // Validar email si viene
+    if (email) {
+      try {
+        assertValidEmail(email);
+      } catch (err) {
+        throw new UnprocessableEntityException(
+          err instanceof InvalidEmailError ? err.message : "Email inválido",
+        );
       }
-    } else {
-      customer = await this.prisma.storeCustomer.create({
-        data: { organizationId, email, displayName, phone },
-      });
-      isNew = true;
     }
 
-    // Adoptar carrito anónimo si viene
-    if (cartId) {
-      await this.prisma.cart.updateMany({
-        where: { id: cartId, organizationId, customerId: null },
-        data:  { customerId: customer.id },
+    // identifyBySession hace upsert — crea si no existe, retorna si existe
+    const customer = await this.customersRepository.identifyBySession(
+      organizationId,
+      sessionId,
+    );
+
+    const isNew = !customer.email && !email;
+
+    // Actualizar datos si vinieron
+    if (email || name || phone) {
+      await this.customersRepository.update(organizationId, customer.id, {
+        ...(email && { email }),
+        ...(name  && { name }),
+        ...(phone && { phone }),
       });
     }
 
-    return { customerId: customer.id, isNew };
+    // cartId se maneja en CartService — aquí solo identificamos al customer
+    void cartId;
+
+    return {
+      customerId: customer.id,
+      sessionId:  customer.sessionId,
+      isNew,
+    };
   }
 
-  async findById(organizationId: string, customerId: string): Promise<CustomerOutput> {
-    const row = await this.prisma.storeCustomer.findFirst({
-      where: { id: customerId, organizationId },
-    });
-    if (!row) throw new NotFoundException(`Customer ${customerId} not found`);
-    return toCustomerOutput(row);
+  async findById(organizationId: string, customerId: string) {
+    const customer = await this.customersRepository.findById(organizationId, customerId);
+    if (!customer) {
+      throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+    }
+    return customer;
+  }
+
+  async findBySession(organizationId: string, sessionId: string) {
+    return this.customersRepository.findBySessionId(organizationId, sessionId);
+  }
+
+  async update(
+    organizationId: string,
+    customerId:     string,
+    patch: { email?: string; name?: string; phone?: string },
+  ) {
+    if (patch.email) {
+      try {
+        assertValidEmail(patch.email);
+      } catch (err) {
+        throw new UnprocessableEntityException(
+          err instanceof InvalidEmailError ? err.message : "Email inválido",
+        );
+      }
+    }
+
+    const exists = await this.customersRepository.findById(organizationId, customerId);
+    if (!exists) throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+
+    return this.customersRepository.update(organizationId, customerId, patch);
+  }
+
+  async listByOrg(
+    organizationId: string,
+    filters?: { search?: string; page?: number; limit?: number },
+  ) {
+    return this.customersRepository.listByOrg(organizationId, filters);
   }
 }

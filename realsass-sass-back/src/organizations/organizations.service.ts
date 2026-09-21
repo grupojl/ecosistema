@@ -44,3 +44,25 @@ export class OrganizationsService {
     return org;
   }
 }
+
+// ─── INTEGRACIÓN SUPERADMIN — ADR-013 ────────────────────────────────────────
+// Cuando storeStatus === 'PAUSED', el storefront debe devolver 404.
+// StoreService en realsass-ecommerce-back llama a este back y lee ecommerceEnabled.
+// Regla: en findBySlugPublic (o el método que devuelve StoreInfo),
+// si organization.storeStatus === 'PAUSED' → devolver ecommerceEnabled: false.
+//
+// Ejemplo de aplicación en el método que resuelve el slug:
+//
+//   const org = await repo.findBySlug(slug);
+//   if (!org) throw new NotFoundException();
+//   return {
+//     organizationId:   org.id,
+//     slug:             org.slug,
+//     name:             org.name,
+//     ecommerceEnabled: org.storeStatus === 'ACTIVE',  // ← AGREGAR ESTA LÍNEA
+//     ...
+//   };
+//
+// StoreService ya maneja ecommerceEnabled: false con un NotFoundException.
+// No hay cambios necesarios en realsass-ecommerce-back.
+// ─────────────────────────────────────────────────────────────────────────────

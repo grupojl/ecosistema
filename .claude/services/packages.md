@@ -58,3 +58,25 @@ Contratos tRPC compartidos. Exporta:
 - Context compartido (`server/context.ts`, `server/trpc.ts`)
 
 Los fronts importan: `import type { SassAppRouter } from '@real/trpc'`
+
+---
+
+## Integración con superadmin (2026-09-19)
+
+### Endpoints /internal/* a implementar
+
+Ver `.claude/contracts/superadmin-api.md` para los shapes exactos.
+Ver `.claude/checklists/superadmin-internal-organizations.md` para la implementación.
+
+| Endpoint | Task | Estado |
+|----------|------|--------|
+| GET /internal/organizations | WEL-I-03 | ❌ pendiente |
+| GET /internal/organizations/:id | WEL-I-04 | ❌ pendiente |
+| POST /internal/organizations/:id/suspend | WEL-I-05 | ❌ pendiente |
+| POST /internal/organizations/:id/unsuspend | WEL-I-06 | ❌ pendiente |
+
+### Variable de entorno nueva
+
+```
+INTERNAL_API_KEY=  # compartida con superadmin — valor en Railway
+```

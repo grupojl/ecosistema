@@ -17,10 +17,10 @@
 ## ⏳ Pendiente para 10/10
 
 ### Domain + Repository en ecommerce-back (S4)
-- [ ] `cart/` — domain + repository (hoy service llama Prisma directo)
-- [ ] `orders/` — domain + repository
-- [ ] `customers/` — domain + repository
-- [ ] `inventory/` — ya tiene molde en catalog, aplicar mismo patrón
+- [x] `cart/` — domain + repository — **CERRADO 2026-09-17** (@Inject(CART_REPOSITORY))
+- [x] `orders/` — domain + repository — **CERRADO 2026-09-17** (@Inject(ORDERS_REPOSITORY) + excepción checkout $tx)
+- [x] `customers/` — domain + repository — **CERRADO 2026-09-17** (@Inject(CUSTOMERS_REPOSITORY))
+- [x] `inventory/` — domain + repository — **CERRADO 2026-09-17** (@Inject(INVENTORY_REPOSITORY) + excepción reserveWithinTransaction)
 
 ### Tests de domain (S4 — cobertura mínima 85%)
 - [ ] Unit tests de `domain/*.entity.ts` — sin mocks, funciones puras

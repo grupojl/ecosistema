@@ -1,63 +1,96 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { ActivityService } from '../activity/activity.service';
+// realsass-ecommerce-back/src/cart/cart.service.ts
+// ECO-BACK-01: refactorizado para usar ICartRepository via @Inject(CART_REPOSITORY).
+// PrismaService eliminado — toda la persistencia va por el repository.
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import { ActivityService }   from "../activity/activity.service.js";
+import {
+  CART_REPOSITORY,
+  type ICartRepository,
+} from "./repository/cart.repository.interface.js";
+import {
+  CartNotFoundError,
+  CartItemNotFoundError,
+  InsufficientStockForCartError,
+  assertValidQuantity,
+} from "./domain/cart.errors.js";
 
 @Injectable()
 export class CartService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly activityService: ActivityService,
+    @Inject(CART_REPOSITORY)
+    private readonly cartRepository: ICartRepository,
+    private readonly activity:        ActivityService,
   ) {}
 
-  private async getOrCreateActiveCart(organizationId: string, sessionId: string, cartId?: string) {
-    if (cartId) {
-      const existing = await this.prisma.cart.findFirst({ where: { id: cartId, organizationId, status: 'ACTIVE' } });
-      if (existing) return existing;
-    }
-
-    return this.prisma.cart.create({
-      data: { organizationId, sessionId, status: 'ACTIVE', currency: 'USD' },
-    });
-  }
-
-  async addItem(organizationId: string, sessionId: string, variantId: string, quantity: number, cartId?: string) {
-    const variant = await this.prisma.productVariant.findFirst({ where: { id: variantId, organizationId } });
-    if (!variant) throw new NotFoundException('Variante no encontrada');
-
-    const cart = await this.getOrCreateActiveCart(organizationId, sessionId, cartId);
-
-    const item = await this.prisma.cartItem.upsert({
-      where: { cartId_variantId: { cartId: cart.id, variantId } },
-      update: { quantity: { increment: quantity } },
-      create: {
-        cartId: cart.id,
-        variantId,
-        quantity,
-        unitPriceCentsSnapshot: variant.priceCents,
-      },
-    });
-
-    await this.activityService
-      .log(organizationId, sessionId, 'CART_ADD', cart.customerId ?? undefined, { variantId, quantity })
-      .catch(() => undefined);
-
-    return this.getCart(organizationId, cart.id);
-  }
-
-  async removeItem(organizationId: string, cartId: string, variantId: string) {
-    const cart = await this.prisma.cart.findFirst({ where: { id: cartId, organizationId } });
-    if (!cart) throw new NotFoundException('Carrito no encontrado');
-
-    await this.prisma.cartItem.deleteMany({ where: { cartId, variantId } });
-    return this.getCart(organizationId, cartId);
+  async getOrCreateCart(organizationId: string, sessionId: string) {
+    const existing = await this.cartRepository.findActiveBySession(organizationId, sessionId);
+    if (existing) return existing;
+    return this.cartRepository.create(organizationId, sessionId);
   }
 
   async getCart(organizationId: string, cartId: string) {
-    const cart = await this.prisma.cart.findFirst({
-      where: { id: cartId, organizationId },
-      include: { items: { include: { variant: true } } },
-    });
-    if (!cart) throw new NotFoundException('Carrito no encontrado');
+    const cart = await this.cartRepository.findById(organizationId, cartId);
+    if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
     return cart;
+  }
+
+  async addItem(
+    organizationId: string,
+    cartId:          string,
+    variantId:       string,
+    quantity:        number,
+  ) {
+    try {
+      assertValidQuantity(quantity);
+    } catch (err) {
+      throw new UnprocessableEntityException(err instanceof Error ? err.message : String(err));
+    }
+
+    const cart = await this.cartRepository.findById(organizationId, cartId);
+    if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
+
+    // Verificar stock disponible en el ítem de la variante
+    const inventoryItem = cart.items
+      .find(i => i.variantId === variantId)
+      ?.variant.inventory;
+
+    if (inventoryItem) {
+      const available = inventoryItem.quantityAvailable - inventoryItem.quantityReserved;
+      const currentQty = cart.items.find(i => i.variantId === variantId)?.quantity ?? 0;
+      if (currentQty + quantity > available) {
+        throw new UnprocessableEntityException(
+          new InsufficientStockForCartError(variantId, quantity, available).message,
+        );
+      }
+    }
+
+    return this.cartRepository.upsertItem(cartId, variantId, quantity);
+  }
+
+  async removeItem(
+    organizationId: string,
+    cartId:          string,
+    variantId:       string,
+  ) {
+    const cart = await this.cartRepository.findById(organizationId, cartId);
+    if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
+
+    const exists = cart.items.some(i => i.variantId === variantId);
+    if (!exists) {
+      throw new NotFoundException(new CartItemNotFoundError(variantId).message);
+    }
+
+    return this.cartRepository.removeItem(cartId, variantId);
+  }
+
+  async completeCart(organizationId: string, cartId: string): Promise<void> {
+    const cart = await this.cartRepository.findById(organizationId, cartId);
+    if (!cart) throw new NotFoundException(new CartNotFoundError(cartId).message);
+    await this.cartRepository.complete(cartId);
   }
 }

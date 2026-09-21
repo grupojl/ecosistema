@@ -3,10 +3,10 @@
   "output": {
     "filePath": "ecosistema.xml",
     "style": "xml",
-    "compress": true,
+    "compress": false,
     "showLineNumbers": false,
     "removeComments": false,
-    "removeEmptyLines": true,
+    "removeEmptyLines": false,
     "topFilesLength": 10,
     "instructionFilePath": "repomix.instructions.md"
   },
@@ -17,9 +17,6 @@
     "tsconfig.base.json",
     "docker-compose.yml",
     ".npmrc",
-    "railway.json",
-    "railway.toml",
-    "nixpacks.toml",
 
     "packages/*/package.json",
     "packages/*/tsconfig.json",
@@ -36,6 +33,7 @@
     "realsass-sass-back/tsconfig.build.json",
     "realsass-sass-back/nest-cli.json",
     "realsass-sass-back/prisma/schema.prisma",
+    "realsass-sass-back/entrypoint.sh",
 
     "realsass-ecommerce-back/src/**/*.ts",
     "realsass-ecommerce-back/Dockerfile",
@@ -48,7 +46,6 @@
     "realsass-ecommerce-back/tsconfig.build.json",
     "realsass-ecommerce-back/nest-cli.json",
     "realsass-ecommerce-back/prisma/schema.prisma",
-    "realsass-sass-back/entrypoint.sh",
     "realsass-ecommerce-back/entrypoint.sh",
 
     "realsass-sass-front/Dockerfile",
@@ -63,10 +60,15 @@
     "realsass-sass-front/app/**/*.tsx",
     "realsass-sass-front/app/**/*.ts",
     "realsass-sass-front/components/**/*.tsx",
+    "realsass-sass-front/components/**/*.ts",
+    "realsass-sass-front/features/**/*.tsx",
+    "realsass-sass-front/features/**/*.ts",
     "realsass-sass-front/lib/**/*.ts",
     "realsass-sass-front/hooks/**/*.ts",
     "realsass-sass-front/context/**/*.tsx",
+    "realsass-sass-front/stores/**/*.ts",
     "realsass-sass-front/types/**/*.ts",
+    "realsass-sass-front/config/**/*.ts",
 
     "realsass-dashboard-front/Dockerfile",
     "realsass-dashboard-front/.dockerignore",
@@ -80,10 +82,15 @@
     "realsass-dashboard-front/app/**/*.tsx",
     "realsass-dashboard-front/app/**/*.ts",
     "realsass-dashboard-front/components/**/*.tsx",
+    "realsass-dashboard-front/components/**/*.ts",
+    "realsass-dashboard-front/features/**/*.tsx",
+    "realsass-dashboard-front/features/**/*.ts",
     "realsass-dashboard-front/lib/**/*.ts",
     "realsass-dashboard-front/hooks/**/*.ts",
     "realsass-dashboard-front/context/**/*.tsx",
+    "realsass-dashboard-front/stores/**/*.ts",
     "realsass-dashboard-front/types/**/*.ts",
+    "realsass-dashboard-front/config/**/*.ts",
 
     "real-ecommerce-front/Dockerfile",
     "real-ecommerce-front/.dockerignore",
@@ -97,16 +104,15 @@
     "real-ecommerce-front/app/**/*.tsx",
     "real-ecommerce-front/app/**/*.ts",
     "real-ecommerce-front/components/**/*.tsx",
+    "real-ecommerce-front/components/**/*.ts",
+    "real-ecommerce-front/features/**/*.tsx",
+    "real-ecommerce-front/features/**/*.ts",
     "real-ecommerce-front/lib/**/*.ts",
     "real-ecommerce-front/hooks/**/*.ts",
     "real-ecommerce-front/context/**/*.tsx",
-    "real-ecommerce-front/types/**/*.ts",
-
-    "realsass-sass-front/stores/**/*.ts",
-    "realsass-dashboard-front/stores/**/*.ts",
     "real-ecommerce-front/stores/**/*.ts",
-
-    "packages/trpc/src/**/*.ts"
+    "real-ecommerce-front/types/**/*.ts",
+    "real-ecommerce-front/config/**/*.ts"
   ],
   "ignore": {
     "useGitignore": true,

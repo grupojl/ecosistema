@@ -60,3 +60,10 @@ export class AuthController {
     return this.usersService.getOrganizationAccess(user.uid, organizationId);
   }
 }
+
+// ─── INTEGRACIÓN SUPERADMIN — ADR-013 ─────────────────────────────────────────
+// findBySlugPublic devuelve la entidad Organization con storeStatus.
+// Quien construya la respuesta HTTP/tRPC con ecommerceEnabled debe usar:
+//   ecommerceEnabled: org.storeStatus === 'ACTIVE'
+// StoreService en realsass-ecommerce-back ya maneja ecommerceEnabled: false con NotFoundException.
+// ──────────────────────────────────────────────────────────────────────────────

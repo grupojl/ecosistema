@@ -36,8 +36,6 @@
     "@trpc/server": "catalog:",
     "bcryptjs": "catalog:",
     "bullmq": "catalog:",
-    "class-transformer": "catalog:",
-    "class-validator": "catalog:",
     "dotenv": "catalog:",
     "firebase-admin": "catalog:",
     "helmet": "catalog:",

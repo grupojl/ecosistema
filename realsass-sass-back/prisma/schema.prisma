@@ -1,14 +1,8 @@
 // =============================================================================
-// prisma/schema.prisma — real-back (post S1)
-// Modelos originales: User, Organization, Collaborator, Invitation, AffiliateData
-// Modelos nuevos (fusión de real-config-back): ThemeConfig, SecretConfig,
-//   FeatureFlag, ContentTemplate, QuotaConfig, WebhookEndpoint,
-//   WebhookDeliveryLog, ConfigAuditLog
-// Migración de permisos: columnas booleanas → permissions JSONB en Collaborator
+// prisma/schema.prisma — real-back (post S1 + ADR-013 superadmin integration)
 // =============================================================================
 
 generator client {
-
   provider   = "prisma-client-js"
   engineType = "client"
 }
@@ -17,7 +11,7 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Enums originales ─────────────────────────────────────────────────────────
+// ─── Enums ────────────────────────────────────────────────────────────────────
 
 enum CollaboratorStatus {
   PENDING
@@ -25,15 +19,26 @@ enum CollaboratorStatus {
   REMOVED
 }
 
-// ─── Modelos originales ───────────────────────────────────────────────────────
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+enum StoreStatus {
+  ACTIVE
+  PAUSED
+}
+
+// ─── Modelos ──────────────────────────────────────────────────────────────────
 
 model User {
-  id             String  @id @default(uuid())
-  firebaseUid    String  @unique
-  email          String  @unique
-  isOwner        Boolean @default(false)
-  isAffiliate    Boolean @default(false)
-  affiliateCode  String? @unique
+  id             String   @id @default(uuid())
+  firebaseUid    String   @unique
+  email          String   @unique
+  isOwner        Boolean  @default(false)
+  isAffiliate    Boolean  @default(false)
+  affiliateCode  String?  @unique
   referredByCode String?
   displayName    String?
   avatarUrl      String?
@@ -56,16 +61,23 @@ model Organization {
   website     String?
   phone       String?
   address     String?
+  slug        String? @unique
+  enabledProducts Json @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ── Integración superadmin (ADR-013) ──────────────────────────────────────
+  // status      → controla acceso al panel administrativo (TenantGuard)
+  // storeStatus → controla visibilidad del storefront público (StoreService)
+  // Son independientes — dos dimensiones de control (norte Shopify Partners)
+  ecosystemId  String      @default("welver")
+  plan         String      @default("free")
+  status       OrgStatus   @default(ACTIVE)
+  suspendedAt  DateTime?
+  storeStatus  StoreStatus @default(ACTIVE)
+
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   collaborators Collaborator[]
-
-  slug            String?  @unique        // ← AGREGAR
-  enabledProducts Json     @default("{}") // ← AGREGAR
-
-  // Relaciones con módulos de config (fusión S1)
   themes        ThemeConfig[]
   secrets       SecretConfig[]
   flags         FeatureFlag[]
@@ -83,17 +95,10 @@ model Collaborator {
   userId         String?
   email          String
   status         CollaboratorStatus @default(PENDING)
-
-  // S1: permisos granulares migrados a JSONB
-  // Las columnas booleanas (canViewListings, etc.) fueron eliminadas.
-  // Estructura esperada: { canViewListings, canCreateListings, canEditListings,
-  //   canDeleteListings, canViewStats, canManageLeads, canManageCollaborators }
-  // Owner siempre recibe permisos completos desde el servicio — no se guarda en DB.
-  permissions Json @default("{}")
-
-  invitedAt  DateTime  @default(now())
-  acceptedAt DateTime?
-  updatedAt  DateTime  @updatedAt
+  permissions    Json               @default("{}")
+  invitedAt      DateTime           @default(now())
+  acceptedAt     DateTime?
+  updatedAt      DateTime           @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -291,7 +296,7 @@ model ConfigAuditLog {
   ipAddress      String?
   createdAt      DateTime @default(now())
 
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@index([configType])
