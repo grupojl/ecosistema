@@ -13,6 +13,7 @@ const REQUEST_TIMEOUT_MS = 5000;
 
 // real-back tiene setGlobalPrefix('api/v1') — ver src/main.ts de real-back.
 const ORGANIZATIONS_SERVICE_PREFIX = process.env['ORGANIZATIONS_SERVICE_PREFIX'] ?? '/api/v1';
+const MARKET_CACHE_TTL = 300; // 5 min — Markets no cambian frecuentemente
 
 /**
  * Cliente HTTP hacia real-back — única fuente de verdad de usuarios,
@@ -90,3 +91,44 @@ export class OrganizationsClientService {
     }
   }
 }
+
+  // ── Markets resolution (MKT-E-01) — ADR-014 ─────────────────────────────────
+  async resolveMarket(
+    organizationId:     string,
+    visitorCountryCode: string,
+  ): Promise<{ id: string; countryCode: string; isDefault: boolean; fulfillmentConfig: Record<string, unknown> }> {
+    const code     = (visitorCountryCode || 'default').toUpperCase()
+    const cacheKey = `market:${organizationId}:${code}`
+
+    const cached = await this.redis.get(cacheKey).catch(() => null)
+    if (cached) return JSON.parse(cached)
+
+    const input     = JSON.stringify({ organizationId, countryCode: code === 'DEFAULT' ? 'AR' : code })
+    const url       = `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/trpc/markets.resolve?input=${encodeURIComponent(input)}`
+
+    const controller = new AbortController()
+    const timeout    = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(url, {
+        headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' },
+        signal:  controller.signal,
+      })
+
+      if (!response.ok) {
+        this.logger.warn(`resolveMarket falló (${response.status}) — usando fallback default`)
+        return { id: 'default', countryCode: 'AR', isDefault: true, fulfillmentConfig: {} }
+      }
+
+      const body   = await response.json() as { result: { data: unknown } }
+      const market = body.result.data as { id: string; countryCode: string; isDefault: boolean; fulfillmentConfig: Record<string, unknown> }
+
+      await this.redis.set(cacheKey, JSON.stringify(market), MARKET_CACHE_TTL).catch(() => undefined)
+      return market
+    } catch {
+      this.logger.warn('resolveMarket timeout/error — usando fallback default')
+      return { id: 'default', countryCode: 'AR', isDefault: true, fulfillmentConfig: {} }
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
