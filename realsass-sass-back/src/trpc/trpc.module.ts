@@ -68,6 +68,7 @@ export class TrpcService {
       webhooksService:      this.webhooks,
       auditService:         this.audit,
       secretsService:       this.secrets,
+      marketsService:     this.markets,
     });
 
     return createExpressMiddleware({
