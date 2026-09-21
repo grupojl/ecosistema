@@ -53,6 +53,7 @@ export class TrpcService {
     private readonly webhooks:      ConfigWebhooksService,
     private readonly audit:         ConfigAuditService,
     private readonly secrets:       ConfigSecretsService,
+    private readonly markets:       MarketsService,
   ) {}
 
   get handler() {
@@ -96,6 +97,7 @@ export class TrpcService {
     ConfigWebhooksModule,
     ConfigAuditModule,
     ConfigSecretsModule,
+    MarketsModule,
   ],
   providers: [TrpcService],
 })

@@ -1,3 +1,4 @@
+import { MarketsService } from '../markets/markets.service';
 import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
 import type { UpdateOrganizationInput } from './domain/organization.entity';
 import { Prisma } from '@prisma/client';
@@ -62,6 +63,12 @@ export class OrganizationsService {
 //     ecommerceEnabled: org.storeStatus === 'ACTIVE',  // ← AGREGAR ESTA LÍNEA
 //     ...
 //   };
+
+  async createForUserWithDefaultMarket(userId: string, countryCode: string = "AR") {
+    const org = await this.createForUser(userId);
+    await this.marketsService.seedDefaultMarket(org.id, countryCode);
+    return org;
+  }
 //
 // StoreService ya maneja ecommerceEnabled: false con un NotFoundException.
 // No hay cambios necesarios en realsass-ecommerce-back.

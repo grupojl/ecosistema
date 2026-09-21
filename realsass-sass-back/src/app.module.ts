@@ -21,6 +21,7 @@ import { ConfigTemplatesModule } from './config-templates/config-templates.modul
 import { ConfigQuotasModule }    from './config-quotas/config-quotas.module';
 import { ConfigWebhooksModule }  from './config-webhooks/config-webhooks.module';
 import { InternalModule }    from './internal/internal.module';
+import { MarketsModule }     from './markets/markets.module';
 import { TrpcModule }            from './trpc/trpc.module';
 
 import {
@@ -57,6 +58,7 @@ import {
     ConfigQuotasModule,
     ConfigWebhooksModule,
     InternalModule,
+    MarketsModule,
     TrpcModule,
   ],
   providers: [

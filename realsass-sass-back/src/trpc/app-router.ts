@@ -10,6 +10,7 @@ import { createConfigAuditRouter }         from './routers/config-audit.router';
 import { createConfigSecretsRouter }       from './routers/config-secrets.router';
 import { createConfigTemplatesRouter }     from './routers/config-templates.router';
 import { createAffiliatesRouter }          from './routers/affiliates.router';
+import { createMarketsRouter }            from './routers/markets.router';
 
 import type { UsersService }               from '../users/users.service';
 import type { AuthService }                from '../auth/auth.service';
@@ -23,6 +24,7 @@ import type { ConfigAuditService }         from '../config-audit/config-audit.se
 import type { ConfigSecretsService }       from '../config-secrets/config-secrets.service';
 import type { ConfigTemplatesService }     from '../config-templates/config-templates.service';
 import type { AffiliatesService }          from '../affiliate/affiliate.service';
+import type { MarketsService }            from '../markets/markets.service';
 
 export interface AppRouterDeps {
   usersService:       UsersService;
@@ -37,6 +39,7 @@ export interface AppRouterDeps {
   secretsService:     ConfigSecretsService;
   templatesService:   ConfigTemplatesService;
   affiliatesService:  AffiliatesService;
+  marketsService:     MarketsService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
@@ -52,6 +55,7 @@ export function createAppRouter(deps: AppRouterDeps) {
     configSecrets:   createConfigSecretsRouter(deps.secretsService),
     configTemplates: createConfigTemplatesRouter(deps.templatesService),
     affiliates:      createAffiliatesRouter(deps.affiliatesService),
+    markets:         createMarketsRouter(deps.marketsService),
   });
 }
 
