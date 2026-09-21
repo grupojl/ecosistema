@@ -35,3 +35,7 @@ export type SassAppRouter = _SassAppRouter;
 // Consumido por: real-ecommerce-front
 import type { EcommerceAppRouter as _EcommerceAppRouter } from '../../realsass-ecommerce-back/src/trpc/app-router';
 export type EcommerceAppRouter = _EcommerceAppRouter;
+
+// ── Markets ───────────────────────────────────────────────────────────────────
+// Consumido por: ecommerce-back, grupojl-control-backend
+export type { MarketDTO, FulfillmentConfig } from '../../realsass-sass-back/src/markets/domain/market.entity'

@@ -65,6 +65,8 @@ model Organization {
   enabledProducts Json @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  countryCode  String   @default("AR") @map("country_code")
+  markets      Market[]
 
   // ── Integración superadmin (ADR-013) ──────────────────────────────────────
   // status      → controla acceso al panel administrativo (TenantGuard)
@@ -301,4 +303,21 @@ model ConfigAuditLog {
   @@index([organizationId, createdAt])
   @@index([configType])
   @@map("config_audit_logs")
+}
+
+model Market {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  countryCode       String   @map("country_code")
+  isDefault         Boolean  @default(false) @map("is_default")
+  isActive          Boolean  @default(true)  @map("is_active")
+  fulfillmentConfig Json     @default("{}") @map("fulfillment_config")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, countryCode])
+  @@index([organizationId, isActive])
+  @@map("markets")
 }
