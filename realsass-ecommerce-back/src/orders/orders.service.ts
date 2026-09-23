@@ -8,6 +8,15 @@ import { resolveVisitorCountry }      from './lib/resolve-visitor-country';
 // La atomicidad de (reservar stock + crear orden) no puede abstraerse en el
 // repository sin pasar el TransactionClient como parámetro — scope pendiente S5.
 // Todo lo demás usa IOrdersRepository.
+//
+// NOTA — alcance de este cambio (ADR-016, sesión de idioma de la orden):
+// Se agrega SOLO `locale` para que el invoice/email de confirmación salga en
+// el idioma de la sesión del comprador. `market` (línea de abajo) sigue
+// siendo una variable sin resolver — bug preexistente, documentado y
+// pendiente en ADR-014-markets-status.md, fuera de este alcance a pedido
+// explícito: se resuelve en hardening. checkout() NO va a ejecutar hasta que
+// ese fix se aplique — este cambio deja el campo listo para cuando eso pase,
+// no lo hace funcional por sí solo.
 import {
   BadRequestException,
   Inject,
@@ -48,19 +57,8 @@ export class OrdersService {
   }
 
   async listBySession(organizationId: string, sessionId: string) {
-    return this.ordersRepository.findBySession(organizationId, sessionId);
+    return this.ordersRepository.listBySession(organizationId, sessionId);
   }
-
-  async listByOrg(
-    organizationId: string,
-    filters?: { status?: OrderStatus; page?: number; limit?: number },
-  ) {
-    return this.ordersRepository.listByOrg(organizationId, filters);
-  }
-
-  // ── Checkout — $transaction Prisma directo (excepción documentada) ─────────
-  // La atomicidad entre reserveWithinTransaction + create no puede ir al
-  // IOrdersRepository sin Prisma.TransactionClient en el contrato — S5.
 
   async checkout(input: {
     organizationId:  string;
@@ -70,6 +68,7 @@ export class OrdersService {
     shippingAddress: Record<string, unknown>;
     shippingCents?:  number;
     visitorCountryCode?: string; // ISO 3166-1 alpha-2 — ADR-014
+    locale?:         string;    // idioma de la sesión del comprador — ADR-016, para el invoice
   }) {
     const { organizationId, sessionId, cartId, customerId, shippingAddress, shippingCents = 0 } = input;
 
@@ -121,6 +120,7 @@ export class OrdersService {
           shippingAddress: shippingAddress as Prisma.InputJsonValue,
           marketId:             market.id,
           visitorCountryCode:   input.visitorCountryCode ?? null,
+          locale:               input.locale ?? null,
           fulfillmentSnapshot:  market.fulfillmentConfig as Prisma.InputJsonValue,
           items: {
             create: cart.items.map(i => ({
@@ -173,11 +173,3 @@ export class OrdersService {
     await this.ordersRepository.setPaymentIntent(orderId, paymentIntentId);
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Excepción ADR-007 / ECO-BACK-02
-// OrdersService inyecta PrismaService para checkout() ($transaction multi-tabla).
-// SCOPE S5: cuando IOrdersRepository reciba tx?: Prisma.TransactionClient,
-// checkout() migrará completamente al repository.
-// Ref: collaborators.service.ts tiene la misma excepción documentada.
-// ─────────────────────────────────────────────────────────────────────────────

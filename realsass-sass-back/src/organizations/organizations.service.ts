@@ -1,7 +1,7 @@
-import { MarketsService } from '../markets/markets.service';
 import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
-import type { UpdateOrganizationInput } from './domain/organization.entity';
 import { Prisma } from '@prisma/client';
+import { MarketsService } from '../markets/markets.service';
+import type { UpdateOrganizationInput, StoreInfo } from './domain/organization.entity';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from './repository/organizations.repository.interface';
 
 @Injectable()
@@ -11,10 +11,22 @@ export class OrganizationsService {
   constructor(
     @Inject(ORGANIZATIONS_REPOSITORY)
     private readonly repo: IOrganizationsRepository,
+    private readonly marketsService: MarketsService,
   ) {}
 
   async createForUser(userId: string, tx?: Prisma.TransactionClient) {
     return this.repo.create({ userId, firebaseUid: '' }, tx);
+  }
+
+  /**
+   * ADR-014 — crea la org y siembra su Market default.
+   * Antes estaba declarado FUERA de la clase (error de sintaxis) y sin
+   * MarketsService inyectado: sass-back no compilaba.
+   */
+  async createForUserWithDefaultMarket(userId: string, countryCode = 'AR') {
+    const org = await this.createForUser(userId);
+    await this.marketsService.seedDefaultMarket(org.id, countryCode);
+    return org;
   }
 
   async getMyOrganization(firebaseUid: string) {
@@ -33,7 +45,11 @@ export class OrganizationsService {
     return this.repo.findByUserId(userId);
   }
 
-  async findBySlugPublic(slug: string) {
+  /**
+   * StoreInfo público por slug. storeStatus PAUSED → ecommerceEnabled: false
+   * (ADR-013); StoreService de ecommerce-back lo traduce a 404.
+   */
+  async findBySlugPublic(slug: string): Promise<StoreInfo | null> {
     return this.repo.findBySlug(slug);
   }
 
@@ -45,31 +61,3 @@ export class OrganizationsService {
     return org;
   }
 }
-
-// ─── INTEGRACIÓN SUPERADMIN — ADR-013 ────────────────────────────────────────
-// Cuando storeStatus === 'PAUSED', el storefront debe devolver 404.
-// StoreService en realsass-ecommerce-back llama a este back y lee ecommerceEnabled.
-// Regla: en findBySlugPublic (o el método que devuelve StoreInfo),
-// si organization.storeStatus === 'PAUSED' → devolver ecommerceEnabled: false.
-//
-// Ejemplo de aplicación en el método que resuelve el slug:
-//
-//   const org = await repo.findBySlug(slug);
-//   if (!org) throw new NotFoundException();
-//   return {
-//     organizationId:   org.id,
-//     slug:             org.slug,
-//     name:             org.name,
-//     ecommerceEnabled: org.storeStatus === 'ACTIVE',  // ← AGREGAR ESTA LÍNEA
-//     ...
-//   };
-
-  async createForUserWithDefaultMarket(userId: string, countryCode: string = "AR") {
-    const org = await this.createForUser(userId);
-    await this.marketsService.seedDefaultMarket(org.id, countryCode);
-    return org;
-  }
-//
-// StoreService ya maneja ecommerceEnabled: false con un NotFoundException.
-// No hay cambios necesarios en realsass-ecommerce-back.
-// ─────────────────────────────────────────────────────────────────────────────

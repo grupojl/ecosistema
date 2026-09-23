@@ -1,3 +1,2 @@
-export * from './types'
-export * from './resolver'
-export * from './client'
+export * from './resolver';
+export * from './client';

@@ -1,14 +1,7 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException, Logger } from '@nestjs/common';
+import { parseSassBackStoreResponse, type StoreInfo } from './store.contract';
 
-export interface StoreInfo {
-  organizationId: string;
-  slug: string;
-  name: string | null;
-  description: string | null;
-  logoUrl: string | null;
-  website: string | null;
-  ecommerceEnabled: boolean;
-}
+export type { StoreInfo };
 
 @Injectable()
 export class StoreService {
@@ -17,31 +10,28 @@ export class StoreService {
 
   /**
    * Resuelve un slug al contexto de tienda consultando realsass-sass-back.
-   * NO usa prisma — este schema no tiene modelo Organization.
    * realsass-sass-back es el source of truth de organizaciones.
    *
-   * Devuelve 404 si:
-   *   - SASS_BACK_URL no está configurado
-   *   - La org no existe para ese slug
-   *   - ecommerceEnabled === false
+   * Semántica de errores (importa para SEO):
+   *   - 404 → la tienda NO existe / está pausada. Google la desindexa.
+   *   - 503 → falla transitoria de infraestructura. Google reintenta y
+   *           CONSERVA la indexación. Antes todo era 404: un blip de red
+   *           de sass-back podía desindexar tiendas enteras.
    */
   async resolveBySlug(slug: string): Promise<StoreInfo> {
     if (!this.sassBackUrl) {
-      throw new NotFoundException(
-        'SASS_BACK_URL no configurado — no se puede resolver el slug de la tienda.',
-      );
+      this.logger.error('SASS_BACK_URL no configurado');
+      throw new ServiceUnavailableException('Servicio de organizaciones no configurado.');
     }
 
     const url = `${this.sassBackUrl}/organizations/public/by-slug/${encodeURIComponent(slug)}`;
 
     let res: Response;
     try {
-      res = await fetch(url, {
-        signal: AbortSignal.timeout(5_000),
-      });
+      res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     } catch (err) {
       this.logger.error(`Error de red al contactar sass-back para slug "${slug}": ${String(err)}`);
-      throw new NotFoundException('No se pudo conectar al servicio de organizaciones.');
+      throw new ServiceUnavailableException('No se pudo conectar al servicio de organizaciones.');
     }
 
     if (res.status === 404) {
@@ -50,18 +40,19 @@ export class StoreService {
 
     if (!res.ok) {
       this.logger.warn(`sass-back respondió ${res.status} para slug "${slug}"`);
-      throw new NotFoundException(`No se pudo resolver la tienda "${slug}".`);
+      throw new ServiceUnavailableException(`No se pudo resolver la tienda "${slug}".`);
     }
 
-    const body = (await res.json()) as { success: boolean; data: StoreInfo };
-    const data = body.data ?? (body as unknown as StoreInfo);
-
-    if (!data.ecommerceEnabled) {
-      throw new NotFoundException(
-        `La organización "${slug}" no tiene ecommerce habilitado.`,
-      );
+    const store = parseSassBackStoreResponse(await res.json());
+    if (!store) {
+      this.logger.error(`Contrato inválido de sass-back para slug "${slug}"`);
+      throw new ServiceUnavailableException('Respuesta inválida del servicio de organizaciones.');
     }
 
-    return data;
+    if (!store.ecommerceEnabled) {
+      throw new NotFoundException(`La organización "${slug}" no tiene ecommerce habilitado.`);
+    }
+
+    return store;
   }
 }

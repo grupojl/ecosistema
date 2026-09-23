@@ -30,6 +30,7 @@ import type { OrdersService }               from '../../orders/orders.service';
 import type { CartService }                 from '../../cart/cart.service';
 import type { CatalogService }              from '../../catalog/catalog.service';
 import type { StoreService }                from '../../store/store.service';
+import { rethrowAsTrpcStoreError }          from '../../store/store.trpc-errors';
 
 export function createCustomerRouter(
   customersService: CustomersService,
@@ -73,7 +74,7 @@ export function createCustomerRouter(
      */
     resolveStore: publicProcedure
       .input(z.object({ slug: z.string().min(1) }))
-      .query(({ input }) => storeService.resolveBySlug(input.slug)),
+      .query(({ input }) => storeService.resolveBySlug(input.slug).catch(rethrowAsTrpcStoreError)),
 
     /**
      * customer.getProducts — @Public
@@ -195,6 +196,7 @@ export function createCustomerRouter(
         }),
         shippingCents:       z.number().int().nonnegative().optional(),
         visitorCountryCode:  z.string().length(2).toUpperCase().optional(), // ADR-014
+        locale:              z.string().min(2).max(10).optional(), // ADR-016 — idioma de la sesión, para el invoice
       }))
       .mutation(({ ctx, input }) =>
         ordersService.checkout(ctx.organizationId!, {
@@ -202,6 +204,7 @@ export function createCustomerRouter(
           customerId:      ctx.customerId!,
           shippingAddress: input.shippingAddress,
           shippingCents:   input.shippingCents,
+          locale:          input.locale,
         }),
       ),
   });

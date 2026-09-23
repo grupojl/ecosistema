@@ -205,6 +205,7 @@ model Order {
   createdAt       DateTime    @default(now()) @map("created_at")
   marketId              String?  @map("market_id")
   visitorCountryCode    String?  @map("visitor_country_code")
+  locale                String?  @map("locale")               // ADR-016 — idioma de la sesión, para el invoice
   fulfillmentSnapshot   Json     @default("{}") @map("fulfillment_snapshot")
   updatedAt       DateTime    @updatedAt @map("updated_at")
   customer        StoreCustomer      @relation(fields: [customerId], references: [id])

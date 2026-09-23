@@ -4,9 +4,11 @@ import { OrganizationsService }            from './organizations.service';
 import { PrismaOrganizationsRepository }   from './repository/prisma-organizations.repository';
 import { ORGANIZATIONS_REPOSITORY }        from './repository/organizations.repository.interface';
 import { PrismaModule }                    from '../prisma/prisma.module';
+import { MarketsModule }                   from '../markets/markets.module';
 
 @Module({
-  imports:     [PrismaModule],
+  // MarketsModule solo importa PrismaModule → sin dependencia circular.
+  imports:     [PrismaModule, MarketsModule],
   controllers: [OrganizationsController],
   providers:   [
     OrganizationsService,

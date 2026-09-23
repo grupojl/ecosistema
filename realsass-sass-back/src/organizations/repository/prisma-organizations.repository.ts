@@ -2,7 +2,13 @@ import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
 import type { IOrganizationsRepository } from './organizations.repository.interface';
-import type { Organization, UpdateOrganizationInput, CreateOrganizationInput, StoreInfo } from '../domain/organization.entity';
+import {
+  toPublicStoreInfo,
+  type Organization,
+  type UpdateOrganizationInput,
+  type CreateOrganizationInput,
+  type StoreInfo,
+} from '../domain/organization.entity';
 
 type PrismaOrg = Prisma.OrganizationGetPayload<Record<string, never>>;
 
@@ -43,27 +49,21 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
     return user?.organization ? this.toEntity(user.organization) : null;
   }
 
+  /**
+   * FIX: antes el select NO incluía storeStatus → `org.storeStatus` era
+   * undefined → ecommerceEnabled siempre false → TODAS las tiendas en 404.
+   * Select explícito y mínimo (sin userId ni enabledProducts: no salen a público).
+   * `slug` es @unique → findUnique usa el índice.
+   */
   async findBySlug(slug: string): Promise<StoreInfo | null> {
-    const org = await this.prisma.organization.findFirst({
-      where: { slug },
+    const row = await this.prisma.organization.findUnique({
+      where:  { slug },
       select: {
-        id: true, slug: true, name: true,
-        description: true, logoUrl: true, website: true,
-        enabledProducts: true,
+        id: true, slug: true, name: true, description: true,
+        logoUrl: true, website: true, countryCode: true, storeStatus: true,
       },
     });
-    if (!org || !org.slug) return null;
-    // @real/jsonb-cast
-    const ep = (org.enabledProducts as Record<string, unknown>) ?? {};
-    return {
-      organizationId:   org.id,
-      slug:             org.slug,
-      name:             org.name,
-      description:      org.description,
-      logoUrl:          org.logoUrl,
-      website:          org.website,
-      ecommerceEnabled: org.storeStatus === 'ACTIVE',
-    };
+    return row ? toPublicStoreInfo(row) : null;
   }
 
   async create(input: CreateOrganizationInput, tx?: Prisma.TransactionClient): Promise<Organization> {

@@ -11,6 +11,8 @@
 import { useState, useEffect }  from 'react';
 import { trpc }                 from '@/lib/trpc/client';
 import { useCustomerContext }   from '@/context/customer-context';
+import { useLocaleStore }       from '@/stores/use-locale-store';
+import { resolveCheckoutLocale } from '@/lib/checkout/resolve-checkout-locale';
 
 function getStoredCartId(): string | null {
   if (typeof window === 'undefined') return null;
@@ -53,9 +55,19 @@ export function useRemoveFromCart() {
   });
 }
 
+/**
+ * ADR-016: el backend acepta `locale` (opcional) en checkout para que el
+ * invoice/email de confirmación salga en el idioma del comprador. Este hook
+ * lo completa automáticamente con el último idioma navegado
+ * (useLocaleStore, alimentado por <LocaleMemo> en el layout de tienda) sin
+ * que quien llame a mutate() tenga que acordarse de pasarlo — puede
+ * igualmente pasar `locale` explícito en el input y ese gana
+ * (resolveCheckoutLocale prioriza lo explícito).
+ */
 export function useCheckout() {
   const utils = trpc.useUtils();
-  return trpc.customer.checkout.useMutation({
+
+  const mutation = trpc.customer.checkout.useMutation({
     onSuccess: () => {
       // Limpiar cartId tras checkout exitoso
       localStorage.removeItem('ecommerce_cart_id');
@@ -63,4 +75,18 @@ export function useCheckout() {
       void utils.customer.orders.invalidate();
     },
   });
+
+  type CheckoutInput = Parameters<typeof mutation.mutate>[0];
+
+  function withRememberedLocale(input: CheckoutInput): CheckoutInput {
+    const remembered = useLocaleStore.getState().locale;
+    const locale = resolveCheckoutLocale((input as { locale?: string }).locale, remembered);
+    return locale ? { ...input, locale } : input;
+  }
+
+  return {
+    ...mutation,
+    mutate:      (input: CheckoutInput) => mutation.mutate(withRememberedLocale(input)),
+    mutateAsync: (input: CheckoutInput) => mutation.mutateAsync(withRememberedLocale(input)),
+  };
 }

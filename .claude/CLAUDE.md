@@ -157,3 +157,53 @@ resolveMarket(organizationId, visitorCountryCode)
 ### Siguiente paso
 
 Ver ADR-014 y los checklists MKT-01..09 en `.claude/modules/sass-back/markets.md`
+
+<!-- ADR-016 -->
+---
+
+## SEO + idioma global (ADR-016)
+
+### El norte
+
+**Shopify Markets** (estructura) · **Apple** (no forzar) · **Airbnb / Booking** (el usuario manda) ·
+**IKEA** (idioma ≠ país) · **Mercado Libre** (LatAm primero) · **Google Search Central** (las reglas)
+
+*El sistema sugiere, el usuario decide, Google ve siempre la misma URL para el mismo contenido.*
+
+### Reglas no negociables
+
+```
+URL        /{es|pt|en}/tienda/{slug}/...     idioma en la URL, país en el Market
+Idioma     cookie > Accept-Language > país (no bots) > es
+Redirect   solo /tienda/... sin idioma, 307. Una URL con idioma NUNCA redirige
+Indexa     solo el idioma primario de la tienda (countryCode) hasta Fase 2
+Errores    NOT_FOUND → 404 · cualquier otra falla → 5xx (Google conserva el índice)
+```
+
+Ver `architecture/10-seo-i18n-norte.md`, `decisions/ADR-016-seo-i18n-global.md`
+y `contracts/seo-i18n.md`. Esto completa el pendiente "Idioma por Market" de ADR-014.
+
+<!-- ADR-018 -->
+---
+
+## Dependencias — política única (ADR-018)
+
+### El norte
+
+**Google** (una versión, dueño, strict deps) · **Microsoft Rush** (cero phantom deps) ·
+**OpenSSF / SLSA** (cadena de suministro)
+
+*Toda dependencia es código ajeno que corre con nuestros permisos: entra con dueño,
+con una sola versión y declarada donde se usa.*
+
+### Reglas no negociables
+
+```
+Versión    solo catalog: o workspace:*  — nada hardcodeado
+Declarar   todo import externo está en el package.json del workspace que lo usa
+Libs       packages/* → frameworks en peerDependencies, nunca en dependencies
+Nueva dep  checklist R4 del norte en el PR + dueño asignado
+Lockfile   --frozen-lockfile en CI y en Railway
+```
+
+Ver `architecture/11-dependencias-norte.md` y `decisions/ADR-018-politica-dependencias.md`.

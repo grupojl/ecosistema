@@ -32,6 +32,7 @@ export interface OrderOutput {
   totalCents:      number;
   shippingCents:   number;
   paymentIntentId: string | null;
+  locale:             string | null; // ADR-016 — idioma de la sesión, para el invoice
   // @real/jsonb-cast
   shippingAddress: Record<string, unknown>;
   createdAt:       Date;
