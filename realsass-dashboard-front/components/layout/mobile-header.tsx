@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2, MapPin, MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, BarChart2,
+  Palette, ToggleLeft, Webhook, ChartColumnBig,
   Menu, X,
 } from 'lucide-react';
 import { NAV_GROUPS } from '@/config/navigation';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Building2, MapPin, MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, BarChart2,
+  Palette, ToggleLeft, Webhook, ChartColumnBig,
 };
 
 export function MobileHeader() {

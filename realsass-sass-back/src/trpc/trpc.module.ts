@@ -15,30 +15,30 @@ import {
 import { createExpressMiddleware }  from '@trpc/server/adapters/express';
 import { createTrpcAuthMiddleware } from '@real/auth-server';
 
-import { createAppRouter }          from './app-router';
-import { createTrpcContext }        from './trpc';
+import { createAppRouter }          from '@/trpc/app-router';
+import { createTrpcContext }        from '@/trpc/trpc';
 
-import { UsersService }             from '../users/users.service';
-import { AuthService }              from '../auth/auth.service';
-import { OrganizationsService }     from '../organizations/organizations.service';
-import { CollaboratorsService }     from '../collaborators/collaborators.service';
-import { ConfigFlagsService }       from '../config-flags/config-flags.service';
-import { ConfigQuotasService }      from '../config-quotas/config-quotas.service';
-import { ConfigThemesService }      from '../config-themes/config-themes.service';
-import { ConfigWebhooksService }    from '../config-webhooks/config-webhooks.service';
-import { ConfigAuditService }       from '../config-audit/config-audit.service';
-import { ConfigSecretsService }     from '../config-secrets/config-secrets.service';
+import { UsersService }             from '@/users/users.service';
+import { AuthService }              from '@/auth/auth.service';
+import { OrganizationsService }     from '@/organizations/organizations.service';
+import { CollaboratorsService }     from '@/collaborators/collaborators.service';
+import { ConfigFlagsService }       from '@/config-flags/config-flags.service';
+import { ConfigQuotasService }      from '@/config-quotas/config-quotas.service';
+import { ConfigThemesService }      from '@/config-themes/config-themes.service';
+import { ConfigWebhooksService }    from '@/config-webhooks/config-webhooks.service';
+import { ConfigAuditService }       from '@/config-audit/config-audit.service';
+import { ConfigSecretsService }     from '@/config-secrets/config-secrets.service';
 
-import { UsersModule }              from '../users/users.module';
-import { AuthModule }               from '../auth/auth.module';
-import { OrganizationsModule }      from '../organizations/organizations.module';
-import { CollaboratorsModule }      from '../collaborators/collaborators.module';
-import { ConfigFlagsModule }        from '../config-flags/config-flags.module';
-import { ConfigQuotasModule }       from '../config-quotas/config-quotas.module';
-import { ConfigThemesModule }       from '../config-themes/config-themes.module';
-import { ConfigWebhooksModule }     from '../config-webhooks/config-webhooks.module';
-import { ConfigAuditModule }        from '../config-audit/config-audit.module';
-import { ConfigSecretsModule }      from '../config-secrets/config-secrets.module';
+import { UsersModule }              from '@/users/users.module';
+import { AuthModule }               from '@/auth/auth.module';
+import { OrganizationsModule }      from '@/organizations/organizations.module';
+import { CollaboratorsModule }      from '@/collaborators/collaborators.module';
+import { ConfigFlagsModule }        from '@/config-flags/config-flags.module';
+import { ConfigQuotasModule }       from '@/config-quotas/config-quotas.module';
+import { ConfigThemesModule }       from '@/config-themes/config-themes.module';
+import { ConfigWebhooksModule }     from '@/config-webhooks/config-webhooks.module';
+import { ConfigAuditModule }        from '@/config-audit/config-audit.module';
+import { ConfigSecretsModule }      from '@/config-secrets/config-secrets.module';
 
 @Injectable()
 export class TrpcService {

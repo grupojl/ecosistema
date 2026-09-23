@@ -3,7 +3,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { resolveStore } from '@/lib/store'
-import { StoreProvider } from './store-provider'
+import { StoreProvider } from '@/app/[locale]/tienda/[slug]/store-provider'
 import { isLocale, getDictionary, t, primaryLocaleForCountry } from '@/lib/i18n'
 import { indexableLocalesForStore } from '@/lib/seo/indexing'
 import { buildAlternates, robotsFor } from '@/lib/seo/site'

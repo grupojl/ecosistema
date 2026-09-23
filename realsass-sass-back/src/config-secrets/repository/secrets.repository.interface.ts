@@ -1,4 +1,4 @@
-import type { SecretConfig, CreateSecretInput } from '../domain/secret.entity';
+import type { SecretConfig, CreateSecretInput } from '@/domain/secret.entity';
 
 export const SECRETS_REPOSITORY = Symbol('SECRETS_REPOSITORY');
 

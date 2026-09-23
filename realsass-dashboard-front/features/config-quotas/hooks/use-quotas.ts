@@ -13,4 +13,3 @@ export function useUpdateQuotaLimit() {
   return trpc.configQuotas.updateLimit.useMutation({
     onSuccess: () => { void utils.configQuotas.list.invalidate(); },
   });
-}

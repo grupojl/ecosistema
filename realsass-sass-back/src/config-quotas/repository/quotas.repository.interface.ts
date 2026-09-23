@@ -1,4 +1,4 @@
-import type { QuotaConfig } from '../domain/quota.entity';
+import type { QuotaConfig } from '@/domain/quota.entity';
 
 export const QUOTAS_REPOSITORY = Symbol('QUOTAS_REPOSITORY');
 

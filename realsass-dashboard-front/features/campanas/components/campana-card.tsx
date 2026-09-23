@@ -6,7 +6,7 @@ import { Badge } from '@real/ui';
 import { Button } from '@real/ui';
 import { Progress } from '@real/ui';
 import { ChevronDown, ChevronUp, TrendingUp, Eye, MousePointer, DollarSign } from 'lucide-react';
-import type { Campana } from '../types';
+import type { Campana } from '@/features/campanas/types';
 
 const ESTADO_COLORS: Record<string, string> = {
   activa: 'bg-green-500/10 text-green-600 border-green-500/20',

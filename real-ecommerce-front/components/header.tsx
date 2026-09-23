@@ -11,7 +11,7 @@
 'use client';
 
 import Link from 'next/link';
-import ShoppingBagModal from './shopping-bag-modal';
+import ShoppingBagModal from '@/components/shopping-bag-modal';
 import { useShoppingBagStore } from '@/stores/use-shopping-bag-store';
 
 export default function Header() {

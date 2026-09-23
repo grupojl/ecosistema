@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { ISecretsRepository } from './secrets.repository.interface';
-import type { SecretConfig, CreateSecretInput } from '../domain/secret.entity';
+import type { ISecretsRepository } from '@/config-secrets/repository/secrets.repository.interface';
+import type { SecretConfig, CreateSecretInput } from '@/domain/secret.entity';
 
 type PrismaSecret = Prisma.SecretConfigGetPayload<Record<string, never>>;
 

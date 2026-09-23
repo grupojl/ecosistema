@@ -5,9 +5,9 @@
  * ÚNICO archivo del módulo orders que puede importar PrismaService.
  */
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import type { IOrdersRepository, OrderRecord, CreateOrderInput } from "./orders.repository.interface";
-import type { OrderStatus } from "../domain/order.errors";
+import { PrismaService } from "@/prisma/prisma.service";
+import type { IOrdersRepository, OrderRecord, CreateOrderInput } from "@/orders/repository/orders.repository.interface";
+import type { OrderStatus } from "@/domain/order.errors";
 
 const ORDER_WITH_ITEMS = {
   items: {

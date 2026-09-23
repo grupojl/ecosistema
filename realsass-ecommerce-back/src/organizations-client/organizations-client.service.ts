@@ -5,8 +5,8 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { RedisService } from '../redis/redis.service';
-import type { OrganizationAccessResult } from './types/organization-access.types';
+import { RedisService } from '@/redis/redis.service';
+import type { OrganizationAccessResult } from '@/organizations-client/types/organization-access.types';
 
 const CACHE_TTL_SECONDS = Number(process.env['CONFIG_CACHE_TTL_ORG_ACCESS'] ?? 30);
 const REQUEST_TIMEOUT_MS = 5000;

@@ -11,7 +11,7 @@
  *   - invalidación automática en mutations
  */
 import { useRouter }         from 'next/navigation'
-import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Loader2, CircleAlert, ArrowLeft } from 'lucide-react'
 import { Button }            from '@real/ui'
 import { useAuth }           from '@/context/auth-context'
 import {
@@ -49,7 +49,7 @@ function LoadingSkeleton() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex items-center gap-2 text-destructive p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-      <AlertCircle className="h-4 w-4 shrink-0" />
+      <CircleAlert className="h-4 w-4 shrink-0" />
       <p className="text-sm">{message}</p>
     </div>
   )

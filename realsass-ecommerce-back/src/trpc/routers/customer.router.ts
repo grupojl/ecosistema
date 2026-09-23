@@ -24,13 +24,13 @@
  */
 import { z }                                from 'zod';
 import { TRPCError }                        from '@trpc/server';
-import { router, publicProcedure, customerProcedure } from '../trpc';
-import type { CustomersService }            from '../../customers/customers.service';
-import type { OrdersService }               from '../../orders/orders.service';
-import type { CartService }                 from '../../cart/cart.service';
-import type { CatalogService }              from '../../catalog/catalog.service';
-import type { StoreService }                from '../../store/store.service';
-import { rethrowAsTrpcStoreError }          from '../../store/store.trpc-errors';
+import { router, publicProcedure, customerProcedure } from '@/trpc';
+import type { CustomersService }            from '@/customers/customers.service';
+import type { OrdersService }               from '@/orders/orders.service';
+import type { CartService }                 from '@/cart/cart.service';
+import type { CatalogService }              from '@/catalog/catalog.service';
+import type { StoreService }                from '@/store/store.service';
+import { rethrowAsTrpcStoreError }          from '@/store/store.trpc-errors';
 
 export function createCustomerRouter(
   customersService: CustomersService,

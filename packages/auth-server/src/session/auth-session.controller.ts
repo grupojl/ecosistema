@@ -24,10 +24,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { SessionService, SESSION_COOKIE_NAME } from './session.service';
-import { Public }                              from '../decorators/public.decorator';
-import { CurrentUser }                         from '../decorators/current-user.decorator';
-import type { CurrentUserPayload }             from '../types/tenant-context';
+import { SessionService, SESSION_COOKIE_NAME } from '@/session/session.service';
+import { Public }                              from '@/decorators/public.decorator';
+import { CurrentUser }                         from '@/decorators/current-user.decorator';
+import type { CurrentUserPayload }             from '@/types/tenant-context';
 
 @Controller('auth')
 export class AuthSessionController {

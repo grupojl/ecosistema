@@ -1,2 +1,2 @@
-export * from './resolver';
-export * from './client';
+export * from '@/lib/store/resolver';
+export * from '@/lib/store/client';

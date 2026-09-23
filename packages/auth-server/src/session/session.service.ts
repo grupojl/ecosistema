@@ -11,7 +11,7 @@
  *   - Ver ADR-004-auth-session-cookies.md
  */
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
-import { getFirebaseAdmin }                          from '../firebase/firebase.module';
+import { getFirebaseAdmin }                          from '@/firebase/firebase.module';
 
 export const SESSION_COOKIE_NAME = '__session' as const;
 export const SESSION_COOKIE_MAX_AGE_MS = 60 * 60 * 24 * 14 * 1000; // 14 días

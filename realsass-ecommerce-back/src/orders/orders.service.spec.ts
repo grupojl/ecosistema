@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { OrdersService } from './orders.service';
+import { OrdersService } from '@/orders/orders.service';
 
 describe('OrdersService.checkout', () => {
   const buildDeps = (overrides: Partial<any> = {}) => {

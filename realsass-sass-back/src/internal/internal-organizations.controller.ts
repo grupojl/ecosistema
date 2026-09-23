@@ -26,14 +26,14 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
-import { InternalApiKeyGuard }              from './internal-api-key.guard';
-import { InternalOrganizationsService }     from './internal-organizations.service';
+import { InternalApiKeyGuard }              from '@/internal/internal-api-key.guard';
+import { InternalOrganizationsService }     from '@/internal/internal-organizations.service';
 import {
   InternalListOrgsSchema,
   InternalOrgActionSchema,
   type InternalListOrgsDto,
   type InternalOrgActionDto,
-} from './schemas';
+} from '@/internal/schemas';
 import { ZodValidationPipe } from '@real/auth-server';
 
 @ApiTags('internal')

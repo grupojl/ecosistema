@@ -5,8 +5,8 @@
  * ÚNICO archivo del módulo customers que puede importar PrismaService.
  */
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import type { ICustomersRepository, CustomerRecord } from "./customers.repository.interface";
+import { PrismaService } from "@/prisma/prisma.service";
+import type { ICustomersRepository, CustomerRecord } from "@/customers/repository/customers.repository.interface";
 
 @Injectable()
 export class PrismaCustomersRepository implements ICustomersRepository {

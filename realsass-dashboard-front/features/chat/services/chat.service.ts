@@ -9,7 +9,7 @@ import type {
   PaginatedMensajes,
   ProyectoIA,
   UpdateAssistantConfigInput,
-} from '../types';
+} from '@/features/chat/types';
 
 // ── Proyectos IA ──────────────────────────────────────────────────────────────
 
@@ -68,4 +68,4 @@ export const marcarLeidos = (orgId: string, conversacionId: string) =>
   });
 
 // Fix de tipo — Mensaje no importado arriba, lo re-exportamos del módulo de tipos
-import type { Mensaje } from '../types';
+import type { Mensaje } from '@/features/chat/types';

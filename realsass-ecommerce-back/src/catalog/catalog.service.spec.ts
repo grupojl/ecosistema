@@ -12,12 +12,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { CatalogService } from './catalog.service';
+import { CatalogService } from '@/catalog/catalog.service';
 import {
   CATALOG_REPOSITORY,
   type CatalogRepository,
   type ProductRecord,
-} from './repository/catalog.repository.interface';
+} from '@/catalog/repository/catalog.repository.interface';
 
 function makeMockRepository(): jest.Mocked<CatalogRepository> {
   return {

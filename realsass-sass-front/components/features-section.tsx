@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { LayoutGrid, BarChart3, Zap, Shield, Bell, Repeat } from "lucide-react"
+import { LayoutGrid, ChartColumn, Zap, Shield, Bell, Repeat } from "lucide-react"
 
 const features = [
   {
@@ -11,7 +11,7 @@ const features = [
       "Create, edit, and publish listings in seconds. Multi-portal syndication keeps your properties visible everywhere.",
   },
   {
-    icon: BarChart3,
+    icon: ChartColumn,
     title: "Advanced Analytics",
     description:
       "Real-time dashboards track views, leads, and conversions so you know exactly what performs.",

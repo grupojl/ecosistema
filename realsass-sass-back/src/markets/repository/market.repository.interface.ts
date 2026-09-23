@@ -1,4 +1,4 @@
-import type { Market, FulfillmentConfig } from '../domain/market.entity'
+import type { Market, FulfillmentConfig } from '@/domain/market.entity'
 
 export const MARKET_REPOSITORY = Symbol('MARKET_REPOSITORY')
 

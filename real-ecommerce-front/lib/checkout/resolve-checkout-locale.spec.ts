@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveCheckoutLocale } from './resolve-checkout-locale'
+import { resolveCheckoutLocale } from '@/lib/checkout/resolve-checkout-locale'
 
 describe('resolveCheckoutLocale', () => {
   it('un locale explícito válido gana sobre el recordado', () => {

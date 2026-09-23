@@ -57,8 +57,15 @@ install:
 	pnpm install --ignore-scripts
 
 # -----------------------------------------------------------------
+# CLEAR — limpia la terminal
+# -----------------------------------------------------------------
+c:
+	@clear
+
+# -----------------------------------------------------------------
 # REPOMIX — genera ecosistema.xml y ecosistema-infra.xml
 # -----------------------------------------------------------------
+
 r:
 	@echo "=== Generando ecosistema.xml... ==="
 	@npx repomix --config repomix.config.json
@@ -70,7 +77,7 @@ r:
 x:
 	@[ -f x.sh ] || (echo "[✗] No existe x.sh en la raíz"; exit 1)
 	@echo "=== Ejecutando x.sh ==="
-	@bash x.sh
+	@bash x.sh ecosistema
 
 # -----------------------------------------------------------------
 # GIT — monorepo: un solo repo en la raíz

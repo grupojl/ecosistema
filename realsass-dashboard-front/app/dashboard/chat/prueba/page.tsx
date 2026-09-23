@@ -13,7 +13,7 @@
 import { useCallback, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { getIdToken } from '@real/auth-client';
-import { AlertCircle, Bot, Loader2, Send, User as UserIcon } from 'lucide-react';
+import { CircleAlert, Bot, Loader2, Send, User as UserIcon } from 'lucide-react';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';
@@ -195,7 +195,7 @@ export default function PruebaAsistentePage() {
 
           {error && (
             <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
+              <CircleAlert className="h-4 w-4 shrink-0" />
               {error}
             </div>
           )}

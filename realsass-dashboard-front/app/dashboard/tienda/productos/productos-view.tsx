@@ -3,7 +3,7 @@
 // Client Component — toda la lógica interactiva de productos.
 // La page.tsx (Server Component) hace el prefetch y pasa el estado hidratado aquí.
 import { useState } from 'react';
-import { Loader2, Plus, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, CircleAlert, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useProducts, useDeleteProduct } from '@/features/store/hooks';
@@ -27,7 +27,7 @@ export function ProductosView() {
 
   if (error) return (
     <div className="flex items-center gap-2 text-destructive p-4">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       <span>Error al cargar productos</span>
     </div>
   );

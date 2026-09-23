@@ -1,1 +1,1 @@
-export { CampanaCard } from './campana-card';
+export { CampanaCard } from '@/features/campanas/components/campana-card';

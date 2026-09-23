@@ -1,1 +1,1 @@
-export * from './hooks';
+export * from '@/features/config-quotas/hooks';

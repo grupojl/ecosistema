@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { CatalogService } from './catalog.service';
-import { PrismaCatalogRepository } from './repository/prisma-catalog.repository';
-import { CATALOG_REPOSITORY } from './repository/catalog.repository.interface';
+import { CatalogService } from '@/catalog/catalog.service';
+import { PrismaCatalogRepository } from '@/catalog/repository/prisma-catalog.repository';
+import { CATALOG_REPOSITORY } from '@/catalog/repository/catalog.repository.interface';
 
 @Module({
   controllers: [ Public],

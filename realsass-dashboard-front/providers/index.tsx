@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { AuthProvider } from '@/features/auth/context/auth-context';
-import { ThemeProvider } from './theme-provider';
+import { ThemeProvider } from '@/providers/theme-provider';
 import { Toaster } from 'sonner';
 
 export function Providers({ children }: { children: ReactNode }) {

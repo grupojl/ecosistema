@@ -1,5 +1,5 @@
-export * from "../shipping/shipping-service"
-export * from "../shipping/carrier-selector"
+export * from "@/lib/shipping/shipping-service"
+export * from "@/lib/shipping/carrier-selector"
 
 export interface ShipmentDetails {
   weight: number // kg

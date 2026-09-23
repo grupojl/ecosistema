@@ -7,7 +7,7 @@ import { Badge } from "@real/ui"
 import { Alert, AlertDescription } from "@real/ui"
 import { Progress } from "@real/ui"
 import { Separator } from "@real/ui"
-import { ShieldCheck, Fingerprint, Smartphone, Key, CheckCircle2, ArrowLeft, AlertCircle } from "lucide-react"
+import { ShieldCheck, Fingerprint, Smartphone, Key, CircleCheckBig, ArrowLeft, CircleAlert } from "lucide-react"
 import Link from "next/link"
 
 const mockCart = {
@@ -87,7 +87,7 @@ export function CheckoutFlow() {
                 {authStep === "pending" && (
                   <div className="space-y-4">
                     <Alert>
-                      <AlertCircle className="w-4 h-4" />
+                      <CircleAlert className="w-4 h-4" />
                       <AlertDescription>
                         Por seguridad, necesitamos verificar tu identidad. Elige un método de autenticación.
                       </AlertDescription>
@@ -140,7 +140,7 @@ export function CheckoutFlow() {
                   <div className="space-y-6 py-8">
                     <div className="flex flex-col items-center text-center">
                       <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                        <CheckCircle2 className="w-10 h-10 text-green-500" />
+                        <CircleCheckBig className="w-10 h-10 text-green-500" />
                       </div>
                       <h3 className="text-lg font-medium mb-2">Verificación exitosa</h3>
                       <p className="text-sm text-muted-foreground mb-6">
@@ -157,7 +157,7 @@ export function CheckoutFlow() {
 
                 {authStep === "error" && (
                   <Alert variant="destructive">
-                    <AlertCircle className="w-4 h-4" />
+                    <CircleAlert className="w-4 h-4" />
                     <AlertDescription>
                       No se pudo verificar tu identidad. Intenta nuevamente o usa otro método.
                     </AlertDescription>
@@ -216,7 +216,7 @@ export function CheckoutFlow() {
                 </div>
                 {authStep === "success" && (
                   <Badge className="w-full justify-center bg-green-500 hover:bg-green-600 text-white">
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    <CircleCheckBig className="w-4 h-4 mr-2" />
                     Verificado
                   </Badge>
                 )}

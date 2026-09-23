@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { feature-flag } from './feature-flag.entity';
+// import { feature-flag } from '@/config-flags/domain/feature-flag.entity';
 
 describe('feature-flag domain', () => {
   it.todo('crear entidad con datos válidos');

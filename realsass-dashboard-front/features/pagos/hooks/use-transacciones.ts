@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/config/constants';
-import { getBalance, getTransacciones } from '../services/pagos.service';
-import type { TransaccionFilters } from '../types';
+import { getBalance, getTransacciones } from '@/features/pagos/services/pagos.service';
+import type { TransaccionFilters } from '@/features/pagos/types';
 
 export function useBalanceSummary() {
   return useQuery({

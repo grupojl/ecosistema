@@ -21,8 +21,8 @@ import {
 import type { Response } from 'express';
 import { Public, CurrentUser }   from '@real/auth-server';
 import type { CurrentUserPayload } from '@real/auth-server';
-import { UsersService }           from '../users/users.service';
-import { AuthService }            from './auth.service';
+import { UsersService }           from '@/users/users.service';
+import { AuthService }            from '@/auth/auth.service';
 
 @Controller('auth')
 export class AuthController {

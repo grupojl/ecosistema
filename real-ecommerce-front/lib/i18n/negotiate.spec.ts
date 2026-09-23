@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseAcceptLanguage, matchLocale, isLikelyCrawler, negotiateLocale } from './negotiate'
+import { parseAcceptLanguage, matchLocale, isLikelyCrawler, negotiateLocale } from '@/lib/i18n/negotiate'
 
 describe('parseAcceptLanguage', () => {
   it('ordena por q-value descendente', () => {

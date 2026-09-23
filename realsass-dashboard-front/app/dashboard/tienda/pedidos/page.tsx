@@ -2,7 +2,7 @@
 // Server Component — HydrationBoundary (ADR-009/S4-D).
 // ECO-FRONT-02: aplica el patrón Server/Client correcto.
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { PedidosView } from './pedidos-view';
+import { PedidosView } from '@/app/dashboard/tienda/pedidos/pedidos-view';
 
 export default async function PedidosPage() {
   const queryClient = new QueryClient();

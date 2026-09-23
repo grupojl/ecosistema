@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
-import { AFFILIATE_REPOSITORY, type IAffiliateRepository } from './repository/affiliate.repository.interface';
+import { AFFILIATE_REPOSITORY, type IAffiliateRepository } from '@/affiliate/repository/affiliate.repository.interface';
 
 @Injectable()
 export class AffiliatesService {

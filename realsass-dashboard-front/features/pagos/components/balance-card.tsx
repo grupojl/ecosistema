@@ -1,7 +1,7 @@
 import { Skeleton } from '@real/ui';
-import { AlertCircle, TrendingUp, Clock, XCircle, CreditCard } from 'lucide-react';
+import { CircleAlert, TrendingUp, Clock, CircleX, CreditCard } from 'lucide-react';
 import { formatMoney } from '@/lib/helpers';
-import { useBalanceSummary } from '../hooks';
+import { useBalanceSummary } from '@/features/pagos/hooks';
 
 export function BalanceCards() {
   const { data: balance, isLoading, error } = useBalanceSummary();
@@ -22,7 +22,7 @@ export function BalanceCards() {
   if (error || !balance) {
     return (
       <div className="flex items-center gap-2 p-4 rounded-xl bg-card border border-border text-sm text-muted-foreground">
-        <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+        <CircleAlert className="h-4 w-4 text-destructive flex-shrink-0" />
         No se pudo cargar el resumen de balance
       </div>
     );
@@ -31,7 +31,7 @@ export function BalanceCards() {
   const cards = [
     { icon: TrendingUp, label: 'Total ingresos', value: formatMoney(balance.totalIngresos, balance.moneda), color: '#4ade80' },
     { icon: Clock,      label: 'Pendiente',      value: formatMoney(balance.totalPendiente, balance.moneda), color: '#fbbf24' },
-    { icon: XCircle,    label: 'Fallido',         value: formatMoney(balance.totalFallido, balance.moneda),  color: '#f87171' },
+    { icon: CircleX,    label: 'Fallido',         value: formatMoney(balance.totalFallido, balance.moneda),  color: '#f87171' },
     { icon: CreditCard, label: 'Tx hoy',          value: String(balance.transaccionesHoy),                   color: undefined  },
   ];
 

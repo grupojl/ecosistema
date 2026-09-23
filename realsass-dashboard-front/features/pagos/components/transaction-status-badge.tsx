@@ -1,4 +1,4 @@
-import type { EstadoTransaccion } from '../types';
+import type { EstadoTransaccion } from '@/features/pagos/types';
 
 const ESTADO_CONFIG: Record<EstadoTransaccion, { label: string; bg: string; color: string; border: string }> = {
   completado:  { label: 'Completado',  bg: 'rgba(34,197,94,0.12)',   color: '#4ade80', border: 'rgba(34,197,94,0.3)'   },

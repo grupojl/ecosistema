@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { indexableLocalesForStore } from './indexing'
+import { indexableLocalesForStore } from '@/lib/seo/indexing'
 
 describe('indexableLocalesForStore (ADR-016 D3 — solo el idioma primario, no toda la UI)', () => {
   it('una tienda con base en Brasil indexa pt', () => {

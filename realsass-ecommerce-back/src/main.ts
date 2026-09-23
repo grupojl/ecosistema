@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { AppModule } from '@/app.module';
+import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
+import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);

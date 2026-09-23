@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { affiliate } from './affiliate.entity';
+// import { affiliate } from '@/affiliate/domain/affiliate.entity';
 
 describe('affiliate domain', () => {
   it.todo('crear entidad con datos válidos');

@@ -16,7 +16,7 @@ import {
   InvalidVariantPriceError,
   DuplicateSkuInProductError,
   ProductWithoutVariantsError,
-} from './product.errors';
+} from '@/catalog/domain/product.errors';
 
 // ─── Value objects / shapes de dominio ───────────────────────────────────────
 

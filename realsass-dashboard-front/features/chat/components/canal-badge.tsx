@@ -1,5 +1,5 @@
 import { Phone, Instagram, Globe, MessageSquare } from 'lucide-react';
-import type { Canal } from '../types';
+import type { Canal } from '@/features/chat/types';
 
 const CANAL_CONFIG: Record<Canal, { label: string; color: string; Icon: React.ElementType }> = {
   whatsapp:  { label: 'WhatsApp',  color: 'rgba(37,211,102,0.15)',  Icon: Phone },

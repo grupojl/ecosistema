@@ -2,8 +2,8 @@ import {
   CanActivate, ExecutionContext, ForbiddenException, Injectable,
 } from '@nestjs/common';
 import { Reflector }  from '@nestjs/core';
-import { ROLES_KEY }  from '../decorators/roles.decorator';
-import type { TenantContext, TenantRole } from '../types/tenant-context';
+import { ROLES_KEY }  from '@/decorators/roles.decorator';
+import type { TenantContext, TenantRole } from '@/types/tenant-context';
 
 const HIERARCHY: Record<TenantRole, number> = {
   OWNER: 4, ADMIN: 3, MEMBER: 2, VIEWER: 1,

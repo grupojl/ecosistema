@@ -10,7 +10,7 @@
  */
 import { useEffect, useState }     from 'react';
 import { useRouter }               from 'next/navigation';
-import { Loader2, AlertCircle }    from 'lucide-react';
+import { Loader2, CircleAlert }    from 'lucide-react';
 import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { initFirebase }            from '@real/auth-client';
 
@@ -59,7 +59,7 @@ export default function SsoPage() {
   if (error) return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-sm text-center space-y-4">
-        <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
+        <CircleAlert className="h-10 w-10 text-destructive mx-auto" />
         <p className="text-sm text-destructive">{error}</p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { StoreService } from './store.service';
-import { parseSassBackStoreResponse } from './store.contract';
+import { StoreService } from '@/store/store.service';
+import { parseSassBackStoreResponse } from '@/store/store.contract';
 
 const ORG_ID = '6f1c2a3b-0000-4000-8000-000000000001';
 

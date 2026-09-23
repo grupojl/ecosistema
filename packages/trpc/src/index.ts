@@ -20,22 +20,22 @@
  */
 
 // ── Context compartido ────────────────────────────────────────────────────────
-export type { TRPCContext }    from './server/context';
-export       { createContext } from './server/context';
+export type { TRPCContext }    from '@/server/context';
+export       { createContext } from '@/server/context';
 
 // ── Procedures base ───────────────────────────────────────────────────────────
-export { t, router, publicProcedure } from './server/trpc';
+export { t, router, publicProcedure } from '@/server/trpc';
 
 // ── SassAppRouter — realsass-sass-back ───────────────────────────────────────
 // Consumido por: realsass-sass-front, realsass-dashboard-front
-import type { AppRouter as _SassAppRouter } from '../../realsass-sass-back/src/trpc/app-router';
+import type { AppRouter as _SassAppRouter } from '@/realsass-sass-back/src/trpc/app-router';
 export type SassAppRouter = _SassAppRouter;
 
 // ── EcommerceAppRouter — realsass-ecommerce-back ─────────────────────────────
 // Consumido por: real-ecommerce-front
-import type { EcommerceAppRouter as _EcommerceAppRouter } from '../../realsass-ecommerce-back/src/trpc/app-router';
+import type { EcommerceAppRouter as _EcommerceAppRouter } from '@/realsass-ecommerce-back/src/trpc/app-router';
 export type EcommerceAppRouter = _EcommerceAppRouter;
 
 // ── Markets ───────────────────────────────────────────────────────────────────
 // Consumido por: ecommerce-back, grupojl-control-backend
-export type { MarketDTO, FulfillmentConfig } from '../../realsass-sass-back/src/markets/domain/market.entity'
+export type { MarketDTO, FulfillmentConfig } from '@/realsass-sass-back/src/markets/domain/market.entity'

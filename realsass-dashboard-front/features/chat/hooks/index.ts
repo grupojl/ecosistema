@@ -3,7 +3,7 @@ export {
   useMensajes,
   useEnviarMensaje,
   useMarcarLeidos,
-} from './use-conversaciones';
+} from '@/features/chat/hooks/use-conversaciones';
 
 export {
   useProyectosIA,
@@ -11,4 +11,4 @@ export {
   useAssistantConfig,
   useUpdateAssistantConfig,
   useToggleAssistant,
-} from './use-proyectos-ia';
+} from '@/features/chat/hooks/use-proyectos-ia';

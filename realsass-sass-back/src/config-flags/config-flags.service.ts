@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { ConfigCacheService }   from '../config-cache/config-cache.service';
-import { ConfigAuditService }   from '../config-audit/config-audit.service';
+import { ConfigCacheService }   from '@/config-cache/config-cache.service';
+import { ConfigAuditService }   from '@/config-audit/config-audit.service';
 import { EventEmitter2 }        from '@nestjs/event-emitter';
-import { UpdateFlagDto }        from './dto/update-flag.dto';
-import { FEATURE_FLAGS_REPOSITORY, type IFeatureFlagsRepository } from './repository/feature-flags.repository.interface';
+import { UpdateFlagDto }        from '@/config-flags/dto/update-flag.dto';
+import { FEATURE_FLAGS_REPOSITORY, type IFeatureFlagsRepository } from '@/config-flags/repository/feature-flags.repository.interface';
 
 @Injectable()
 export class ConfigFlagsService {

@@ -11,9 +11,9 @@ import {
   CreditCard, AlertCircle, ChevronLeft, ChevronRight, SlidersHorizontal, X,
 } from 'lucide-react';
 import { formatMoney, formatDate } from '@/lib/helpers';
-import { useTransacciones } from '../hooks';
-import { TransactionStatusBadge } from './transaction-status-badge';
-import type { EstadoTransaccion, TransaccionFilters } from '../types';
+import { useTransacciones } from '@/features/pagos/hooks';
+import { TransactionStatusBadge } from '@/features/pagos/components/transaction-status-badge';
+import type { EstadoTransaccion, TransaccionFilters } from '@/features/pagos/types';
 
 const ESTADOS: EstadoTransaccion[] = ['completado', 'pendiente', 'fallido', 'reembolsado'];
 const ESTADO_LABELS: Record<EstadoTransaccion, string> = {

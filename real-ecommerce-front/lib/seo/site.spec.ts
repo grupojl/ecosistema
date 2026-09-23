@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { getSiteUrl, __resetSiteUrlCacheForTests, localizedPath, absoluteUrl, buildAlternates, robotsFor } from './site'
+import { getSiteUrl, __resetSiteUrlCacheForTests, localizedPath, absoluteUrl, buildAlternates, robotsFor } from '@/lib/seo/site'
 
 const ORIGINAL_SITE_URL = process.env['SITE_URL']
 

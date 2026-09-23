@@ -1,8 +1,8 @@
 import { Module }                from "@nestjs/common";
-import { CartService }           from "./cart.service";
-import { PrismaCartRepository }  from "./repository/prisma-cart.repository";
-import { CART_REPOSITORY }       from "./repository/cart.repository.interface";
-import { ActivityModule }        from "../activity/activity.module";
+import { CartService }           from "@/cart/cart.service";
+import { PrismaCartRepository }  from "@/cart/repository/prisma-cart.repository";
+import { CART_REPOSITORY }       from "@/cart/repository/cart.repository.interface";
+import { ActivityModule }        from "@/activity/activity.module";
 
 @Module({
   imports:   [ActivityModule],

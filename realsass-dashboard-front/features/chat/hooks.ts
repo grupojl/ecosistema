@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatIaFetch } from '@/lib/chat-ia-client';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import type { ProyectoIA, ConversacionIA, MensajeIA, ChatResponse } from './types';
+import type { ProyectoIA, ConversacionIA, MensajeIA, ChatResponse } from '@/features/chat/types';
 
 export function useProyectosIA() {
   const { profile } = useAuth();

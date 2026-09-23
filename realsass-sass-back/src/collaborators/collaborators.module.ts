@@ -1,8 +1,8 @@
 import { Module }                         from '@nestjs/common';
-import { CollaboratorsService }           from './collaborators.service';
-import { PrismaCollaboratorsRepository }  from './repository/prisma-collaborators.repository';
-import { COLLABORATORS_REPOSITORY }       from './repository/collaborators.repository.interface';
-import { PrismaModule }                   from '../prisma/prisma.module';
+import { CollaboratorsService }           from '@/collaborators/collaborators.service';
+import { PrismaCollaboratorsRepository }  from '@/collaborators/repository/prisma-collaborators.repository';
+import { COLLABORATORS_REPOSITORY }       from '@/collaborators/repository/collaborators.repository.interface';
+import { PrismaModule }                   from '@/prisma/prisma.module';
 
 @Module({
   imports:     [PrismaModule],

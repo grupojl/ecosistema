@@ -29,4 +29,3 @@ export function useWebhookLogs(webhookId: string | null | undefined) {
     { webhookId: webhookId!, take: 50 },
     { enabled: !!webhookId },
   );
-}

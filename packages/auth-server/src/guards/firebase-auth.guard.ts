@@ -4,8 +4,8 @@ import {
 } from '@nestjs/common';
 import { Reflector }     from '@nestjs/core';
 import * as admin        from 'firebase-admin';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import type { CurrentUserPayload } from '../types/tenant-context';
+import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
+import type { CurrentUserPayload } from '@/types/tenant-context';
 
 /**
  * FirebaseAuthGuard — guard global de autenticacion.

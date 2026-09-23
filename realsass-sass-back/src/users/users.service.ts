@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { Prisma }              from '@prisma/client';
-import { USERS_REPOSITORY, type IUsersRepository } from './repository/users.repository.interface';
+import { USERS_REPOSITORY, type IUsersRepository } from '@/users/repository/users.repository.interface';
 import type { OrganizationAccessResult }            from '@real/auth-server';
 
 @Injectable()

@@ -1,5 +1,5 @@
-import { MarketsInternalController } from './markets.internal.controller';
-import { MarketsModule }             from '../markets/markets.module';
+import { MarketsInternalController } from '@/internal/markets.internal.controller';
+import { MarketsModule }             from '@/markets/markets.module';
 // realsass-sass-back/src/internal/internal.module.ts
 //
 // Módulo REST para endpoints /internal/* consumidos por superadmin.
@@ -7,9 +7,9 @@ import { MarketsModule }             from '../markets/markets.module';
 // Requiere PrismaModule (global) — no importa módulos de dominio existentes
 // porque la surface interna es cross-tenant (superadmin ve todas las orgs).
 import { Module }                          from '@nestjs/common';
-import { InternalApiKeyGuard }             from './internal-api-key.guard';
-import { InternalOrganizationsController } from './internal-organizations.controller';
-import { InternalOrganizationsService }    from './internal-organizations.service';
+import { InternalApiKeyGuard }             from '@/internal/internal-api-key.guard';
+import { InternalOrganizationsController } from '@/internal/internal-organizations.controller';
+import { InternalOrganizationsService }    from '@/internal/internal-organizations.service';
 
 @Module@Module({
   imports:     [MarketsModule],

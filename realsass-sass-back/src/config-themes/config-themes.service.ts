@@ -1,11 +1,11 @@
 import {
   Injectable, NotFoundException, ConflictException, ForbiddenException, Inject,
 } from '@nestjs/common';
-import { ConfigCacheService }   from '../config-cache/config-cache.service';
-import { ConfigAuditService }   from '../config-audit/config-audit.service';
+import { ConfigCacheService }   from '@/config-cache/config-cache.service';
+import { ConfigAuditService }   from '@/config-audit/config-audit.service';
 import { EventEmitter2 }        from '@nestjs/event-emitter';
-import { CreateThemeDto }       from './dto/create-theme.dto';
-import { THEMES_REPOSITORY, type IThemesRepository } from './repository/themes.repository.interface';
+import { CreateThemeDto }       from '@/config-themes/dto/create-theme.dto';
+import { THEMES_REPOSITORY, type IThemesRepository } from '@/config-themes/repository/themes.repository.interface';
 
 @Injectable()
 export class ConfigThemesService {

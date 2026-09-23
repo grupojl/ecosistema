@@ -11,8 +11,8 @@
  *   borderRadius, logoUrl, faviconUrl, darkMode, customCSS
  */
 import { z }                                      from 'zod';
-import { router, tenantProcedure, ownerProcedure } from '../trpc';
-import type { ConfigThemesService }               from '../../config-themes/config-themes.service';
+import { router, tenantProcedure, ownerProcedure } from '@/trpc';
+import type { ConfigThemesService }               from '@/config-themes/config-themes.service';
 
 const ThemeUpdateInput = z.object({
   primaryColor:   z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),

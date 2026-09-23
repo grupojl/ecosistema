@@ -15,10 +15,10 @@
  * al mismo StepUp verificando auth_time del token Firebase en el middleware.
  */
 import { z }               from 'zod';
-import { router, ownerProcedure } from '../trpc';
+import { router, ownerProcedure } from '@/trpc';
 import * as admin          from 'firebase-admin';
 import { TRPCError }       from '@trpc/server';
-import type { ConfigSecretsService } from '../../config-secrets/config-secrets.service';
+import type { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
 
 const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
 

@@ -1,4 +1,4 @@
-import type { Organization, UpdateOrganizationInput, CreateOrganizationInput, StoreInfo } from '../domain/organization.entity';
+import type { Organization, UpdateOrganizationInput, CreateOrganizationInput, StoreInfo } from '@/domain/organization.entity';
 import type { Prisma } from '@prisma/client';
 
 export const ORGANIZATIONS_REPOSITORY = Symbol('ORGANIZATIONS_REPOSITORY');

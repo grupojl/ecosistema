@@ -1,5 +1,5 @@
 import { apiClient, buildQuery } from '@/lib/api-client';
-import type { BalanceSummary, PaginatedTransacciones, TransaccionFilters } from '../types';
+import type { BalanceSummary, PaginatedTransacciones, TransaccionFilters } from '@/features/pagos/types';
 
 export const getBalance = (): Promise<BalanceSummary> =>
   apiClient.get('pagos', '/balance');

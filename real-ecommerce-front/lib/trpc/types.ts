@@ -8,7 +8,7 @@
  * Si el back cambia un campo, este archivo lo refleja automáticamente.
  */
 import type { inferRouterOutputs } from '@trpc/server';
-import type { AppRouter }          from './router-type';
+import type { AppRouter }          from '@/lib/trpc/router-type';
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 

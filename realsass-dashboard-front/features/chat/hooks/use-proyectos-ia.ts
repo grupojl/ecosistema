@@ -8,8 +8,8 @@ import {
   getProyectosIA,
   toggleAssistant,
   updateAssistantConfig,
-} from '../services/chat.service';
-import type { CreateProyectoInput, UpdateAssistantConfigInput } from '../types';
+} from '@/features/chat/services/chat.service';
+import type { CreateProyectoInput, UpdateAssistantConfigInput } from '@/features/chat/types';
 
 function useOrgId(): string {
   const { profile } = useAuth();

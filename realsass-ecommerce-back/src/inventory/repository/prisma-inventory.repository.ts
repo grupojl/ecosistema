@@ -5,9 +5,9 @@
  * ÚNICO archivo del módulo inventory que puede importar PrismaService.
  */
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import type { IInventoryRepository, InventoryRecord } from "./inventory.repository.interface";
-import { InsufficientStockError } from "../errors/insufficient-stock.error";
+import { PrismaService } from "@/prisma/prisma.service";
+import type { IInventoryRepository, InventoryRecord } from "@/inventory/repository/inventory.repository.interface";
+import { InsufficientStockError } from "@/errors/insufficient-stock.error";
 
 @Injectable()
 export class PrismaInventoryRepository implements IInventoryRepository {

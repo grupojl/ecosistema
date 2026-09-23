@@ -1,4 +1,4 @@
-import type { ContentTemplate, CreateTemplateInput } from '../domain/template.entity';
+import type { ContentTemplate, CreateTemplateInput } from '@/domain/template.entity';
 
 export const TEMPLATES_REPOSITORY = Symbol('TEMPLATES_REPOSITORY');
 

@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import type { CurrentUserPayload } from '../types/tenant-context';
+import type { CurrentUserPayload } from '@/types/tenant-context';
 
 /** @CurrentUser() — inyecta el payload del usuario autenticado por FirebaseAuthGuard. */
 export const CurrentUser = createParamDecorator(

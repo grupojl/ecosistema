@@ -20,22 +20,22 @@ import {
 import { createExpressMiddleware }    from '@trpc/server/adapters/express';
 import { createTrpcAuthMiddleware }   from '@real/auth-server';
 
-import { createEcommerceAppRouter }   from './app-router';
-import { createTrpcContext }          from './trpc';
+import { createEcommerceAppRouter }   from '@/trpc/app-router';
+import { createTrpcContext }          from '@/trpc/trpc';
 
-import { CatalogService }             from '../catalog/catalog.service';
-import { InventoryService }           from '../inventory/inventory.service';
-import { OrdersService }              from '../orders/orders.service';
-import { CustomersService }           from '../customers/customers.service';
-import { CartService }                from '../cart/cart.service';
-import { OrganizationsClientService } from '../organizations-client/organizations-client.service';
+import { CatalogService }             from '@/catalog/catalog.service';
+import { InventoryService }           from '@/inventory/inventory.service';
+import { OrdersService }              from '@/orders/orders.service';
+import { CustomersService }           from '@/customers/customers.service';
+import { CartService }                from '@/cart/cart.service';
+import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
 
-import { CatalogModule }              from '../catalog/catalog.module';
-import { InventoryModule }            from '../inventory/inventory.module';
-import { OrdersModule }               from '../orders/orders.module';
-import { CustomersModule }            from '../customers/customers.module';
-import { CartModule }                 from '../cart/cart.module';
-import { OrganizationsClientModule }  from '../organizations-client/organizations-client.module';
+import { CatalogModule }              from '@/catalog/catalog.module';
+import { InventoryModule }            from '@/inventory/inventory.module';
+import { OrdersModule }               from '@/orders/orders.module';
+import { CustomersModule }            from '@/customers/customers.module';
+import { CartModule }                 from '@/cart/cart.module';
+import { OrganizationsClientModule }  from '@/organizations-client/organizations-client.module';
 
 @Injectable()
 export class TrpcService {

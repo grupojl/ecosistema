@@ -4,9 +4,9 @@ import { X, TrendingUp, ShoppingCart, Clock } from 'lucide-react';
 import { Button } from '@real/ui';
 import { ScrollArea } from '@real/ui';
 import { cn } from '@/lib/utils';
-import { CanalBadge } from './canal-badge';
-import { EtapaBadge, ETAPA_CONFIG } from './etapa-badge';
-import type { Conversacion } from '../types';
+import { CanalBadge } from '@/features/chat/components/canal-badge';
+import { EtapaBadge, ETAPA_CONFIG } from '@/features/chat/components/etapa-badge';
+import type { Conversacion } from '@/features/chat/types';
 
 function getInitials(name: string) {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();

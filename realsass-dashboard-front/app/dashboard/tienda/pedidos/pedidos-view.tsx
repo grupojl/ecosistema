@@ -2,7 +2,7 @@
 // realsass-dashboard-front/app/dashboard/tienda/pedidos/pedidos-view.tsx
 // Client Component — lógica interactiva de pedidos.
 import { useState } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, CircleAlert } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useOrders } from '@/features/store/hooks';
 import type { OrderStatus } from '@/features/store/types';
@@ -27,7 +27,7 @@ export function PedidosView() {
 
   if (error) return (
     <div className="flex items-center gap-2 text-destructive p-4">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       <span>Error al cargar pedidos</span>
     </div>
   );

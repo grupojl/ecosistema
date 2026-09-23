@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AffiliatesController } from './affiliate.controller';
-import { AffiliatesService } from './affiliate.service';
+import { AffiliatesController } from '@/affiliate/affiliate.controller';
+import { AffiliatesService } from '@/affiliate/affiliate.service';
 
 describe('AffiliateController', () => {
   let controller: AffiliatesController;

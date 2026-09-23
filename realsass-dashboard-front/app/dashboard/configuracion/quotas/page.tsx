@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, BarChart2, Infinity } from 'lucide-react';
+import { CircleAlert, ChartColumnBig, InfinityIcon } from 'lucide-react';
 import { Skeleton } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useQuotas } from '@/features/config-quotas/hooks';
@@ -25,7 +25,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
         )}>
           {isUnlimited ? (
             <span className="flex items-center gap-1 text-green-500">
-              <Infinity className="h-4 w-4" />
+              <InfinityIcon className="h-4 w-4" />
               Ilimitado
             </span>
           ) : (
@@ -51,7 +51,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
           </div>
           {isAlert && (
             <p className={cn('text-xs flex items-center gap-1', isCritical ? 'text-destructive' : 'text-amber-500')}>
-              <AlertCircle className="h-3 w-3" />
+              <CircleAlert className="h-3 w-3" />
               {isCritical ? 'Límite casi alcanzado' : `Alerta al ${quota.alertAt}%`}
             </p>
           )}
@@ -74,14 +74,14 @@ export default function QuotasPage() {
 
   if (error) return (
     <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       Error al cargar quotas.
     </div>
   );
 
   if (quotas.length === 0) return (
     <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <BarChart2 className="h-12 w-12 text-muted-foreground/30" />
+      <ChartColumnBig className="h-12 w-12 text-muted-foreground/30" />
       <p className="text-sm text-muted-foreground">Sin quotas configuradas para esta organización</p>
       <p className="text-xs text-muted-foreground max-w-xs">
         Las quotas se crean automáticamente cuando se configura el plan de la org en el config service.

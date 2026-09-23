@@ -105,4 +105,3 @@ export const adminProcedure     = t.procedure.use(enforceAdmin)     as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly) as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const customerProcedure  = t.procedure.use(enforceCustomer)  as any;

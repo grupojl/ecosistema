@@ -1,4 +1,4 @@
-import type { Collaborator, InviteCollaboratorInput, UpdateCollaboratorInput } from '../domain/collaborator.entity';
+import type { Collaborator, InviteCollaboratorInput, UpdateCollaboratorInput } from '@/domain/collaborator.entity';
 
 export const COLLABORATORS_REPOSITORY = Symbol('COLLABORATORS_REPOSITORY');
 

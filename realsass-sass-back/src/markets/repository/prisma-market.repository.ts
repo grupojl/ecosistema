@@ -1,7 +1,7 @@
 import { Injectable }       from '@nestjs/common'
-import { PrismaService }    from '../../prisma/prisma.service'
-import { Market, FulfillmentConfigSchema, type FulfillmentConfig } from '../domain/market.entity'
-import type { IMarketRepository } from './market.repository.interface'
+import { PrismaService }    from '@/prisma/prisma.service'
+import { Market, FulfillmentConfigSchema, type FulfillmentConfig } from '@/domain/market.entity'
+import type { IMarketRepository } from '@/markets/repository/market.repository.interface'
 
 @Injectable()
 export class PrismaMarketRepository implements IMarketRepository {

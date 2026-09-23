@@ -7,8 +7,8 @@ import {
   getConversaciones,
   getMensajes,
   marcarLeidos,
-} from '../services/chat.service';
-import type { ConversacionFilters, EnviarMensajeInput } from '../types';
+} from '@/features/chat/services/chat.service';
+import type { ConversacionFilters, EnviarMensajeInput } from '@/features/chat/types';
 
 function useOrgId(): string {
   const { profile } = useAuth();

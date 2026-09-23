@@ -3,12 +3,12 @@ import {
   Inject, Injectable, Logger, UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector }     from '@nestjs/core';
-import { CACHE_PORT }    from '../ports/cache.port';
-import type { CachePort } from '../ports/cache.port';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { CACHE_PORT }    from '@/ports/cache.port';
+import type { CachePort } from '@/ports/cache.port';
+import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import type {
   TenantContext, CurrentUserPayload, OrganizationAccessResult,
-} from '../types/tenant-context';
+} from '@/types/tenant-context';
 
 const CACHE_TTL = 90;
 

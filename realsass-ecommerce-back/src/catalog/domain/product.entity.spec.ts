@@ -14,13 +14,13 @@ import {
   validateProductDraft,
   canPublish,
   type ProductDraft,
-} from './product.entity';
+} from '@/catalog/domain/product.entity';
 import {
   InvalidHandleError,
   InvalidVariantPriceError,
   DuplicateSkuInProductError,
   ProductWithoutVariantsError,
-} from './product.errors';
+} from '@/catalog/domain/product.errors';
 
 describe('domain/product.entity', () => {
   describe('assertValidHandle', () => {

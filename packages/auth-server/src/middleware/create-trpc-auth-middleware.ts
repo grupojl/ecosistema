@@ -23,12 +23,12 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { getFirebaseAdmin }                      from '../firebase/firebase.module';
+import { getFirebaseAdmin }                      from '@/firebase/firebase.module';
 import type {
   CurrentUserPayload,
   TenantContext,
   OrganizationAccessResult,
-} from '../types/tenant-context';
+} from '@/types/tenant-context';
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 

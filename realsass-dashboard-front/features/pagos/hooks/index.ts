@@ -1,1 +1,1 @@
-export { useBalanceSummary, useTransacciones } from './use-transacciones';
+export { useBalanceSummary, useTransacciones } from '@/features/pagos/hooks/use-transacciones';

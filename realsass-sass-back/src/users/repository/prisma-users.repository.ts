@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IUsersRepository } from './users.repository.interface';
-import type { User, UserProfile, UpsertUserInput } from '../domain/user.entity';
+import type { IUsersRepository } from '@/users/repository/users.repository.interface';
+import type { User, UserProfile, UpsertUserInput } from '@/domain/user.entity';
 
 type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
 type PrismaUserWithOrg = Prisma.UserGetPayload<{

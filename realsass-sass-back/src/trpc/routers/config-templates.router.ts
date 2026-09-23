@@ -1,6 +1,6 @@
 import { z }                                       from 'zod';
-import { router, tenantProcedure, ownerProcedure } from '../trpc';
-import type { ConfigTemplatesService }             from '../../config-templates/config-templates.service';
+import { router, tenantProcedure, ownerProcedure } from '@/trpc';
+import type { ConfigTemplatesService }             from '@/config-templates/config-templates.service';
 
 export function createConfigTemplatesRouter(templatesService: ConfigTemplatesService) {
   return router({

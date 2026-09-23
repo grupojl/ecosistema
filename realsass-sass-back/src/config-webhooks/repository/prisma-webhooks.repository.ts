@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IWebhooksRepository } from './webhooks.repository.interface';
-import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '../domain/webhook.entity';
+import type { IWebhooksRepository } from '@/config-webhooks/repository/webhooks.repository.interface';
+import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '@/domain/webhook.entity';
 
 type PrismaWebhook = Prisma.WebhookEndpointGetPayload<Record<string, never>>;
 type PrismaLog     = Prisma.WebhookDeliveryLogGetPayload<Record<string, never>>;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { storeJsonLd, productJsonLd, breadcrumbJsonLd, serializeJsonLd } from './json-ld'
+import { storeJsonLd, productJsonLd, breadcrumbJsonLd, serializeJsonLd } from '@/lib/seo/json-ld'
 import { toProductView, type ProductLike } from '@/lib/catalog/product-view'
 
 const product: ProductLike = {

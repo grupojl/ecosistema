@@ -11,7 +11,7 @@
  *
  * El país es una señal débil de idioma: nunca pisa a Accept-Language.
  */
-import { DEFAULT_LOCALE, isLocale, localeFromCountry, type Locale } from './config';
+import { DEFAULT_LOCALE, isLocale, localeFromCountry, type Locale } from '@/lib/i18n/config';
 
 export type LocaleSource = 'cookie' | 'accept-language' | 'country' | 'default';
 

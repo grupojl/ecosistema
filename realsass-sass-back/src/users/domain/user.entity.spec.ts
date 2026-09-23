@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { user } from './user.entity';
+// import { user } from '@/users/domain/user.entity';
 
 describe('user domain', () => {
   it.todo('crear entidad con datos válidos');

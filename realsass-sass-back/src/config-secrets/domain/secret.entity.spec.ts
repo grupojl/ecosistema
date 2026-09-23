@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { secret } from './secret.entity';
+// import { secret } from '@/config-secrets/domain/secret.entity';
 
 describe('secret domain', () => {
   it.todo('crear entidad con datos válidos');

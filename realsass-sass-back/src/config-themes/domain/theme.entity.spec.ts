@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { theme } from './theme.entity';
+// import { theme } from '@/config-themes/domain/theme.entity';
 
 describe('theme domain', () => {
   it.todo('crear entidad con datos válidos');

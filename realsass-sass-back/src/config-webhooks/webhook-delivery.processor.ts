@@ -1,8 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { PrismaService } from '../prisma/prisma.service';
-import { WEBHOOK_QUEUE } from './webhook-delivery.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { WEBHOOK_QUEUE } from '@/config-webhooks/webhook-delivery.service';
 import * as crypto from 'crypto';
 
 const TIMEOUT = Number(process.env['WEBHOOK_DELIVERY_TIMEOUT'] ?? 5000);

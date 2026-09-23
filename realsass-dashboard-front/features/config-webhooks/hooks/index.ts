@@ -1,4 +1,4 @@
 export {
   useWebhooks, useWebhookLogs,
   useCreateWebhook, useTestWebhook, useDeleteWebhook,
-} from './use-webhooks';
+} from '@/features/config-webhooks/hooks/use-webhooks';

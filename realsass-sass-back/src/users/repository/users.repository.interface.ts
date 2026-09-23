@@ -1,4 +1,4 @@
-import type { User, UserProfile, UpsertUserInput } from '../domain/user.entity';
+import type { User, UserProfile, UpsertUserInput } from '@/domain/user.entity';
 import type { Prisma } from '@prisma/client';
 
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');

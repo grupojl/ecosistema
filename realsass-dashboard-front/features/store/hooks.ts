@@ -2,8 +2,8 @@
 // TanStack Query hooks del módulo Tienda.
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { storeApi } from './api';
-import type { ProductInput, ProductFilters, OrderFilters } from './types';
+import { storeApi } from '@/features/store/api';
+import type { ProductInput, ProductFilters, OrderFilters } from '@/features/store/types';
 
 const KEYS = {
   products: (orgId: string, filters: ProductFilters) => ['store', 'products', orgId, filters] as const,

@@ -5,8 +5,8 @@
  * ÚNICO archivo del módulo cart que puede importar PrismaService.
  */
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import type { ICartRepository, CartRecord } from "./cart.repository.interface";
+import { PrismaService } from "@/prisma/prisma.service";
+import type { ICartRepository, CartRecord } from "@/cart/repository/cart.repository.interface";
 
 const CART_WITH_ITEMS = {
   items: {

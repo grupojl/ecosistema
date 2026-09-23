@@ -10,7 +10,7 @@
  */
 import { createTRPCReact }  from '@trpc/react-query';
 import { httpBatchLink }    from '@trpc/client';
-import type { AppRouter }   from './router-type';
+import type { AppRouter }   from '@/lib/trpc/router-type';
 
 export const trpc = createTRPCReact<AppRouter>();
 

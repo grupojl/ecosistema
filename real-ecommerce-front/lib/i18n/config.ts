@@ -12,7 +12,7 @@
  *                       Esa es la única fuente de deuda de deploy: el mapeo
  *                       de países ya está completo para el mundo entero.
  */
-import { worldLanguageForCountry } from './countries';
+import { worldLanguageForCountry } from '@/lib/i18n/countries';
 
 export const LOCALES = ['es', 'pt', 'en', 'fr', 'de'] as const;
 export type Locale = (typeof LOCALES)[number];

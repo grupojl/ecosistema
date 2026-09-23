@@ -8,10 +8,10 @@ import { ScrollArea } from '@real/ui';
 import { Skeleton } from '@real/ui';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/helpers';
-import { useMensajes, useEnviarMensaje } from '../hooks';
-import { CanalBadge } from './canal-badge';
-import { EtapaBadge } from './etapa-badge';
-import type { Conversacion } from '../types';
+import { useMensajes, useEnviarMensaje } from '@/features/chat/hooks';
+import { CanalBadge } from '@/features/chat/components/canal-badge';
+import { EtapaBadge } from '@/features/chat/components/etapa-badge';
+import type { Conversacion } from '@/features/chat/types';
 
 interface MensajeSkeletonProps { count?: number }
 function MensajeSkeleton({ count = 3 }: MensajeSkeletonProps) {

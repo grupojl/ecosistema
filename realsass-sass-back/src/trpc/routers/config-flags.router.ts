@@ -13,8 +13,8 @@
  *   conditions?: Record<string, unknown>
  */
 import { z }                      from 'zod';
-import { router, tenantProcedure } from '../trpc';
-import type { ConfigFlagsService } from '../../config-flags/config-flags.service';
+import { router, tenantProcedure } from '@/trpc';
+import type { ConfigFlagsService } from '@/config-flags/config-flags.service';
 
 export function createConfigFlagsRouter(flagsService: ConfigFlagsService) {
   return router({

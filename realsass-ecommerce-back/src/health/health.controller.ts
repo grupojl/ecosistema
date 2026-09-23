@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { Public }          from '@real/auth-server';
-import { PrismaService }   from '../prisma/prisma.service';
+import { PrismaService }   from '@/prisma/prisma.service';
 
 interface HealthDetail { status: 'up' | 'down'; latencyMs: number }
 interface HealthResponse {

@@ -1,11 +1,11 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { ICollaboratorsRepository } from './collaborators.repository.interface';
+import type { ICollaboratorsRepository } from '@/collaborators/repository/collaborators.repository.interface';
 import type {
   Collaborator, CollaboratorPermissions,
   InviteCollaboratorInput, UpdateCollaboratorInput,
-} from '../domain/collaborator.entity';
+} from '@/domain/collaborator.entity';
 
 type PrismaCollab = Prisma.CollaboratorGetPayload<Record<string, never>>;
 

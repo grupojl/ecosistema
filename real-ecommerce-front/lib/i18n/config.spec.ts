@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   isLocale, localeFromCountry, primaryLocaleForCountry,
   intlLocale, openGraphLocale, isRtlLocale, LOCALES, RTL_LOCALES, DEFAULT_LOCALE,
-} from './config'
+} from '@/lib/i18n/config'
 
 describe('isLocale', () => {
   it('acepta los 5 locales activos', () => {

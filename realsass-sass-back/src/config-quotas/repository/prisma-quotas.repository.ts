@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IQuotasRepository } from './quotas.repository.interface';
-import type { QuotaConfig } from '../domain/quota.entity';
+import type { IQuotasRepository } from '@/config-quotas/repository/quotas.repository.interface';
+import type { QuotaConfig } from '@/domain/quota.entity';
 
 type PrismaQuota = Prisma.QuotaConfigGetPayload<Record<string, never>>;
 

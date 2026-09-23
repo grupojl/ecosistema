@@ -10,18 +10,18 @@
  * ADR-005: todo el consumo interno es tRPC.
  * REST solo para GET /health y futuros webhooks externos.
  */
-import { router }                          from './trpc';
-import { createAdminCatalogRouter }        from './routers/admin-catalog.router';
-import { createAdminInventoryRouter }      from './routers/admin-inventory.router';
-import { createAdminOrdersRouter }         from './routers/admin-orders.router';
-import { createCustomerRouter }            from './routers/customer.router';
+import { router }                          from '@/trpc/trpc';
+import { createAdminCatalogRouter }        from '@/trpc/routers/admin-catalog.router';
+import { createAdminInventoryRouter }      from '@/trpc/routers/admin-inventory.router';
+import { createAdminOrdersRouter }         from '@/trpc/routers/admin-orders.router';
+import { createCustomerRouter }            from '@/trpc/routers/customer.router';
 
-import type { CatalogService }             from '../catalog/catalog.service';
-import type { InventoryService }           from '../inventory/inventory.service';
-import type { OrdersService }              from '../orders/orders.service';
-import type { CustomersService }           from '../customers/customers.service';
-import type { CartService }                from '../cart/cart.service';
-import type { StoreService }               from '../store/store.service';
+import type { CatalogService }             from '@/catalog/catalog.service';
+import type { InventoryService }           from '@/inventory/inventory.service';
+import type { OrdersService }              from '@/orders/orders.service';
+import type { CustomersService }           from '@/customers/customers.service';
+import type { CartService }                from '@/cart/cart.service';
+import type { StoreService }               from '@/store/store.service';
 
 export interface EcommerceAppRouterDeps {
   catalogService:   CatalogService;

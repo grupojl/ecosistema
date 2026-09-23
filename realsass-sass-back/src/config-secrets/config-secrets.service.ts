@@ -1,10 +1,10 @@
 import {
   Injectable, NotFoundException, ConflictException, Logger, Inject,
 } from '@nestjs/common';
-import { CryptoService }        from './crypto.service';
-import { ConfigAuditService }   from '../config-audit/config-audit.service';
-import { CreateSecretDto }      from './dto/create-secret.dto';
-import { SECRETS_REPOSITORY, type ISecretsRepository } from './repository/secrets.repository.interface';
+import { CryptoService }        from '@/config-secrets/crypto.service';
+import { ConfigAuditService }   from '@/config-audit/config-audit.service';
+import { CreateSecretDto }      from '@/config-secrets/dto/create-secret.dto';
+import { SECRETS_REPOSITORY, type ISecretsRepository } from '@/config-secrets/repository/secrets.repository.interface';
 
 @Injectable()
 export class ConfigSecretsService {

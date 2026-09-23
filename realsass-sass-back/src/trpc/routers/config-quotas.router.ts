@@ -7,8 +7,8 @@
  *     limit: number (−1 = ilimitado)
  */
 import { z }                       from 'zod';
-import { router, ownerProcedure, tenantProcedure } from '../trpc';
-import type { ConfigQuotasService } from '../../config-quotas/config-quotas.service';
+import { router, ownerProcedure, tenantProcedure } from '@/trpc';
+import type { ConfigQuotasService } from '@/config-quotas/config-quotas.service';
 
 export function createConfigQuotasRouter(quotasService: ConfigQuotasService) {
   return router({

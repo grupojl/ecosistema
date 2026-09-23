@@ -152,4 +152,3 @@ export function Navbar() {
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </>
   )
-}

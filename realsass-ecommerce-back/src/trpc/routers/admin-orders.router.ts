@@ -12,8 +12,8 @@
  * customer.router.ts.
  */
 import { z }                     from 'zod';
-import { router, adminProcedure } from '../trpc';
-import type { OrdersService }    from '../../orders/orders.service';
+import { router, adminProcedure } from '@/trpc';
+import type { OrdersService }    from '@/orders/orders.service';
 
 export function createAdminOrdersRouter(ordersService: OrdersService) {
   return router({

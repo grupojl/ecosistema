@@ -1,14 +1,14 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IOrganizationsRepository } from './organizations.repository.interface';
+import type { IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
 import {
   toPublicStoreInfo,
   type Organization,
   type UpdateOrganizationInput,
   type CreateOrganizationInput,
   type StoreInfo,
-} from '../domain/organization.entity';
+} from '@/domain/organization.entity';
 
 type PrismaOrg = Prisma.OrganizationGetPayload<Record<string, never>>;
 

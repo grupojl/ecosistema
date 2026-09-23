@@ -12,12 +12,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { PrismaService }     from "../prisma/prisma.service.js";
-import { InsufficientStockError } from "./errors/insufficient-stock.error.js";
+import { PrismaService }     from "@/prisma/prisma.service.js";
+import { InsufficientStockError } from "@/inventory/errors/insufficient-stock.error.js";
 import {
   INVENTORY_REPOSITORY,
   type IInventoryRepository,
-} from "./repository/inventory.repository.interface.js";
+} from "@/inventory/repository/inventory.repository.interface.js";
 import type { Prisma } from "@prisma/client";
 
 @Injectable()

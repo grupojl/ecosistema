@@ -10,7 +10,7 @@
  *   // <style dangerouslySetInnerHTML={{ __html: css }} />
  */
 
-import type { PublicTheme } from './config-client'
+import type { PublicTheme } from '@/lib/config-client'
 
 /**
  * Genera el bloque :root { ... } con las custom properties del tema.

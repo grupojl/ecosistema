@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Plus, Trash2, Loader2, AlertCircle, Star, Palette } from 'lucide-react';
+import { Check, Plus, Trash2, Loader2, CircleAlert, Star, Palette } from 'lucide-react';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';
@@ -124,7 +124,7 @@ export default function TemaPage() {
 
   if (error) return (
     <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       Error al cargar temas. Verificá que el config service esté disponible.
     </div>
   );
@@ -293,7 +293,7 @@ export default function TemaPage() {
 
             {formError && (
               <div className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4" />{formError}
+                <CircleAlert className="h-4 w-4" />{formError}
               </div>
             )}
           </div>

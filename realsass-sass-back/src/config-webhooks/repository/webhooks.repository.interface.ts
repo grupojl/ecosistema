@@ -1,4 +1,4 @@
-import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '../domain/webhook.entity';
+import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '@/domain/webhook.entity';
 
 export const WEBHOOKS_REPOSITORY = Symbol('WEBHOOKS_REPOSITORY');
 

@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { ConfigCacheService }   from '../config-cache/config-cache.service';
-import { ConfigAuditService }   from '../config-audit/config-audit.service';
-import { QuotaExceededException } from '../common/exceptions/quota-exceeded.exception';
+import { ConfigCacheService }   from '@/config-cache/config-cache.service';
+import { ConfigAuditService }   from '@/config-audit/config-audit.service';
+import { QuotaExceededException } from '@/common/exceptions/quota-exceeded.exception';
 import { EventEmitter2 }        from '@nestjs/event-emitter';
-import { QUOTAS_REPOSITORY, type IQuotasRepository } from './repository/quotas.repository.interface';
+import { QUOTAS_REPOSITORY, type IQuotasRepository } from '@/config-quotas/repository/quotas.repository.interface';
 
 @Injectable()
 export class ConfigQuotasService {

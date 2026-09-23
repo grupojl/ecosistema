@@ -21,8 +21,8 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import type { InternalListOrgsDto } from './schemas';
+import { PrismaService } from '@/prisma/prisma.service';
+import type { InternalListOrgsDto } from '@/internal/schemas';
 
 export interface InternalOrgItem {
   id:           string;

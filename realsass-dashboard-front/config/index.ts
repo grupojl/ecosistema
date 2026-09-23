@@ -1,3 +1,3 @@
-export * from './constants';
-export * from './navigation';
-export * from './site';
+export * from '@/config/constants';
+export * from '@/config/navigation';
+export * from '@/config/site';

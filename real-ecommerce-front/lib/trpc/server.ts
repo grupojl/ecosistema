@@ -17,7 +17,7 @@
  *   se configuran con { next: { revalidate: N } } en el contexto.
  */
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter }                  from './router-type';
+import type { AppRouter }                  from '@/lib/trpc/router-type';
 
 function getBackendUrl(): string {
   const url = process.env.ECOMMERCE_BACK_URL ?? process.env.NEXT_PUBLIC_ECOMMERCE_BACK_URL;

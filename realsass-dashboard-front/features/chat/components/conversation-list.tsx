@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { MessageSquare, SlidersHorizontal, Search, AlertCircle } from 'lucide-react';
+import { MessageSquare, SlidersHorizontal, Search, CircleAlert } from 'lucide-react';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { ScrollArea } from '@real/ui';
 import { Skeleton } from '@real/ui';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/helpers';
-import { CanalBadge } from './canal-badge';
-import { EtapaBadge, ETAPA_CONFIG } from './etapa-badge';
-import { useConversaciones } from '../hooks';
-import type { Canal, EtapaCliente } from '../types';
+import { CanalBadge } from '@/features/chat/components/canal-badge';
+import { EtapaBadge, ETAPA_CONFIG } from '@/features/chat/components/etapa-badge';
+import { useConversaciones } from '@/features/chat/hooks';
+import type { Canal, EtapaCliente } from '@/features/chat/types';
 
 const CANAL_LABELS: Record<Canal, string> = {
   whatsapp: 'WhatsApp', instagram: 'Instagram', telegram: 'Telegram', web: 'Web',
@@ -132,7 +132,7 @@ export function ConversationList({ selectedId, onSelect }: ConversationListProps
           <>{[1, 2, 3, 4].map((i) => <ConversacionSkeleton key={i} />)}</>
         ) : error ? (
           <div className="flex flex-col items-center gap-2 p-6 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive" />
+            <CircleAlert className="h-8 w-8 text-destructive" />
             <p className="text-xs text-muted-foreground">Error al cargar conversaciones</p>
           </div>
         ) : filtered.length === 0 ? (

@@ -7,8 +7,8 @@
  *   OrganizationsService.findByUserId(userId)
  */
 import { z }                    from 'zod';
-import { router, authProcedure } from '../trpc';
-import type { OrganizationsService } from '../../organizations/organizations.service';
+import { router, authProcedure } from '@/trpc';
+import type { OrganizationsService } from '@/organizations/organizations.service';
 
 const UpdateOrgInput = z.object({
   name:        z.string().min(2).max(100).optional(),

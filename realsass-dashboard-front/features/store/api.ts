@@ -18,7 +18,7 @@ import { ecommerceFetch, buildQuery } from '@/lib/api-client';
 import type {
   Product, ProductInput, ProductFilters,
   Order, OrderFilters, Paginated,
-} from './types';
+} from '@/features/store/types';
 
 export const storeApi = {
   // ─── Catálogo (admin) ───────────────────────────────────────────────────────

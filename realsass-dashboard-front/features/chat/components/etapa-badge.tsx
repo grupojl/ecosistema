@@ -1,4 +1,4 @@
-import type { EtapaCliente } from '../types';
+import type { EtapaCliente } from '@/features/chat/types';
 
 export const ETAPA_CONFIG: Record<EtapaCliente, { label: string; bg: string; color: string; border: string }> = {
   prospecto:   { label: 'Prospecto',   bg: 'rgba(120,120,120,0.15)', color: '#a1a1aa', border: 'rgba(120,120,120,0.3)' },

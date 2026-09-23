@@ -1,1 +1,1 @@
-export { useCampanas, useMetricasCampana } from './use-campanas';
+export { useCampanas, useMetricasCampana } from '@/features/campanas/hooks/use-campanas';

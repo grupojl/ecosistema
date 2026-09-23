@@ -9,7 +9,7 @@
 
 import { useState }                         from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc, createTrpcClient }           from './client';
+import { trpc, createTrpcClient }           from '@/lib/trpc/client';
 import { useCustomerContext }               from '@/context/customer-context';
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {

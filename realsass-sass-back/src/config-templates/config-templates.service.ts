@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { ConfigCacheService }   from '../config-cache/config-cache.service';
-import { ConfigAuditService }   from '../config-audit/config-audit.service';
-import { CreateTemplateDto }    from './dto/create-template.dto';
-import { TEMPLATES_REPOSITORY, type ITemplatesRepository } from './repository/templates.repository.interface';
+import { ConfigCacheService }   from '@/config-cache/config-cache.service';
+import { ConfigAuditService }   from '@/config-audit/config-audit.service';
+import { CreateTemplateDto }    from '@/config-templates/dto/create-template.dto';
+import { TEMPLATES_REPOSITORY, type ITemplatesRepository } from '@/config-templates/repository/templates.repository.interface';
 
 @Injectable()
 export class ConfigTemplatesService {

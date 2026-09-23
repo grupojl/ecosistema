@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { webhook } from './webhook.entity';
+// import { webhook } from '@/config-webhooks/domain/webhook.entity';
 
 describe('webhook domain', () => {
   it.todo('crear entidad con datos válidos');

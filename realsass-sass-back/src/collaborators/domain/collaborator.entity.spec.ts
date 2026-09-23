@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { collaborator } from './collaborator.entity';
+// import { collaborator } from '@/collaborators/domain/collaborator.entity';
 
 describe('collaborator domain', () => {
   it.todo('crear entidad con datos válidos');

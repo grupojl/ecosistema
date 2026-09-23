@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IThemesRepository } from './themes.repository.interface';
-import type { ThemeConfig, CreateThemeInput } from '../domain/theme.entity';
+import type { IThemesRepository } from '@/config-themes/repository/themes.repository.interface';
+import type { ThemeConfig, CreateThemeInput } from '@/domain/theme.entity';
 
 type PrismaTheme = Prisma.ThemeConfigGetPayload<Record<string, never>>;
 

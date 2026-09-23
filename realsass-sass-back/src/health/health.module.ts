@@ -1,9 +1,9 @@
 // src/health/health.module.ts
 import { Module }  from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
-import { RedisModule }  from '../redis/redis.module';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { RedisModule }  from '@/redis/redis.module';
 // shadowed: from '@nestjs/common';
-import { HealthController } from './health.controller';
+import { HealthController } from '@/health/health.controller';
 
 @Module({
   controllers: [HealthController],

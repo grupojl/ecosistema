@@ -1,4 +1,4 @@
-import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '../domain/audit-log.entity';
+import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '@/domain/audit-log.entity';
 
 export const AUDIT_REPOSITORY = Symbol('AUDIT_REPOSITORY');
 

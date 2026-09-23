@@ -11,10 +11,10 @@
  */
 import { Module }                                       from '@nestjs/common';
 import { SessionService, AuthSessionController }        from '@real/auth-server';
-import { AuthService }                                  from './auth.service';
-import { AuthController }                               from './auth.controller';
-import { ClaimsService }                                from './claims.service';
-import { UsersModule }                                  from '../users/users.module';
+import { AuthService }                                  from '@/auth/auth.service';
+import { AuthController }                               from '@/auth/auth.controller';
+import { ClaimsService }                                from '@/auth/claims.service';
+import { UsersModule }                                  from '@/users/users.module';
 
 @Module({
   imports:     [UsersModule],

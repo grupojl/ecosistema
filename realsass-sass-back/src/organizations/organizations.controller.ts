@@ -13,7 +13,7 @@
  */
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { Public }                from '@real/auth-server';
-import { OrganizationsService }  from './organizations.service';
+import { OrganizationsService }  from '@/organizations/organizations.service';
 
 @Controller('organizations')
 export class OrganizationsController {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { escapeXml, buildSitemapXml, SITEMAP_MAX_URLS, type SitemapEntry } from './sitemap'
+import { escapeXml, buildSitemapXml, SITEMAP_MAX_URLS, type SitemapEntry } from '@/lib/seo/sitemap'
 
 describe('escapeXml', () => {
   it('escapa los 5 caracteres especiales de XML', () => {

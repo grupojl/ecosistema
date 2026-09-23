@@ -10,8 +10,8 @@
  *   )
  */
 import { z }               from 'zod';
-import { router, ownerProcedure } from '../trpc';
-import type { ConfigAuditService } from '../../config-audit/config-audit.service';
+import { router, ownerProcedure } from '@/trpc';
+import type { ConfigAuditService } from '@/config-audit/config-audit.service';
 
 export function createConfigAuditRouter(auditService: ConfigAuditService) {
   return router({

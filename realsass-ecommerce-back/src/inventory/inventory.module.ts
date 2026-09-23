@@ -1,7 +1,7 @@
 import { Module }                      from "@nestjs/common";
-import { InventoryService }            from "./inventory.service";
-import { PrismaInventoryRepository }   from "./repository/prisma-inventory.repository";
-import { INVENTORY_REPOSITORY }        from "./repository/inventory.repository.interface";
+import { InventoryService }            from "@/inventory/inventory.service";
+import { PrismaInventoryRepository }   from "@/inventory/repository/prisma-inventory.repository";
+import { INVENTORY_REPOSITORY }        from "@/inventory/repository/inventory.repository.interface";
 
 @Module({
   providers: [

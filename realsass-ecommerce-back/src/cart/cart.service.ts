@@ -7,17 +7,17 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { ActivityService }   from "../activity/activity.service.js";
+import { ActivityService }   from "@/activity/activity.service.js";
 import {
   CART_REPOSITORY,
   type ICartRepository,
-} from "./repository/cart.repository.interface.js";
+} from "@/cart/repository/cart.repository.interface.js";
 import {
   CartNotFoundError,
   CartItemNotFoundError,
   InsufficientStockForCartError,
   assertValidQuantity,
-} from "./domain/cart.errors.js";
+} from "@/cart/domain/cart.errors.js";
 
 @Injectable()
 export class CartService {

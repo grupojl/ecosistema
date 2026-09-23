@@ -1,8 +1,8 @@
 import { Test } from '@nestjs/testing'
-import { MarketsService }       from '../markets.service'
-import { MARKET_REPOSITORY }   from '../repository/market.repository.interface'
-import type { IMarketRepository } from '../repository/market.repository.interface'
-import { Market }               from '../domain/market.entity'
+import { MarketsService }       from '@/markets.service'
+import { MARKET_REPOSITORY }   from '@/repository/market.repository.interface'
+import type { IMarketRepository } from '@/repository/market.repository.interface'
+import { Market }               from '@/domain/market.entity'
 
 const mockMarket = (overrides = {}): Market => {
   const props = {

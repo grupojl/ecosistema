@@ -7,13 +7,13 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import type { ProductDraft } from '../domain/product.entity';
+import { PrismaService } from '@/prisma/prisma.service';
+import type { ProductDraft } from '@/domain/product.entity';
 import type {
   CatalogRepository,
   ProductRecord,
   UpdateProductPatch,
-} from './catalog.repository.interface';
+} from '@/catalog/repository/catalog.repository.interface';
 
 const PRODUCT_INCLUDE = {
   category: { select: { id: true, name: true, handle: true } },

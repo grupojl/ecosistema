@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { availableUnits, toProductView, formatPrice, paginate, parsePageParam, type ProductLike } from './product-view'
+import { availableUnits, toProductView, formatPrice, paginate, parsePageParam, type ProductLike } from '@/lib/catalog/product-view'
 
 const baseProduct: ProductLike = {
   id: 'p1',

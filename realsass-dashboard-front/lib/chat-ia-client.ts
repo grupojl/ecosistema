@@ -89,4 +89,3 @@ export async function chatIaFetch<T>(
   }
 
   return res.json() as Promise<T>;
-}

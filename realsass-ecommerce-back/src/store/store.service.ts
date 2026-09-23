@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ServiceUnavailableException, Logger } from '@nestjs/common';
-import { parseSassBackStoreResponse, type StoreInfo } from './store.contract';
+import { parseSassBackStoreResponse, type StoreInfo } from '@/store/store.contract';
 
 export type { StoreInfo };
 

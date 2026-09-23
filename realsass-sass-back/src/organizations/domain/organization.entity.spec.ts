@@ -1,4 +1,4 @@
-import { toPublicStoreInfo, type PublicStoreRow } from './organization.entity';
+import { toPublicStoreInfo, type PublicStoreRow } from '@/organizations/domain/organization.entity';
 
 const baseRow: PublicStoreRow = {
   id:          '6f1c2a3b-0000-4000-8000-000000000001',

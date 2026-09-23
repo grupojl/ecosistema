@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { worldLanguageForCountry, WORLD_LANGUAGE_BY_COUNTRY, MULTILINGUAL_COUNTRIES } from './countries'
+import { worldLanguageForCountry, WORLD_LANGUAGE_BY_COUNTRY, MULTILINGUAL_COUNTRIES } from '@/lib/i18n/countries'
 
 describe('worldLanguageForCountry', () => {
   it('devuelve el idioma dominante para países bien conocidos', () => {

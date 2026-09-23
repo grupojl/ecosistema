@@ -1,9 +1,9 @@
 import { Module }                  from "@nestjs/common";
-import { OrdersService }           from "./orders.service";
-import { PrismaOrdersRepository }  from "./repository/prisma-orders.repository";
-import { ORDERS_REPOSITORY }       from "./repository/orders.repository.interface";
-import { ActivityModule }          from "../activity/activity.module";
-import { InventoryModule }         from "../inventory/inventory.module";
+import { OrdersService }           from "@/orders/orders.service";
+import { PrismaOrdersRepository }  from "@/orders/repository/prisma-orders.repository";
+import { ORDERS_REPOSITORY }       from "@/orders/repository/orders.repository.interface";
+import { ActivityModule }          from "@/activity/activity.module";
+import { InventoryModule }         from "@/inventory/inventory.module";
 
 @Module({
   imports:   [ActivityModule, InventoryModule],

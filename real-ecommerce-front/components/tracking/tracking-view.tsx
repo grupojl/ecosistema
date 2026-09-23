@@ -6,7 +6,7 @@ import { Badge } from "@real/ui"
 import { Button } from "@real/ui"
 import { Progress } from "@real/ui"
 import { Separator } from "@real/ui"
-import { Package, Truck, CheckCircle2, MapPin, Clock, ArrowLeft } from "lucide-react"
+import { Package, Truck, CircleCheckBig, MapPin, Clock, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
 const mockOrder = {
@@ -105,7 +105,7 @@ export function TrackingView() {
                         }`}
                       >
                         {step.completed ? (
-                          <CheckCircle2 className="w-5 h-5" />
+                          <CircleCheckBig className="w-5 h-5" />
                         ) : step.status === "in_transit" ? (
                           <Truck className="w-5 h-5" />
                         ) : (

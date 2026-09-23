@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { t, plural, getDictionary, LOCALES } from './index'
+import { t, plural, getDictionary, LOCALES } from '@/lib/i18n/index'
 
 describe('t (interpolación)', () => {
   it('reemplaza placeholders conocidos', () => {

@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IFeatureFlagsRepository } from './feature-flags.repository.interface';
-import type { FeatureFlag, UpdateFeatureFlagInput } from '../domain/feature-flag.entity';
+import type { IFeatureFlagsRepository } from '@/config-flags/repository/feature-flags.repository.interface';
+import type { FeatureFlag, UpdateFeatureFlagInput } from '@/domain/feature-flag.entity';
 
 type PrismaFlag = Prisma.FeatureFlagGetPayload<Record<string, never>>;
 

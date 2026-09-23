@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { getProducts, getCategories } from '@/lib/store'
 import { toProductView, formatPrice } from '@/lib/catalog/product-view'
-import { useStore } from './store-provider'
+import { useStore } from '@/app/[locale]/tienda/[slug]/store-provider'
 import { getDictionary, t, intlLocale, isLocale } from '@/lib/i18n'
 import { notFound } from 'next/navigation'
 import { ProductCard } from '@/components/storefront/product-card'

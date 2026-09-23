@@ -13,8 +13,8 @@
  *   ConfigWebhooksService.test(organizationId, id)   ← también disponible
  */
 import { z }               from 'zod';
-import { router, ownerProcedure } from '../trpc';
-import type { ConfigWebhooksService } from '../../config-webhooks/config-webhooks.service';
+import { router, ownerProcedure } from '@/trpc';
+import type { ConfigWebhooksService } from '@/config-webhooks/config-webhooks.service';
 
 export function createConfigWebhooksRouter(webhooksService: ConfigWebhooksService) {
   return router({

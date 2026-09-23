@@ -8,8 +8,8 @@
  * internos usados dentro de OrdersService.$transaction — no se exponen.
  */
 import { z }                    from 'zod';
-import { router, adminProcedure } from '../trpc';
-import type { InventoryService } from '../../inventory/inventory.service';
+import { router, adminProcedure } from '@/trpc';
+import type { InventoryService } from '@/inventory/inventory.service';
 
 export function createAdminInventoryRouter(inventoryService: InventoryService) {
   return router({

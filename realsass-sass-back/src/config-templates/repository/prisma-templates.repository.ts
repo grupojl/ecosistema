@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { ITemplatesRepository } from './templates.repository.interface';
-import type { ContentTemplate, CreateTemplateInput } from '../domain/template.entity';
+import type { ITemplatesRepository } from '@/config-templates/repository/templates.repository.interface';
+import type { ContentTemplate, CreateTemplateInput } from '@/domain/template.entity';
 
 type PrismaTemplate = Prisma.ContentTemplateGetPayload<Record<string, never>>;
 

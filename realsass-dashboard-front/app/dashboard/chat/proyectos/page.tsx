@@ -1,7 +1,7 @@
 'use client';
 // app/dashboard/chat/proyectos/page.tsx — gestión de proyectos IA
 import Link from 'next/link';
-import { Bot, ArrowLeft, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Bot, ArrowLeft, RefreshCw, CheckCircle, CircleX } from 'lucide-react';
 import { Badge } from '@real/ui';
 import { Button } from '@real/ui';
 import { useProyectosIA } from '@/features/chat/hooks';
@@ -67,7 +67,7 @@ export default function ProyectosIAPage() {
                 {proyecto.isActive ? (
                   <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                 ) : (
-                  <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <CircleX className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
               </div>
 

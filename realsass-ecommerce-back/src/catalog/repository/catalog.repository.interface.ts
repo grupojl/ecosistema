@@ -12,7 +12,7 @@
  * Token de inyección: CATALOG_REPOSITORY (ver catalog.module.ts)
  */
 
-import type { ProductDraft } from '../domain/product.entity';
+import type { ProductDraft } from '@/domain/product.entity';
 
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 

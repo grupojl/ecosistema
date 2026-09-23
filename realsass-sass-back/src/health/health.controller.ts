@@ -1,7 +1,7 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { Public }        from '@real/auth-server';
-import { PrismaService } from '../prisma/prisma.service';
-import { RedisService }  from '../redis/redis.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { RedisService }  from '@/redis/redis.service';
 
 interface HealthDetail { status: 'up' | 'down'; latencyMs: number }
 interface HealthResponse {

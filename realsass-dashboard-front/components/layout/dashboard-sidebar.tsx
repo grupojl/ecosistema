@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, BarChart2,
+  Palette, ToggleLeft, Webhook, ChartColumnBig,
   LogOut, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 const ICON_MAP: Record<string, React.ElementType> = {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, BarChart2,
+  Palette, ToggleLeft, Webhook, ChartColumnBig,
 };
 
 const STORE_FRONT_URL =

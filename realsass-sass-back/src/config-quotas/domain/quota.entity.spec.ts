@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { quota } from './quota.entity';
+// import { quota } from '@/config-quotas/domain/quota.entity';
 
 describe('quota domain', () => {
   it.todo('crear entidad con datos válidos');

@@ -5,7 +5,7 @@
  * Si lo hace, es un bug de arquitectura — la lógica de dominio está acoplada a infraestructura.
  */
 
-// import { audit-log } from './audit-log.entity';
+// import { audit-log } from '@/config-audit/domain/audit-log.entity';
 
 describe('audit-log domain', () => {
   it.todo('crear entidad con datos válidos');

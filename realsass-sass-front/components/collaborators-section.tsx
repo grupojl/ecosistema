@@ -6,7 +6,7 @@
  * Migrado de lib/api fetch manual → hooks tRPC (use-collaborators.ts)
  */
 import { useState }        from 'react'
-import { Users, Plus, Trash2, Copy, Check, Loader2, AlertCircle, Mail } from 'lucide-react'
+import { Users, Plus, Trash2, Copy, Check, Loader2, CircleAlert, Mail } from 'lucide-react'
 import { Button, Input, Badge, Skeleton, Switch, Label } from '@real/ui'
 import { useAuth }         from '@/context/auth-context'
 import {
@@ -106,7 +106,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
         />
         {invite.error && (
           <p className="text-sm text-destructive flex items-center gap-1">
-            <AlertCircle className="h-4 w-4" />
+            <CircleAlert className="h-4 w-4" />
             {getErrorMessage(invite.error)}
           </p>
         )}
@@ -135,7 +135,7 @@ export function CollaboratorsSection() {
 
   if (error) return (
     <div className="flex items-center gap-2 text-destructive p-4 rounded-lg border border-destructive/20">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       <p className="text-sm">{getErrorMessage(error)}</p>
     </div>
   )

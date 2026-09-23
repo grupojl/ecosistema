@@ -1,6 +1,6 @@
-export { useDebounce } from './use-debounce';
-export { useLocalStorage } from './use-local-storage';
-export { useIsMobile } from './use-mobile';
+export { useDebounce } from '@/hooks/use-debounce';
+export { useLocalStorage } from '@/hooks/use-local-storage';
+export { useIsMobile } from '@/hooks/use-mobile';
 
 // Feature hooks
 export * from '@/features/propiedades/hooks';

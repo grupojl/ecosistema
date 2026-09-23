@@ -4,7 +4,7 @@
  * Puerto (interface) de la capa Repository para "orders".
  * Token: ORDERS_REPOSITORY
  */
-import type { OrderStatus } from "../domain/order.errors";
+import type { OrderStatus } from "@/domain/order.errors";
 
 export const ORDERS_REPOSITORY = Symbol("ORDERS_REPOSITORY");
 

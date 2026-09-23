@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Palette, ToggleLeft, Webhook, BarChart2, Settings2 } from 'lucide-react';
+import { Palette, ToggleLeft, Webhook, ChartColumnBig, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CONFIG_TABS = [
   { name: 'Tema visual',   href: '/dashboard/configuracion/tema',     Icon: Palette    },
   { name: 'Feature Flags', href: '/dashboard/configuracion/flags',    Icon: ToggleLeft },
   { name: 'Webhooks',      href: '/dashboard/configuracion/webhooks', Icon: Webhook    },
-  { name: 'Quotas',        href: '/dashboard/configuracion/quotas',   Icon: BarChart2  },
+  { name: 'Quotas',        href: '/dashboard/configuracion/quotas',   Icon: ChartColumnBig  },
 ] as const;
 
 export default function ConfiguracionLayout({ children }: { children: React.ReactNode }) {

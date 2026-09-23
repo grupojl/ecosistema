@@ -14,8 +14,8 @@
  * en REST con @Public() — lo consume SSG/ISR de Next.js.
  */
 import { z }                                      from 'zod';
-import { router, adminProcedure }                 from '../trpc';
-import type { CatalogService }                    from '../../catalog/catalog.service';
+import { router, adminProcedure }                 from '@/trpc';
+import type { CatalogService }                    from '@/catalog/catalog.service';
 
 const VariantInput = z.object({
   sku:      z.string().min(1),

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect } from 'react'
-import { MarketBanner } from './market-banner'
+import { MarketBanner } from '@/components/markets/market-banner'
 
 interface MarketProviderProps {
   children:                   React.ReactNode

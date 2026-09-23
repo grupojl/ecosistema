@@ -10,12 +10,12 @@ import {
 import {
   CUSTOMERS_REPOSITORY,
   type ICustomersRepository,
-} from "./repository/customers.repository.interface.js";
+} from "@/customers/repository/customers.repository.interface.js";
 import {
   assertValidEmail,
   CustomerNotFoundError,
   InvalidEmailError,
-} from "./domain/customer.errors.js";
+} from "@/customers/domain/customer.errors.js";
 
 export interface IdentifyCustomerOutput {
   customerId: string;

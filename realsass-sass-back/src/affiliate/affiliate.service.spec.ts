@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AffiliateService } from './affiliate.service';
+import { AffiliateService } from '@/affiliate/affiliate.service';
 
 describe('AffiliateService', () => {
   let service: AffiliateService;

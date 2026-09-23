@@ -1,5 +1,5 @@
 import type { ShippingAdapter, ShipmentDetails, CarrierQuote } from "@/types/shipping"
-import { selectCarrier } from "./carrier-selector"
+import { selectCarrier } from "@/lib/shipping/carrier-selector"
 
 export class ShippingService {
   private adapters: Map<string, ShippingAdapter> = new Map()

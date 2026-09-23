@@ -6,7 +6,7 @@
  * 2. Si no hay Market CO → fallback al Market default (AR)
  * 3. fulfillmentSnapshot queda guardado en la Order
  */
-import { resolveVisitorCountry } from '../lib/resolve-visitor-country'
+import { resolveVisitorCountry } from '@/lib/resolve-visitor-country'
 import type { Request } from 'express'
 
 function mockRequest(headers: Record<string, string>): Partial<Request> {

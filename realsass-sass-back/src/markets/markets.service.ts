@@ -1,16 +1,16 @@
 import { Injectable, Inject } from '@nestjs/common'
 import { TRPCError }          from '@trpc/server'
-import type { IMarketRepository } from './repository/market.repository.interface'
-import { MARKET_REPOSITORY }      from './repository/market.repository.interface'
-import { FulfillmentConfigSchema } from './domain/market.entity'
-import type { FulfillmentConfig }  from './domain/market.entity'
+import type { IMarketRepository } from '@/markets/repository/market.repository.interface'
+import { MARKET_REPOSITORY }      from '@/markets/repository/market.repository.interface'
+import { FulfillmentConfigSchema } from '@/markets/domain/market.entity'
+import type { FulfillmentConfig }  from '@/markets/domain/market.entity'
 import {
   MarketNotFoundError,
   DuplicateMarketError,
   CannotDeactivateDefaultMarketError,
   CannotDeleteDefaultMarketError,
-} from './domain/market.errors'
-import type { MarketDTO } from './domain/market.entity'
+} from '@/markets/domain/market.errors'
+import type { MarketDTO } from '@/markets/domain/market.entity'
 
 @Injectable()
 export class MarketsService {

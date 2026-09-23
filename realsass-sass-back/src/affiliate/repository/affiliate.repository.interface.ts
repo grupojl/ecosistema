@@ -1,4 +1,4 @@
-import type { AffiliateProfile, AffiliateReferral } from '../domain/affiliate.entity';
+import type { AffiliateProfile, AffiliateReferral } from '@/domain/affiliate.entity';
 
 export const AFFILIATE_REPOSITORY = Symbol('AFFILIATE_REPOSITORY');
 

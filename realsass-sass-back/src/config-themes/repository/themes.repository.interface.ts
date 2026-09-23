@@ -1,4 +1,4 @@
-import type { ThemeConfig, CreateThemeInput } from '../domain/theme.entity';
+import type { ThemeConfig, CreateThemeInput } from '@/domain/theme.entity';
 
 export const THEMES_REPOSITORY = Symbol('THEMES_REPOSITORY');
 

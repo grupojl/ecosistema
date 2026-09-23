@@ -21,9 +21,9 @@
  *   organization-access es consumido por ecommerce-back vía HTTP, no por un front.
  */
 import { z }                   from 'zod';
-import { router, authProcedure } from '../trpc';
-import type { UsersService }   from '../../users/users.service';
-import type { AuthService }    from '../../auth/auth.service';
+import { router, authProcedure } from '@/trpc';
+import type { UsersService }   from '@/users/users.service';
+import type { AuthService }    from '@/auth/auth.service';
 
 export function createAuthRouter(
   usersService: UsersService,

@@ -1,4 +1,4 @@
-import type { FeatureFlag, UpdateFeatureFlagInput } from '../domain/feature-flag.entity';
+import type { FeatureFlag, UpdateFeatureFlagInput } from '@/domain/feature-flag.entity';
 
 export const FEATURE_FLAGS_REPOSITORY = Symbol('FEATURE_FLAGS_REPOSITORY');
 

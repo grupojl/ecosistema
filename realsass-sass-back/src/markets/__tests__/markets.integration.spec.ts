@@ -2,7 +2,7 @@
  * Integration test del contrato tRPC de Markets.
  * Usa el router real con un servicio mockeado.
  */
-import { createMarketsRouter } from '../../trpc/routers/markets.router'
+import { createMarketsRouter } from '@/trpc/routers/markets.router'
 import { createCallerFactory }  from '@trpc/server'
 
 const mockService = {

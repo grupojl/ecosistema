@@ -17,14 +17,14 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { validateProductDraft, canPublish } from './domain/product.entity';
-import { DomainError } from './domain/product.errors';
+import { CreateProductDto } from '@/catalog/dto/create-product.dto';
+import { UpdateProductDto } from '@/catalog/dto/update-product.dto';
+import { validateProductDraft, canPublish } from '@/catalog/domain/product.entity';
+import { DomainError } from '@/catalog/domain/product.errors';
 import {
   CATALOG_REPOSITORY,
   type CatalogRepository,
-} from './repository/catalog.repository.interface';
+} from '@/catalog/repository/catalog.repository.interface';
 
 @Injectable()
 export class CatalogService {

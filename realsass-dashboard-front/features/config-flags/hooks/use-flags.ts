@@ -33,4 +33,3 @@ export function useUpdateFlag() {
     },
     onSettled: () => { void utils.configFlags.list.invalidate(); },
   });
-}

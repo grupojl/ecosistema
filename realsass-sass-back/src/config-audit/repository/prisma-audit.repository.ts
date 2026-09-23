@@ -1,8 +1,8 @@
 import { Injectable }    from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma }   from '@prisma/client';
-import type { IAuditRepository } from './audit.repository.interface';
-import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '../domain/audit-log.entity';
+import type { IAuditRepository } from '@/config-audit/repository/audit.repository.interface';
+import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '@/domain/audit-log.entity';
 
 type PrismaAuditLog = Prisma.ConfigAuditLogGetPayload<Record<string, never>>;
 

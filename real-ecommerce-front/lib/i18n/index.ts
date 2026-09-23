@@ -5,16 +5,16 @@
  * (es/pt/en/fr/de) — el mapeo de países cubre el mundo entero (countries.ts);
  * activar un idioma nuevo es agregar su diccionario acá + a LOCALES.
  */
-import { de } from './dictionaries/de';
-import { en } from './dictionaries/en';
-import { es } from './dictionaries/es';
-import { fr } from './dictionaries/fr';
-import { pt } from './dictionaries/pt';
-import type { Dictionary, PluralForms } from './dictionaries/types';
-import type { Locale } from './config';
+import { de } from '@/lib/i18n/dictionaries/de';
+import { en } from '@/lib/i18n/dictionaries/en';
+import { es } from '@/lib/i18n/dictionaries/es';
+import { fr } from '@/lib/i18n/dictionaries/fr';
+import { pt } from '@/lib/i18n/dictionaries/pt';
+import type { Dictionary, PluralForms } from '@/lib/i18n/dictionaries/types';
+import type { Locale } from '@/lib/i18n/config';
 
-export * from './config';
-export * from './countries';
+export * from '@/lib/i18n/config';
+export * from '@/lib/i18n/countries';
 export type { Dictionary, PluralForms };
 
 const DICTIONARIES: Readonly<Record<Locale, Dictionary>> = { es, pt, en, fr, de };

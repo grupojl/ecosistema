@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { AUDIT_REPOSITORY, type IAuditRepository } from './repository/audit.repository.interface';
-import type { CreateAuditLogInput, AuditLogFilters } from './domain/audit-log.entity';
+import { AUDIT_REPOSITORY, type IAuditRepository } from '@/config-audit/repository/audit.repository.interface';
+import type { CreateAuditLogInput, AuditLogFilters } from '@/config-audit/domain/audit-log.entity';
 
 @Injectable()
 export class ConfigAuditService {

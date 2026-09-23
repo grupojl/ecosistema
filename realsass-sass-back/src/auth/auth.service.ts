@@ -1,11 +1,11 @@
 // realsass-sass-back/src/auth/auth.service.ts
-import type { ProfileForClaims } from './claims.service';
+import type { ProfileForClaims } from '@/auth/claims.service';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as admin            from 'firebase-admin';
-import { PrismaService }     from '../prisma/prisma.service';
-import { UsersService }      from '../users/users.service';
-import { AffiliatesService } from '../affiliate/affiliate.service';
-import { ClaimsService }     from './claims.service';
+import { PrismaService }     from '@/prisma/prisma.service';
+import { UsersService }      from '@/users/users.service';
+import { AffiliatesService } from '@/affiliate/affiliate.service';
+import { ClaimsService }     from '@/auth/claims.service';
 import type { CurrentUserPayload } from '@real/auth-server';
 
 /**

@@ -10,8 +10,8 @@
  *   collaborators.getInvitationInfo → info de invitación por token (@Public)
  */
 import { z }                                        from 'zod';
-import { router, authProcedure, publicProcedure }   from '../trpc';
-import type { CollaboratorsService }                from '../../collaborators/collaborators.service';
+import { router, authProcedure, publicProcedure }   from '@/trpc';
+import type { CollaboratorsService }                from '@/collaborators/collaborators.service';
 
 const permissionsSchema = z.object({
   canViewListings:        z.boolean().optional(),

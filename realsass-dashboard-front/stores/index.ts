@@ -1,1 +1,1 @@
-export { useSidebarStore } from './use-sidebar-store';
+export { useSidebarStore } from '@/stores/use-sidebar-store';

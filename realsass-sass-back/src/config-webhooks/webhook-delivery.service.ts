@@ -4,7 +4,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectQueue }                  from '@nestjs/bullmq';
 import { Queue }                        from 'bullmq';
 import { OnEvent }                      from '@nestjs/event-emitter';
-import { PrismaService }                from '../prisma/prisma.service';
+import { PrismaService }                from '@/prisma/prisma.service';
 import * as crypto                      from 'crypto';
 
 export const WEBHOOK_QUEUE = 'webhook-delivery';

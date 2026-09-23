@@ -1,5 +1,5 @@
-import { OrganizationsClientService } from '../organizations-client/organizations-client.service';
-import { resolveVisitorCountry }      from './lib/resolve-visitor-country';
+import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
+import { resolveVisitorCountry }      from '@/orders/lib/resolve-visitor-country';
 // realsass-ecommerce-back/src/orders/orders.service.ts
 // ECO-BACK-02: refactorizado para usar IOrdersRepository.
 //
@@ -23,17 +23,17 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService }    from "../prisma/prisma.service.js";
-import { InventoryService } from "../inventory/inventory.service.js";
-import { ActivityService }  from "../activity/activity.service.js";
+import { PrismaService }    from "@/prisma/prisma.service.js";
+import { InventoryService } from "@/inventory/inventory.service.js";
+import { ActivityService }  from "@/activity/activity.service.js";
 import {
   ORDERS_REPOSITORY,
   type IOrdersRepository,
-} from "./repository/orders.repository.interface.js";
+} from "@/orders/repository/orders.repository.interface.js";
 import {
   assertValidOrderTransition,
   type OrderStatus,
-} from "./domain/order.errors.js";
+} from "@/orders/domain/order.errors.js";
 import type { Prisma } from "@prisma/client";
 
 @Injectable()

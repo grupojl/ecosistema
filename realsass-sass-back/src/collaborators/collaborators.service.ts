@@ -2,10 +2,10 @@ import {
   Injectable, NotFoundException, ForbiddenException,
   BadRequestException, Logger, Inject,
 } from '@nestjs/common';
-import { PrismaService }       from '../prisma/prisma.service';
+import { PrismaService }       from '@/prisma/prisma.service';
 import { CollaboratorStatus }  from '@prisma/client';
-import { COLLABORATORS_REPOSITORY, type ICollaboratorsRepository } from './repository/collaborators.repository.interface';
-import type { CollaboratorPermissions } from './domain/collaborator.entity';
+import { COLLABORATORS_REPOSITORY, type ICollaboratorsRepository } from '@/collaborators/repository/collaborators.repository.interface';
+import type { CollaboratorPermissions } from '@/collaborators/domain/collaborator.entity';
 
 // Interfaces locales — sin class-validator, compatibles con tRPC
 interface InviteCollaboratorDto {

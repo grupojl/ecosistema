@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { CachePort } from './cache.port';
+import type { CachePort } from '@/ports/cache.port';
 
 interface Entry {
   value: unknown;

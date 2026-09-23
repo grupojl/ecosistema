@@ -1,6 +1,6 @@
 import { NotFoundException, ServiceUnavailableException, BadRequestException } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
-import { rethrowAsTrpcStoreError } from './store.trpc-errors';
+import { rethrowAsTrpcStoreError } from '@/store/store.trpc-errors';
 
 function codeOf(err: unknown): string {
   try {

@@ -1,5 +1,5 @@
-import { router, authProcedure } from '../trpc';
-import type { AffiliatesService } from '../../affiliate/affiliate.service';
+import { router, authProcedure } from '@/trpc';
+import type { AffiliatesService } from '@/affiliate/affiliate.service';
 
 export function createAffiliatesRouter(affiliatesService: AffiliatesService) {
   return router({

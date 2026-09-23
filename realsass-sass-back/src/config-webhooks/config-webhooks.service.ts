@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { ConfigAuditService }    from '../config-audit/config-audit.service';
-import { WebhookDeliveryService } from './webhook-delivery.service';
-import { CreateWebhookDto }      from './dto/create-webhook.dto';
-import { WEBHOOKS_REPOSITORY, type IWebhooksRepository } from './repository/webhooks.repository.interface';
+import { ConfigAuditService }    from '@/config-audit/config-audit.service';
+import { WebhookDeliveryService } from '@/config-webhooks/webhook-delivery.service';
+import { CreateWebhookDto }      from '@/config-webhooks/dto/create-webhook.dto';
+import { WEBHOOKS_REPOSITORY, type IWebhooksRepository } from '@/config-webhooks/repository/webhooks.repository.interface';
 
 @Injectable()
 export class ConfigWebhooksService {

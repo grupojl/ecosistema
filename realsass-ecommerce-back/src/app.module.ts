@@ -1,23 +1,23 @@
 import { LoggerModule }    from 'nestjs-pino';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { Module, type NestModule, type MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';                     from '@nestjs/common';
+import { CorrelationIdMiddleware } from '@/common/middleware/correlation-id.middleware';                     from '@nestjs/common';
 import { APP_GUARD }                  from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigModule }               from '@nestjs/config';
 
-import { PrismaModule }              from './prisma/prisma.module';
-import { RedisModule }               from './redis/redis.module';
-import { OrganizationsClientModule } from './organizations-client/organizations-client.module';
-import { CatalogModule }             from './catalog/catalog.module';
-import { InventoryModule }           from './inventory/inventory.module';
-import { CustomersModule }           from './customers/customers.module';
-import { ActivityModule }            from './activity/activity.module';
-import { CartModule }                from './cart/cart.module';
-import { OrdersModule }              from './orders/orders.module';
-import { StoreModule }               from './store/store.module';
-import { HealthModule } from './health/health.module';
-import { TrpcModule }                from './trpc/trpc.module';
+import { PrismaModule }              from '@/prisma/prisma.module';
+import { RedisModule }               from '@/redis/redis.module';
+import { OrganizationsClientModule } from '@/organizations-client/organizations-client.module';
+import { CatalogModule }             from '@/catalog/catalog.module';
+import { InventoryModule }           from '@/inventory/inventory.module';
+import { CustomersModule }           from '@/customers/customers.module';
+import { ActivityModule }            from '@/activity/activity.module';
+import { CartModule }                from '@/cart/cart.module';
+import { OrdersModule }              from '@/orders/orders.module';
+import { StoreModule }               from '@/store/store.module';
+import { HealthModule } from '@/health/health.module';
+import { TrpcModule }                from '@/trpc/trpc.module';
 
 import {
   FirebaseModule,

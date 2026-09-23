@@ -7,7 +7,7 @@
 import { cache } from 'react';
 import { createStoreCaller } from '@/lib/trpc/server';
 import type { StoreProduct, StoreCategory } from '@/lib/trpc/types';
-import { trpcErrorCode } from './resolver';
+import { trpcErrorCode } from '@/lib/store/resolver';
 
 export type { StoreProduct, StoreCategory };
 

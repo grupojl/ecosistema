@@ -1,4 +1,4 @@
-import type { Dictionary } from './types';
+import type { Dictionary } from '@/lib/i18n/dictionaries/types';
 
 export const en = {
   nav: { home: 'Home', products: 'Products' },

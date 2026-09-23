@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/config/constants';
-import { getCampanas, getMetricasCampana } from '../services/campanas.service';
-import type { CampanaFilters } from '../types';
+import { getCampanas, getMetricasCampana } from '@/features/campanas/services/campanas.service';
+import type { CampanaFilters } from '@/features/campanas/types';
 
 export function useCampanas(filters: CampanaFilters = {}) {
   return useQuery({

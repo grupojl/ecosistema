@@ -1,2 +1,2 @@
-export { DashboardSidebar } from './dashboard-sidebar';
-export { MobileHeader } from './mobile-header';
+export { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
+export { MobileHeader } from '@/components/layout/mobile-header';

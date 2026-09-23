@@ -9,7 +9,7 @@
  */
 import { useParams, useRouter }  from 'next/navigation'
 import { motion }                from 'framer-motion'
-import { Building2, Check, X, Loader2, ShieldCheck, AlertCircle, LogIn } from 'lucide-react'
+import { Building2, Check, X, Loader2, ShieldCheck, CircleAlert, LogIn } from 'lucide-react'
 import { Button }                from '@real/ui'
 import { useAuth }               from '@/context/auth-context'
 import { useInvitationInfo, useAcceptInvitation } from '@/hooks/use-collaborators'
@@ -92,7 +92,7 @@ export default function InvitePage() {
           <div className="space-y-3">
             {accept.error && (
               <div className="flex items-center gap-2 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <CircleAlert className="h-4 w-4 shrink-0" />
                 {getErrorMessage(accept.error)}
               </div>
             )}

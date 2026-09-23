@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, ToggleLeft, Globe, Loader2 } from 'lucide-react';
+import { CircleAlert, ToggleLeft, Globe, Loader2 } from 'lucide-react';
 import { Skeleton } from '@real/ui';
 import { Switch } from '@real/ui';
 import { toast } from 'sonner';
@@ -45,7 +45,7 @@ export default function FlagsPage() {
 
   if (error) return (
     <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <AlertCircle className="h-4 w-4" />
+      <CircleAlert className="h-4 w-4" />
       Error al cargar feature flags.
     </div>
   );
