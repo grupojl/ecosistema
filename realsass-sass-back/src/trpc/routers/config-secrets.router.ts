@@ -16,7 +16,7 @@
  */
 import { z }               from 'zod';
 import { router, ownerProcedure } from '@/trpc';
-import * as admin          from 'firebase-admin';
+import * as admin          from 'firebase-admin'; // @real/firebase-auth
 import { TRPCError }       from '@trpc/server';
 import type { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
 
@@ -50,7 +50,7 @@ export function createConfigSecretsRouter(secretsService: ConfigSecretsService) 
         expiresAt:    z.string().datetime().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        return secretsService.create(ctx.organizationId, ctx.uid, input as any, ctx.req.ip);
+        return secretsService.create(ctx.organizationId, ctx.uid, input as Parameters<typeof secretsService.create>[2] // @real/secrets-input-type, ctx.req.ip);
       }),
 
     rotate: ownerProcedure

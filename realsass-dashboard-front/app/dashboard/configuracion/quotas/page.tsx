@@ -64,7 +64,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
 export default function QuotasPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useQuotas(organizationId);
-  const quotas = Array.isArray(data) ? data : (data as any)?.data ?? [];
+  const quotas = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
 
   if (isLoading) return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

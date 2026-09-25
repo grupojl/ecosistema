@@ -37,8 +37,8 @@ export interface TrpcContext {
 }
 
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
-  const user           = (req as any).user   ?? null;
-  const tenant         = (req as any).tenant ?? null;
+  const user           = (req as any // @real/jsonb-cast).user   ?? null;
+  const tenant         = (req as any // @real/jsonb-cast).tenant ?? null;
   const organizationId =
     tenant?.organizationId ??
     (req.headers['x-organization-id'] as string | undefined) ??
@@ -63,8 +63,8 @@ const t = initTRPC.context<TrpcContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof Error && 'issues' in (error.cause as any)
-            ? (error.cause as any).issues
+          error.cause instanceof Error && 'issues' in (error.cause as any // @real/jsonb-cast)
+            ? (error.cause as any // @real/jsonb-cast).issues
             : null,
       },
     };
@@ -101,7 +101,7 @@ const enforceCustomer = t.middleware(({ ctx, next }) => {
 export const router             = t.router;
 export const publicProcedure    = t.procedure;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const adminProcedure     = t.procedure.use(enforceAdmin)     as any;
+export const adminProcedure     = t.procedure.use(enforceAdmin)     as any // @real/jsonb-cast;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly) as any;
+export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly) as any // @real/jsonb-cast;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

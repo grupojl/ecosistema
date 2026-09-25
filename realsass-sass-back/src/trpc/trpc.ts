@@ -16,8 +16,15 @@
  *   ownerProcedure   → requiere uid + organizationId + role === 'OWNER'
  */
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
+
+// Extiende Request con los campos que agregan los guards de NestJS
+interface AuthenticatedRequest extends Request {
+  user?:   { uid: string; email?: string };
+  tenant?: { organizationId: string; role: string };
+}
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -29,8 +36,9 @@ export interface TrpcContext {
 }
 
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
-  const user           = (req as any).user  ?? null;
-  const tenant         = (req as any).tenant ?? null;
+  const typedReq = req as AuthenticatedRequest;
+  const user           = typedReq.user  ?? null;
+  const tenant         = typedReq.tenant ?? null;
   const organizationId =
     tenant?.organizationId ??
     (req.headers['x-organization-id'] as string | undefined) ??
@@ -53,8 +61,8 @@ const t = initTRPC.context<TrpcContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof Error && 'issues' in (error.cause as any)
-            ? (error.cause as any).issues
+          error.cause instanceof Error && 'issues' in (error.cause as unknown as ZodError) // @real/zod-type
+            ? (error.cause as unknown as ZodError).issues // @real/zod-type
             : null,
       },
     };

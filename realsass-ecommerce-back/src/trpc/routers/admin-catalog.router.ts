@@ -58,7 +58,7 @@ export function createAdminCatalogRouter(catalogService: CatalogService) {
     create: adminProcedure
       .input(CreateProductInput)
       .mutation(async ({ ctx, input }) => {
-        return catalogService.createProduct(ctx.organizationId, input as any);
+        return catalogService.createProduct(ctx.organizationId, input as any // @real/jsonb-cast);
       }),
 
     /**
@@ -71,7 +71,7 @@ export function createAdminCatalogRouter(catalogService: CatalogService) {
         data:      UpdateProductInput,
       }))
       .mutation(async ({ ctx, input }) => {
-        return catalogService.updateProduct(ctx.organizationId, input.productId, input.data as any);
+        return catalogService.updateProduct(ctx.organizationId, input.productId, input.data as any // @real/jsonb-cast);
       }),
   });
 }

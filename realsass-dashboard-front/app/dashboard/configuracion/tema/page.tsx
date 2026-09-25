@@ -70,7 +70,7 @@ const EMPTY_FORM: CreateThemeInput = {
 export default function TemaPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useThemes(organizationId);
-  const themes  = Array.isArray(data) ? data : (data as any)?.data ?? [];
+  const themes  = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
 
   const createMutation   = useCreateTheme();
   const activateMutation = useActivateTheme();

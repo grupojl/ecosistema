@@ -18,13 +18,13 @@ export function TrpcProvider({ children }: { children: ReactNode }) {
   const url = `${process.env['NEXT_PUBLIC_API_URL'] ?? ''}/trpc`;
 
   const [trpcClient] = useState(() =>
-    (trpc as any).createClient(makeTrpcClient(
+    (trpc as any // @real/jsonb-cast).createClient(makeTrpcClient(
       url,
       () => firebaseUser?.getIdToken() ?? Promise.resolve(null),
     )),
   );
 
-  const TrpcProviderComponent = (trpc as any).Provider;
+  const TrpcProviderComponent = (trpc as any // @real/jsonb-cast).Provider;
 
   return (
     <TrpcProviderComponent client={trpcClient} queryClient={queryClient}>

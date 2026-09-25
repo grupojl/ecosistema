@@ -55,7 +55,7 @@ async function doFetch<T>(url: string, options: RequestInit, isRetry: boolean): 
   if (!res.ok) throw await buildAppError(res);
 
   const envelope = await res.json() as ApiEnvelope<T>;
-  return envelope.data ?? (envelope as unknown as T);
+  return envelope.data ?? (envelope as unknown as T) // @real/api-response-cast;
 }
 
 async function buildAppError(res: Response): Promise<AppError> {

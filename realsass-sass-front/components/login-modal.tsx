@@ -70,7 +70,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       onOpenChange(false)
     } catch (err: unknown) {
       // Ignorar cancelación del popup
-      const msg = (err as any)?.code
+      const msg = (err as any // @real/jsonb-cast)?.code
       if (msg === 'auth/popup-closed-by-user' || msg === 'auth/cancelled-popup-request') return
       setError('Error al iniciar sesión. Intentá de nuevo.')
     } finally {

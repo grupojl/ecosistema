@@ -9,8 +9,8 @@ export default function DashboardPage() {
   const { data: ordersData } = useOrders(organizationId ?? '', {});
   const { data: productsData } = useProducts(organizationId ?? '', {});
 
-  const totalOrders   = (ordersData as any)?.meta?.total   ?? 0;
-  const totalProducts = (productsData as any)?.meta?.total ?? 0;
+  const totalOrders   = (ordersData as any // @real/jsonb-cast)?.meta?.total   ?? 0;
+  const totalProducts = (productsData as any // @real/jsonb-cast)?.meta?.total ?? 0;
 
   const cards = [
     { icon: Package,     label: 'Productos',    value: totalProducts, color: '#60a5fa' },

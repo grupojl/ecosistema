@@ -26,9 +26,9 @@ describe('productJsonLd', () => {
   it('un único precio → Offer simple', () => {
     const view = toProductView(product)
     const ld = productJsonLd({ product: view, url: '/es/tienda/x/productos/y', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any)['@type']).toBe('Offer')
-    expect((ld.offers as any).price).toBe('150.00')
-    expect((ld.offers as any).availability).toContain('InStock')
+    expect((ld.offers as any // @real/jsonb-cast)['@type']).toBe('Offer')
+    expect((ld.offers as any // @real/jsonb-cast).price).toBe('150.00')
+    expect((ld.offers as any // @real/jsonb-cast).availability).toContain('InStock')
   })
 
   it('rango de precio (variantes distintas) → AggregateOffer', () => {
@@ -41,9 +41,9 @@ describe('productJsonLd', () => {
     }
     const view = toProductView(withRange)
     const ld = productJsonLd({ product: view, url: '/x', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any)['@type']).toBe('AggregateOffer')
-    expect((ld.offers as any).lowPrice).toBe('150.00')
-    expect((ld.offers as any).highPrice).toBe('160.00')
+    expect((ld.offers as any // @real/jsonb-cast)['@type']).toBe('AggregateOffer')
+    expect((ld.offers as any // @real/jsonb-cast).lowPrice).toBe('150.00')
+    expect((ld.offers as any // @real/jsonb-cast).highPrice).toBe('160.00')
   })
 
   it('sin stock → availability OutOfStock', () => {
@@ -52,7 +52,7 @@ describe('productJsonLd', () => {
       variants: [{ id: 'v1', title: '40', priceCents: 15000, currency: 'ARS', inventory: { quantityAvailable: 0, quantityReserved: 0 } }],
     }
     const ld = productJsonLd({ product: toProductView(outOfStock), url: '/x', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any).availability).toContain('OutOfStock')
+    expect((ld.offers as any // @real/jsonb-cast).availability).toContain('OutOfStock')
   })
 
   it('sin variantes → sin offers, no revienta', () => {
@@ -68,7 +68,7 @@ describe('breadcrumbJsonLd', () => {
       { name: 'Inicio', url: '/es/tienda/x' },
       { name: 'Calzado', url: '/es/tienda/x/categoria/calzado' },
     ])
-    const items = ld.itemListElement as any[]
+    const items = ld.itemListElement as any // @real/jsonb-cast[]
     expect(items[0].position).toBe(1)
     expect(items[1].position).toBe(2)
   })

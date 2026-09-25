@@ -37,7 +37,7 @@ function formatDate(iso: string) {
 export default function WebhooksPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useWebhooks(organizationId);
-  const webhooks = Array.isArray(data) ? data : (data as any)?.data ?? [];
+  const webhooks = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
 
   const createMutation = useCreateWebhook();
   const testMutation   = useTestWebhook();
@@ -68,7 +68,7 @@ export default function WebhooksPage() {
     setFormError(null);
     try {
       const result = await createMutation.mutateAsync({ data: form, orgId: organizationId });
-      const secret = (result as any).secret as string | undefined;
+      const secret = (result as any // @real/jsonb-cast).secret as string | undefined;
       setCreateOpen(false);
       setForm({ url: '', events: [] });
       if (secret) setCreatedSecret(secret);
@@ -284,7 +284,7 @@ function DeliveryLogsSheet({
   onClose: () => void;
 }) {
   const { data, isLoading } = useWebhookLogs(wh.id, orgId);
-  const logs = Array.isArray(data) ? data : (data as any)?.data ?? [];
+  const logs = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
 
   return (
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>

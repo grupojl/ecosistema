@@ -21,7 +21,7 @@ function mockFetch(status: number, body: unknown): jest.Mock {
     ok:   status >= 200 && status < 300,
     json: () => Promise.resolve(body),
   });
-  global.fetch = fn as unknown as typeof fetch;
+  global.fetch = fn as unknown as typeof // @real/jsonb-cast fetch;
   return fn;
 }
 
@@ -82,7 +82,7 @@ describe('StoreService.resolveBySlug', () => {
   });
 
   it('error de red → 503', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET')) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET')) as unknown as typeof // @real/jsonb-cast fetch;
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 

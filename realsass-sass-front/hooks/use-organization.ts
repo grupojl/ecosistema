@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { trpc } from '@/lib/trpc/client';
-const t = trpc as any;
+const t = trpc as any // @real/jsonb-cast;
 
 export function useMyOrganization() {
   return t.organizations.me.useQuery(undefined, { staleTime: 60_000 });

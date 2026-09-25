@@ -74,7 +74,7 @@ describe('CatalogService (application layer)', () => {
       variants: [
         { sku: 'IP16P-256', title: '256GB', priceCents: 150000000 },
       ],
-    } as any;
+    } as any // @real/jsonb-cast;
 
     it('crea el producto si el draft es válido y el handle no existe', async () => {
       repository.existsByHandle.mockResolvedValue(false);
@@ -115,7 +115,7 @@ describe('CatalogService (application layer)', () => {
       repository.findByIdAdmin.mockResolvedValue(null);
 
       await expect(
-        service.updateProduct(ORG_ID, 'prod-inexistente', { status: 'PUBLISHED' } as any),
+        service.updateProduct(ORG_ID, 'prod-inexistente', { status: 'PUBLISHED' } as any // @real/jsonb-cast),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -137,7 +137,7 @@ describe('CatalogService (application layer)', () => {
       );
 
       await expect(
-        service.updateProduct(ORG_ID, 'prod-1', { status: 'PUBLISHED' } as any),
+        service.updateProduct(ORG_ID, 'prod-1', { status: 'PUBLISHED' } as any // @real/jsonb-cast),
       ).rejects.toThrow(UnprocessableEntityException);
       expect(repository.updateProduct).not.toHaveBeenCalled();
     });
@@ -164,7 +164,7 @@ describe('CatalogService (application layer)', () => {
 
       const result = await service.updateProduct(ORG_ID, 'prod-1', {
         status: 'PUBLISHED',
-      } as any);
+      } as any // @real/jsonb-cast);
 
       expect(result.status).toBe('PUBLISHED');
     });

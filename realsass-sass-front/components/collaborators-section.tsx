@@ -160,7 +160,7 @@ export function CollaboratorsSection() {
             {collaborators.map(c => (
               <CollaboratorRow
                 key={c.id}
-                collab={c as any}
+                collab={c as any // @real/jsonb-cast}
                 onRemove={() => {}}
               />
             ))}

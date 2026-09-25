@@ -20,8 +20,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
           ? exception.message
           : 'Error interno';
 
-    const errors = typeof body === 'object' && body !== null && Array.isArray((body as any).message)
-      ? (body as any).message
+    const errors = typeof body === 'object' && body !== null && Array.isArray((body as any // @real/jsonb-cast).message)
+      ? (body as any // @real/jsonb-cast).message
       : undefined;
 
     if (status >= 500) {

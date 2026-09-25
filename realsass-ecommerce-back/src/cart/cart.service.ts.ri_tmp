@@ -1,0 +1,21 @@
+// realsass-ecommerce-back/src/cart/cart.service.ts
+// ECO-BACK-01: refactorizado para usar ICartRepository via @Inject(CART_REPOSITORY).
+// PrismaService eliminado — toda la persistencia va por el repository.
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from "@nestjs/common";
+import { ActivityService }   from "@/activity/activity.service.js";
+import {
+  CART_REPOSITORY,
+  type ICartRepository,
+} from "@/cart/repository/cart.repository.interface.js";
+import {
+  CartNotFoundError,
+  CartItemNotFoundError,
+  InsufficientStockForCartError,
+  assertValidQuantity,
+} from "@/cart/domain/cart.errors.js";
+

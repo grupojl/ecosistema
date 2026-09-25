@@ -1,7 +1,7 @@
 // realsass-sass-back/src/auth/auth.service.ts
 import type { ProfileForClaims } from '@/auth/claims.service';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import * as admin            from 'firebase-admin';
+import * as admin            from 'firebase-admin'; // @real/firebase-auth
 import { PrismaService }     from '@/prisma/prisma.service';
 import { UsersService }      from '@/users/users.service';
 import { AffiliatesService } from '@/affiliate/affiliate.service';
@@ -14,6 +14,18 @@ import type { CurrentUserPayload } from '@real/auth-server';
  *   2. generateCustomToken() — SSO entre sass-front y dashboard-front
  *   3. refreshClaims()       — reemite claims (cambio de org activa)
  */
+// Mapea UserProfile al shape que espera ClaimsService
+// Hace explícito el contrato entre los dos servicios (ADR-007)
+function toProfileForClaims(profile: { collaborations: Array<{ organizationId: string; role: string; organization?: Record<string, unknown> }> }): import('@/auth/claims.service').ProfileForClaims {
+  return {
+    tenants: profile.collaborations.map(c => ({
+      organizationId: c.organizationId,
+      organization:   c.organization ?? {},
+      role:           c.role,
+    })),
+  };
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -43,7 +55,7 @@ export class AuthService {
 
       // ── Emitir custom claims (ADR-003) ──────────────────────────────────
       if (profile?.tenants.length) {
-        const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
+        const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
         if (platformClaims) {
           await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
         }
@@ -77,7 +89,7 @@ export class AuthService {
 
     // ── Emitir custom claims para usuario nuevo ──────────────────────────
     if (profile?.tenants.length) {
-      const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
+      const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
       if (platformClaims) {
         await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
       }
@@ -91,7 +103,7 @@ export class AuthService {
     const profile = await this.users.buildProfile(firebaseUid);
     if (!profile?.tenants.length) return;
 
-    const platformClaims = this.claims.buildClaimsFromProfile(profile as unknown as ProfileForClaims);
+    const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
     if (platformClaims) {
       await this.claims.setOrgClaims(firebaseUid, platformClaims);
     }

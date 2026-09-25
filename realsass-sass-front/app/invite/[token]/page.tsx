@@ -50,8 +50,8 @@ export default function InvitePage() {
 
   if (!invitation) return null
 
-  const org   = (invitation as any).collaborator?.organization
-  const email = (invitation as any).collaborator?.email
+  const org   = (invitation as any // @real/jsonb-cast).collaborator?.organization
+  const email = (invitation as any // @real/jsonb-cast).collaborator?.email
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">

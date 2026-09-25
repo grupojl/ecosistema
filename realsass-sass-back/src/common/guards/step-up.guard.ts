@@ -1,7 +1,7 @@
 import {
   CanActivate, ExecutionContext, ForbiddenException, Injectable,
 } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import * as admin from 'firebase-admin'; // @real/firebase-auth
 
 /**
  * StepUpGuard — exige re-autenticacion reciente (maximo 5 minutos).

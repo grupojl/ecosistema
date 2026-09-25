@@ -16,7 +16,7 @@
 //   }
 // }
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import * as admin from 'firebase-admin'; // @real/firebase-auth
 
 export interface PlatformClaims {
   organizationId:   string;
