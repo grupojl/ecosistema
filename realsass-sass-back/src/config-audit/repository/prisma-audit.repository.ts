@@ -1,10 +1,14 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { z }             from 'zod';
 import type { Prisma }   from '@prisma/client';
 import type { IAuditRepository } from '@/config-audit/repository/audit.repository.interface';
 import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '@/domain/audit-log.entity';
 
 type PrismaAuditLog = Prisma.ConfigAuditLogGetPayload<Record<string, never>>;
+
+// Zod schema para el campo Json "diff" de Prisma
+const DiffSchema = z.record(z.unknown()).nullable().catch(null);
 
 @Injectable()
 export class PrismaAuditRepository implements IAuditRepository {
@@ -20,8 +24,7 @@ export class PrismaAuditRepository implements IAuditRepository {
       action:         row.action,
       previousValue:  row.previousValue,
       newValue:       row.newValue,
-      // @real/jsonb-cast — Prisma devuelve JsonValue para campos Json
-      diff:           row.diff as Record<string, unknown> | null,
+      diff:           DiffSchema.parse(row.diff),
       reason:         row.reason,
       ipAddress:      row.ipAddress,
       createdAt:      row.createdAt,

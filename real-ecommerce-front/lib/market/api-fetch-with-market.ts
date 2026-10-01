@@ -1,5 +1,5 @@
 'use client'
-import { useMarketStore } from '@/store/use-market-store'
+import { useMarketStore } from '@/stores/use-market-store'
 
 /**
  * Wrapper de fetch que inyecta X-Visitor-Country en cada request.

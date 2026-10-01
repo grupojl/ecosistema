@@ -1,13 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { trpc } from '@/lib/trpc/client';
-const t = trpc as any // @real/jsonb-cast;
 
 export function useMyOrganization() {
-  return t.organizations.me.useQuery(undefined, { staleTime: 60_000 });
+  return trpc.organizations.me.useQuery(undefined, { staleTime: 60_000 });
 }
+
 export function useUpdateOrganization() {
-  const utils = t.useUtils();
-  return t.organizations.update.useMutation({
+  const utils = trpc.useUtils();
+  return trpc.organizations.update.useMutation({
     onSuccess: () => {
       void utils.organizations.me.invalidate();
       void utils.auth.me.invalidate();

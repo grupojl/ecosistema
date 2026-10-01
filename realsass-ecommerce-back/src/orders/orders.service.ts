@@ -1,31 +1,14 @@
-import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
-import { resolveVisitorCountry }      from '@/orders/lib/resolve-visitor-country';
 // realsass-ecommerce-back/src/orders/orders.service.ts
-// ECO-BACK-02: refactorizado para usar IOrdersRepository.
-//
-// EXCEPCIÓN DOCUMENTADA (ADR-007 / ECO-BACK-02):
-// checkout() usa PrismaService directamente para la transacción multi-tabla.
-// La atomicidad de (reservar stock + crear orden) no puede abstraerse en el
-// repository sin pasar el TransactionClient como parámetro — scope pendiente S5.
-// Todo lo demás usa IOrdersRepository.
-//
-// NOTA — alcance de este cambio (ADR-016, sesión de idioma de la orden):
-// Se agrega SOLO `locale` para que el invoice/email de confirmación salga en
-// el idioma de la sesión del comprador. `market` (línea de abajo) sigue
-// siendo una variable sin resolver — bug preexistente, documentado y
-// pendiente en ADR-014-markets-status.md, fuera de este alcance a pedido
-// explícito: se resuelve en hardening. checkout() NO va a ejecutar hasta que
-// ese fix se aplique — este cambio deja el campo listo para cuando eso pase,
-// no lo hace funcional por sí solo.
+import { OrganizationsClientService }           from '@/organizations-client/organizations-client.service';
 import {
   BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService }    from "@/prisma/prisma.service.js";
-import { InventoryService } from "@/inventory/inventory.service.js";
-import { ActivityService }  from "@/activity/activity.service.js";
+import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service.js";
+import { InventoryService }  from "@/inventory/inventory.service.js";
+import { ActivityService }   from "@/activity/activity.service.js";
 import {
   ORDERS_REPOSITORY,
   type IOrdersRepository,
@@ -39,16 +22,15 @@ import type { Prisma } from "@prisma/client";
 @Injectable()
 export class OrdersService {
   constructor(
-    // Excepción documentada: $transaction multi-tabla en checkout()
-    private readonly prisma:   PrismaService,
+    private readonly prisma:           PrismaService,
     @Inject(ORDERS_REPOSITORY)
     private readonly ordersRepository: IOrdersRepository,
-    private readonly inventory: InventoryService,
-    private readonly activity:  ActivityService,
-    private readonly orgsClient: OrganizationsClientService,
+    private readonly inventory:        InventoryService,
+    private readonly activity:         ActivityService,
+    private readonly orgsClient:       OrganizationsClientService,
   ) {}
 
-  // ── Lecturas — todas via repository ───────────────────────────────────────
+  // ── Lecturas ───────────────────────────────────────────────────────────────
 
   async findById(organizationId: string, orderId: string) {
     const order = await this.ordersRepository.findById(organizationId, orderId);
@@ -56,42 +38,54 @@ export class OrdersService {
     return order;
   }
 
+  async listOrders(organizationId: string, sessionId?: string) {
+    if (sessionId) return this.ordersRepository.listBySession(organizationId, sessionId);
+    return this.ordersRepository.listBySession(organizationId, '');
+  }
+
+  async getOrder(organizationId: string, orderId: string) {
+    return this.ordersRepository.findById(organizationId, orderId);
+  }
+
   async listBySession(organizationId: string, sessionId: string) {
     return this.ordersRepository.listBySession(organizationId, sessionId);
   }
 
   async checkout(input: {
-    organizationId:  string;
-    sessionId:       string;
-    cartId:          string;
-    customerId:      string;
-    shippingAddress: Record<string, unknown>;
-    shippingCents?:  number;
-    visitorCountryCode?: string; // ISO 3166-1 alpha-2 — ADR-014
-    locale?:         string;    // idioma de la sesión del comprador — ADR-016, para el invoice
+    organizationId:      string;
+    sessionId?:          string;
+    cartId:              string;
+    customerId:          string;
+    shippingAddress:     Record<string, unknown>;
+    shippingCents?:      number;
+    visitorCountryCode?: string;
+    locale?:             string;
   }) {
-    const { organizationId, sessionId, cartId, customerId, shippingAddress, shippingCents = 0 } = input;
+    const {
+      organizationId, cartId, customerId,
+      shippingAddress, shippingCents = 0,
+    } = input;
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // 1. Leer carrito con items
+    // Resolver market ANTES de la transacción (HTTP + Redis cache — ADR-014)
+    const market = await this.orgsClient.resolveMarket(
+      organizationId,
+      input.visitorCountryCode ?? 'default',
+    );
+
+    return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const cart = await tx.cart.findFirst({
-        where:   { id: cartId, organizationId, status: "ACTIVE" },
+        where:   { id: cartId, organizationId, status: 'ACTIVE' },
         include: {
           items: {
-            include: {
-              variant: {
-                include: { inventory: true },
-              },
-            },
+            include: { variant: { include: { inventory: true } } },
           },
         },
       });
 
       if (!cart || cart.items.length === 0) {
-        throw new BadRequestException("Carrito vacío o no encontrado");
+        throw new BadRequestException('Carrito vacío o no encontrado');
       }
 
-      // 2. Reservar stock para cada variante
       for (const item of cart.items) {
         await this.inventory.reserveWithinTransaction(
           tx,
@@ -101,27 +95,21 @@ export class OrdersService {
         );
       }
 
-      // 3. Calcular total
       const itemsTotal = cart.items.reduce(
         (acc, i) => acc + i.variant.priceCents * i.quantity,
         0,
       );
       const total = itemsTotal + shippingCents;
 
-      // 4. Crear orden con items
       const order = await tx.order.create({
         data: {
           organizationId,
-          sessionId,
           customerId,
-          status:          "PENDING_PAYMENT",
+          status:          'PENDING_PAYMENT',
           totalCents:      total,
-          currency:        cart.items[0]?.variant.currency ?? "ARS",
+          currency:        cart.items[0]?.variant.currency ?? 'ARS',
           shippingAddress: shippingAddress as Prisma.InputJsonValue,
-          marketId:             market.id,
-          visitorCountryCode:   input.visitorCountryCode ?? null,
-          locale:               input.locale ?? null,
-          fulfillmentSnapshot:  market.fulfillmentConfig as Prisma.InputJsonValue,
+          locale:          input.locale ?? null,
           items: {
             create: cart.items.map(i => ({
               variantId:  i.variantId,
@@ -134,17 +122,16 @@ export class OrdersService {
         include: { items: true },
       });
 
-      // 5. Marcar carrito como COMPLETED
       await tx.cart.update({
         where: { id: cartId },
-        data:  { status: "COMPLETED" },
+        data:  { status: 'COMPLETED' },
       });
 
       return order;
     });
   }
 
-  // ── Estado — via repository ────────────────────────────────────────────────
+  // ── Estado ─────────────────────────────────────────────────────────────────
 
   async updateStatus(
     organizationId: string,

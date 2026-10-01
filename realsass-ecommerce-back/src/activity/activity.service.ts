@@ -16,7 +16,13 @@ export class ActivityService {
     payload: Record<string, unknown> = {},
   ) {
     return this.prisma.customerActivityEvent.create({
-      data: { organizationId, sessionId, eventType: eventType as any // @real/enum-cast, customerId, payload: payload as Prisma.InputJsonValue },
+      data: {
+        organizationId,
+        sessionId,
+        eventType: eventType as string,
+        customerId,
+        payload: payload as Prisma.InputJsonValue,
+      },
     });
   }
 }

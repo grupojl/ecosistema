@@ -1,30 +1,35 @@
 // features/store/hooks.ts
-// TanStack Query hooks del módulo Tienda.
+// TanStack Query hooks del módulo Tienda con optimistic updates.
+// E11-04 — Fase 4 Escalón 11
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { storeApi } from '@/features/store/api';
-import type { ProductInput, ProductFilters, OrderFilters } from '@/features/store/types';
+import type { Product, ProductInput, ProductFilters, OrderFilters } from '@/features/store/types';
 
 const KEYS = {
-  products: (orgId: string, filters: ProductFilters) => ['store', 'products', orgId, filters] as const,
-  product: (orgId: string, id: string) => ['store', 'product', orgId, id] as const,
-  orders: (orgId: string, filters: OrderFilters) => ['store', 'orders', orgId, filters] as const,
-  order: (orgId: string, id: string) => ['store', 'order', orgId, id] as const,
+  products: (orgId: string, filters: ProductFilters = {}) =>
+    ['store', 'products', orgId, filters] as const,
+  product: (orgId: string, id: string) =>
+    ['store', 'product', orgId, id] as const,
+  orders: (orgId: string, filters: OrderFilters = {}) =>
+    ['store', 'orders', orgId, filters] as const,
+  order: (orgId: string, id: string) =>
+    ['store', 'order', orgId, id] as const,
 };
 
 export function useProducts(orgId: string | undefined, filters: ProductFilters = {}) {
   return useQuery({
     queryKey: KEYS.products(orgId ?? '', filters),
-    queryFn: () => storeApi.getProducts(orgId as string, filters),
-    enabled: !!orgId,
+    queryFn:  () => storeApi.getProducts(orgId as string, filters),
+    enabled:  !!orgId,
   });
 }
 
 export function useProduct(orgId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: KEYS.product(orgId ?? '', id ?? ''),
-    queryFn: () => storeApi.getProduct(orgId as string, id as string),
-    enabled: !!orgId && !!id,
+    queryFn:  () => storeApi.getProduct(orgId as string, id as string),
+    enabled:  !!orgId && !!id,
   });
 }
 
@@ -32,7 +37,7 @@ export function useCreateProduct(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: ProductInput) => storeApi.createProduct(orgId as string, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
   });
 }
 
@@ -41,7 +46,21 @@ export function useUpdateProduct(orgId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<ProductInput> }) =>
       storeApi.updateProduct(orgId as string, id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+
+    // Optimistic update: actualiza el producto en el cache antes de la respuesta
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: ['store', 'products', orgId] });
+      const prev = qc.getQueryData(KEYS.products(orgId ?? ''));
+      qc.setQueryData(KEYS.products(orgId ?? ''), (old: Product[] | undefined) =>
+        (old ?? []).map(p => p.id === id ? { ...p, ...data } : p),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      // Revertir si falla
+      if (ctx?.prev) qc.setQueryData(KEYS.products(orgId ?? ''), ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
   });
 }
 
@@ -49,7 +68,20 @@ export function useDeleteProduct(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => storeApi.deleteProduct(orgId as string, id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+
+    // Optimistic update: elimina el producto del cache inmediatamente
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['store', 'products', orgId] });
+      const prev = qc.getQueryData(KEYS.products(orgId ?? ''));
+      qc.setQueryData(KEYS.products(orgId ?? ''), (old: Product[] | undefined) =>
+        (old ?? []).filter(p => p.id !== id),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(KEYS.products(orgId ?? ''), ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
   });
 }
 
@@ -65,15 +97,15 @@ export function useUpdateInventory(orgId: string | undefined) {
 export function useOrders(orgId: string | undefined, filters: OrderFilters = {}) {
   return useQuery({
     queryKey: KEYS.orders(orgId ?? '', filters),
-    queryFn: () => storeApi.getOrders(orgId as string, filters),
-    enabled: !!orgId,
+    queryFn:  () => storeApi.getOrders(orgId as string, filters),
+    enabled:  !!orgId,
   });
 }
 
 export function useOrder(orgId: string | undefined, id: string | undefined) {
   return useQuery({
     queryKey: KEYS.order(orgId ?? '', id ?? ''),
-    queryFn: () => storeApi.getOrder(orgId as string, id as string),
-    enabled: !!orgId && !!id,
+    queryFn:  () => storeApi.getOrder(orgId as string, id as string),
+    enabled:  !!orgId && !!id,
   });
 }

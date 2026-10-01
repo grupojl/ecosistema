@@ -1,141 +1,89 @@
-# Fase 4 — Escala
-## Escalones 9, 11, 12, 13 — 3 ecosistemas simultáneos
+# Fase 4 — Escala + S4
+## Escalones 9, 11, 12, 13 + Tests/CI
 
-**Estado:** ⚪ Pendiente — iniciar cuando Fase 3 esté completa
-**Cuándo:** Cuando welver, y otros ecosistemas operan simultáneamente
+**Estado:** 🔴 EN CURSO — código iniciado 2026-09-30
 **Referentes:** AWS (DR) · Linear/Figma (UX) · Netflix (Chaos) · Airbnb/Uber (FinOps)
 
 ---
 
-## Escalón 9 — Recuperación ante Desastres
+## Completado en sesión 2026-09-30
 
-### Qué hay que hacer
-
-1. **Definir RTO y RPO por servicio**:
-
-   | Servicio | RTO objetivo | RPO objetivo |
-   |---|---|---|
-   | `realsass-sass-back` | < 5 min | < 1 min |
-   | `realsass-ecommerce-back` | < 5 min | < 1 min |
-   | `realsass-sass-front` | < 2 min | N/A (stateless) |
-   | `realsass-dashboard-front` | < 2 min | N/A (stateless) |
-   | `real-ecommerce-front` | < 2 min | N/A (stateless) |
-
-2. **Backups verificados** — probar restauración de backup en staging.
-   Un backup que nunca se probó no existe.
-
-3. **Redis con persistencia AOF** — confirmar que los datos de caché
-   críticos (tenant context) se recuperan si Redis reinicia.
-
-4. **Runbook de recuperación** — documentar paso a paso qué hacer cuando:
-   - La DB de sass-back se corrompe
-   - Railway tiene un incidente parcial
-   - ecommerce-back queda en loop de crash
-
-5. **Drill de recuperación** — simular la caída de sass-back y medir
-   cómo afecta a ecommerce-back (que depende de él para validar tenants).
-
-### Cómo saber que este escalón está completo
-
-- RTO/RPO definidos y documentados
-- Restauración de backup probada exitosamente en staging
-- Runbooks escritos para los 3 escenarios más probables
-- Drill de recuperación ejecutado y documentado
+| Task | Estado | Detalle |
+|------|--------|---------|
+| E12-02 Health 3 estados | ✅ | ok/degraded/down + LATENCY_WARN_MS=200 en ambos backs |
+| E11-05 ISR storefront | ✅ | revalidate=3600 layout, =1800 productos page |
+| S4-D HydrationBoundary | ✅ | 4 páginas con prefetch real + server callers |
+| E11-04 Optimistic updates | ✅ | onMutate+rollback en useUpdateProduct y useDeleteProduct |
+| S4-G ESLint | ✅ | eslint.config.mjs en los 5 servicios |
 
 ---
 
-## Escalón 11 — Rendimiento Percibido y UX (Latency-Zero)
+## Escalón 9 — Disaster Recovery ⚪
 
-### Qué hay que hacer
+Acciones manuales en Railway UI — no requieren código:
 
-1. **Medir latencias actuales** — `p50`, `p95`, `p99` por procedure tRPC.
-   Antes de optimizar, medir.
-
-2. **HydrationBoundary en Server Components** — todos los Server Components
-   deben usar `<HydrationBoundary>` para pasar datos prefetcheados al client.
-   Sin esto, el Client Component hace un refetch inicial innecesario.
-   → Ver `.claude/checklists/frontend-capa-2-tanstack.md`
-
-3. **Paginación en todos los listados** — `collaborators.list`, `catalog.list`,
-   `orders.list` — ningún procedure devuelve un array sin límite.
-   Sin paginación, el primer cliente con 10.000 productos rompe la API.
-
-4. **Optimistic updates** — operaciones de baja criticidad (toggle de flag,
-   cambio de tema) deben actualizarse en la UI antes de recibir confirmación
-   del back. TanStack Query tiene soporte nativo para esto.
-
-5. **ISR en ecommerce-front** — el catálogo público debe servirse desde caché
-   CDN con revalidación, no en tiempo real por cada visita.
-
-6. **Índices de DB optimizados** — medir queries lentas con `EXPLAIN ANALYZE`.
-   Un query sin índice que tarda 2ms con 100 registros tarda 2s con 100.000.
-
-### Cómo saber que este escalón está completo
-
-- `p95` de latencia < 100ms en procedures principales con carga simulada
-- Todos los listados tienen paginación
-- HydrationBoundary en todos los Server Components que prefetchean datos
-- ISR configurado en ecommerce-front para catálogo público
+- [ ] **[E9-01]** Definir RTO/RPO por servicio y documentar
+- [ ] **[E9-02]** Probar restauración de backup en staging → documentar resultado
+- [ ] **[E9-03]** Confirmar Redis AOF activo en Railway → documentar
+- [ ] **[E9-04]** Runbook de recuperación — ya existe en roadmap/runbook-incidente.md ✅
 
 ---
 
-## Escalón 12 — Alta Disponibilidad y Chaos Engineering
+## Escalón 11 — Rendimiento ⏳
 
-### Qué hay que hacer
-
-1. **Múltiples réplicas** — configurar 2+ réplicas de sass-back y ecommerce-back
-   en Railway. El `MemoryCacheAdapter` no funciona entre réplicas — confirmar
-   que Redis es el caché principal antes de escalar.
-
-2. **Health check con 3 estados**:
-   - `status: "ok"` — todo funciona
-   - `status: "degraded"` — funciona pero con dependencias lentas (ej: Firebase tarda)
-   - `status: "down"` — no puede servir requests
-
-3. **Comportamiento de ecommerce-back si sass-back cae** — hoy:
-   `OrganizationsClientService` rechaza con 503 si sass-back no responde (timeout 2s).
-   ¿Es correcto para el checkout? ¿Para ver el catálogo público? Documentar.
-
-4. **Chaos drill básico**:
-   - Apagar sass-back → ¿cómo responde ecommerce-back?
-   - Cortar Redis → ¿el `MemoryCacheAdapter` toma el relevo correctamente?
-   - Saturar la queue de webhooks → ¿los deliveries fallan silenciosamente?
-
-5. **Documentar resultados del chaos** — qué se rompió, qué funcionó,
-   qué se arregló. El chaos drill sin documentación es solo un ejercicio.
-
-### Cómo saber que este escalón está completo
-
-- 2+ réplicas de sass-back y ecommerce-back en Railway
-- Health check con 3 estados implementado en los 2 backs
-- Chaos drill documentado con resultados
-- Comportamientos de degradación documentados en `architecture/00-principios.md`
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| HydrationBoundary 4 páginas | ✅ | S4-D completado 2026-09-30 |
+| ISR ecommerce-front | ✅ | revalidate en layout + productos |
+| Medir latencias p50/p95/p99 | ⏳ | Requiere tráfico real en producción |
+| Paginación cursor adminCatalog | ⏳ | adminCatalog.list sin cursor pagination aún |
+| Optimistic updates | ✅ | useUpdateProduct + useDeleteProduct |
 
 ---
 
-## Escalón 13 — Eficiencia Financiera (FinOps)
+## Escalón 12 — Alta Disponibilidad ⏳
 
-### Qué hay que hacer
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| Health 3 estados | ✅ | ok/degraded/down en ambos backs 2026-09-30 |
+| 2+ réplicas en Railway | ⏳ | Acción manual en Railway UI |
+| Chaos drill sass-back | ⏳ | Requiere producción real |
+| Chaos drill Redis | ⏳ | Requiere producción real |
 
-1. **Costo por servicio** — Railway expone métricas de consumo por servicio.
-   Medir cuánto cuesta cada servicio mensualmente y documentarlo.
+---
 
-2. **Costo marginal por organización nueva** — poder responder:
-   "si agregamos 100 organizaciones nuevas, ¿cuánto sube la factura?"
+## Escalón 13 — FinOps ⚪
 
-3. **Escalado automático en Railway** — configurar:
-   - Escalar hacia arriba cuando CPU > 70% sostenido 2 minutos
-   - Escalar hacia abajo cuando CPU < 20% sostenido 5 minutos
+Todo en Railway dashboard — acciones manuales:
 
-4. **TTL de caché como palanca de costo** — documentar la decisión de TTL
-   por tipo de dato: caché largo = menos queries = menos costo.
-   Caché corto = datos más frescos = más costo. No hay respuesta única.
+- [ ] Dashboard de costos por servicio
+- [ ] Escalado automático configurado
+- [ ] Costo marginal documentado
 
-5. **ISR vs SSR en ecommerce-front** — cada visita SSR cuesta cómputo.
-   Maximizar ISR para reducir costo de render por visita.
+---
 
-### Cómo saber que este escalón está completo
+## S4 — Tests 85% + CI (próxima prioridad de código)
 
-- Dashboard de costos por servicio configurado
-- Escalado automático configurado en Railway
-- Costo marginal documentado antes de cada campaña de adquisición
+| Fase | Estado |
+|------|--------|
+| S4-A Decisiones degradación | ✅ |
+| S4-B conventions/state.md | ✅ |
+| S4-C GitHub Actions | ✅ |
+| S4-D HydrationBoundary | ✅ |
+| S4-E Tests backend | ⏳ PRÓXIMA |
+| S4-F Tests frontend | ⏳ |
+| S4-G ESLint | ✅ |
+
+### S4-E — orden de implementación
+
+1. Cross-tenant: org A no retorna datos de org B
+2. Domain entities: funciones puras sin mocks
+3. Contracts HTTP/tRPC: Supertest input inválido → Zod error, sin cookie → 401
+4. Auth guards: FirebaseAuthGuard mockeando Firebase Admin SDK
+
+### Cómo saber que Fase 4 está completa
+
+- Health check ok/degraded/down en producción con alertas Railway ✅ (código listo)
+- Tests con 85% de cobertura en paths críticos (S4-E + S4-F)
+- Latencias medidas con carga real
+- Chaos drills documentados

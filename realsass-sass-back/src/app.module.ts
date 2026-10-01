@@ -43,7 +43,7 @@ import {
     PrometheusModule.register({ path: '/metrics', defaultMetrics: { enabled: true } }),
     LoggerModule.forRoot({ pinoHttp: { level: process.env['LOG_LEVEL'] ?? (process.env['NODE_ENV'] !== 'production' ? 'debug' : 'info'), transport: process.env['NODE_ENV'] !== 'production' ? { target: 'pino-pretty', options: { colorize: true } } : undefined } }),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }, { name: 'auth', ttl: 60_000, limit: 10 }]),
     EventEmitterModule.forRoot({ wildcard: false }),
     FirebaseModule,
     HealthModule,

@@ -1,6 +1,6 @@
-import { getIdToken } from '../firebase/firebase';
-import { AppError }   from '../errors/app-error';
-import type { ApiEnvelope } from '../types/index';
+import { getIdToken } from '@/firebase/firebase';
+import { AppError }   from '@/errors/app-error';
+import type { ApiEnvelope } from '@/types/index';
 
 // organizationId activo en memoria — no en localStorage
 let _organizationId: string | null = null;
@@ -55,7 +55,7 @@ async function doFetch<T>(url: string, options: RequestInit, isRetry: boolean): 
   if (!res.ok) throw await buildAppError(res);
 
   const envelope = await res.json() as ApiEnvelope<T>;
-  return envelope.data ?? (envelope as unknown as T) // @real/api-response-cast;
+  return (envelope.data ?? envelope) as T;
 }
 
 async function buildAppError(res: Response): Promise<AppError> {

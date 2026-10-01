@@ -58,7 +58,7 @@ function createServerTrpcClient() {
  * Reemplaza: GET /config/theme/:orgSlug
  * Ahora usa: trpc.configThemes.getPublicTheme({ orgSlug })
  *
- * Capa 5 completa: tipo inferido desde SassAppRouter — sin cast as any // @real/jsonb-cast.
+ * Capa 5 completa: tipo inferido desde SassAppRouter — sin casteo implícito.
  */
 export async function getPublicTheme(orgSlug: string): Promise<PublicTheme> {
   try {

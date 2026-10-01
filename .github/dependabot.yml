@@ -1,0 +1,30 @@
+# dependabot.yml — alertas automáticas de vulnerabilidades en dependencias
+# Ref: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Monorepo raíz
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+    open-pull-requests-limit: 5
+    groups:
+      # Agrupar updates de pnpm catalog para evitar ruido
+      catalog-updates:
+        patterns:
+          - "*"
+    ignore:
+      # Major versions requieren revisión manual
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5

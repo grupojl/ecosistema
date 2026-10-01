@@ -29,10 +29,10 @@ export function useUpdateFlag() {
       await utils.configFlags.list.cancel();
       const previous = utils.configFlags.list.getData();
 
-      utils.configFlags.list.setData(undefined, (old: any) => {
+      utils.configFlags.list.setData(undefined, (old) => {
         if (!old) return old;
         const list = Array.isArray(old) ? old : old?.data ?? [];
-        const updated = list.map((f: any) =>
+        const updated = list.map((f) =>
           f.key === variables.flagId
             ? { ...f, ...(variables.enabled !== undefined && { enabled: variables.enabled }) }
             : f,

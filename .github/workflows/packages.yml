@@ -1,0 +1,48 @@
+name: packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+
+jobs:
+  ci:
+    name: typecheck packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck auth-server
+        run: pnpm --filter @real/auth-server typecheck
+
+      - name: Typecheck auth-client
+        run: pnpm --filter @real/auth-client typecheck
+
+      - name: Typecheck trpc
+        run: pnpm --filter @real/trpc typecheck
+
+      - name: Typecheck ui
+        run: pnpm --filter @real/ui typecheck

@@ -1,0 +1,50 @@
+name: realsass-ecommerce-back
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'realsass-ecommerce-back/**'
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'realsass-ecommerce-back/**'
+      - 'packages/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.base.json'
+
+jobs:
+  ci:
+    name: typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter realsass-ecommerce-back typecheck
+
+      - name: Build
+        run: pnpm --filter realsass-ecommerce-back build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5433/dummy
+
+      - name: Audit
+        run: pnpm --filter realsass-ecommerce-back audit --audit-level=high
+        continue-on-error: false

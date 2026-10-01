@@ -1,10 +1,14 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { z }             from 'zod';
 import type { Prisma }   from '@prisma/client';
 import type { IFeatureFlagsRepository } from '@/config-flags/repository/feature-flags.repository.interface';
 import type { FeatureFlag, UpdateFeatureFlagInput } from '@/domain/feature-flag.entity';
 
 type PrismaFlag = Prisma.FeatureFlagGetPayload<Record<string, never>>;
+
+// Zod schema para el campo Json "conditions" de Prisma
+const ConditionsSchema = z.record(z.unknown()).catch({});
 
 @Injectable()
 export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
@@ -18,8 +22,7 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
       enabled:           row.enabled,
       description:       row.description,
       rolloutPercentage: row.rolloutPercentage,
-      // @real/jsonb-cast — Prisma devuelve JsonValue para campos Json
-      conditions:        row.conditions as Record<string, unknown>,
+      conditions:        ConditionsSchema.parse(row.conditions),
       createdAt:         row.createdAt,
       updatedAt:         row.updatedAt,
     };

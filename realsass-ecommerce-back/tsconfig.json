@@ -13,7 +13,6 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -24,13 +23,18 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "typeRoots": [
       "../node_modules/@types",
       "./node_modules/@types"
     ]
   },
-  "extends": "../tsconfig.base.json"
+  "extends": "../tsconfig.base.json",
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.e2e-spec.ts",
+    "test/**"
+  ]
 }

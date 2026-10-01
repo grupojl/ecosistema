@@ -18,15 +18,17 @@ import {
   type CatalogRepository,
   type ProductRecord,
 } from '@/catalog/repository/catalog.repository.interface';
+import type { CreateProductDto } from '@/catalog/dto/create-product.dto';
+import type { UpdateProductPatch } from '@/catalog/repository/catalog.repository.interface';
 
 function makeMockRepository(): jest.Mocked<CatalogRepository> {
   return {
-    existsByHandle: jest.fn(),
-    createProduct: jest.fn(),
-    findByIdAdmin: jest.fn(),
-    listAdmin: jest.fn(),
-    updateProduct: jest.fn(),
-    listPublished: jest.fn(),
+    existsByHandle:       jest.fn(),
+    createProduct:        jest.fn(),
+    findByIdAdmin:        jest.fn(),
+    listAdmin:            jest.fn(),
+    updateProduct:        jest.fn(),
+    listPublished:        jest.fn(),
     findPublishedByHandle: jest.fn(),
   };
 }
@@ -35,23 +37,23 @@ const ORG_ID = 'org-123';
 
 function fakeProduct(overrides: Partial<ProductRecord> = {}): ProductRecord {
   return {
-    id: 'prod-1',
+    id:             'prod-1',
     organizationId: ORG_ID,
-    categoryId: null,
-    name: 'iPhone 16 Pro',
-    handle: 'iphone-16-pro',
-    description: null,
-    status: 'DRAFT',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    category: null,
-    variants: [],
+    categoryId:     null,
+    name:           'iPhone 16 Pro',
+    handle:         'iphone-16-pro',
+    description:    null,
+    status:         'DRAFT',
+    createdAt:      new Date(),
+    updatedAt:      new Date(),
+    category:       null,
+    variants:       [],
     ...overrides,
   };
 }
 
 describe('CatalogService (application layer)', () => {
-  let service: CatalogService;
+  let service:    CatalogService;
   let repository: jest.Mocked<CatalogRepository>;
 
   beforeEach(async () => {
@@ -68,13 +70,11 @@ describe('CatalogService (application layer)', () => {
   });
 
   describe('createProduct', () => {
-    const validDto = {
-      name: 'iPhone 16 Pro',
-      handle: 'iphone-16-pro',
-      variants: [
-        { sku: 'IP16P-256', title: '256GB', priceCents: 150000000 },
-      ],
-    } as any // @real/jsonb-cast;
+    const validDto: CreateProductDto = {
+      name:     'iPhone 16 Pro',
+      handle:   'iphone-16-pro',
+      variants: [{ sku: 'IP16P-256', title: '256GB', priceCents: 150000000 }],
+    };
 
     it('crea el producto si el draft es válido y el handle no existe', async () => {
       repository.existsByHandle.mockResolvedValue(false);
@@ -93,51 +93,42 @@ describe('CatalogService (application layer)', () => {
     it('rechaza con ConflictException si el handle ya existe (sin llegar a Prisma)', async () => {
       repository.existsByHandle.mockResolvedValue(true);
 
-      await expect(service.createProduct(ORG_ID, validDto)).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(service.createProduct(ORG_ID, validDto)).rejects.toThrow(ConflictException);
       expect(repository.createProduct).not.toHaveBeenCalled();
     });
 
     it('rechaza con UnprocessableEntityException si el domain invalida el draft', async () => {
-      const invalidDto = { ...validDto, handle: 'Handle Invalido!!' };
+      const invalidDto: CreateProductDto = { ...validDto, handle: 'Handle Invalido!!' };
 
-      await expect(service.createProduct(ORG_ID, invalidDto)).rejects.toThrow(
-        UnprocessableEntityException,
-      );
-      // Nunca debería consultar el repository si el domain ya rechazó.
+      await expect(service.createProduct(ORG_ID, invalidDto)).rejects.toThrow(UnprocessableEntityException);
       expect(repository.existsByHandle).not.toHaveBeenCalled();
     });
   });
 
   describe('updateProduct', () => {
+    const publishPatch: UpdateProductPatch = { status: 'PUBLISHED' };
+
     it('rechaza con NotFoundException si el producto no existe', async () => {
       repository.findByIdAdmin.mockResolvedValue(null);
 
       await expect(
-        service.updateProduct(ORG_ID, 'prod-inexistente', { status: 'PUBLISHED' } as any // @real/jsonb-cast),
+        service.updateProduct(ORG_ID, 'prod-inexistente', publishPatch),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('rechaza publicar si ninguna variante tiene stock', async () => {
       repository.findByIdAdmin.mockResolvedValue(
         fakeProduct({
-          variants: [
-            {
-              id: 'v1',
-              productId: 'prod-1',
-              sku: 'SKU-1',
-              title: 'Único',
-              priceCents: 1000,
-              currency: 'USD',
-              inventory: { quantityAvailable: 0, quantityReserved: 0 },
-            },
-          ],
+          variants: [{
+            id: 'v1', productId: 'prod-1', sku: 'SKU-1', title: 'Único',
+            priceCents: 1000, currency: 'USD',
+            inventory: { quantityAvailable: 0, quantityReserved: 0 },
+          }],
         }),
       );
 
       await expect(
-        service.updateProduct(ORG_ID, 'prod-1', { status: 'PUBLISHED' } as any // @real/jsonb-cast),
+        service.updateProduct(ORG_ID, 'prod-1', publishPatch),
       ).rejects.toThrow(UnprocessableEntityException);
       expect(repository.updateProduct).not.toHaveBeenCalled();
     });
@@ -145,27 +136,16 @@ describe('CatalogService (application layer)', () => {
     it('permite publicar si al menos una variante tiene stock', async () => {
       repository.findByIdAdmin.mockResolvedValue(
         fakeProduct({
-          variants: [
-            {
-              id: 'v1',
-              productId: 'prod-1',
-              sku: 'SKU-1',
-              title: 'Único',
-              priceCents: 1000,
-              currency: 'USD',
-              inventory: { quantityAvailable: 3, quantityReserved: 0 },
-            },
-          ],
+          variants: [{
+            id: 'v1', productId: 'prod-1', sku: 'SKU-1', title: 'Único',
+            priceCents: 1000, currency: 'USD',
+            inventory: { quantityAvailable: 3, quantityReserved: 0 },
+          }],
         }),
       );
-      repository.updateProduct.mockResolvedValue(
-        fakeProduct({ status: 'PUBLISHED' }),
-      );
+      repository.updateProduct.mockResolvedValue(fakeProduct({ status: 'PUBLISHED' }));
 
-      const result = await service.updateProduct(ORG_ID, 'prod-1', {
-        status: 'PUBLISHED',
-      } as any // @real/jsonb-cast);
-
+      const result = await service.updateProduct(ORG_ID, 'prod-1', publishPatch);
       expect(result.status).toBe('PUBLISHED');
     });
   });
@@ -180,9 +160,7 @@ describe('CatalogService (application layer)', () => {
     });
 
     it('devuelve el producto si está publicado', async () => {
-      repository.findPublishedByHandle.mockResolvedValue(
-        fakeProduct({ status: 'PUBLISHED' }),
-      );
+      repository.findPublishedByHandle.mockResolvedValue(fakeProduct({ status: 'PUBLISHED' }));
 
       const result = await service.getProductPublic(ORG_ID, 'iphone-16-pro');
       expect(result.status).toBe('PUBLISHED');

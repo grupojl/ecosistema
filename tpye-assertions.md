@@ -92,3 +92,66 @@ grep -rn " as \|<[A-Za-z0-9_]\+>" */src --include="*.ts" \
   | grep -v "@ecosistema-ms/" \
   | grep -v " import " \
   | grep -v " export "
+
+
+
+B1 as any → ✅
+B2 as unknown as → ❌ falta
+B3 @ts-ignore → ✅
+B4 @ts-expect-error sin texto → ✅
+B5 class-validator → ❌ falta
+
+
+
+# B1 — as any sin @real/ (solo bugs reales)
+grep -rn " as any" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules" | grep -v ".next" | grep -v "dist" | grep -v "build" \
+  | grep -v "@real/" | grep -v "@ecosistema-ms/"
+
+# B1b — : any en parámetros (excluye comentarios JSDoc)
+grep -rn ": any\b\|: any," --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules" | grep -v "dist" \
+  | grep -v ":[0-9]*:[[:space:]]*\*" \
+  | grep -v ":[0-9]*:[[:space:]]*//"
+
+# B2 — as unknown as sin @real/
+grep -rn " as unknown as" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules" | grep -v "dist" \
+  | grep -v "@real/" | grep -v "@ecosistema-ms/"
+
+# B3 — @ts-ignore
+grep -rn "@ts-ignore" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules"
+
+# B4 — @ts-expect-error
+grep -rn "@ts-expect-error" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules"
+
+# B5 — class-validator
+grep -rn "from 'class-validator'\|from \"class-validator\"\|@IsString\b\|@IsEmail\b\|@IsEnum\b\|@IsOptional\b\|@IsNotEmpty\b" \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules"
+
+# B6 — strict presente (esperamos output, no ausencia)
+grep -E "strictNullChecks|\"strict\"" tsconfig.base.json
+
+
+# DEUDA — as any CON @real/ (casts documentados pendientes de cerrar)
+grep -rn " as any" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules" | grep -v ".next" | grep -v "dist" | grep -v "build" \
+  | grep "@real/"
+
+# DEUDA — as unknown as CON @real/
+grep -rn " as unknown as" --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules" | grep -v "dist" \
+  | grep "@real/"
+
+# DEUDA — JSONB real de Prisma en repositories (los 5 legítimos)
+grep -rn "@real/jsonb-cast" --include="*.ts" \
+  | grep -v "node_modules" | grep -v "spec.ts" \
+  | grep "repository/"
+
+# DEUDA — JSONB en código que NO es repository (tipado flojo de tRPC/Express)
+grep -rn "@real/jsonb-cast" --include="*.ts" \
+  | grep -v "node_modules" | grep -v "spec.ts" \
+  | grep -v "repository/"

@@ -37,7 +37,7 @@ function formatDate(iso: string) {
 export default function WebhooksPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useWebhooks(organizationId);
-  const webhooks = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
+  const webhooks = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
 
   const createMutation = useCreateWebhook();
   const testMutation   = useTestWebhook();
@@ -68,7 +68,7 @@ export default function WebhooksPage() {
     setFormError(null);
     try {
       const result = await createMutation.mutateAsync({ data: form, orgId: organizationId });
-      const secret = (result as any // @real/jsonb-cast).secret as string | undefined;
+      const secret = (result as { secret?: string })?.secret as string | undefined;
       setCreateOpen(false);
       setForm({ url: '', events: [] });
       if (secret) setCreatedSecret(secret);
@@ -284,7 +284,7 @@ function DeliveryLogsSheet({
   onClose: () => void;
 }) {
   const { data, isLoading } = useWebhookLogs(wh.id, orgId);
-  const logs = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
+  const logs = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
 
   return (
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -304,7 +304,7 @@ function DeliveryLogsSheet({
               <p className="text-sm text-muted-foreground">Sin entregas registradas</p>
             </div>
           ) : (
-            logs.map((log: any) => (
+            logs.map((log) => (
               <div key={log.id} className={cn(
                 'rounded-lg border px-3 py-2.5 space-y-1',
                 log.success ? 'border-green-500/20 bg-green-50/5' : 'border-destructive/20 bg-destructive/5',

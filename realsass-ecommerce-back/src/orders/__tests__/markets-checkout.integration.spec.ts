@@ -10,7 +10,7 @@ import { resolveVisitorCountry } from '@/lib/resolve-visitor-country'
 import type { Request } from 'express'
 
 function mockRequest(headers: Record<string, string>): Partial<Request> {
-  return { headers: headers as any // @real/jsonb-cast }
+  return { headers: headers as Record<string, string> }
 }
 
 describe('resolveVisitorCountry()', () => {

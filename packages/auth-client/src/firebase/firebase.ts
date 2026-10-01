@@ -20,6 +20,16 @@ export interface FirebaseConfig {
 let _app: FirebaseApp | null = null;
 
 /**
+ * env() — lee variables de entorno de forma compatible con browser y Node.
+ * Next.js inyecta NEXT_PUBLIC_* en el bundle como strings literales.
+ * El cast evita la dependencia de @types/node en un package browser.
+ */
+function env(key: string): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (globalThis as any /* @real/browser-compat */).process?.env?.[key] as string | undefined;
+}
+
+/**
  * initFirebase — inicializa Firebase con una config explicita.
  * Llamar desde el layout si se quiere control explicito.
  * Si no se llama, getFirebaseAuth() auto-inicializa usando NEXT_PUBLIC_FIREBASE_*
@@ -42,19 +52,17 @@ export function initFirebase(config: FirebaseConfig): FirebaseApp {
 function getOrInitApp(): FirebaseApp {
   if (_app) return _app;
 
-  // Si ya hay una app inicializada por otro medio, usarla
   if (getApps().length > 0) {
     _app = getApp();
     return _app;
   }
 
-  // Auto-init usando variables de entorno NEXT_PUBLIC_FIREBASE_*
-  const apiKey            = process.env['NEXT_PUBLIC_FIREBASE_API_KEY'];
-  const authDomain        = process.env['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'];
-  const projectId         = process.env['NEXT_PUBLIC_FIREBASE_PROJECT_ID'];
-  const storageBucket     = process.env['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'];
-  const messagingSenderId = process.env['NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'];
-  const appId             = process.env['NEXT_PUBLIC_FIREBASE_APP_ID'];
+  const apiKey            = env('NEXT_PUBLIC_FIREBASE_API_KEY');
+  const authDomain        = env('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
+  const projectId         = env('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
+  const storageBucket     = env('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
+  const messagingSenderId = env('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
+  const appId             = env('NEXT_PUBLIC_FIREBASE_APP_ID');
 
   if (!apiKey || !projectId) {
     throw new Error(

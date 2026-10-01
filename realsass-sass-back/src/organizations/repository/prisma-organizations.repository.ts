@@ -1,5 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { z }             from 'zod';
 import type { Prisma }   from '@prisma/client';
 import type { IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
 import {
@@ -12,6 +13,9 @@ import {
 
 type PrismaOrg = Prisma.OrganizationGetPayload<Record<string, never>>;
 
+// Zod schema para el campo Json "enabledProducts" de Prisma
+const EnabledProductsSchema = z.record(z.unknown()).catch({});
+
 @Injectable()
 export class PrismaOrganizationsRepository implements IOrganizationsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,14 +23,13 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
   private toEntity(row: PrismaOrg): Organization {
     return {
       id:              row.id,
-      firebaseUid:     '',   // viene del join con User — no disponible en el modelo directo
+      firebaseUid:     '',
       slug:            row.slug,
       name:            row.name,
       description:     row.description,
       logoUrl:         row.logoUrl,
       website:         row.website,
-      // @real/jsonb-cast — Prisma devuelve JsonValue para campos Json
-      enabledProducts: row.enabledProducts as Record<string, unknown>,
+      enabledProducts: EnabledProductsSchema.parse(row.enabledProducts),
       plan:            'free',
       createdAt:       row.createdAt,
       updatedAt:       row.updatedAt,
@@ -49,12 +52,6 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
     return user?.organization ? this.toEntity(user.organization) : null;
   }
 
-  /**
-   * FIX: antes el select NO incluía storeStatus → `org.storeStatus` era
-   * undefined → ecommerceEnabled siempre false → TODAS las tiendas en 404.
-   * Select explícito y mínimo (sin userId ni enabledProducts: no salen a público).
-   * `slug` es @unique → findUnique usa el índice.
-   */
   async findBySlug(slug: string): Promise<StoreInfo | null> {
     const row = await this.prisma.organization.findUnique({
       where:  { slug },

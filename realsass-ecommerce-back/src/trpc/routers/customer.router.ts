@@ -137,7 +137,7 @@ export function createCustomerRouter(
       .input(z.object({ orderId: z.string().uuid() }))
       .query(async ({ ctx, input }) => {
         const order = await ordersService.getOrder(ctx.organizationId!, input.orderId);
-        if (!order || (order as any // @real/jsonb-cast).customerId !== ctx.customerId) {
+        if (!order || order.customerId !== ctx.customerId) {
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
         return order;
@@ -199,7 +199,7 @@ export function createCustomerRouter(
         locale:              z.string().min(2).max(10).optional(), // ADR-016 — idioma de la sesión, para el invoice
       }))
       .mutation(({ ctx, input }) =>
-        ordersService.checkout(ctx.organizationId!, {
+        ordersService.checkout({organizationId: ctx.organizationId!,
           cartId:          input.cartId,
           customerId:      ctx.customerId!,
           shippingAddress: input.shippingAddress,

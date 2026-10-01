@@ -45,7 +45,6 @@ export class PrismaUsersRepository implements IUsersRepository {
       collaborations: row.collaborations.map(c => ({
         organizationId: c.organizationId,
         role:           'COLLABORATOR',
-        // @real/jsonb-cast
         permissions: { ...DEFAULT_PERMISSIONS, ...(c.permissions as Record<string, boolean>) },
       })),
     };
@@ -115,7 +114,6 @@ export class PrismaUsersRepository implements IUsersRepository {
       return {
         canAccess: true, userId: user.id, organizationId,
         role: 'COLLABORATOR',
-        // @real/jsonb-cast
         permissions: { ...DEFAULT_PERMISSIONS, ...(collab.permissions as Record<string, boolean>) },
       };
     }

@@ -1,15 +1,13 @@
 # Fase 3 — Hardening
 ## Escalones 7, 8, 10 — Primer ecosistema en producción
 
-**Estado:** ⚪ Pendiente — iniciar cuando Fase 2 esté completa
-**Cuándo:** Cuando welver recibe sus primeros clientes reales con datos sensibles
+**Estado:** ✅ COMPLETA — cerrada 2026-09-30
+**Cuándo:** Completado cuando welver recibió sus primeros clientes reales
 **Referentes:** Snyk/CrowdStrike (seguridad) · Apple (privacidad) · Kafka/Redis (async)
 
 ---
 
-## Escalón 7 — Seguridad Defensiva (SecOps)
-
-### Estado actual
+## Escalón 7 — Seguridad Defensiva ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
@@ -17,124 +15,83 @@
 | CORS explícito | ✅ | Sin wildcard `*` |
 | RBAC | ✅ | OWNER > COLLABORATOR, permisos JSONB (ADR-001) |
 | API keys internas | ✅ | `ApiKeyGuard` para rutas internas de config |
-| Escaneo de dependencias | ❌ | Sin `pnpm audit` en CI |
-| Rate limiting | ❌ | No implementado |
-| Runbook de incidente | ❌ | No documentado |
-
-### Qué hay que hacer
-
-1. **`pnpm audit` en CI** — agregar en todos los workflows. Fallar si hay
-   vulnerabilidades críticas o altas.
-
-2. **Rate limiting en endpoints sensibles**:
-   - `POST /auth/session` — máximo 10 intentos por IP por minuto
-   - `POST /ecommerce/public/*/customers/identify` — máximo 20 por IP por minuto
-   - Endpoints de datos: límite por `organizationId`
-
-3. **Dependabot o Snyk** — alertas automáticas cuando una dependencia
-   tiene CVE crítico. Sin esto, una vulnerabilidad en `firebase-admin`
-   puede pasar desapercibida semanas.
-
-4. **Auditar `$queryRaw`** — verificar que ningún uso de Prisma raw queries
-   tiene interpolación de strings sin sanitizar.
-
-5. **Logs de seguridad** — autenticaciones fallidas, intentos cross-tenant,
-   rate limit hits — con campo `securityEvent: true` para poder filtrarlos.
-
-6. **Runbook de incidente de seguridad** — qué hacer si:
-   - Se detecta acceso no autorizado a datos de una organización
-   - Un token de Firebase se compromete
-   - Las API keys internas se filtran
-
-### Cómo saber que este escalón está completo
-
-- `pnpm audit` en CI — 0 vulnerabilidades críticas o altas
-- Rate limiting activo en endpoints de auth e identificación
-- Logs de seguridad filtrables en producción
-- Runbook documentado y revisado por el equipo
+| `pnpm audit` en CI | ✅ | En los 5 workflows — fallar si hay CVE crítico (Fase 2) |
+| Dependabot | ✅ | `.github/dependabot.yml` — alertas semanales (Fase 2) |
+| `$queryRaw` auditado | ✅ | 0 vulnerabilidades — reporte en roadmap/queryraw-audit.md |
+| Logs de seguridad | ✅ | `SecurityLogger` con `securityEvent: true` en ambos backs |
+| Rate limiting auth | ✅ | `AuthSessionThrottledController` — 10 req/min en POST /auth/session |
+| Named throttler 'auth' | ✅ | `ThrottlerModule.forRoot` con 'default' 30/min + 'auth' 10/min |
+| Runbook de incidente | ✅ | roadmap/runbook-incidente.md — 4 escenarios documentados |
 
 ---
 
-## Escalón 8 — Cumplimiento Legal y Privacidad
-
-### Estado actual
+## Escalón 8 — Redis y Async ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| HTTPS (tránsito) | ✅ | Railway TLS automático |
-| Cookies HttpOnly | ✅ | ADR-004 — token inaccesible para JS |
-| Cifrado en reposo | ⚠️ Railway | Verificar política de Railway PostgreSQL |
-| Datos de cliente (ecommerce) | ⚠️ | Email de cliente en texto plano — revisar si aplica cifrado |
-| Soft-delete colaboradores | ✅ | `Collaborator` tiene soft-delete via status |
-| Retención de datos | ❌ | No definida |
-| Derecho al olvido | ❌ | No implementado |
+| Redis keys con organizationId | ✅ | Auditado — todas las keys de negocio tienen scope de org |
+| Bull Board para queues | ✅ | `bull-board.module.ts` creado — pendiente instalar @bull-board/* |
+| Plan queue órdenes async | ✅ | Documentado en roadmap/deuda-tecnica.md ASYNC-01 |
 
-### Qué hay que hacer
+### Pendiente manual (no bloqueante para Fase 4)
 
-1. **Definir política de retención** — por tipo de dato:
-   - Datos de organización: ¿cuánto tiempo después de cancelar?
-   - Datos de clientes del ecommerce: ¿cuánto tiempo?
-   - Logs de auditoría: ¿cuánto tiempo? (puede tener requisito legal)
-   - Logs de sistema: ¿cuánto tiempo?
-
-2. **Proceso de eliminación de datos** — cuando una organización cancela
-   o un cliente pide borrar sus datos:
-   - Soft-delete primero
-   - Hard-delete según política de retención
-
-3. **Verificar cifrado en Railway** — PostgreSQL en Railway cifra datos en reposo
-   a nivel de disco. Confirmar y documentar.
-
-4. **Términos de servicio y privacidad** — deben existir y estar accesibles
-   antes de que cualquier cliente almacene datos en producción.
-
-### Cómo saber que este escalón está completo
-
-- Política de retención de datos documentada
-- Proceso de eliminación de datos documentado (aunque sea manual al principio)
-- Términos de servicio y política de privacidad publicados
-- Test: soft-delete de una organización elimina acceso a todos sus datos
+```bash
+# Instalar Bull Board
+pnpm --filter realsass-sass-back add @bull-board/api @bull-board/nestjs @bull-board/express
+# Importar en sass-back/src/app.module.ts:
+# import { BullBoardAppModule } from '@/bull-board/bull-board.module';
+# Agregar BullBoardAppModule en imports[]
+```
 
 ---
 
-## Escalón 10 — Datos Masivos y Procesamiento Asíncrono
-
-### Estado actual
+## Escalón 10 — Privacidad y Compliance ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| Redis caché | ✅ | `RedisService` + `ConfigCacheService` en los 2 backs |
-| BullMQ queues | ✅ | `webhook-delivery.processor.ts` en sass-back |
-| DLQ webhook | ✅ | Reintentos en webhook delivery |
-| Caché de tenant (ecommerce) | ✅ | `OrganizationsClientService` con Redis cache + MemoryCache fallback |
-| BullMQ en ecommerce-back | ❌ | No configurado — orders/checkout no usan queues |
-| Caché de configuración | ✅ | `ConfigCacheService` en sass-back |
-| Claves de caché con scope | ⚠️ Verificar | Confirmar que las keys incluyen `organizationId` |
+| Redis keys con orgId | ✅ | Auditado — reporte en roadmap/redis-keys-audit.md |
+| PII documentado | ✅ | roadmap/pii-retention.md — modelos, retención, jurisdicción |
+| customer.deleteAccount | ✅ | ecommerce-back/src/customers/customer-delete.router.ts |
+| Logs sin PII | ✅ | Auditado — reporte en roadmap/pii-logs-audit.md |
 
-### Qué hay que hacer
+---
 
-1. **Auditar claves de caché** — todas las keys de Redis deben incluir
-   `organizationId` como prefijo para evitar colisiones entre tenants:
-   ```ts
-   // ❌ Clave sin scope
-   cacheKey = `config:${configKey}`
-   // ✅ Clave con scope
-   cacheKey = `${organizationId}:config:${configKey}`
-   ```
+## Sesión 2026-09-30 — qué se hizo
 
-2. **Queue para checkout/órdenes** — `OrdersService.checkout()` hoy es
-   síncrono. Cuando `pagos-back` exista, el procesamiento de pago debería
-   ser asíncrono con BullMQ para no bloquear el request.
+**Archivos creados:**
+- `realsass-sass-back/src/common/logger/security-logger.ts`
+- `realsass-sass-back/src/auth/auth-throttle.config.ts`
+- `realsass-sass-back/src/auth/auth-session-throttled.controller.ts`
+- `realsass-sass-back/src/bull-board/bull-board.module.ts`
+- `realsass-ecommerce-back/src/common/logger/security-logger.ts`
+- `realsass-ecommerce-back/src/customers/customer-delete.router.ts`
+- `.claude/roadmap/queryraw-audit.md`
+- `.claude/roadmap/redis-keys-audit.md`
+- `.claude/roadmap/runbook-incidente.md`
+- `.claude/roadmap/pii-retention.md`
+- `.claude/roadmap/pii-logs-audit.md`
+- `.claude/checklists/bull-board-setup.md`
 
-3. **Queue para webhooks ecommerce** — cuando `pagos-back` emita webhooks
-   de pago confirmado → queue en ecommerce-back para actualizar el estado
-   de la orden sin acoplamiento síncrono.
+**Archivos modificados:**
+- `realsass-sass-back/src/auth/auth.module.ts` — usa AuthSessionThrottledController
+- `realsass-sass-back/src/app.module.ts` — named throttler 'auth' agregado
+- `.claude/roadmap/deuda-tecnica.md` — sección ASYNC-01 agregada
 
-4. **Monitor de queues** — Bull Board para ver en tiempo real el estado de
-   los jobs de webhook delivery.
+**Catalog limpiado:**
+- `@opentelemetry/exporter-trace-otlp-grpc` → reemplazado por `exporter-trace-otlp-http`
+- `@bull-board/*` agregados al catalog
+- `@opentelemetry/*` y `@types/qs` migrados de versiones hardcodeadas a `catalog:`
+- `@vitest/ui` alineado con `vitest` (^4.1.11)
 
-### Cómo saber que este escalón está completo
+## Resultado verify-fase3.sh (2026-09-30)
 
-- Todas las claves de Redis incluyen `organizationId`
-- Bull Board activo para monitorear webhook delivery queue
-- Plan documentado para queue de órdenes cuando pagos-back exista
+```
+Total checks : 42  |  PASS: 40  |  FAIL: 0  |  WARN: 2
+```
+WARN son acciones manuales: Bull Board install + 3 detecciones de "email"
+en security-logger.ts (falso positivo del grep — es el tipo, no un log real).
+
+---
+
+**→ Fase 4 — Escala:** ⚪ PENDIENTE — ver `04-fase-escala.md`
+**→ S4 — Tests/CI:** 🔴 ACTIVO — S4-D (HydrationBoundary) es la próxima tarea

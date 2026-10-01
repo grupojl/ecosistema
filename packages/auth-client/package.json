@@ -7,6 +7,9 @@
   "types": "./src/index.ts",
   "scripts": { "build": "tsc --noEmit", "typecheck": "tsc --noEmit" },
   "dependencies": { "firebase": "catalog:", "zod": "catalog:" },
-  "devDependencies": { "typescript": "catalog:", "@types/react": "catalog:" },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@types/react": "catalog:"
+  },
   "peerDependencies": { "react": ">=19.0.0" }
 }

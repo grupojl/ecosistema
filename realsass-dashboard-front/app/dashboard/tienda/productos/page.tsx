@@ -1,16 +1,31 @@
-// realsass-dashboard-front/app/dashboard/tienda/productos/page.tsx
-// Server Component — prefetch de productos + HydrationBoundary (ADR-009/S4-D).
-// ECO-FRONT-01: aplica el patrón Server/Client correcto.
+/**
+ * app/dashboard/tienda/productos/page.tsx — realsass-dashboard-front
+ *
+ * Server Component con HydrationBoundary + prefetch real.
+ * El server caller obtiene los datos antes de renderizar → sin loading flash.
+ *
+ * S4-D — HydrationBoundary / Fase 4 Escalón 11
+ */
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { ProductosView } from '@/app/dashboard/tienda/productos/productos-view';
+import { cookies }        from 'next/headers';
+import { ProductosView }  from '@/app/dashboard/tienda/productos/productos-view';
+import { createDashboardCaller } from '@/lib/trpc/server';
 
 export default async function ProductosPage() {
-  const queryClient = new QueryClient();
+  const queryClient    = new QueryClient();
+  const cookieStore    = await cookies();
+  const sessionCookie  = cookieStore.get('__session')?.value;
+  const organizationId = cookieStore.get('x-organization-id')?.value ?? '';
 
-  // El prefetch se conecta al router tRPC server-side cuando esté disponible.
-  // Por ahora el QueryClient se pasa vacío y el Client Component fetcha en mount.
-  // TODO S5: agregar prefetchQuery con createServerCaller() cuando el procedure
-  //          adminCatalog.list esté disponible en el server caller.
+  if (organizationId) {
+    const caller = createDashboardCaller(organizationId, sessionCookie);
+    await queryClient.prefetchQuery({
+      queryKey: ['store', 'products', organizationId, {}],
+      queryFn:  () => caller.adminCatalog.list(),
+    }).catch(() => {
+      // Prefetch falla silenciosamente — el Client Component fetcha en mount
+    });
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

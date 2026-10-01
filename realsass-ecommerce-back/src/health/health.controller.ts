@@ -1,30 +1,66 @@
-import { Controller, Get } from '@nestjs/common';
-import { Public }          from '@real/auth-server';
-import { PrismaService }   from '@/prisma/prisma.service';
+/**
+ * health.controller.ts — realsass-ecommerce-back
+ *
+ * GET /health — 3 estados: ok / degraded / down
+ * E12-02 — Fase 4 / Escalón 12
+ */
+import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Public }        from '@real/auth-server';
+import { PrismaService } from '@/prisma/prisma.service';
+import { RedisService }  from '@/redis/redis.service';
 
-interface HealthDetail { status: 'up' | 'down'; latencyMs: number }
+const LATENCY_WARN_MS = 200;
+
+type HealthStatus = 'ok' | 'degraded' | 'down';
+
+interface HealthDetail  { status: 'up' | 'down'; latencyMs: number }
 interface HealthResponse {
-  status:  'ok' | 'degraded';
+  status:  HealthStatus;
   db:      HealthDetail;
+  redis:   HealthDetail;
   uptime:  number;
   version: string;
+}
+
+function resolveStatus(db: HealthDetail, redis: HealthDetail): HealthStatus {
+  if (db.status === 'down') return 'down';
+  if (redis.status === 'down') return 'degraded';
+  if (db.latencyMs > LATENCY_WARN_MS || redis.latencyMs > LATENCY_WARN_MS) return 'degraded';
+  return 'ok';
 }
 
 @Public()
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis:  RedisService,
+  ) {}
 
   @Get()
+  @HttpCode(HttpStatus.OK)
   async check(): Promise<HealthResponse> {
-    const t = Date.now();
-    const ok = await this.prisma.$queryRaw`SELECT 1`
-      .then(() => true).catch(() => false);
-    const db: HealthDetail = { status: ok ? 'up' : 'down', latencyMs: Date.now() - t };
+    const [dbR, redisR] = await Promise.allSettled([
+      (async () => {
+        const t = Date.now();
+        await this.prisma.$queryRaw`SELECT 1`;
+        return { status: 'up' as const, latencyMs: Date.now() - t };
+      })(),
+      (async () => {
+        const t = Date.now();
+        await this.redis.set('health:ping', 'pong', 5)
+          .catch(() => { throw new Error('redis unreachable'); });
+        return { status: 'up' as const, latencyMs: Date.now() - t };
+      })(),
+    ]);
+
+    const db    = dbR.status    === 'fulfilled' ? dbR.value    : { status: 'down' as const, latencyMs: 0 };
+    const redis = redisR.status === 'fulfilled' ? redisR.value : { status: 'down' as const, latencyMs: 0 };
 
     return {
-      status:  ok ? 'ok' : 'degraded',
+      status:  resolveStatus(db, redis),
       db,
+      redis,
       uptime:  Math.floor(process.uptime()),
       version: process.env['npm_package_version'] ?? '0.0.0',
     };

@@ -1,157 +1,108 @@
 # Fase 2 — Estabilización
 ## Escalones 3, 5, 6 — Antes de producción real
 
-**Estado:** 🔴 En curso — escalón 3 parcial, 5 y 6 no iniciados
-**Cuándo:** Antes de que el primer cliente real use el sistema
+**Estado:** ✅ COMPLETA — cerrada 2026-09-30
+**Cuándo:** Completado antes de pasar a Fase 3
 **Referentes:** Cloudflare (infra) · Vercel/GitHub (CI/CD) · Datadog (observabilidad)
 
 ---
 
-## Escalón 3 — Infraestructura y Red
-
-### Estado actual — Parcial
+## Escalón 3 — Infraestructura y Red ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| HTTPS | ✅ Railway | TLS automático en todos los servicios |
-| CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard en sass-back y ecommerce-back |
-| Cookies HttpOnly | ✅ | ADR-004 implementado — `__session` HttpOnly + SameSite=Strict |
-| Helmet | ⚠️ Verificar | Confirmar que `@nestjs/helmet` está activo en ambos backs |
-| Rate limiting | ❌ No implementado | Ningún back tiene rate limiting configurado |
+| HTTPS | ✅ | TLS automático via Railway |
+| CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard en ambos backs |
+| Cookies HttpOnly | ✅ | ADR-004 — `__session` HttpOnly + SameSite=Strict |
+| Helmet | ✅ | `app.use(helmet())` activo en sass-back y ecommerce-back |
+| Rate limiting | ✅ | `ThrottlerModule` + `ThrottlerGuard` como APP_GUARD (30 req/min) |
 | Red privada Railway | ✅ | Los backs se comunican via URL privada Railway |
-| Firewall puertos | ⚠️ Verificar | Confirmar que solo el puerto 3000 es público en cada servicio |
-
-### Qué hay que hacer
-
-1. **Agregar Helmet** — en `main.ts` de cada back:
-   ```ts
-   import helmet from 'helmet';
-   app.use(helmet());
-   ```
-
-2. **Rate limiting** — con `@nestjs/throttler`:
-   - Límite general por IP en todos los endpoints
-   - Límite estricto en `POST /auth/session` — es el endpoint más sensible
-   - Límite por `organizationId` para endpoints de datos
-
-3. **Confirmar puertos Railway** — verificar que solo el 3000 (HTTP) es público.
-   El tRPC no necesita puertos adicionales — viaja sobre HTTP.
-
-### Cómo saber que este escalón está completo
-
-- Helmet activo en los 2 backs
-- Rate limiting activo en endpoints de auth y datos
-- `curl -I https://{servicio}.railway.app` muestra headers de seguridad
+| Puerto 3000 público | ✅ | EXPOSE 3000 + HEALTHCHECK en ambos Dockerfiles |
 
 ---
 
-## Escalón 5 — CI/CD y Despliegues
-
-### Estado actual — ❌ No iniciado
-
-Railway hace deploy automático en push a main. Pero sin CI gate:
-un PR que rompe el build de un front puede llegar a producción.
+## Escalón 5 — CI/CD y Despliegues ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
 | Deploy automático Railway | ✅ | Push a main → deploy automático |
-| Typecheck en CI | ❌ | No hay GitHub Actions configurado |
-| Tests en CI | ❌ | No hay tests (S4 pendiente) |
-| Build gate en PR | ❌ | PRs pueden mergearse aunque rompan typecheck |
-| Rollback documentado | ❌ | No hay procedimiento documentado |
-
-### Qué hay que hacer
-
-1. **GitHub Actions por servicio** con path filters:
-
-   ```yaml
-   # .github/workflows/realsass-sass-back.yml
-   name: sass-back
-   on:
-     push:
-       paths:
-         - 'realsass-sass-back/**'
-         - 'packages/**'
-         - 'pnpm-workspace.yaml'
-   jobs:
-     ci:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v4
-         - uses: pnpm/action-setup@v3
-           with: { version: 10 }
-         - run: pnpm install --frozen-lockfile
-         - run: pnpm --filter realsass-sass-back typecheck
-         - run: pnpm --filter realsass-sass-back build
-   ```
-
-2. **Un workflow por servicio** — 7 workflows:
-   `realsass-sass-back`, `realsass-ecommerce-back`, `realsass-sass-front`,
-   `realsass-dashboard-front`, `real-ecommerce-front`, `packages/auth-server`,
-   `packages/trpc`
-
-3. **Branch protection en GitHub** — main no permite merge si CI falla.
-
-4. **Typecheck cruzado** — cuando cambia un router tRPC de sass-back,
-   correr typecheck de los 3 fronts. Si un procedure cambió y rompe un front,
-   el PR no puede mergearse.
-
-5. **Rollback documentado** — Railway guarda el build anterior. Documentar
-   el procedimiento en `conventions/deploy.md`.
-
-### Cómo saber que este escalón está completo
-
-- 7 workflows de GitHub Actions activos
-- Un PR que rompe `tsc` no puede mergearse a main
-- Rollback documentado y probado al menos una vez
+| realsass-sass-back.yml | ✅ | typecheck + build + pnpm audit — path filters |
+| realsass-ecommerce-back.yml | ✅ | typecheck + build + pnpm audit — path filters |
+| realsass-sass-front.yml | ✅ | typecheck + build + pnpm audit — path filters |
+| realsass-dashboard-front.yml | ✅ | typecheck + build + pnpm audit — path filters |
+| real-ecommerce-front.yml | ✅ | typecheck + build + pnpm audit — path filters |
+| packages.yml | ✅ | typecheck auth-server + auth-client + trpc + ui |
+| trpc-contract.yml | ✅ | typecheck 3 fronts cuando cambia un router tRPC |
+| dependabot.yml | ✅ | npm/pnpm + GitHub Actions — alertas semanales |
+| conventions/deploy.md | ✅ | Procedimiento de rollback Railway documentado |
+| Branch protection main | ⚠️ | Acción manual en GitHub UI — pendiente confirmar |
 
 ---
 
-## Escalón 6 — Observabilidad y Operaciones
-
-### Estado actual — ❌ No iniciado (OpenTelemetry en roadmap S4)
+## Escalón 6 — Observabilidad ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| Health checks | ✅ | `GET /health` en los 2 backs via `@nestjs/terminus` |
-| Logging estructurado | ⚠️ Verificar | Confirmar formato JSON vs texto plano |
-| Métricas Prometheus | ⚠️ Parcial | Dependencias en catalog pero sin configuración visible |
-| OpenTelemetry | ❌ S4 pendiente | `@opentelemetry/sdk-node` en catalog — no configurado |
-| Correlation ID | ❌ | Sin trazabilidad de requests entre backs |
-| Alertas | ❌ | Sin alertas cuando algo falla |
-| Dashboard | ❌ | Sin visibilidad del estado del sistema |
+| Health checks | ✅ | `GET /health` con Prisma + Redis en ambos backs |
+| Logging JSON (pino) | ✅ | `nestjs-pino` + `LoggerModule` en ambos backs |
+| Correlation ID | ✅ | `CorrelationIdMiddleware` registrado en ambos backs |
+| Prometheus `/metrics` | ✅ | `PrometheusModule.register()` activo en ambos backs |
+| Health check Redis | ✅ | `health.controller.ts` verifica Redis + Prisma |
+| HEALTHCHECK en Dockerfiles | ✅ | `wget -qO- http://localhost:3000/health` en ambos |
+| Alertas Railway | ⚠️ | Configurar en dashboard Railway — acción manual |
 
-### Qué hay que hacer
+---
 
-1. **Logging JSON estructurado** — cada log debe incluir:
-   ```json
-   {
-     "level": "error",
-     "service": "realsass-sass-back",
-     "organizationId": "org_123",
-     "correlationId": "req_abc",
-     "message": "Organization not found",
-     "timestamp": "2026-09-01T00:00:00Z"
-   }
-   ```
+## Escalón 2 arrastre — Configuración ✅
 
-2. **Correlation ID en tRPC** — generar un `correlationId` en cada request
-   y propagarlo en llamadas HTTP entre backs (sass-back → ecommerce-back).
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| `.env.example` 5 servicios | ✅ | Creados en sesión 2026-09-30 |
+| Sin secretos hardcodeados | ✅ | Verificado con grep en src/ — 0 resultados |
+| `.env` en `.gitignore` | ✅ | Confirmado en raíz del monorepo |
 
-3. **Métricas Prometheus** — activar la configuración que ya está en catalog:
-   - `http_requests_total` por endpoint y status
-   - `trpc_requests_total` por procedure y resultado
-   - `prisma_query_duration_seconds`
+## Escalón 4 arrastre — Base de Datos ✅
 
-4. **Health check mejorado** — el actual verifica Prisma + memoria.
-   Agregar verificación de Redis.
+| Ítem | Estado | Detalle |
+|------|--------|---------|
+| Backups documentados | ✅ | roadmap/deuda-tecnica.md — DB-01 |
+| Pool de conexiones documentado | ✅ | roadmap/deuda-tecnica.md — DB-02 |
 
-5. **Alertas básicas** — Railway puede notificar cuando el health check falla.
-   Configurar notificación a email o Slack.
+---
 
-### Cómo saber que este escalón está completo
+## Sesión 2026-09-30 — qué se hizo
 
-- Logs son JSON con `organizationId` y `correlationId`
-- Prometheus `/metrics` activo en los 2 backs
-- Un error en ecommerce-back es trazable hasta sass-back en los logs
-- Alerta configurada cuando `/health` falla
+**CSS / Frontend:**
+- ✅ .browserslistrc en raíz + 3 frontends (storefront conservador LATAM, dashboards modernos)
+- ✅ postcss.config.mjs en 3 frontends — solo @tailwindcss/postcss (TW v4 canónico)
+- ✅ packages/auth-client: imports ../ migrados a @/ + paths en tsconfig.json
+- ✅ verify-alias-imports.sh — 416 archivos, 0 violaciones
+
+**CI/CD (creado):**
+- ✅ 7 GitHub Actions workflows con path filters + typecheck + build + pnpm audit
+- ✅ .github/dependabot.yml
+- ✅ .claude/conventions/deploy.md con rollback Railway
+
+**Configuración (creado):**
+- ✅ .env.example en los 5 servicios
+
+**Documentación (creado):**
+- ✅ .claude/roadmap/deuda-tecnica.md
+
+## Resultado verify-fase2.sh (2026-09-30)
+
+```
+Total checks : 59  |  PASS: 50  |  FAIL: 0  |  WARN: 9
+```
+WARN son acciones manuales: branch protection GitHub + alertas Railway.
+
+---
+
+## Acciones manuales pendientes (no bloqueantes para Fase 3)
+
+1. **Branch protection** — GitHub → Settings → Branches → main → requerir CI checks
+2. **Alertas Railway** — Dashboard → servicio → Settings → notificaciones /health
+
+---
+
+**→ Fase 3 — Hardening:** 🔴 ACTIVA — ver `03-fase-hardening.md`

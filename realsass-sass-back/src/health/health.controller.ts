@@ -1,15 +1,46 @@
+/**
+ * health.controller.ts — realsass-sass-back
+ *
+ * GET /health — 3 estados:
+ *   ok:       db + redis UP con latencia normal
+ *   degraded: db o redis UP pero latencia > LATENCY_WARN_MS (200ms)
+ *             o una dependencia UP + otra DOWN (servicio parcialmente funcional)
+ *   down:     db DOWN (sin DB no podemos servir ningún request)
+ *
+ * Railway usa este endpoint para healthcheck — respuesta en < 200ms obligatoria.
+ * E12-02 — Fase 4 / Escalón 12
+ */
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { Public }        from '@real/auth-server';
 import { PrismaService } from '@/prisma/prisma.service';
 import { RedisService }  from '@/redis/redis.service';
 
-interface HealthDetail { status: 'up' | 'down'; latencyMs: number }
+const LATENCY_WARN_MS = 200;
+
+type HealthStatus = 'ok' | 'degraded' | 'down';
+
+interface HealthDetail {
+  status:    'up' | 'down';
+  latencyMs: number;
+}
+
 interface HealthResponse {
-  status:  'ok' | 'degraded';
+  status:  HealthStatus;
   db:      HealthDetail;
   redis:   HealthDetail;
   uptime:  number;
   version: string;
+}
+
+function resolveStatus(db: HealthDetail, redis: HealthDetail): HealthStatus {
+  // down: DB caída → no podemos servir ningún request
+  if (db.status === 'down') return 'down';
+
+  // degraded: Redis caído (fallback a MemoryCache pero con limitaciones) o latencia alta
+  if (redis.status === 'down') return 'degraded';
+  if (db.latencyMs > LATENCY_WARN_MS || redis.latencyMs > LATENCY_WARN_MS) return 'degraded';
+
+  return 'ok';
 }
 
 @Public()
@@ -31,7 +62,8 @@ export class HealthController {
       })(),
       (async () => {
         const t = Date.now();
-        await this.redis.set('health:ping', 'pong', 5).catch(() => { throw new Error('redis') });
+        await this.redis.set('health:ping', 'pong', 5)
+          .catch(() => { throw new Error('redis unreachable'); });
         return { status: 'up' as const, latencyMs: Date.now() - t };
       })(),
     ]);
@@ -40,7 +72,7 @@ export class HealthController {
     const redis = redisR.status === 'fulfilled' ? redisR.value : { status: 'down' as const, latencyMs: 0 };
 
     return {
-      status:  db.status === 'down' || redis.status === 'down' ? 'degraded' : 'ok',
+      status:  resolveStatus(db, redis),
       db,
       redis,
       uptime:  Math.floor(process.uptime()),

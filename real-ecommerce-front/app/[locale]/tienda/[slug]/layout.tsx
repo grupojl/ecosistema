@@ -1,4 +1,9 @@
 // app/[locale]/tienda/[slug]/layout.tsx
+
+// ISR: revalidar la tienda cada hora. El slug + store info cambia poco.
+// Para datos más dinámicos (stock, precios), usar SWR en el Client Component.
+// E11-05 — Fase 4 / Escalón 11
+export const revalidate = 3600;
 // Server Component — resuelve slug + locale antes de renderizar children.
 import { notFound } from 'next/navigation'
 import Link from 'next/link'

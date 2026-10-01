@@ -40,7 +40,7 @@ export function useAddToCart() {
   const utils         = trpc.useUtils();
 
   return trpc.customer.cartAddItem.useMutation({
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       const id = data?.id ?? data?.data?.id;
       if (id) storeCartId(id);
       void utils.customer.cartGet.invalidate();

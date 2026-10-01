@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { storeJsonLd, productJsonLd, breadcrumbJsonLd, serializeJsonLd } from '@/lib/seo/json-ld'
+import { storeJsonLd, productJsonLd, breadcrumbJsonLd, serializeJsonLd, type JsonLdObject } from '@/lib/seo/json-ld'
 import { toProductView, type ProductLike } from '@/lib/catalog/product-view'
 
 const product: ProductLike = {
@@ -26,9 +26,9 @@ describe('productJsonLd', () => {
   it('un único precio → Offer simple', () => {
     const view = toProductView(product)
     const ld = productJsonLd({ product: view, url: '/es/tienda/x/productos/y', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any // @real/jsonb-cast)['@type']).toBe('Offer')
-    expect((ld.offers as any // @real/jsonb-cast).price).toBe('150.00')
-    expect((ld.offers as any // @real/jsonb-cast).availability).toContain('InStock')
+    expect((ld.offers as JsonLdObject)['@type']).toBe('Offer')
+    expect((ld.offers as JsonLdObject).price).toBe('150.00')
+    expect((ld.offers as JsonLdObject).availability).toContain('InStock')
   })
 
   it('rango de precio (variantes distintas) → AggregateOffer', () => {
@@ -41,9 +41,9 @@ describe('productJsonLd', () => {
     }
     const view = toProductView(withRange)
     const ld = productJsonLd({ product: view, url: '/x', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any // @real/jsonb-cast)['@type']).toBe('AggregateOffer')
-    expect((ld.offers as any // @real/jsonb-cast).lowPrice).toBe('150.00')
-    expect((ld.offers as any // @real/jsonb-cast).highPrice).toBe('160.00')
+    expect((ld.offers as JsonLdObject)['@type']).toBe('AggregateOffer')
+    expect((ld.offers as JsonLdObject).lowPrice).toBe('150.00')
+    expect((ld.offers as JsonLdObject).highPrice).toBe('160.00')
   })
 
   it('sin stock → availability OutOfStock', () => {
@@ -52,7 +52,7 @@ describe('productJsonLd', () => {
       variants: [{ id: 'v1', title: '40', priceCents: 15000, currency: 'ARS', inventory: { quantityAvailable: 0, quantityReserved: 0 } }],
     }
     const ld = productJsonLd({ product: toProductView(outOfStock), url: '/x', storeName: 'Mi Marca', inLanguage: 'es' })
-    expect((ld.offers as any // @real/jsonb-cast).availability).toContain('OutOfStock')
+    expect((ld.offers as JsonLdObject).availability).toContain('OutOfStock')
   })
 
   it('sin variantes → sin offers, no revienta', () => {
@@ -68,7 +68,7 @@ describe('breadcrumbJsonLd', () => {
       { name: 'Inicio', url: '/es/tienda/x' },
       { name: 'Calzado', url: '/es/tienda/x/categoria/calzado' },
     ])
-    const items = ld.itemListElement as any // @real/jsonb-cast[]
+    const items = ld.itemListElement as JsonLdObject[]
     expect(items[0].position).toBe(1)
     expect(items[1].position).toBe(2)
   })

@@ -15,14 +15,12 @@ const validStore = {
   ecommerceEnabled: true,
 };
 
-function mockFetch(status: number, body: unknown): jest.Mock {
-  const fn = jest.fn().mockResolvedValue({
+function mockFetch(status: number, body: unknown): jest.SpyInstance {
+  return jest.spyOn(globalThis, 'fetch').mockResolvedValue({
     status,
     ok:   status >= 200 && status < 300,
     json: () => Promise.resolve(body),
-  });
-  global.fetch = fn as unknown as typeof // @real/jsonb-cast fetch;
-  return fn;
+  } as Response);
 }
 
 describe('parseSassBackStoreResponse (contrato)', () => {
@@ -50,49 +48,53 @@ describe('parseSassBackStoreResponse (contrato)', () => {
 });
 
 describe('StoreService.resolveBySlug', () => {
-  const originalFetch = global.fetch;
-  const originalEnv   = process.env['SASS_BACK_URL'];
+  const originalEnv = process.env['SASS_BACK_URL'];
+  let fetchSpy: jest.SpyInstance;
 
-  beforeEach(() => { process.env['SASS_BACK_URL'] = 'http://sass-back.test/api/v1'; });
+  beforeEach(() => {
+    process.env['SASS_BACK_URL'] = 'http://sass-back.test/api/v1';
+  });
+
   afterEach(() => {
-    global.fetch = originalFetch;
     process.env['SASS_BACK_URL'] = originalEnv;
+    fetchSpy?.mockRestore();
   });
 
   it('devuelve StoreInfo validado con countryCode', async () => {
-    const fetchMock = mockFetch(200, { success: true, data: validStore });
+    fetchSpy = mockFetch(200, { success: true, data: validStore });
     const store = await new StoreService().resolveBySlug('mi marca');
     expect(store.countryCode).toBe('BR');
-    expect(fetchMock.mock.calls[0][0]).toBe('http://sass-back.test/api/v1/organizations/public/by-slug/mi%20marca');
+    expect(fetchSpy.mock.calls[0][0]).toBe('http://sass-back.test/api/v1/organizations/public/by-slug/mi%20marca');
   });
 
   it('404 upstream → NotFound', async () => {
-    mockFetch(404, {});
+    fetchSpy = mockFetch(404, {});
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('ecommerce deshabilitado → NotFound', async () => {
-    mockFetch(200, { ...validStore, ecommerceEnabled: false });
+    fetchSpy = mockFetch(200, { ...validStore, ecommerceEnabled: false });
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('5xx upstream → 503 (Google no desindexa)', async () => {
-    mockFetch(502, {});
+    fetchSpy = mockFetch(502, {});
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('error de red → 503', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET')) as unknown as typeof // @real/jsonb-cast fetch;
+    fetchSpy = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNRESET'));
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('contrato roto upstream → 503', async () => {
-    mockFetch(200, { unexpected: true });
+    fetchSpy = mockFetch(200, { unexpected: true });
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('SASS_BACK_URL vacío → 503', async () => {
     process.env['SASS_BACK_URL'] = '';
+    fetchSpy = mockFetch(200, validStore);
     await expect(new StoreService().resolveBySlug('x')).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

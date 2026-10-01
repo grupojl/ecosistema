@@ -1,3 +1,4 @@
+import type { MarketsService } from '@/markets/markets.service'
 /**
  * Integration test del contrato tRPC de Markets.
  * Usa el router real con un servicio mockeado.
@@ -5,7 +6,7 @@
 import { createMarketsRouter } from '@/trpc/routers/markets.router'
 import { createCallerFactory }  from '@trpc/server'
 
-const mockService = {
+const mockService: jest.Mocked<MarketsService> = {
   list:          jest.fn(),
   create:        jest.fn(),
   update:        jest.fn(),
@@ -16,7 +17,7 @@ const mockService = {
 }
 
 describe('marketsRouter (tRPC integration)', () => {
-  const router      = createMarketsRouter(mockService as any)
+  const router      = createMarketsRouter(mockService)
   const createCaller = createCallerFactory(router)
   const caller      = createCaller({})
 

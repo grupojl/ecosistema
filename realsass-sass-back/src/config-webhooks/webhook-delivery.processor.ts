@@ -35,8 +35,8 @@ export class WebhookDeliveryProcessor extends WorkerHost {
       statusCode = res.status;
       success    = res.ok;
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    } catch (e: any) {
-      error = e.message ?? 'Unknown error';
+    } catch (e: unknown) {
+      error = (e instanceof Error ? e.message : String(e)) ?? 'Unknown error';
       this.logger.warn(`Webhook ${webhookId} falló (intento ${job.attemptsMade + 1}): ${error}`);
       throw e;
     } finally {

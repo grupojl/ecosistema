@@ -1,4 +1,7 @@
 // app/[locale]/tienda/[slug]/productos/page.tsx — Listado paginado
+
+// ISR: catálogo de productos revalida cada 30 min (stock puede cambiar más seguido)
+export const revalidate = 1800;
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProducts } from '@/lib/store'

@@ -20,8 +20,15 @@
  *   customerProcedure  → requiere customerId + organizationId
  */
 import { initTRPC, TRPCError } from '@trpc/server';
+import { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
+
+// Extiende Request con los campos que inyectan los middlewares de auth
+interface AuthenticatedRequest extends Request {
+  user?:   { uid: string; email?: string };
+  tenant?: { organizationId: string; role: string; userId?: string };
+}
 
 // ─── Context unificado ────────────────────────────────────────────────────────
 
@@ -37,8 +44,9 @@ export interface TrpcContext {
 }
 
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
-  const user           = (req as any // @real/jsonb-cast).user   ?? null;
-  const tenant         = (req as any // @real/jsonb-cast).tenant ?? null;
+  const typedReq       = req as AuthenticatedRequest;
+  const user           = typedReq.user   ?? null;
+  const tenant         = typedReq.tenant ?? null;
   const organizationId =
     tenant?.organizationId ??
     (req.headers['x-organization-id'] as string | undefined) ??
@@ -63,8 +71,8 @@ const t = initTRPC.context<TrpcContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof Error && 'issues' in (error.cause as any // @real/jsonb-cast)
-            ? (error.cause as any // @real/jsonb-cast).issues
+          error.cause instanceof ZodError
+            ? error.cause.issues
             : null,
       },
     };
@@ -98,10 +106,8 @@ const enforceCustomer = t.middleware(({ ctx, next }) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-export const router             = t.router;
-export const publicProcedure    = t.procedure;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const adminProcedure     = t.procedure.use(enforceAdmin)     as any // @real/jsonb-cast;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly) as any // @real/jsonb-cast;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const { router, procedure: publicProcedure } = t;
+
+export const adminProcedure     = t.procedure.use(enforceAdmin);
+export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly);
+export const customerProcedure  = t.procedure.use(enforceCustomer);

@@ -19,7 +19,7 @@ const SYSTEM_TARGET_LABELS: Record<string, string> = {
 export default function FlagsPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useFlags(organizationId);
-  const flags = Array.isArray(data) ? data : (data as any // @real/jsonb-cast)?.data ?? [];
+  const flags = Array.isArray(data) ? data : Array.isArray(data) ? data : (data as { data?: unknown[] } | undefined)?.data ?? [];
 
   const updateMutation = useUpdateFlag();
 

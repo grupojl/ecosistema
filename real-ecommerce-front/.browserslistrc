@@ -1,0 +1,34 @@
+# .browserslistrc — real-ecommerce-front
+# Storefront público B2C con tráfico LATAM
+#
+# Justificación del target conservador:
+#   - Android 8+ con Chrome/WebView es habitual en mercados LATAM de gama media
+#   - Safari 14 = iPhone 6S (todavía activo, no alcanzó fin de vida en 2024)
+#   - samsung >= 14 cubre Galaxy A-series predominante en la región
+#
+# Qué activa Lightning CSS con este target (transformaciones automáticas):
+#   - oklch() → fallback rgb/hex en Safari < 15.4
+#   - color-mix()         → fallback en browsers sin soporte
+#   - CSS nesting nativo  → desanidado para Chrome < 112
+#   - logical properties  → margin-inline: x → margin-left/right: x
+#   - :is(), :where()     → prefijos donde aplica
+#   - gap en flexbox      → fallback para Chrome < 84
+#
+# Validar cobertura real: npx browserslist --config=real-ecommerce-front/.browserslistrc
+
+[production]
+>= 0.3%
+last 3 major versions
+not dead
+not ie <= 11
+not op_mini all
+ios_saf >= 14
+safari >= 14
+chrome >= 90
+firefox >= 90
+samsung >= 14
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version

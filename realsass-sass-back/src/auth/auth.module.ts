@@ -11,6 +11,7 @@
  */
 import { Module }                                       from '@nestjs/common';
 import { SessionService, AuthSessionController }        from '@real/auth-server';
+import { AuthSessionThrottledController }               from '@/auth/auth-session-throttled.controller';
 import { AuthService }                                  from '@/auth/auth.service';
 import { AuthController }                               from '@/auth/auth.controller';
 import { ClaimsService }                                from '@/auth/claims.service';
@@ -19,7 +20,7 @@ import { UsersModule }                                  from '@/users/users.modu
 @Module({
   imports:     [UsersModule],
   providers:   [AuthService, ClaimsService, SessionService],
-  controllers: [AuthController, AuthSessionController],
+  controllers: [AuthController, AuthSessionThrottledController],
   exports:     [AuthService, ClaimsService, SessionService],
 })
 export class AuthModule {}

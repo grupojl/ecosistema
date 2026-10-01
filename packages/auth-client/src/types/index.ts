@@ -48,6 +48,6 @@ export interface AffiliateData {
 
 export interface ApiEnvelope<T> {
   success:  boolean;
-  data:     T;
+  data?:    T;
   message?: string;
 }

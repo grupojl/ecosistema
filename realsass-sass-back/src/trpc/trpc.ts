@@ -16,7 +16,7 @@
  *   ownerProcedure   → requiere uid + organizationId + role === 'OWNER'
  */
 import { initTRPC, TRPCError } from '@trpc/server';
-import type { ZodError } from 'zod';
+import { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
 
@@ -61,8 +61,8 @@ const t = initTRPC.context<TrpcContext>().create({
       data: {
         ...shape.data,
         zodError:
-          error.cause instanceof Error && 'issues' in (error.cause as unknown as ZodError) // @real/zod-type
-            ? (error.cause as unknown as ZodError).issues // @real/zod-type
+          error.cause instanceof ZodError
+            ? error.cause.issues
             : null,
       },
     };
@@ -104,6 +104,6 @@ export const router           = t.router;
 export const publicProcedure  = t.procedure;
 export const authProcedure:   any = t.procedure.use(enforceAuth);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const tenantProcedure: any = t.procedure.use(enforceTenant);
+export const tenantProcedure = t.procedure.use(enforceTenant);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ownerProcedure:  any = t.procedure.use(enforceOwner);

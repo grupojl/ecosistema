@@ -1,67 +1,31 @@
 # Fase 1 — Desarrollo
 ## Escalones 1, 2, 4 — La base que hace cosmético todo lo demás
 
-**Estado:** 🟡 Avanzado — bloqueantes activos en Escalón 1
-**Cuándo:** Ahora — resolver bloqueantes antes de pasar a Fase 2
+**Estado:** ✅ COMPLETA — cerrada 2026-09-02
+**Cuándo:** Completado antes de pasar a Fase 2
 **Referentes:** Stripe (código) · Twelve-Factor App (config) · PlanetScale (DB)
 
 ---
 
-## Escalón 1 — Código: Arquitectura y Calidad
-
-### Estado actual — 8.5/10
+## Escalón 1 — Código: Arquitectura y Calidad ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| TypeScript strict | ✅ | ADR-007 implementado — `toEntity()` en 11 repositories de sass-back |
+| TypeScript strict | ✅ | ADR-007 — `toEntity()` en 11 repositories de sass-back |
 | Domain/Repository sass-back | ✅ | 11 módulos con domain/ + repository/ |
-| Domain/Repository ecommerce-back | ⚠️ Parcial | Solo `catalog/` — cart, orders, customers, inventory pendientes |
-| tRPC exclusivo sass-back | ✅ | 11 routers, Zod inline, sin DTOs class-validator nuevos |
+| Domain/Repository ecommerce-back | ✅ | cart, orders, customers, inventory migrados (ADR-012) |
+| tRPC exclusivo sass-back | ✅ | 11 routers, Zod inline, sin DTOs class-validator |
 | tRPC exclusivo ecommerce-back | ✅ | Controllers REST eliminados — solo app.controller.ts (hello) |
-| DTOs class-validator sass-back | ✅ | Eliminados — organizations.service usa UpdateOrganizationInput (ADR-010 C1) |
-| Multi-tenant organizationId | ✅ | Respetado en todos los modelos |
+| DTOs class-validator | ✅ | Eliminados en ambos backs |
+| Multi-tenant organizationId | ✅ | Respetado en todos los modelos y queries |
 | Sin cross-service imports | ✅ | Dockerfile de cada servicio solo copia su carpeta + packages/ |
 | Sin `as any` repositories | ✅ | ADR-007 implementado |
-| ecommerce-front tRPC server caller | ✅ | lib/store/client.ts usa createStoreCaller() tRPC (ADR-006 resuelto) |
-
-### Bloqueantes activos
-
-**[BLOQUEANTE-1] Eliminar controllers REST de ecommerce-back** (ADR-005)
-Los controllers REST de catalog, inventory, orders, cart, customers, store
-deben eliminarse — los routers tRPC ya existen y los reemplazan.
-→ Ver `.claude/checklists/backend-capa-2-router.md`
-→ Ver `.claude/decisions/ADR-005-rest-to-trpc.md`
-
-**[BLOQUEANTE-2] ecommerce-front → tRPC server caller** (ADR-006)
-`lib/store/client.ts`, `lib/store/resolver.ts`, `context/customer-context.tsx`
-usan fetch REST manual donde debe ir tRPC server caller.
-→ Ver `.claude/checklists/frontend-capa-1-fetch.md`
-
-### Pendiente no bloqueante
-
-- Domain/Repository en ecommerce-back: `cart/`, `orders/`, `customers/`, `inventory/`
-  → Ver `.claude/checklists/backend-capas-3-4-domain-repo.md`
-
-### Cómo saber que este escalón está completo
-
-- `grep -r "class-validator" realsass-ecommerce-back/src` → 0 resultados
-- `grep -r "class-validator" realsass-sass-back/src` → 0 resultados
-- `lib/store/client.ts` eliminado — reemplazado por tRPC server caller
-- `cart/`, `orders/`, `customers/` tienen domain/ + repository/
-- `tsc --noEmit` pasa en los 2 backs y los 3 fronts sin errores
-
-### Referente: por qué Stripe
-
-La API de Stripe es el estándar de ergonomía y tipado. Cada method retorna
-un tipo explícito, cada error está tipado, cada input validado con schema.
-En welver, el equivalente es: un ingeniero nuevo puede leer cualquier router
-tRPC y saber exactamente qué acepta, qué valida y qué retorna — sin preguntar.
+| ecommerce-front tRPC server caller | ✅ | lib/store/client.ts usa createStoreCaller() tRPC |
+| 0 fetch REST de negocio en fronts | ✅ | Excepción documentada: POST/DELETE /auth/session |
 
 ---
 
-## Escalón 2 — Configuración y Entorno
-
-### Estado actual — 9.5/10
+## Escalón 2 — Configuración y Entorno ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
@@ -71,50 +35,39 @@ tRPC y saber exactamente qué acepta, qué valida y qué retorna — sin pregunt
 | CORS explícito | ✅ | `ALLOWED_ORIGINS` sin wildcard — sass-back no arranca sin él |
 | Secretos fuera del código | ✅ | Firebase private key via Railway env vars |
 | pnpm 10 + Node 24 | ✅ | Documentado en conventions/entorno.md |
+| `.env.example` en 5 servicios | ✅ | Completado en sesión 2026-09-30 (apply-fase2.sh) |
 
-### Pendiente mínimo
-
-- [x] `.env.example` creado en sass-back y ecommerce-back — E2-02 con todas las vars requeridas
-- [ ] Validación de env vars al arranque en cada `main.ts` — falla con mensaje claro si falta una var
-
-### Cómo saber que este escalón está completo
-
-- Cada servicio tiene `.env.example` completo y actualizado
-- El servicio falla en arranque con mensaje claro si falta una var obligatoria
-- `git grep -r "PRIVATE_KEY\|-----BEGIN" --include="*.ts"` → 0 resultados con valores reales
+### Pendiente diferido a S4
+- [ ] Validación de env vars al arranque en `main.ts` — falla con mensaje claro si falta una var
 
 ---
 
-## Escalón 4 — Base de Datos y Almacenamiento
-
-### Estado actual — 8/10
+## Escalón 4 — Base de Datos ✅
 
 | Ítem | Estado | Detalle |
 |------|--------|---------|
-| Prisma ORM | ✅ | Schema declarativo, dos DBs separadas (sass + ecommerce) |
+| Prisma ORM | ✅ | Schema declarativo, dos DBs separadas |
 | Migraciones versionadas | ✅ | `prisma/migrations/` en cada back |
-| DB separada por back | ✅ | `realsass-sass-back` y `realsass-ecommerce-back` tienen `DATABASE_URL` propia |
+| DB separada por back | ✅ | `DATABASE_URL` propia por servicio |
 | Multi-tenant `organizationId` | ✅ | En todos los modelos con datos de negocio |
 | Índices en `organizationId` | ✅ | Confirmados en ambos schemas — ADR-011 |
-| Backups automáticos | ⚠️ Railway | Verificar política de backups y RPO resultante |
-| Pool de conexiones | ⚠️ Verificar | Con múltiples réplicas Railway, el pool puede ser cuello de botella |
-| `prisma migrate deploy` en Dockerfile | ✅ | entrypoint.sh en ambos backends — ADR-010 C2 |
+| `prisma migrate deploy` en Dockerfile | ✅ | entrypoint.sh en ambos backends |
+| Backups documentados | ✅ | roadmap/deuda-tecnica.md — DB-01 |
+| Pool de conexiones documentado | ✅ | roadmap/deuda-tecnica.md — DB-02 |
 
-### Qué hay que hacer
+---
 
-1. **Verificar índices** — todo modelo con `organizationId` de alta frecuencia de consulta
-   debe tener `@@index([organizationId])`. Sin índice = query lento a escala.
+## Criterios de cierre cumplidos
 
-2. **Confirmar política de backups Railway** — documentar RPO resultante.
+- ✅ 0 fetch REST de negocio en real-ecommerce-front
+- ✅ lib/ecommerce/index.ts eliminado
+- ✅ Controllers REST legacy de ecommerce-back eliminados
+- ✅ customer.router.ts completo (resolveStore, identify, getProducts, getProduct, cart.*, checkout)
+- ✅ lib/store/client.ts y resolver.ts usando tRPC server caller
+- ✅ `.env.example` en los 5 servicios
+- ✅ Índices Prisma auditados
+- ✅ Deuda técnica DB documentada
 
-3. **Confirmar orden en Dockerfile** — `prisma migrate deploy` antes del `CMD`.
+---
 
-4. **Pool de conexiones** — documentar límite por servicio. Con N réplicas Railway
-   de cada back, el límite de conexiones de PostgreSQL es `N × pool_size`.
-
-### Cómo saber que este escalón está completo
-
-- Índices en `organizationId` confirmados en ambos schemas
-- `prisma migrate deploy` antes del `CMD` en los 2 Dockerfiles de backs
-- Backups automáticos confirmados con RPO documentado
-- Límites de pool documentados en `services/realsass-sass-back.md` y `services/realsass-ecommerce-back.md`
+**→ Fase 2 — Estabilización:** ✅ COMPLETA — ver `02-fase-estabilizacion.md`

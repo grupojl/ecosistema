@@ -14,10 +14,10 @@ export function useUpdateFlag() {
     onMutate: async (variables) => {
       await utils.configFlags.list.cancel();
       const previous = utils.configFlags.list.getData();
-      utils.configFlags.list.setData(undefined, (old: any) => {
+      utils.configFlags.list.setData(undefined, (old) => {
         if (!old) return old;
         const list = Array.isArray(old) ? old : old?.data ?? [];
-        const updated = list.map((f: any) =>
+        const updated = list.map((f) =>
           f.id === variables.flagId
             ? { ...f, ...(variables.enabled !== undefined && { enabled: variables.enabled }) }
             : f,
@@ -26,10 +26,11 @@ export function useUpdateFlag() {
       });
       return { previous };
     },
-    onError: (_err: any, _vars: any, context: any) => {
+    onError: (_err: unknown, _vars: unknown, context) => {
       if (context?.previous !== undefined) {
         utils.configFlags.list.setData(undefined, context.previous);
       }
     },
     onSettled: () => { void utils.configFlags.list.invalidate(); },
   });
+}

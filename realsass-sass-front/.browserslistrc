@@ -1,0 +1,26 @@
+# .browserslistrc — realsass-sass-front
+# Dashboard de dueños (OWNER): landing pública + /profile + /settings
+#
+# Justificación del target moderno:
+#   - Usuarios OWNER son dueños del negocio que eligieron este SaaS
+#   - Acceso típico desde Mac/PC con Chrome/Safari/Firefox modernos
+#   - No se esperan visitas desde Android bajo ni iPhone pre-2020
+#   - Fallbacks mínimos → CSS más liviano, menos transformaciones
+#
+# NOTA: la landing pública (/) puede tener algo más de diversidad de dispositivos,
+# pero el perfil OWNER justifica mantener el target moderno para todo el servicio.
+#
+# Validar: npx browserslist --config=realsass-sass-front/.browserslistrc
+
+[production]
+last 2 chrome versions
+last 2 firefox versions
+last 2 safari versions
+last 2 edge versions
+not dead
+not ie <= 11
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version

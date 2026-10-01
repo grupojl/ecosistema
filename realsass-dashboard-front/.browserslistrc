@@ -1,0 +1,23 @@
+# .browserslistrc — realsass-dashboard-front
+# Dashboard de colaboradores (ADMIN/MEMBER/VIEWER): gestión interna
+#
+# Justificación del target moderno:
+#   - Usuarios internos de la organización del cliente
+#   - Acceso desde equipos de empresa (Chrome/Edge/Firefox corporativo)
+#   - Contexto B2B: IT generalmente mantiene browsers actualizados
+#   - RBAC OWNER > ADMIN > MEMBER > VIEWER — todos usuarios internos
+#
+# Validar: npx browserslist --config=realsass-dashboard-front/.browserslistrc
+
+[production]
+last 2 chrome versions
+last 2 firefox versions
+last 2 safari versions
+last 2 edge versions
+not dead
+not ie <= 11
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version

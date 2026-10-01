@@ -1,0 +1,22 @@
+# .browserslistrc — raíz del monorepo welver/
+# Leído por: Lightning CSS (Tailwind v4), SWC (Next.js), postcss-preset-env
+#
+# Norte: Vercel Next.js defaults + Tailwind CSS team targets
+# Validar: npx browserslist  |  https://browsersl.ist
+#
+# Este archivo actúa como FALLBACK para cualquier servicio sin override local.
+# Los frontends con perfil propio tienen su propio .browserslistrc en su carpeta.
+#
+# Referencia: https://github.com/browserslist/browserslist
+
+[production]
+>= 0.5%
+last 2 major versions
+not dead
+not ie <= 11
+not op_mini all
+
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version

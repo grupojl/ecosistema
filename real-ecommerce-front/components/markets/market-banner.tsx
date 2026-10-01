@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useMarketStore }      from '@/store/use-market-store'
+import { useMarketStore }      from '@/stores/use-market-store'
 
 const COUNTRY_NAMES: Record<string, string> = {
   CO: 'Colombia', MX: 'México', BR: 'Brasil', CL: 'Chile',
