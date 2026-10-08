@@ -75,3 +75,16 @@ inconsistencia si ambos existen para el mismo servicio.
 Levanta `postgres-back` (5432), `postgres-ecommerce` (5433) y `redis` (6379)
 para desarrollo local. No se usa en producción — Railway provisiona sus
 propias instancias gestionadas.
+
+## Reglas de Dockerfile aprendidas en Railway (2026-10-08)
+
+- **Sin `RUN --mount=type=cache`**: Railway exige `id=s/<id-del-servicio>-…` y un Dockerfile no conoce ese id
+  (`dockerfile invalid: … missing the cacheKey prefix`). Las plantillas de `architecture/05` y `06` todavía los
+  muestran: no copiarlos.
+- **El bit ejecutable no viaja** (los `.sh` entran a git con modo 100644): invocar con `sh script.sh`.
+- **`node_modules` vive en `/app/node_modules`**, un nivel arriba del servicio: los scripts no pueden asumir
+  `node_modules/.bin` relativo; agregar `../node_modules/.bin` al PATH.
+- **Prisma 7**: `prisma migrate deploy` lee la URL de `prisma.config.ts`; el runtime tiene que copiarlo.
+- **Contexto de build = raíz del monorepo** (Root Directory `/`). El `.dockerignore` válido es el de la raíz.
+- **Probar sin Docker**: armar el layout del runtime (junction de `node_modules` un nivel arriba) y correr el
+  entrypoint y `node dist/main.js`. Así se encontraron los fallos de arranque de sass-back antes de desplegar.

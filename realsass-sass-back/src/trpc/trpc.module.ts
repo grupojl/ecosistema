@@ -108,6 +108,8 @@ export class TrpcService {
     ConfigWebhooksModule,
     ConfigAuditModule,
     ConfigSecretsModule,
+    ConfigTemplatesModule,
+    AffiliatesModule,
     MarketsModule,
   ],
   providers: [TrpcService],

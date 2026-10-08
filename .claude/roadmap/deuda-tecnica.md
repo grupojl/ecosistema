@@ -55,12 +55,32 @@
 - [x] `next dev` de los 3 fronts usaba el puerto 3000 (choque con sass-back): ahora 3001 / 3002 / 3003.
 - [x] Comentario obsoleto `SESSION_COOKIE_SECRET` en el Dockerfile de sass-back (el código no la lee).
 
+### Cerrado — errores de Railway y de arranque de los contenedores ✅ (2026-10-08)
+
+El primer deploy en Railway falló en los 5 servicios con `dockerfile invalid: flag '--mount=type=cache,id=…' is
+missing the cacheKey prefix`. Corregirlo destapó fallos que solo se ven al ejecutar la imagen; se reprodujeron
+emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verificaron después del arreglo:
+
+- [x] **Cache mounts de pnpm**: Railway exige `id=s/<id-del-servicio>-…` y un Dockerfile no conoce ese id. Se quitaron
+  los 8 `RUN --mount=type=cache` (5 servicios + 3 stages `contracts`); el build reinstala dependencias cada vez.
+  Las plantillas `architecture/05-dockerfile-backend.md` y `06-dockerfile-frontend.md` todavía los muestran
+  (contratos inmutables: no se tocaron).
+- [x] **Backs — `entrypoint.sh`** usaba `node_modules/.bin/prisma` pero `node_modules` está en `/app/node_modules`:
+  ahora agrega `../node_modules/.bin` al PATH. Reproducido (`No such file or directory`) y verificado.
+- [x] **Backs — `prisma.config.ts`** no se copiaba al runtime (con Prisma 7 la URL de la base sale de ese archivo).
+- [x] **Backs — `entrypoint.sh` no ejecutable** (modo git 100644): el `CMD` lo invoca con `sh`.
+- [x] **sass-back no arrancaba** (nunca había corrido compilado): `AuthModule` no importaba `AffiliatesModule`;
+  `TrpcModule` no importaba `ConfigTemplatesModule` ni `AffiliatesModule`; se perdió `BullModule.forRoot`.
+  Ahora: "Nest application successfully started" desde el layout de la imagen.
+- [x] ecommerce-back verificado: arranca desde el layout de la imagen ("Nest application successfully started").
+
 ### Pendiente — variables de entorno
 
 - [ ] [DT-ENV-01] dashboard: el back de sass se llama `NEXT_PUBLIC_REAL_BACK_URL` en layout/provider/constants y
   `NEXT_PUBLIC_SASS_BACK_URL` en `api-client`/`providers`. Hoy hay que definir ambas. Unificar en `SASS_BACK_URL`.
-- [ ] [DT-ENV-02] sass-back: la cola BullMQ de webhooks no tiene `BullModule.forRoot`; usa Redis en `localhost:6379`
-  y no lee `REDIS_URL`. Salvo que haya un Redis en localhost, la cola no podría conectarse (no lo probé contra un Redis real). Cablear la conexión a `REDIS_URL`.
+- [x] [DT-ENV-02] **Cerrado**: sass-back no arrancaba (`Worker requires a connection`) porque se había perdido el
+  `BullModule.forRoot`; restaurado en `AppModule` leyendo `REDIS_URL` (`src/redis/bull-connection.ts`).
+  Sigue haciendo falta un Redis real para los webhooks: no se probó contra uno.
 - [ ] [DT-ENV-03] storefront: `x-organization-id` del navegador sale de una variable fija; no sirve para varias
   tiendas en un mismo despliegue. Resolver la organización por slug (ya la entrega `customer.resolveStore`).
 - [ ] [DT-ENV-04] ecommerce-back: la imagen usa `PORT=3001` y local `3005`; alinear.
@@ -73,8 +93,8 @@
   tiene `jest.config.js` **y** la clave `jest` en `package.json` ("Multiple configurations found"); con
   `--config jest.config.js` las 16 suites (8 por back) fallan sin correr un solo test por TS5011 (TypeScript 6 exige
   `rootDir` en ts-jest). Es previo a la sesión del ADR-019. Prerrequisito de S4-E (tests de backend).
-- [ ] **[DT-DOCKER-01] `docker build` real** de los 3 fronts y de los 2 backs (la verificación fue una
-  simulación sin Docker). Probar también que los contenedores arrancan.
+- [ ] **[DT-DOCKER-01] `docker build` real** de los 3 fronts y de los 2 backs. Lo verificado hasta ahora son los
+  comandos de cada stage y el arranque del runtime emulado, sin Docker. Railway valida la sintaxis (ya mostró un error).
 
 ### Pendiente — P1
 

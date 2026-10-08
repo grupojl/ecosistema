@@ -25,8 +25,9 @@ COPY realsass-ecommerce-back/package.json   ./realsass-ecommerce-back/
 
 RUN echo "shamefully-hoist=true" >> .npmrc
 
-RUN --mount=type=cache,id=pnpm-ecommerce-back,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+# Sin --mount=type=cache: Railway exige que el id lleve el prefijo s/<id-del-servicio>- y un Dockerfile
+# no conoce ese id (error "missing the cacheKey prefix"). Sin cache, cada build reinstala las dependencias.
+RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
@@ -61,6 +62,7 @@ ENV PORT=3001
 COPY --from=build --chown=nestjs:nodejs /app/node_modules                            ../node_modules
 COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist            ./dist
 COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma          ./prisma
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma.config.ts   ./prisma.config.ts
 COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.json    ./package.json
 COPY --chown=nestjs:nodejs realsass-ecommerce-back/entrypoint.sh                     ./entrypoint.sh
 
@@ -70,4 +72,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
-CMD ["dumb-init", "/app/realsass-ecommerce-back/entrypoint.sh"]
+# entrypoint.sh se invoca con sh: en git no tiene bit ejecutable (modo 100644)
+CMD ["dumb-init", "sh", "/app/realsass-ecommerce-back/entrypoint.sh"]

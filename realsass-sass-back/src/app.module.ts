@@ -6,6 +6,8 @@ import { ConfigModule }               from '@nestjs/config';
 import { APP_GUARD }                  from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { EventEmitterModule }         from '@nestjs/event-emitter';
+import { BullModule }                 from '@nestjs/bullmq';
+import { bullConnection }            from '@/redis/bull-connection';
 
 import { HealthModule }          from '@/health/health.module';
 import { PrismaModule }          from '@/prisma/prisma.module';
@@ -45,6 +47,8 @@ import {
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }, { name: 'auth', ttl: 60_000, limit: 10 }]),
     EventEmitterModule.forRoot({ wildcard: false }),
+    // Conexión global de las colas (webhooks). Lee REDIS_URL — ver redis/bull-connection.ts
+    BullModule.forRoot({ connection: bullConnection() }),
     FirebaseModule,
     HealthModule,
     PrismaModule,

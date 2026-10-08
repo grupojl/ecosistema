@@ -24,8 +24,9 @@ COPY realsass-sass-front/package.json     ./realsass-sass-front/
 
 RUN echo "shamefully-hoist=true" >> .npmrc
 
-RUN --mount=type=cache,id=pnpm-sass-front,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+# Sin --mount=type=cache: Railway exige que el id lleve el prefijo s/<id-del-servicio>- y un Dockerfile
+# no conoce ese id (error "missing the cacheKey prefix"). Sin cache, cada build reinstala las dependencias.
+RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: contracts (ADR-019) ─────────────────────────────────────────────
 # @real/trpc emite los .d.ts de los routers de AMBOS backs a packages/trpc/dist.
@@ -43,8 +44,7 @@ COPY packages/trpc/package.json            ./packages/trpc/
 COPY realsass-sass-back/package.json       ./realsass-sass-back/
 COPY realsass-ecommerce-back/package.json  ./realsass-ecommerce-back/
 
-RUN --mount=type=cache,id=pnpm-contracts,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 COPY tsconfig.base.json                 ./
 COPY packages/auth-server/              ./packages/auth-server/
