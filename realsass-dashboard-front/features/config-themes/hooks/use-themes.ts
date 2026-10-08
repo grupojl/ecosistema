@@ -1,9 +1,15 @@
+/**
+ * features/config-themes/hooks/use-themes.ts
+ *
+ * useThemes(orgId)      → trpc.configThemes.list
+ * useCreateTheme()      → trpc.configThemes.create
+ * useActivateTheme()    → trpc.configThemes.activate
+ * useDeleteTheme()      → trpc.configThemes.remove
+ */
 import { trpc } from '@/lib/trpc/client';
 
-export function useThemes(organizationId?: string | null) {
-  return trpc.configThemes.list.useQuery(undefined, {
-    enabled: !!organizationId,
-  });
+export function useThemes(organizationId: string | null | undefined) {
+  return trpc.configThemes.list.useQuery(undefined, { enabled: !!organizationId });
 }
 
 export function useActivateTheme() {
@@ -15,16 +21,14 @@ export function useActivateTheme() {
 
 export function useCreateTheme() {
   const utils = trpc.useUtils();
-  return trpc.configThemes.update.useMutation({
+  return trpc.configThemes.create.useMutation({
     onSuccess: () => { void utils.configThemes.list.invalidate(); },
   });
 }
 
 export function useDeleteTheme() {
-  return {
-    mutateAsync: async (_themeId: string) => {
-      throw new Error('configThemes.delete no implementado en el router aún');
-    },
-    isPending: false,
-  };
+  const utils = trpc.useUtils();
+  return trpc.configThemes.remove.useMutation({
+    onSuccess: () => { void utils.configThemes.list.invalidate(); },
+  });
 }

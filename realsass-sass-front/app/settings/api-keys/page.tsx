@@ -33,7 +33,8 @@ export default function ApiKeysPage() {
 
   if (loading || !profile) return <ApiKeysSkeleton />
 
-  if (!profile.isOwner) {
+  // Dueño = tiene organización propia (los colaboradores solo tienen `collaborations`)
+  if (!profile.organization) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="text-center">

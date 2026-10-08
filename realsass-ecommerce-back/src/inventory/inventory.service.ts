@@ -4,12 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service.js";
-import { InsufficientStockError } from "@/inventory/errors/insufficient-stock.error.js";
+import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service";
+import { InsufficientStockError } from "@/inventory/errors/insufficient-stock.error";
 import {
   INVENTORY_REPOSITORY,
   type IInventoryRepository,
-} from "@/inventory/repository/inventory.repository.interface.js";
+} from "@/inventory/repository/inventory.repository.interface";
 
 @Injectable()
 export class InventoryService {

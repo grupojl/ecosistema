@@ -12,8 +12,8 @@ import {
 import type { CreateProyectoInput, UpdateAssistantConfigInput } from '@/features/chat/types';
 
 function useOrgId(): string {
-  const { profile } = useAuth();
-  return profile?.tenants?.[0]?.organizationId ?? '';
+  const { organizationId } = useAuth();
+  return organizationId ?? '';
 }
 
 export function useProyectosIA() {

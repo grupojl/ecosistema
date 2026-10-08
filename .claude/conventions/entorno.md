@@ -33,12 +33,30 @@ link-workspace-packages=true
 dedupe-peer-dependents=true
 ignore-scripts=true
 
-Nota: `shamefully-hoist=true` es la razón por la que los Dockerfiles de los
-fronts hacen `output: standalone` deshabilitado en algunos casos — ver
-comentarios en `next.config.mjs` de `realsass-sass-front` y
-`realsass-dashboard-front`: *"el monorepo usa shamefully-hoist, los
-node_modules están en la raíz del workspace. standalone no los incluye
-correctamente en ese setup y rompe en runtime."*
+Nota (2026-10-08): `shamefully-hoist=true` NO impide `output: 'standalone'`. Los tres fronts lo usan
+(`.next/standalone` trae `node_modules` y `<front>/server.js`) y se verificó armando el runtime del
+Dockerfile (standalone + static + public) y arrancando `server.js`: los tres responden HTTP 200.
+`realsass-sass-front` era el único sin `output: 'standalone'`, por lo que su imagen no podía construirse.
+
+## Variables de entorno (`.env.example`)
+
+Cada servicio tiene un `.env.example` **versionado** con TODAS sus variables, un comentario por variable
+y la marca `[REQUERIDA]` / `[OPCIONAL]`. Regla: si se agrega o quita un `process.env.X` en un servicio,
+se actualiza su `.env.example` en el mismo PR. Comentarios siempre en su propia línea (Docker
+`--env-file` no soporta comentarios en línea). Los `.gitignore` deben conservar `!.env.example`.
+
+| Servicio | Puerto local | Notas |
+|---|---|---|
+| `realsass-sass-back` | 3000 | requiere `ALLOWED_ORIGINS`, `CONFIG_MASTER_KEY`, `INTERNAL_API_KEY` |
+| `realsass-sass-front` | 3001 | `next dev -p 3001` |
+| `realsass-dashboard-front` | 3002 | `next dev -p 3002` |
+| `real-ecommerce-front` | 3003 | `next dev -p 3003` |
+| `realsass-ecommerce-back` | 3005 | la imagen Docker usa `PORT=3001` |
+
+Las `NEXT_PUBLIC_*` de un front son **Build Variables** (Next las incrusta al compilar; el Dockerfile
+las recibe como `ARG`). Las URLs son la base del servicio, sin `/api/v1`: los clientes tRPC agregan
+`/api/v1/trpc`. Las variables sin prefijo (`SITE_URL`, `ECOMMERCE_BACK_URL`, `SASS_BACK_URL`) son de
+servidor y se leen en runtime.
 
 ## Stack canónico
 

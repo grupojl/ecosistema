@@ -16,7 +16,7 @@
  * antes de importarlo en app.module.ts. Ver comentario en app.module.ts.
  */
 import { Module }         from '@nestjs/common';
-import { BullBoardModule, BullBoardController } from '@bull-board/nestjs';
+import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
 import { BullMQAdapter }  from '@bull-board/api/bullMQAdapter';
 import { BullModule }     from '@nestjs/bullmq';
@@ -34,6 +34,5 @@ import { WEBHOOK_QUEUE }  from '@/config-webhooks/webhook-delivery.service';
       adapter: BullMQAdapter,
     }),
   ],
-  controllers: [BullBoardController],
 })
 export class BullBoardAppModule {}

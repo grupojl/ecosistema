@@ -1,111 +1,87 @@
 // features/store/hooks.ts
-// TanStack Query hooks del módulo Tienda con optimistic updates.
-// E11-04 — Fase 4 Escalón 11
+// Hooks del módulo Tienda sobre el contrato tRPC de ecommerce-back (ADR-005).
+// Optimistic updates con rollback — E11-04 Fase 4 Escalón 11.
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { storeApi } from '@/features/store/api';
-import type { Product, ProductInput, ProductFilters, OrderFilters } from '@/features/store/types';
+import { ecommerceTrpc } from '@/lib/trpc/ecommerce-client';
+import type { OrderFilters, ProductPatch } from '@/features/store/types';
 
-const KEYS = {
-  products: (orgId: string, filters: ProductFilters = {}) =>
-    ['store', 'products', orgId, filters] as const,
-  product: (orgId: string, id: string) =>
-    ['store', 'product', orgId, id] as const,
-  orders: (orgId: string, filters: OrderFilters = {}) =>
-    ['store', 'orders', orgId, filters] as const,
-  order: (orgId: string, id: string) =>
-    ['store', 'order', orgId, id] as const,
-};
+type OrgId = string | null | undefined;
 
-export function useProducts(orgId: string | undefined, filters: ProductFilters = {}) {
-  return useQuery({
-    queryKey: KEYS.products(orgId ?? '', filters),
-    queryFn:  () => storeApi.getProducts(orgId as string, filters),
-    enabled:  !!orgId,
+export function useProducts(orgId: OrgId) {
+  return ecommerceTrpc.adminCatalog.list.useQuery(undefined, { enabled: !!orgId });
+}
+
+export function useCreateProduct() {
+  const utils = ecommerceTrpc.useUtils();
+  return ecommerceTrpc.adminCatalog.create.useMutation({
+    onSuccess: () => utils.adminCatalog.list.invalidate(),
   });
 }
 
-export function useProduct(orgId: string | undefined, id: string | undefined) {
-  return useQuery({
-    queryKey: KEYS.product(orgId ?? '', id ?? ''),
-    queryFn:  () => storeApi.getProduct(orgId as string, id as string),
-    enabled:  !!orgId && !!id,
-  });
+/** Aplica solo los campos definidos del patch (un `undefined` no pisa el valor actual). */
+function definedFields(patch: ProductPatch): ProductPatch {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, v]) => v !== undefined),
+  ) as ProductPatch;
 }
 
-export function useCreateProduct(orgId: string | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: ProductInput) => storeApi.createProduct(orgId as string, data),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
-  });
-}
-
-export function useUpdateProduct(orgId: string | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ProductInput> }) =>
-      storeApi.updateProduct(orgId as string, id, data),
-
-    // Optimistic update: actualiza el producto en el cache antes de la respuesta
-    onMutate: async ({ id, data }) => {
-      await qc.cancelQueries({ queryKey: ['store', 'products', orgId] });
-      const prev = qc.getQueryData(KEYS.products(orgId ?? ''));
-      qc.setQueryData(KEYS.products(orgId ?? ''), (old: Product[] | undefined) =>
-        (old ?? []).map(p => p.id === id ? { ...p, ...data } : p),
+export function useUpdateProduct() {
+  const utils = ecommerceTrpc.useUtils();
+  return ecommerceTrpc.adminCatalog.update.useMutation({
+    onMutate: async ({ productId, data }) => {
+      await utils.adminCatalog.list.cancel();
+      const previous = utils.adminCatalog.list.getData();
+      utils.adminCatalog.list.setData(undefined, (old) =>
+        old?.map((p) => (p.id === productId ? { ...p, ...definedFields(data) } : p)),
       );
-      return { prev };
+      return { previous };
     },
-    onError: (_err, _vars, ctx) => {
-      // Revertir si falla
-      if (ctx?.prev) qc.setQueryData(KEYS.products(orgId ?? ''), ctx.prev);
+    onError: (_err, _vars, context) => {
+      if (context?.previous) utils.adminCatalog.list.setData(undefined, context.previous);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+    onSettled: () => utils.adminCatalog.list.invalidate(),
   });
 }
 
-export function useDeleteProduct(orgId: string | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => storeApi.deleteProduct(orgId as string, id),
-
-    // Optimistic update: elimina el producto del cache inmediatamente
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ['store', 'products', orgId] });
-      const prev = qc.getQueryData(KEYS.products(orgId ?? ''));
-      qc.setQueryData(KEYS.products(orgId ?? ''), (old: Product[] | undefined) =>
-        (old ?? []).filter(p => p.id !== id),
-      );
-      return { prev };
+/**
+ * El back no expone delete: se archiva (status ARCHIVED = soft-delete).
+ * El producto sale de la lista de forma optimista.
+ */
+export function useDeleteProduct() {
+  const utils = ecommerceTrpc.useUtils();
+  return ecommerceTrpc.adminCatalog.update.useMutation({
+    onMutate: async ({ productId }) => {
+      await utils.adminCatalog.list.cancel();
+      const previous = utils.adminCatalog.list.getData();
+      utils.adminCatalog.list.setData(undefined, (old) => old?.filter((p) => p.id !== productId));
+      return { previous };
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(KEYS.products(orgId ?? ''), ctx.prev);
+    onError: (_err, _vars, context) => {
+      if (context?.previous) utils.adminCatalog.list.setData(undefined, context.previous);
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+    onSettled: () => utils.adminCatalog.list.invalidate(),
   });
 }
 
-export function useUpdateInventory(orgId: string | undefined) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ variantId, quantityAvailable }: { variantId: string; quantityAvailable: number }) =>
-      storeApi.updateInventory(orgId as string, variantId, quantityAvailable),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['store', 'products', orgId] }),
+export function useUpdateInventory() {
+  const utils = ecommerceTrpc.useUtils();
+  return ecommerceTrpc.adminInventory.setStock.useMutation({
+    onSuccess: () => utils.adminCatalog.list.invalidate(),
   });
 }
 
-export function useOrders(orgId: string | undefined, filters: OrderFilters = {}) {
-  return useQuery({
-    queryKey: KEYS.orders(orgId ?? '', filters),
-    queryFn:  () => storeApi.getOrders(orgId as string, filters),
-    enabled:  !!orgId,
+/** El back lista todas las órdenes de la org; el filtro por estado se aplica en el cliente. */
+export function useOrders(orgId: OrgId, filters: OrderFilters = {}) {
+  const { status } = filters;
+  return ecommerceTrpc.adminOrders.list.useQuery(undefined, {
+    enabled: !!orgId,
+    select:  (orders) => (status ? orders.filter((o) => o.status === status) : orders),
   });
 }
 
-export function useOrder(orgId: string | undefined, id: string | undefined) {
-  return useQuery({
-    queryKey: KEYS.order(orgId ?? '', id ?? ''),
-    queryFn:  () => storeApi.getOrder(orgId as string, id as string),
-    enabled:  !!orgId && !!id,
-  });
+export function useOrder(orgId: OrgId, orderId: string | undefined) {
+  return ecommerceTrpc.adminOrders.get.useQuery(
+    { orderId: orderId ?? '' },
+    { enabled: !!orgId && !!orderId },
+  );
 }

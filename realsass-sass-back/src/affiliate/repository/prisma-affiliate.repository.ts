@@ -1,6 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IAffiliateRepository } from '@/affiliate/repository/affiliate.repository.interface';
 import type { AffiliateProfile, AffiliateReferral } from '@/domain/affiliate.entity';
 

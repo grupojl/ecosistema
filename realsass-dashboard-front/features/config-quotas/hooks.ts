@@ -1,25 +1,3 @@
-/**
- * features/config-quotas/hooks.ts
- *
- * useQuotas(orgId)       → trpc.configQuotas.list
- * useUpdateQuotaLimit()  → trpc.configQuotas.updateLimit
- */
-import { trpc } from '@/lib/trpc/client';
-
-export function useQuotas(organizationId: string | null | undefined) {
-  return trpc.configQuotas.list.useQuery(
-    undefined,
-    {
-      enabled:         !!organizationId,
-      staleTime:       30_000,
-      refetchInterval: 30_000, // se actualiza cada 30s igual que antes
-    },
-  );
-}
-
-export function useUpdateQuotaLimit() {
-  const utils = trpc.useUtils();
-  return trpc.configQuotas.updateLimit.useMutation({
-    onSuccess: () => void utils.configQuotas.list.invalidate(),
-  });
-}
+// Implementación en hooks/use-quotas.ts — este archivo solo mantiene el import histórico
+// '@/features/config-quotas/hooks' (un archivo hooks.ts tiene prioridad sobre la carpeta hooks/).
+export * from '@/features/config-quotas/hooks/use-quotas';

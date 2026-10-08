@@ -38,7 +38,7 @@ export function CampanaCard({ campana, metricas, loadingMetricas, onExpand }: Ca
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-foreground truncate">{campana.nombre}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{campana.plataforma} &middot; {campana.objetivo}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{campana.plataforma}</p>
           </div>
           <Badge variant="outline" className={ESTADO_COLORS[campana.estado] ?? ''}>{campana.estado}</Badge>
         </div>

@@ -8,6 +8,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { cookies }      from 'next/headers';
 import { PedidosView }  from '@/app/dashboard/tienda/pedidos/pedidos-view';
 import { createDashboardCaller } from '@/lib/trpc/server';
+import { ecommerceQueryKeys }    from '@/lib/trpc/keys';
 
 export default async function PedidosPage() {
   const queryClient    = new QueryClient();
@@ -18,8 +19,8 @@ export default async function PedidosPage() {
   if (organizationId) {
     const caller = createDashboardCaller(organizationId, sessionCookie);
     await queryClient.prefetchQuery({
-      queryKey: ['store', 'orders', organizationId, {}],
-      queryFn:  () => caller.adminOrders.list(),
+      queryKey: ecommerceQueryKeys.orders,
+      queryFn:  () => caller.adminOrders.list.query(),
     }).catch(() => {
       // Prefetch falla silenciosamente — el Client Component fetcha en mount
     });

@@ -1,12 +1,11 @@
+import { RedisService } from '@/redis/redis.service'
 import { Injectable } from '@nestjs/common'
-import { InjectRedis } from '@nestjs-modules/ioredis'
-import type Redis from 'ioredis'
-import type { MarketDTO } from '@real/trpc'
+import type { MarketDTO } from '@real/trpc/markets'
 
 @Injectable()
 export class MarketResolverService {
   constructor(
-    @InjectRedis() private readonly redis: Redis,
+    private readonly redis: RedisService,
   ) {}
 
   /**
@@ -37,7 +36,7 @@ export class MarketResolverService {
     const { result } = (await res.json()) as { result: { data: MarketDTO } }
     const market      = result.data
 
-    await this.redis.setex(cacheKey, 300, JSON.stringify(market))
+    await this.redis.set(cacheKey, JSON.stringify(market), 300)
     return market
   }
 }

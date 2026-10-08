@@ -7,5 +7,10 @@
     "**/*spec.ts",
     "prisma.config.ts",
     "prisma/**"
-  ]
+  ],
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "./dist",
+    "rootDir": ".."
+  }
 }

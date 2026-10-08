@@ -22,7 +22,7 @@ import {
   useState, useCallback, useRef, type ReactNode,
 } from 'react'
 import { useRouter }                        from 'next/navigation'
-import { auth, onAuthStateChanged, signOut, type User } from '@real/auth-client'
+import { getFirebaseAuth, onAuthStateChanged, signOut, type User } from '@real/auth-client'
 import { AppError }                         from '@/lib/errors'
 
 // ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
@@ -156,7 +156,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       scheduleTokenRefresh(user)
     } catch (err) {
       if (err instanceof AppError && err.code === 'AUTH') {
-        await signOut(auth)
+        await signOut()
       }
     } finally {
       setBusy(false)
@@ -164,7 +164,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [refCode, scheduleTokenRefresh])
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
       setFirebaseUser(user)
       if (user) {
         await syncAndLoad(user)
@@ -196,7 +196,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     setBusy(true)
     try {
       await deleteSessionCookie()
-      await signOut(auth)
+      await signOut()
       setProfile(null)
       router.push('/')
     } finally {

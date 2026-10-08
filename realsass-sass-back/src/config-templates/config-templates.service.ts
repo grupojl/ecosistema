@@ -37,7 +37,6 @@ export class ConfigTemplatesService {
       organizationId,
       key:         dto.key,
       content:     dto.content,
-      description: dto.description,
     });
     this.audit.log({ organizationId, userId, configType: 'template', configKey: dto.key, action: 'create' });
     return template;

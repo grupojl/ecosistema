@@ -5,8 +5,7 @@ import { useAuth } from '@/features/auth/hooks/use-auth';
 import type { ProyectoIA, ConversacionIA, MensajeIA, ChatResponse } from '@/features/chat/types';
 
 export function useProyectosIA() {
-  const { profile } = useAuth();
-  const orgId = profile?.organization?.id ?? '';
+  const orgId = useAuth().organizationId ?? '';
   return useQuery({
     queryKey: ['chat-ia', 'projects', orgId],
     queryFn: () =>
@@ -17,8 +16,7 @@ export function useProyectosIA() {
 }
 
 export function useCrearProyectoIA() {
-  const { profile } = useAuth();
-  const orgId = profile?.organization?.id ?? '';
+  const orgId = useAuth().organizationId ?? '';
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: { name: string; description?: string }) =>
@@ -30,9 +28,8 @@ export function useCrearProyectoIA() {
   });
 }
 
-export function useConversaciones() {
-  const { profile } = useAuth();
-  const orgId = profile?.organization?.id ?? '';
+export function useConversaciones(_params?: { canal?: string; etapa?: string; limit?: number }) {
+  const orgId = useAuth().organizationId ?? '';
   return useQuery({
     queryKey: ['chat-ia', 'conversations', orgId],
     queryFn: () =>
@@ -43,8 +40,7 @@ export function useConversaciones() {
 }
 
 export function useMensajes(conversacionId: string) {
-  const { profile } = useAuth();
-  const orgId = profile?.organization?.id ?? '';
+  const orgId = useAuth().organizationId ?? '';
   return useQuery({
     queryKey: ['chat-ia', 'messages', orgId, conversacionId],
     queryFn: () =>
@@ -56,8 +52,7 @@ export function useMensajes(conversacionId: string) {
 }
 
 export function useEnviarMensajeAsistente(projectSlug: string) {
-  const { profile } = useAuth();
-  const orgId = profile?.organization?.id ?? '';
+  const orgId = useAuth().organizationId ?? '';
   return useMutation({
     mutationFn: (dto: { userId: string; message: string; channel?: string }) =>
       chatIaFetch<ChatResponse>(

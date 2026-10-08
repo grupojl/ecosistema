@@ -1,6 +1,103 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-09-28
+Última actualización: 2026-10-08
+
+---
+
+## Sesión 2026-10-08 — Contratos desde `dist` + dashboard-front (ADR-019)
+
+### Cerrado ✅
+
+- [x] **`@real/trpc` con contrato real**: `build` emite los `.d.ts` de ambos backs a `dist/contracts/`; se
+  eliminó el stub `SassAppRouter = any`. Hoja `@real/trpc/markets` para que los backs no dependan del contrato.
+- [x] **Sin `any` en procedures** (`trpc.ts` de sass-back y ecommerce-back): builders anotados con
+  `TRPCProcedureBuilder` + contextos con nombre (evita TS2883).
+- [x] DTO de templates y webhooks pedían `organizationId` al cliente (lo inyecta el service) — tipados con `Omit`.
+- [x] Router de temas de sass-back: `list` / `create` / `activate` / `remove` (antes `list` devolvía un tema y
+  `update` solo activaba).
+- [x] `packages/auth-client`: `api-fetch.ts` sin alias `@/`; `getFirebaseAuth` exportado.
+- [x] `pnpm install` roto: se quitó `@nestjs-modules/ioredis@^3.0.0` (versión inexistente, sin uso en `src`) y se
+  declaró `@types/qs` en ecommerce-back.
+- [x] **realsass-dashboard-front: typecheck y build en verde, sin `ignoreBuildErrors`.**
+  - módulo Tienda migrado a tRPC (`features/store/hooks.ts`), con alta/edición de producto, stock por variante
+    y detalle de pedido;
+  - páginas de config alineadas al contrato (flags, quotas, tema, webhooks);
+  - `auth-context.tsx` tenía `'use client'` en la línea 6 (rompía el build);
+  - eliminados `features/store/api.ts` y 4 componentes iPhone/Mac huérfanos.
+
+### Cerrado en la segunda mitad de la sesión ✅
+
+- [x] **[DT-CONTRATO-01] Docker de los fronts**: stage `contracts` en los 3 Dockerfiles + `.dockerignore` raíz.
+  Verificado simulando los stages en un directorio limpio (los 3 fronts).
+- [x] **[DT-CONTRATO-02] CI**: script raíz `pnpm contracts`, ejecutado tras `pnpm install` en los 15 workflows.
+- [x] **[DT-CONTRATO-03] `sass-front` y `real-ecommerce-front`**: typecheck y build en verde contra el contrato
+  real; `ignoreBuildErrors` eliminado de `real-ecommerce-front` (= DT-SEO-07). Archivos truncados
+  (`navbar.tsx`, `auth-provider-wrapper.tsx` sin la `}` final), `useAuth`/perfil, carrito (`customer.cart.*`) y
+  markets alineados al contrato.
+- [x] **[DT-CONTRATO-04] `configThemes.getPublicTheme`**: procedure público por `orgSlug` en sass-back.
+- [x] `@real/auth-client`: `signInWithApple`, `signInWithFacebook`.
+- [x] Bug latente: `collaborators.service.ts` usaba `import("@prisma/client").Prisma` (cliente por defecto que
+  no existe: el schema genera en `src/generated/prisma`); solo compilaba por un `@prisma/client` viejo local.
+- [x] Docker de los backs: `CMD ["dumb-init", …]` tenía un `]` suelto (ejecutaba una ruta inexistente).
+
+### Cerrado — build de fronts y variables de entorno ✅
+
+- [x] `real-ecommerce-front`: `middleware.ts` → `proxy.ts` (Next 16), comportamiento verificado (307 con
+  `Vary`, `Cache-Control` y `X-Locale-Source`).
+- [x] `SITE_URL`: `robots.ts` pasó a `force-dynamic`; `ARG/ENV SITE_URL` en el Dockerfile para el build;
+  verificado que `robots.txt` agrega `Sitemap:` leyendo la variable en runtime.
+- [x] `realsass-sass-front` no tenía `output: 'standalone'` pero su Dockerfile copia `.next/standalone`
+  (la imagen no podía construirse). Corregido y verificado arrancando `server.js` en los 3 fronts.
+- [x] Dockerfile del dashboard no declaraba `NEXT_PUBLIC_REAL_BACK_URL`, `CHAT_IA_URL`, `CAMPANAS_URL`, `PAGOS_URL`
+  (quedaban `undefined` en el build); storefront: `ORGANIZATION_ID` y `SITE_URL`.
+- [x] `.env.example` completo (con comentarios, requerida/opcional y defaults reales) en los 5 servicios.
+  `real-ecommerce-front/.gitignore` ignoraba `.env*` incluido el example (nunca estuvo versionado).
+- [x] `next dev` de los 3 fronts usaba el puerto 3000 (choque con sass-back): ahora 3001 / 3002 / 3003.
+- [x] Comentario obsoleto `SESSION_COOKIE_SECRET` en el Dockerfile de sass-back (el código no la lee).
+
+### Pendiente — variables de entorno
+
+- [ ] [DT-ENV-01] dashboard: el back de sass se llama `NEXT_PUBLIC_REAL_BACK_URL` en layout/provider/constants y
+  `NEXT_PUBLIC_SASS_BACK_URL` en `api-client`/`providers`. Hoy hay que definir ambas. Unificar en `SASS_BACK_URL`.
+- [ ] [DT-ENV-02] sass-back: la cola BullMQ de webhooks no tiene `BullModule.forRoot`; usa Redis en `localhost:6379`
+  y no lee `REDIS_URL`. Salvo que haya un Redis en localhost, la cola no podría conectarse (no lo probé contra un Redis real). Cablear la conexión a `REDIS_URL`.
+- [ ] [DT-ENV-03] storefront: `x-organization-id` del navegador sale de una variable fija; no sirve para varias
+  tiendas en un mismo despliegue. Resolver la organización por slug (ya la entrega `customer.resolveStore`).
+- [ ] [DT-ENV-04] ecommerce-back: la imagen usa `PORT=3001` y local `3005`; alinear.
+- [ ] [DT-ENV-05] `realsass-dashboard-front/.env.local.example` y `realsass-sass-front/.env.local.example` quedaron
+  duplicados y desactualizados (mencionan servicios inexistentes y `/api/v1` en las URLs): borrarlos.
+
+### Pendiente — P0
+
+- [ ] **[DT-TEST-01] Los tests de los backs no se pueden ejecutar** (verificado 2026-10-08): `pnpm test` falla porque cada back
+  tiene `jest.config.js` **y** la clave `jest` en `package.json` ("Multiple configurations found"); con
+  `--config jest.config.js` las 16 suites (8 por back) fallan sin correr un solo test por TS5011 (TypeScript 6 exige
+  `rootDir` en ts-jest). Es previo a la sesión del ADR-019. Prerrequisito de S4-E (tests de backend).
+- [ ] **[DT-DOCKER-01] `docker build` real** de los 3 fronts y de los 2 backs (la verificación fue una
+  simulación sin Docker). Probar también que los contenedores arrancan.
+
+### Pendiente — P1
+
+- [ ] [DT-CI-01] `ci-*-front.yml` corren `lint` y `build`; el lint de los fronts no se verificó.
+- [ ] [DT-CI-02] Hay 15 workflows con jobs duplicados (`ci-*` y `realsass-*`/`trpc-contract`): unificar en los 7 documentados.
+- [ ] [DT-SF-01] `sass-front`: `UserProfile.isOwner` no existe en el contrato; "dueño" se deriva de
+  `profile.organization !== null`. Confirmar la regla.
+- [ ] [DT-DASH-01] ecommerce-back: procedure para editar variantes (SKU/precio) y para cambiar el estado de un
+  pedido; el dashboard no puede hacerlo hoy.
+- [ ] [DT-DASH-02] `features/chat`: unificar `hooks.ts`/`hooks/` y `types.ts`/`types/` en un único shape de
+  chat-ia-back; hoy conviven tres.
+- [ ] [DT-DASH-03] Borrar `features/config-*/services/*.service.ts` (REST legacy sin uso) y migrar `campanas` /
+  `pagos` fuera de `lib/api-client.ts` cuando esos servicios tengan router tRPC.
+- [ ] [DT-DASH-04] Permisos finos por colaborador (ver `modules/dashboard-front/tienda.md`) sin cablear en las
+  pantallas de Tienda.
+
+### Deuda consciente
+
+- `MarketDTO` duplicado en `packages/trpc/src/markets.ts` y la entidad de sass-back.
+- Los tipos de fecha del contrato dicen `Date` pero viajan como string (cliente tRPC sin transformer).
+- `src/generated/` (cliente Prisma) de ambos backs no está en `.gitignore`.
+- Los `.d.ts` de contratos dejan `@nestjs/*`, `express` y `@prisma/client-runtime-utils` sin resolver en los fronts
+  (resuelven a `any` solo fuera de la salida de los routers).
 
 ---
 

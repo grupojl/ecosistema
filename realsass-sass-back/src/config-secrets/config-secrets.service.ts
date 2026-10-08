@@ -24,7 +24,7 @@ export class ConfigSecretsService {
   async create(organizationId: string, userId: string, dto: CreateSecretDto, ip?: string) {
     const valueEncrypted = this.crypto.encrypt(dto.value);
     const secret = await this.repo.create({
-      organizationId, key: dto.key, valueEncrypted, description: dto.description,
+      organizationId, key: dto.key, valueEncrypted: valueEncrypted.encrypted, description: dto.description,
     });
     this.audit.log({ organizationId, userId, configType: 'secret', configKey: dto.key, action: 'create', ipAddress: ip });
     return secret;
@@ -34,7 +34,7 @@ export class ConfigSecretsService {
     const existing = await this.repo.findByIdWithValue(id);
     if (!existing) throw new NotFoundException(`Secret ${id} not found`);
     const valueEncrypted = this.crypto.encrypt(newValue);
-    const updated = await this.repo.updateValue(id, valueEncrypted);
+    const updated = await this.repo.updateValue(id, typeof valueEncrypted === 'string' ? valueEncrypted : (valueEncrypted as any).encrypted ?? String(valueEncrypted));
     this.audit.log({ organizationId, userId, configType: 'secret', configKey: existing.key, action: 'rotate', ipAddress: ip });
     return updated;
   }

@@ -11,7 +11,7 @@ import { InternalApiKeyGuard }             from '@/internal/internal-api-key.gua
 import { InternalOrganizationsController } from '@/internal/internal-organizations.controller';
 import { InternalOrganizationsService }    from '@/internal/internal-organizations.service';
 
-@Module@Module({
+@Module({
   imports:     [MarketsModule],
   controllers: [InternalOrganizationsController, MarketsInternalController],
   providers:   [InternalApiKeyGuard, InternalOrganizationsService],

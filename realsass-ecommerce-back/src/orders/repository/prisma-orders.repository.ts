@@ -8,6 +8,7 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "@/prisma/prisma.service";
 import type { IOrdersRepository, OrderRecord, CreateOrderInput } from "@/orders/repository/orders.repository.interface";
 import type { OrderStatus } from "@/domain/order.errors";
+import { Prisma, $Enums } from '@/generated/prisma';
 
 const ORDER_WITH_ITEMS = {
   items: {
@@ -31,9 +32,9 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     return order as OrderRecord | null;
   }
 
-  async findBySession(organizationId: string, sessionId: string): Promise<OrderRecord[]> {
+  async findByCart(organizationId: string, cartId: string): Promise<OrderRecord[]> {
     const orders = await this.prisma.order.findMany({
-      where:   { organizationId, sessionId },
+      where:   { organizationId, cartId },
       include: ORDER_WITH_ITEMS,
       orderBy: { createdAt: "desc" },
     });
@@ -50,7 +51,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
 
     const where = {
       organizationId,
-      ...(filters?.status && { status: filters.status }),
+      ...(filters?.status && { status: filters.status as $Enums.OrderStatus }),
     };
 
     const [orders, total] = await Promise.all([
@@ -71,17 +72,19 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     const order = await this.prisma.order.create({
       data: {
         organizationId:  input.organizationId,
-        sessionId:       input.sessionId,
-        status:          "PENDING",
+        cartId:          input.cartId,
+        customerId:      input.customerId,
+        subtotalCents:   input.subtotalCents,
+        shippingCents:   input.shippingCents,
+        status:          'PENDING_PAYMENT' as $Enums.OrderStatus,
         totalCents:      input.totalCents,
         currency:        input.currency,
-        shippingAddress: (input.shippingAddress ?? null) as never,
+        shippingAddress: (input.shippingAddress ?? null) as Prisma.InputJsonValue,
         items: {
           create: input.items.map((item) => ({
-            variantId:  item.variantId,
-            quantity:   item.quantity,
-            priceCents: item.priceCents,
-            currency:   item.currency,
+            variantId:              item.variantId,
+            quantity:               item.quantity,
+            unitPriceCentsSnapshot: item.unitPriceCentsSnapshot,
           })),
         },
       },
@@ -93,7 +96,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
   async updateStatus(orderId: string, status: OrderStatus): Promise<OrderRecord> {
     const order = await this.prisma.order.update({
       where:   { id: orderId },
-      data:    { status },
+      data:    { status: status as $Enums.OrderStatus },
       include: ORDER_WITH_ITEMS,
     });
     return order as OrderRecord;

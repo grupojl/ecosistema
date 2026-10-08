@@ -1,5 +1,5 @@
 import { z }              from 'zod'
-import { router, publicProcedure } from '@real/trpc'
+import { router, publicProcedure } from '@/trpc/trpc'
 import { MarketsService }          from '@/markets/markets.service'
 
 const FulfillmentConfigInput = z.object({

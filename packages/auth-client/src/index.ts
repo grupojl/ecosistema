@@ -10,8 +10,8 @@ export type {
 
 // Firebase
 export {
-  initFirebase, getIdToken,
-  signInWithGoogle, signOut,
+  initFirebase, getFirebaseAuth, getIdToken,
+  signInWithGoogle, signInWithApple, signInWithFacebook, signOut,
 } from './firebase/firebase';
 export type { FirebaseConfig } from './firebase/firebase';
 

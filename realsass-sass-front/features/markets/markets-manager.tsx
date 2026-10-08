@@ -1,6 +1,5 @@
 'use client'
-import { useTRPC } from '@/lib/trpc/client'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { trpc } from '@/lib/trpc/client'
 import { useOrganizationId } from '@/hooks/use-organization-id'
 
 // Lista de países LATAM soportados
@@ -18,21 +17,17 @@ const SUPPORTED_COUNTRIES: Record<string, string> = {
 }
 
 export function MarketsManager() {
-  const trpc          = useTRPC()
-  const orgId         = useOrganizationId()
-  const queryClient   = useQueryClient()
+  const orgId = useOrganizationId()
+  const utils = trpc.useUtils()
 
-  const { data: markets = [], isLoading } = useQuery(
-    trpc.markets.list.queryOptions({ organizationId: orgId })
+  const { data: markets = [], isLoading } = trpc.markets.list.useQuery(
+    { organizationId: orgId ?? '' },
+    { enabled: !!orgId },
   )
 
-  const setDefault = useMutation(trpc.markets.setDefault.mutationOptions({
-    onSuccess: () => queryClient.invalidateQueries(trpc.markets.list.queryOptions({ organizationId: orgId })),
-  }))
-
-  const toggleActive = useMutation(trpc.markets.update.mutationOptions({
-    onSuccess: () => queryClient.invalidateQueries(trpc.markets.list.queryOptions({ organizationId: orgId })),
-  }))
+  const setDefault = trpc.markets.setDefault.useMutation({
+    onSuccess: () => utils.markets.list.invalidate(),
+  })
 
   if (isLoading) return <p className="text-muted-foreground text-sm">Cargando mercados...</p>
 

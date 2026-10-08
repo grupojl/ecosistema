@@ -1,5 +1,5 @@
 /**
- * middleware.ts — real-ecommerce-front (Edge)
+ * proxy.ts — real-ecommerce-front (Next 16: convención `proxy`, antes `middleware`; runtime Node.js)
  *
  * Solo intercepta URLs de tienda SIN idioma (/tienda/...). Las URLs con
  * idioma (/es/tienda/...) nunca se redirigen: son las que Google indexa y
@@ -14,7 +14,7 @@ import { LOCALE_COOKIE } from '@/lib/i18n/config';
 import { negotiateLocale } from '@/lib/i18n/negotiate';
 import { resolveVisitorCountry } from '@/lib/market/resolver';
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const country = resolveVisitorCountry(request);
 
   const { locale, source } = negotiateLocale({

@@ -49,7 +49,7 @@ export function createAppRouter(deps: AppRouterDeps) {
     collaborators:   createCollaboratorsRouter(deps.collaboratorsService),
     configFlags:     createConfigFlagsRouter(deps.flagsService),
     configQuotas:    createConfigQuotasRouter(deps.quotasService),
-    configThemes:    createConfigThemesRouter(deps.themesService),
+    configThemes:    createConfigThemesRouter(deps.themesService, deps.orgsService),
     configWebhooks:  createConfigWebhooksRouter(deps.webhooksService),
     configAudit:     createConfigAuditRouter(deps.auditService),
     configSecrets:   createConfigSecretsRouter(deps.secretsService),

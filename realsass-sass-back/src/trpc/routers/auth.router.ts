@@ -51,7 +51,7 @@ export function createAuthRouter(
       }))
       .mutation(async ({ ctx, input }) => {
         await authService.syncUser(
-          { uid: ctx.uid!, email: ctx.req.user?.email },
+          { uid: ctx.uid!, email: ctx.req.user?.email ?? '', displayName: ctx.req.user?.displayName ?? null, avatarUrl: ctx.req.user?.avatarUrl ?? null },
           input.affiliateCode,
         );
         return { ok: true };

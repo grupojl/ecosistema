@@ -1,7 +1,7 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z }             from 'zod';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
 import {
   toPublicStoreInfo,
@@ -14,7 +14,7 @@ import {
 type PrismaOrg = Prisma.OrganizationGetPayload<Record<string, never>>;
 
 // Zod schema para el campo Json "enabledProducts" de Prisma
-const EnabledProductsSchema = z.record(z.unknown()).catch({});
+const EnabledProductsSchema = z.record(z.string(), z.unknown()).catch({});
 
 @Injectable()
 export class PrismaOrganizationsRepository implements IOrganizationsRepository {

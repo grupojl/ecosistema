@@ -1,3 +1,4 @@
+import type { TenantRole } from '@real/auth-server';
 /**
  * src/trpc/trpc.ts — realsass-ecommerce-back
  *
@@ -20,14 +21,15 @@
  *   customerProcedure  → requiere customerId + organizationId
  */
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
 
 // Extiende Request con los campos que inyectan los middlewares de auth
 interface AuthenticatedRequest extends Request {
-  user?:   { uid: string; email?: string };
-  tenant?: { organizationId: string; role: string; userId?: string };
+  user?:   { uid: string; email: string; displayName: string | null; avatarUrl: string | null };
+  tenant?: { userId: string; organizationId: string; role: TenantRole; permissions: Record<string, boolean> };
 }
 
 // ─── Context unificado ────────────────────────────────────────────────────────
@@ -43,6 +45,28 @@ export interface TrpcContext {
   customerId:     string | null;
 }
 
+// Contextos de salida de cada middleware. Con nombre a propósito: si `next({ ctx: { ...ctx } })`
+// infiere el tipo por spread, TS expande `Request` y el .d.ts de los procedures necesita
+// nombrar `ParsedQs` (TS2883, no portable) — el contrato para los fronts se perdía en `any`.
+export interface AdminTrpcContext extends TrpcContext {
+  uid: string;
+  organizationId: string;
+  role: 'OWNER' | 'COLLABORATOR';
+}
+export interface OwnerOnlyTrpcContext extends AdminTrpcContext {
+  role: 'OWNER';
+}
+export interface CustomerTrpcContext extends TrpcContext {
+  customerId: string;
+  organizationId: string;
+}
+
+/** Builder de procedures con `TOverrides` nombrado (ver nota sobre TS2883 arriba). */
+type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
+  TrpcContext, object, TOverrides,
+  TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, false
+>;
+
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
   const typedReq       = req as AuthenticatedRequest;
   const user           = typedReq.user   ?? null;
@@ -56,7 +80,7 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
     req,
     uid:            user?.uid         ?? null,
     organizationId,
-    role:           tenant?.role      ?? null,
+    role:           (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
     userId:         tenant?.userId    ?? null,
     customerId:     (req.headers['x-customer-id'] as string | undefined) ?? null,
   };
@@ -86,7 +110,8 @@ const enforceAdmin = t.middleware(({ ctx, next }) => {
   if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Token Firebase requerido' });
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
   if (!ctx.role) throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso a esta organización' });
-  return next({ ctx: { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: ctx.role } });
+  const admin: AdminTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: ctx.role };
+  return next({ ctx: admin });
 });
 
 /** Solo OWNER */
@@ -94,20 +119,22 @@ const enforceOwnerOnly = t.middleware(({ ctx, next }) => {
   if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED' });
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
   if (ctx.role !== 'OWNER') throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo el OWNER puede realizar esta acción' });
-  return next({ ctx: { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: 'OWNER' as const } });
+  const owner: OwnerOnlyTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: 'OWNER' };
+  return next({ ctx: owner });
 });
 
 /** Cliente del storefront logueado (customerId en header) */
 const enforceCustomer = t.middleware(({ ctx, next }) => {
   if (!ctx.customerId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Header x-customer-id requerido' });
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
-  return next({ ctx: { ...ctx, customerId: ctx.customerId, organizationId: ctx.organizationId } });
+  const customer: CustomerTrpcContext = { ...ctx, customerId: ctx.customerId, organizationId: ctx.organizationId };
+  return next({ ctx: customer });
 });
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 export const { router, procedure: publicProcedure } = t;
 
-export const adminProcedure     = t.procedure.use(enforceAdmin);
-export const ownerOnlyProcedure = t.procedure.use(enforceOwnerOnly);
-export const customerProcedure  = t.procedure.use(enforceCustomer);
+export const adminProcedure:     ProcedureWith<AdminTrpcContext> = t.procedure.use(enforceAdmin);
+export const ownerOnlyProcedure: ProcedureWith<OwnerOnlyTrpcContext> = t.procedure.use(enforceOwnerOnly);
+export const customerProcedure:  ProcedureWith<CustomerTrpcContext> = t.procedure.use(enforceCustomer);

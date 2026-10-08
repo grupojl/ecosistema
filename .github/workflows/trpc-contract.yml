@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+
       - name: Typecheck realsass-sass-front
         run: pnpm --filter realsass-sass-front typecheck
 

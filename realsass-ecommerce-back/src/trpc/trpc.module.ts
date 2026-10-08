@@ -34,6 +34,8 @@ import { CatalogModule }              from '@/catalog/catalog.module';
 import { InventoryModule }            from '@/inventory/inventory.module';
 import { OrdersModule }               from '@/orders/orders.module';
 import { CustomersModule }            from '@/customers/customers.module';
+import { StoreService }              from '@/store/store.service';
+import { StoreModule }               from '@/store/store.module';
 import { CartModule }                 from '@/cart/cart.module';
 import { OrganizationsClientModule }  from '@/organizations-client/organizations-client.module';
 
@@ -45,6 +47,7 @@ export class TrpcService {
     private readonly orders:     OrdersService,
     private readonly customers:  CustomersService,
     private readonly cart:       CartService,
+    private readonly store:      StoreService,
     private readonly orgsClient: OrganizationsClientService,
   ) {}
 
@@ -55,6 +58,7 @@ export class TrpcService {
       ordersService:    this.orders,
       customersService: this.customers,
       cartService:      this.cart,
+      storeService:     this.store,
     });
 
     return createExpressMiddleware({
@@ -78,6 +82,7 @@ export class TrpcService {
     OrdersModule,
     CustomersModule,
     CartModule,
+    StoreModule,
     OrganizationsClientModule,
   ],
   providers: [TrpcService],

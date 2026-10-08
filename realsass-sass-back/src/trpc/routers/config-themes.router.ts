@@ -1,41 +1,71 @@
 /**
  * src/trpc/routers/config-themes.router.ts
  *
- * Firmas reales (leídas del XML):
- *   ConfigThemesService.listForOrg(organizationId)
- *   ConfigThemesService.activate(organizationId, userId, themeId)
- *   ConfigThemesService.update(organizationId, userId, themeId, dto)
+ * Firmas reales de ConfigThemesService:
+ *   list(organizationId)                  → temas de la org (+ sistema)
+ *   create(organizationId, userId, dto)   → nuevo tema
+ *   activate(organizationId, userId, id)  → activa (desactiva el anterior)
+ *   remove(organizationId, userId, id)    → elimina (no activo, no system default)
  *
- * dto de update (CreateThemeDto shape):
- *   primaryColor, secondaryColor, accentColor, fontFamily,
- *   borderRadius, logoUrl, faviconUrl, darkMode, customCSS
+ * El tema público del storefront NO sale de acá (getPublicTheme es del flujo público).
  */
 import { z }                                      from 'zod';
-import { router, tenantProcedure, ownerProcedure } from '@/trpc';
+import { TRPCError }                            from '@trpc/server';
+import { router, publicProcedure, tenantProcedure, ownerProcedure } from '@/trpc';
 import type { ConfigThemesService }               from '@/config-themes/config-themes.service';
+import type { OrganizationsService }              from '@/organizations/organizations.service';
 
-const ThemeUpdateInput = z.object({
-  primaryColor:   z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  accentColor:    z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
+const HexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
+
+const ThemeCreateInput = z.object({
+  name:           z.string().min(1).max(100),
+  primaryColor:   HexColor.optional(),
+  secondaryColor: HexColor.optional(),
+  accentColor:    HexColor.optional(),
   fontFamily:     z.string().max(100).optional(),
   borderRadius:   z.string().max(20).optional(),
-  logoUrl:        z.string().url().optional().nullable(),
-  faviconUrl:     z.string().url().optional().nullable(),
+  logoUrl:        z.string().url().optional(),
+  faviconUrl:     z.string().url().optional(),
   darkMode:       z.boolean().optional(),
-  customCSS:      z.string().max(50_000).optional().nullable(),
+  customCSS:      z.string().max(50_000).optional(),
 });
 
-export function createConfigThemesRouter(themesService: ConfigThemesService) {
+export function createConfigThemesRouter(
+  themesService: ConfigThemesService,
+  orgsService:   OrganizationsService,
+) {
   return router({
+
+    /**
+     * configThemes.getPublicTheme
+     * Tema activo de una org por slug — PÚBLICO (lo consume el storefront y el layout de sass-front).
+     * Devuelve null si la org no existe o no tiene tema activo (el consumidor aplica el default).
+     */
+    getPublicTheme: publicProcedure
+      .input(z.object({ orgSlug: z.string().min(1).max(100) }))
+      .query(async ({ input }) => {
+        const org = await orgsService.findBySlugPublic(input.orgSlug);
+        if (!org) throw new TRPCError({ code: 'NOT_FOUND', message: 'Organización no encontrada' });
+        return themesService.getPublicTheme(org.organizationId);
+      }),
 
     /**
      * configThemes.list
      * Temas de la org + temas del sistema (seeds).
      */
     list: tenantProcedure.query(async ({ ctx }) => {
-      return themesService.getPublicTheme(ctx.organizationId);
+      return themesService.list(ctx.organizationId);
     }),
+
+    /**
+     * configThemes.create
+     * Crea un tema para la org. Solo OWNER.
+     */
+    create: ownerProcedure
+      .input(ThemeCreateInput)
+      .mutation(async ({ ctx, input }) => {
+        return themesService.create(ctx.organizationId, ctx.uid, input);
+      }),
 
     /**
      * configThemes.activate
@@ -48,16 +78,15 @@ export function createConfigThemesRouter(themesService: ConfigThemesService) {
       }),
 
     /**
-     * configThemes.update
-     * Edita tokens de diseño de un tema. Solo OWNER.
+     * configThemes.remove
+     * Elimina un tema que no esté activo ni sea default del sistema. Solo OWNER.
      */
-    update: ownerProcedure
-      .input(z.object({
-        themeId: z.string().uuid(),
-        data:    ThemeUpdateInput,
-      }))
+    remove: ownerProcedure
+      .input(z.object({ themeId: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
-        return themesService.activate(ctx.organizationId, ctx.uid, input.themeId);
+        return themesService.remove(ctx.organizationId, ctx.uid, input.themeId);
       }),
   });
 }
+
+export type ConfigThemesRouter = ReturnType<typeof createConfigThemesRouter>;

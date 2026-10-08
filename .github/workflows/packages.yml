@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+
       - name: Typecheck auth-server
         run: pnpm --filter @real/auth-server typecheck
 

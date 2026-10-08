@@ -1,6 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IQuotasRepository } from '@/config-quotas/repository/quotas.repository.interface';
 import type { QuotaConfig } from '@/domain/quota.entity';
 

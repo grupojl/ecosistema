@@ -1,32 +1,13 @@
-/**
- * src/trpc/trpc.ts
- *
- * Inicialización del servidor tRPC para real-back.
- *
- * Context:
- *   uid            → firebaseUid del usuario autenticado (string | null)
- *   organizationId → de header x-organization-id (string | null)
- *   role           → resuelto por TenantGuard pre-montado ('OWNER' | 'COLLABORATOR' | null)
- *   req            → Express Request completo (para acceder a req.ip en secrets)
- *
- * Procedures exportados:
- *   publicProcedure  → sin auth (no usada en este back, pero disponible)
- *   authProcedure    → requiere uid (token Firebase válido)
- *   tenantProcedure  → requiere uid + organizationId + role
- *   ownerProcedure   → requiere uid + organizationId + role === 'OWNER'
- */
 import { initTRPC, TRPCError } from '@trpc/server';
+import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
 
-// Extiende Request con los campos que agregan los guards de NestJS
 interface AuthenticatedRequest extends Request {
-  user?:   { uid: string; email?: string };
-  tenant?: { organizationId: string; role: string };
+  user?:   { uid: string; email: string; displayName: string | null; avatarUrl: string | null };
+  tenant?: { userId: string; organizationId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'; permissions: Record<string, boolean> };
 }
-
-// ─── Context ──────────────────────────────────────────────────────────────────
 
 export interface TrpcContext {
   req: Request;
@@ -35,10 +16,30 @@ export interface TrpcContext {
   role: 'OWNER' | 'COLLABORATOR' | null;
 }
 
+// Contextos de salida de cada middleware. Con nombre a propósito: si `next({ ctx: { ...ctx } })`
+// infiere el tipo por spread, TS expande `Request` y el .d.ts de los procedures necesita
+// nombrar `ParsedQs` (TS2883, no portable) — el contrato para los fronts se perdía en `any`.
+export interface AuthedTrpcContext extends TrpcContext {
+  uid: string;
+}
+export interface TenantTrpcContext extends AuthedTrpcContext {
+  organizationId: string;
+  role: 'OWNER' | 'COLLABORATOR';
+}
+export interface OwnerTrpcContext extends TenantTrpcContext {
+  role: 'OWNER';
+}
+
+/** Builder de procedures con `TOverrides` nombrado (ver nota sobre TS2883 arriba). */
+type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
+  TrpcContext, object, TOverrides,
+  TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, false
+>;
+
 export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
-  const typedReq = req as AuthenticatedRequest;
-  const user           = typedReq.user  ?? null;
-  const tenant         = typedReq.tenant ?? null;
+  const typedReq      = req as AuthenticatedRequest;
+  const user          = typedReq.user  ?? null;
+  const tenant        = typedReq.tenant ?? null;
   const organizationId =
     tenant?.organizationId ??
     (req.headers['x-organization-id'] as string | undefined) ??
@@ -48,11 +49,9 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
     req,
     uid:            user?.uid   ?? null,
     organizationId,
-    role:           tenant?.role ?? null,
+    role:           (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
   };
 }
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
 
 const t = initTRPC.context<TrpcContext>().create({
   errorFormatter({ shape, error }) {
@@ -60,50 +59,36 @@ const t = initTRPC.context<TrpcContext>().create({
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.cause instanceof ZodError
-            ? error.cause.issues
-            : null,
+        zodError: error.cause instanceof ZodError ? error.cause.issues : null,
       },
     };
   },
 });
 
-// ─── Middlewares ──────────────────────────────────────────────────────────────
-
 const enforceAuth = t.middleware(({ ctx, next }) => {
-  if (!ctx.uid) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Token Firebase requerido' });
-  }
-  return next({ ctx: { ...ctx, uid: ctx.uid } });
+  if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Token Firebase requerido' });
+  const authed: AuthedTrpcContext = { ...ctx, uid: ctx.uid };
+  return next({ ctx: authed });
 });
 
 const enforceTenant = t.middleware(({ ctx, next }) => {
-  if (!ctx.uid) {
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
-  if (!ctx.organizationId) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
-  }
-  if (!ctx.role) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso a esta organización' });
-  }
-  return next({ ctx: { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: ctx.role } });
+  if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED' });
+  if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
+  if (!ctx.role) throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso a esta organización' });
+  const tenant: TenantTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: ctx.role };
+  return next({ ctx: tenant });
 });
 
 const enforceOwner = t.middleware(({ ctx, next }) => {
   if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED' });
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
   if (ctx.role !== 'OWNER') throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo el OWNER puede realizar esta acción' });
-  return next({ ctx: { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: 'OWNER' as const } });
+  const owner: OwnerTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: 'OWNER' };
+  return next({ ctx: owner });
 });
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
-
-export const router           = t.router;
-export const publicProcedure  = t.procedure;
-export const authProcedure:   any = t.procedure.use(enforceAuth);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const tenantProcedure = t.procedure.use(enforceTenant);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ownerProcedure:  any = t.procedure.use(enforceOwner);
+export const router          = t.router;
+export const publicProcedure = t.procedure;
+export const authProcedure:   ProcedureWith<AuthedTrpcContext> = t.procedure.use(enforceAuth);
+export const tenantProcedure: ProcedureWith<TenantTrpcContext> = t.procedure.use(enforceTenant);
+export const ownerProcedure:  ProcedureWith<OwnerTrpcContext>  = t.procedure.use(enforceOwner);

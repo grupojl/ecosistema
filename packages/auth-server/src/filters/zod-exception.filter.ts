@@ -17,7 +17,7 @@ export class ZodExceptionFilter implements ExceptionFilter {
       statusCode: HttpStatus.BAD_REQUEST,
       error:      'Validation Error',
       message:    'La entrada no cumple el schema requerido',
-      details:    exception.errors.map(e => ({
+      details:    exception.issues.map(e => ({
         field:   e.path.join('.'),
         message: e.message,
         code:    e.code,

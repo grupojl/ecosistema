@@ -1,14 +1,14 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z }             from 'zod';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IAuditRepository } from '@/config-audit/repository/audit.repository.interface';
 import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '@/domain/audit-log.entity';
 
 type PrismaAuditLog = Prisma.ConfigAuditLogGetPayload<Record<string, never>>;
 
 // Zod schema para el campo Json "diff" de Prisma
-const DiffSchema = z.record(z.unknown()).nullable().catch(null);
+const DiffSchema = z.record(z.string(), z.unknown()).nullable().catch(null);
 
 @Injectable()
 export class PrismaAuditRepository implements IAuditRepository {
@@ -32,7 +32,7 @@ export class PrismaAuditRepository implements IAuditRepository {
   }
 
   async create(input: CreateAuditLogInput): Promise<void> {
-    await this.prisma.configAuditLog.create({ data: input });
+    await this.prisma.configAuditLog.create({ data: input as any });
   }
 
   async findByOrg(

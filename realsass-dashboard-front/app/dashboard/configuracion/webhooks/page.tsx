@@ -37,7 +37,7 @@ function formatDate(iso: string) {
 export default function WebhooksPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useWebhooks(organizationId);
-  const webhooks = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
+  const webhooks = data ?? [];
 
   const createMutation = useCreateWebhook();
   const testMutation   = useTestWebhook();
@@ -67,7 +67,7 @@ export default function WebhooksPage() {
     if (!organizationId) return;
     setFormError(null);
     try {
-      const result = await createMutation.mutateAsync({ data: form, orgId: organizationId });
+      const result = await createMutation.mutateAsync(form);
       const secret = (result as { secret?: string })?.secret as string | undefined;
       setCreateOpen(false);
       setForm({ url: '', events: [] });
@@ -81,7 +81,7 @@ export default function WebhooksPage() {
   const handleTest = async (id: string) => {
     if (!organizationId) return;
     try {
-      await testMutation.mutateAsync({ id, orgId: organizationId });
+      await testMutation.mutateAsync({ webhookId: id });
       toast.success('Webhook de prueba enviado');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
@@ -91,7 +91,7 @@ export default function WebhooksPage() {
   const handleDelete = async () => {
     if (!deleting || !organizationId) return;
     try {
-      await deleteMutation.mutateAsync({ id: deleting.id, orgId: organizationId });
+      await deleteMutation.mutateAsync({ webhookId: deleting.id });
       toast.success('Webhook eliminado');
       setDeleting(null);
     } catch (err) {
@@ -132,7 +132,7 @@ export default function WebhooksPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {webhooks.map((wh: WebhookEndpoint) => (
+          {webhooks.map((wh) => (
             <div key={wh.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -144,9 +144,6 @@ export default function WebhooksPage() {
                       </span>
                     ))}
                   </div>
-                  {wh.failureCount > 0 && (
-                    <p className="text-xs text-destructive mt-1">{wh.failureCount} fallo{wh.failureCount !== 1 ? 's' : ''}</p>
-                  )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button size="icon" variant="ghost" className="h-8 w-8"
@@ -247,7 +244,7 @@ export default function WebhooksPage() {
 
       {/* Sheet de logs */}
       {logsWh && (
-        <DeliveryLogsSheet wh={logsWh} orgId={organizationId} onClose={() => setLogsWh(null)} />
+        <DeliveryLogsSheet wh={logsWh} onClose={() => setLogsWh(null)} />
       )}
 
       {/* Confirm delete */}
@@ -277,14 +274,13 @@ export default function WebhooksPage() {
 
 // ── Sheet de delivery logs ─────────────────────────────────────────────────────
 function DeliveryLogsSheet({
-  wh, orgId, onClose,
+  wh, onClose,
 }: {
   wh: WebhookEndpoint;
-  orgId: string | null;
   onClose: () => void;
 }) {
-  const { data, isLoading } = useWebhookLogs(wh.id, orgId);
-  const logs = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
+  const { data, isLoading } = useWebhookLogs(wh.id);
+  const logs = data ?? [];
 
   return (
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -319,14 +315,12 @@ function DeliveryLogsSheet({
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
                     {log.statusCode && <span className={cn('font-mono', log.success ? 'text-green-600' : 'text-destructive')}>{log.statusCode}</span>}
-                    {log.duration && <span>{log.duration}ms</span>}
-                    {log.attempt > 1 && <span className="text-amber-500">intento {log.attempt}</span>}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground">{formatDate(log.createdAt)}</span>
-                  {log.error && (
-                    <span className="text-[10px] text-destructive truncate max-w-[200px]">{log.error}</span>
+                  {!log.success && log.responseBody && (
+                    <span className="text-[10px] text-destructive truncate max-w-[200px]">{log.responseBody}</span>
                   )}
                 </div>
               </div>

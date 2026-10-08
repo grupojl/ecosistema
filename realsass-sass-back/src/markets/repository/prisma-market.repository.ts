@@ -12,26 +12,26 @@ export class PrismaMarketRepository implements IMarketRepository {
       where: { organizationId },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     })
-    return rows.map(Market.fromPrisma)
+    return rows.map(r => Market.fromPrisma(r as any))
   }
 
   async findActive(organizationId: string, countryCode: string): Promise<Market | null> {
     const row = await this.prisma.market.findFirst({
       where: { organizationId, countryCode: countryCode.toUpperCase(), isActive: true },
     })
-    return row ? Market.fromPrisma(row) : null
+    return row ? Market.fromPrisma(row as any) : null
   }
 
   async findDefault(organizationId: string): Promise<Market | null> {
     const row = await this.prisma.market.findFirst({
       where: { organizationId, isDefault: true },
     })
-    return row ? Market.fromPrisma(row) : null
+    return row ? Market.fromPrisma(row as any) : null
   }
 
   async findById(id: string): Promise<Market | null> {
     const row = await this.prisma.market.findUnique({ where: { id } })
-    return row ? Market.fromPrisma(row) : null
+    return row ? Market.fromPrisma(row as any) : null
   }
 
   async create(data: {
@@ -51,7 +51,7 @@ export class PrismaMarketRepository implements IMarketRepository {
         fulfillmentConfig: config as object,
       },
     })
-    return Market.fromPrisma(row)
+    return Market.fromPrisma(row as any)
   }
 
   async update(id: string, data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig }): Promise<Market> {
@@ -59,7 +59,7 @@ export class PrismaMarketRepository implements IMarketRepository {
     if (data.isActive !== undefined)          updateData['isActive']          = data.isActive
     if (data.fulfillmentConfig !== undefined) updateData['fulfillmentConfig'] = FulfillmentConfigSchema.parse(data.fulfillmentConfig) as object
     const row = await this.prisma.market.update({ where: { id }, data: updateData })
-    return Market.fromPrisma(row)
+    return Market.fromPrisma(row as any)
   }
 
   async setDefault(id: string, organizationId: string): Promise<Market> {
@@ -73,7 +73,7 @@ export class PrismaMarketRepository implements IMarketRepository {
         data:  { isDefault: true, isActive: true },
       }),
     ])
-    return Market.fromPrisma(updated)
+    return Market.fromPrisma(updated as any)
   }
 
   async delete(id: string): Promise<void> {

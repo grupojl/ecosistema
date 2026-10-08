@@ -1,6 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { ISecretsRepository } from '@/config-secrets/repository/secrets.repository.interface';
 import type { SecretConfig, CreateSecretInput } from '@/domain/secret.entity';
 
@@ -32,7 +32,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
       where: { organizationId, isActive: true },
       select: SELECT_PUBLIC,
     });
-    return rows.map(r => this.toEntity(r));
+    return rows.map(r => this.toEntity(r as any));
   }
 
   async findByIdWithValue(id: string): Promise<(SecretConfig & { valueEncrypted: string }) | null> {
@@ -49,17 +49,17 @@ export class PrismaSecretsRepository implements ISecretsRepository {
         valueEncrypted: input.valueEncrypted,
         description:    input.description,
         isActive:       true,
-      },
+      } as any,
       select: SELECT_PUBLIC,
     });
-    return this.toEntity(row);
+    return this.toEntity(row as any);
   }
 
   async updateValue(id: string, valueEncrypted: string): Promise<SecretConfig> {
     const row = await this.prisma.secretConfig.update({
       where: { id }, data: { valueEncrypted }, select: SELECT_PUBLIC,
     });
-    return this.toEntity(row);
+    return this.toEntity(row as any);
   }
 
   async revoke(id: string): Promise<void> {

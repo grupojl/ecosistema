@@ -4,7 +4,7 @@ import { PrismaCatalogRepository } from '@/catalog/repository/prisma-catalog.rep
 import { CATALOG_REPOSITORY } from '@/catalog/repository/catalog.repository.interface';
 
 @Module({
-  controllers: [ Public],
+  controllers: [],
   providers: [
     CatalogService,
     {

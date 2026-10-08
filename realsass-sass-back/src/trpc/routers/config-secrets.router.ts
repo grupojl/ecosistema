@@ -17,6 +17,7 @@
 import { z }               from 'zod';
 import { router, ownerProcedure } from '@/trpc';
 import * as admin          from 'firebase-admin'; // @real/firebase-auth
+import { getAuth }         from 'firebase-admin/auth';
 import { TRPCError }       from '@trpc/server';
 import type { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
 
@@ -24,7 +25,7 @@ const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
 
 /** Verifica re-autenticación reciente (igual que StepUpGuard) */
 async function enforceStepUp(token: string): Promise<void> {
-  const decoded  = await admin.app().auth().verifyIdToken(token);
+  const decoded  = await getAuth().verifyIdToken(token);
   const authTime = decoded.auth_time * 1000;
   if (Date.now() - authTime > STEP_UP_WINDOW_MS) {
     throw new TRPCError({
@@ -50,7 +51,7 @@ export function createConfigSecretsRouter(secretsService: ConfigSecretsService) 
         expiresAt:    z.string().datetime().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        return secretsService.create(ctx.organizationId, ctx.uid, input as Parameters<typeof secretsService.create>[2] // @real/secrets-input-type, ctx.req.ip);
+        return secretsService.create(ctx.organizationId, ctx.uid, input as Parameters<typeof secretsService.create>[2], ctx.req.ip);
       }),
 
     rotate: ownerProcedure

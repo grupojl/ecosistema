@@ -1,6 +1,6 @@
-import { getIdToken } from '@/firebase/firebase';
-import { AppError }   from '@/errors/app-error';
-import type { ApiEnvelope } from '@/types/index';
+import { getIdToken } from '../firebase/firebase';
+import { AppError }   from '../errors/app-error';
+import type { ApiEnvelope } from '../types/index';
 
 // organizationId activo en memoria — no en localStorage
 let _organizationId: string | null = null;

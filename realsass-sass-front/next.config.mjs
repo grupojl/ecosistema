@@ -1,9 +1,9 @@
 // next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Sin output: standalone — el monorepo usa shamefully-hoist, los
-  // node_modules están en la raíz del workspace. standalone no los
-  // incluye correctamente en ese setup y rompe en runtime.
+  // Los Dockerfiles copian .next/standalone (imagen mínima). Con shamefully-hoist el trazado
+  // incluye node_modules desde la raíz del workspace; verificado arrancando server.js.
+  output: 'standalone',
 
   async headers() {
     const firebaseProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? ''

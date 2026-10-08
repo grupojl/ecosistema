@@ -23,7 +23,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nestjs-modules/ioredis": "catalog:",
     "@nestjs/bullmq": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
@@ -64,6 +63,7 @@
     "@types/express": "catalog:",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@types/qs": "catalog:",
     "@types/supertest": "catalog:",
     "@types/uuid": "catalog:",
     "eslint": "catalog:",

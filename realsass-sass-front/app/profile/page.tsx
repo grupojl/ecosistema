@@ -37,7 +37,7 @@ export default async function ProfilePage() {
     const caller = createSassServerCaller(sessionCookie);
     await queryClient.prefetchQuery({
       queryKey: ['auth', 'me'],
-      queryFn:  () => caller.auth.me(),
+      queryFn:  () => caller.auth.me.query(),
     }).catch(() => {
       // Prefetch falla silenciosamente — el Client Component fetcha en mount
     });

@@ -1,16 +1,12 @@
 'use client'
-import { useTRPC } from '@/lib/trpc/client'
-import { useQuery } from '@tanstack/react-query'
+import { trpc } from '@/lib/trpc/client'
 
 interface MarketsSummaryProps {
   organizationId: string
 }
 
 export function MarketsSummary({ organizationId }: MarketsSummaryProps) {
-  const trpc          = useTRPC()
-  const { data = [] } = useQuery(
-    trpc.markets.list.queryOptions({ organizationId })
-  )
+  const { data = [] } = trpc.markets.list.useQuery({ organizationId })
 
   const activeCount = data.filter(m => m.isActive).length
 

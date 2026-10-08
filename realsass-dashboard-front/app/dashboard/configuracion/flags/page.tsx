@@ -9,17 +9,10 @@ import { useFlags, useUpdateFlag } from '@/features/config-flags/hooks';
 import type { FeatureFlag } from '@/features/config/types';
 import { cn } from '@/lib/utils';
 
-const SYSTEM_TARGET_LABELS: Record<string, string> = {
-  all:      'Todos',
-  chat:     'Chat IA',
-  payments: 'Pagos',
-  ads:      'Campañas',
-};
-
 export default function FlagsPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useFlags(organizationId);
-  const flags = Array.isArray(data) ? data : Array.isArray(data) ? data : (data as { data?: unknown[] } | undefined)?.data ?? [];
+  const flags = data ?? [];
 
   const updateMutation = useUpdateFlag();
 
@@ -27,9 +20,8 @@ export default function FlagsPage() {
     if (!organizationId || !flag.organizationId) return; // flags globales son readonly
     try {
       await updateMutation.mutateAsync({
-        key:    flag.key,
-        data:   { enabled: !flag.enabled },
-        orgId:  organizationId,
+        flagId:  flag.id,
+        enabled: !flag.enabled,
       });
       toast.success(`Flag "${flag.key}" ${!flag.enabled ? 'activado' : 'desactivado'}`);
     } catch (err) {
@@ -50,8 +42,8 @@ export default function FlagsPage() {
     </div>
   );
 
-  const orgFlags    = flags.filter((f: FeatureFlag) => f.organizationId);
-  const globalFlags = flags.filter((f: FeatureFlag) => !f.organizationId);
+  const orgFlags    = flags.filter((f) => f.organizationId);
+  const globalFlags = flags.filter((f) => !f.organizationId);
 
   const FlagRow = ({ flag }: { flag: FeatureFlag }) => {
     const isGlobal   = !flag.organizationId;
@@ -71,9 +63,6 @@ export default function FlagsPage() {
                 Sistema
               </span>
             )}
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-              {SYSTEM_TARGET_LABELS[flag.systemTarget] ?? flag.systemTarget}
-            </span>
             {flag.rolloutPercentage < 100 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600">
                 {flag.rolloutPercentage}% rollout
@@ -102,7 +91,7 @@ export default function FlagsPage() {
       {orgFlags.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-foreground">Flags de tu organización</h2>
-          {orgFlags.map((flag: FeatureFlag) => <FlagRow key={flag.id} flag={flag} />)}
+          {orgFlags.map((flag) => <FlagRow key={flag.id} flag={flag} />)}
         </section>
       )}
 
@@ -112,7 +101,7 @@ export default function FlagsPage() {
             <Globe className="h-3.5 w-3.5" />
             Flags globales del sistema (solo lectura)
           </h2>
-          {globalFlags.map((flag: FeatureFlag) => <FlagRow key={flag.id} flag={flag} />)}
+          {globalFlags.map((flag) => <FlagRow key={flag.id} flag={flag} />)}
         </section>
       )}
 

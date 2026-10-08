@@ -2,12 +2,29 @@
   "name": "@real/trpc",
   "version": "0.0.0",
   "private": true,
-  "description": "Contratos tRPC compartidos — routers, tipos, contexto (S1/S2)",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Contratos tRPC compartidos — tipos de los routers de cada back, leídos desde dist/",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./markets": {
+      "types": "./dist/markets.d.ts",
+      "default": "./dist/markets.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "markets": [
+        "dist/markets.d.ts"
+      ]
+    }
+  },
   "scripts": {
-    "build": "echo \"@real/trpc ok\"",
-    "typecheck": "echo \"@real/trpc ok\""
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/build.mjs"
   },
   "dependencies": {
     "@trpc/server": "catalog:",
@@ -17,11 +34,5 @@
   "devDependencies": {
     "typescript": "catalog:",
     "@types/node": "catalog:"
-  },
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
   }
 }

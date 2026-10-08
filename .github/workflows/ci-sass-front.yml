@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
       - run: pnpm --filter realsass-sass-front typecheck
       - run: pnpm --filter realsass-sass-front lint
       - run: pnpm --filter realsass-sass-front build

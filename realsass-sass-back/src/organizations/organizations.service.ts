@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma';
 import { MarketsService } from '@/markets/markets.service';
 import type { UpdateOrganizationInput, StoreInfo } from '@/organizations/domain/organization.entity';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';

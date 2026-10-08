@@ -114,7 +114,7 @@ export async function identifyCustomer(
 ): Promise<string> {
   const caller = createStoreCaller(organizationId);
 
-  const result = await caller.customer.identify({
+  const result = await caller.customer.identify.mutate({
     organizationId,
     email,
     displayName,

@@ -207,3 +207,28 @@ Lockfile   --frozen-lockfile en CI y en Railway
 ```
 
 Ver `architecture/11-dependencias-norte.md` y `decisions/ADR-018-politica-dependencias.md`.
+
+---
+
+## Contratos tRPC — `dist` como única fuente para los fronts (ADR-019)
+
+### El norte
+
+**Contrato real o no hay contrato**: un procedure con `any` o un `dist` escrito a mano vacía el tipado
+extremo a extremo que justifica usar tRPC.
+
+### Reglas no negociables
+
+```
+Build      pnpm --filter @real/trpc build emite los .d.ts de cada back a packages/trpc/dist/contracts
+Orden      prisma generate -> @real/trpc build -> backs -> fronts
+Fronts     leen SOLO de @real/trpc (dist); tipos de dominio inferidos, nunca escritos a mano
+Backs      importan solo @real/trpc/markets (hoja sin ciclo)
+Procedures prohibido `any`: TRPCProcedureBuilder con contexto nombrado (evita TS2883)
+Fronts     sin ignoreBuildErrors; sin alias @/ dentro de packages/*
+Docker     cada Dockerfile de front tiene un stage `contracts` que genera packages/trpc/dist
+CI/local   `pnpm contracts` (prisma generate de ambos backs + @real/trpc build) tras `pnpm install`
+```
+
+**Pendiente:** `docker build` real de los 3 fronts (solo se simuló en un directorio limpio).
+Ver `decisions/ADR-019-contratos-trpc-desde-dist.md` y `modules/packages/trpc.md`.

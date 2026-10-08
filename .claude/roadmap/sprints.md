@@ -45,6 +45,50 @@ WARN: archivos .bak acumulados (limpiar con find . -name '*.bak' -delete)
 
 ---
 
+## Sesión 2026-10-08 — Contratos desde `dist` + dashboard-front
+
+Decisión: ADR-019. Detalle de pendientes en `roadmap/deuda-tecnica.md` (DT-CONTRATO-*, DT-DASH-*).
+
+### Resultado
+
+```
+prisma generate → @real/trpc build → sass-back / ecommerce-back typecheck + build → ✅
+realsass-dashboard-front typecheck + build (sin ignoreBuildErrors)                 → ✅
+```
+
+```
+realsass-sass-front + real-ecommerce-front typecheck + build (sin ignoreBuildErrors) → ✅
+Docker de los fronts: stage `contracts`, simulado en directorio limpio (3 fronts)    → ✅ (sin docker build real)
+```
+
+No verificado todavía: `docker build` real, lint de los fronts, prueba manual con los backs levantados
+(alta de producto, stock, publicar, detalle de pedido).
+
+### Archivos creados
+
+- `packages/trpc/scripts/build.mjs`, `src/markets.ts`, `src/router-types.ts`, `tsconfig.core.json`
+- `realsass-dashboard-front/lib/trpc/{ecommerce-client,keys}.ts`, `lib/api-client.ts` (reescrito)
+- `realsass-dashboard-front/features/store/format.ts`, `features/auth/hooks/use-active-organization.ts`
+- `realsass-dashboard-front/components/dashboard/{product-sheet,order-sheet}.tsx`
+- `.claude/decisions/ADR-019-contratos-trpc-desde-dist.md`
+
+- `.dockerignore` (raíz), script `contracts` en el `package.json` raíz; paso "Contratos tRPC" en los 15 workflows
+- `realsass-sass-back`: `configThemes.getPublicTheme` (público, por slug)
+
+### Tanda 3 — builds de fronts y variables de entorno
+
+- `real-ecommerce-front`: `proxy.ts`, `robots.ts` dinámico, ARG de `SITE_URL` y de la organización.
+- `realsass-sass-front`: `output: 'standalone'` (los 3 fronts arrancan `server.js` con HTTP 200 en el runtime emulado).
+- `.env.example` documentado en los 5 servicios; `dev` de los fronts en puertos 3001/3002/3003.
+- Pendientes nuevos: DT-ENV-01..05 (`roadmap/deuda-tecnica.md`).
+
+### Archivos eliminados
+
+- `components/dashboard/{accesorio-sheet,product-modal,products-table,products-filters}.tsx`
+- `features/store/api.ts`
+
+---
+
 ## S4: Tests 85% + CI + HydrationBoundary
 
 **Estado: 🔴 ACTIVO**

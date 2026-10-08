@@ -34,7 +34,8 @@ import {
   type InternalListOrgsDto,
   type InternalOrgActionDto,
 } from '@/internal/schemas';
-import { ZodValidationPipe } from '@real/auth-server';
+import { ZodValidationPipe }            from '@/common/pipes/zod-validation.pipe';
+
 
 @ApiTags('internal')
 @ApiHeader({ name: 'x-internal-api-key', required: true })

@@ -7,17 +7,17 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { ActivityService }   from "@/activity/activity.service.js";
+import { ActivityService }   from "@/activity/activity.service";
 import {
   CART_REPOSITORY,
   type ICartRepository,
-} from "@/cart/repository/cart.repository.interface.js";
+} from "@/cart/repository/cart.repository.interface";
 import {
   CartNotFoundError,
   CartItemNotFoundError,
   InsufficientStockForCartError,
   assertValidQuantity,
-} from "@/cart/domain/cart.errors.js";
+} from "@/cart/domain/cart.errors";
 
 @Injectable()
 export class CartService {
@@ -41,35 +41,20 @@ export class CartService {
 
   async addItem(
     organizationId: string,
-    cartId:          string,
+    sessionId:       string,
     variantId:       string,
     quantity:        number,
+    cartId?:         string,
   ) {
     try {
       assertValidQuantity(quantity);
     } catch (err) {
       throw new UnprocessableEntityException(err instanceof Error ? err.message : String(err));
     }
-
-    const cart = await this.cartRepository.findById(organizationId, cartId);
-    if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
-
-    // Verificar stock disponible en el ítem de la variante
-    const inventoryItem = cart.items
-      .find(i => i.variantId === variantId)
-      ?.variant.inventory;
-
-    if (inventoryItem) {
-      const available = inventoryItem.quantityAvailable - inventoryItem.quantityReserved;
-      const currentQty = cart.items.find(i => i.variantId === variantId)?.quantity ?? 0;
-      if (currentQty + quantity > available) {
-        throw new UnprocessableEntityException(
-          new InsufficientStockForCartError(variantId, quantity, available).message,
-        );
-      }
-    }
-
-    return this.cartRepository.upsertItem(cartId, variantId, quantity);
+    const resolvedCartId = cartId
+      ?? (await this.cartRepository.findActiveBySession(organizationId, sessionId))?.id
+      ?? (await this.cartRepository.create(organizationId, sessionId)).id;
+    return this.cartRepository.upsertItem(resolvedCartId, variantId, quantity);
   }
 
   async removeItem(

@@ -1,5 +1,5 @@
 import type { Organization, UpdateOrganizationInput, CreateOrganizationInput, StoreInfo } from '@/domain/organization.entity';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '@/generated/prisma';
 
 export const ORGANIZATIONS_REPOSITORY = Symbol('ORGANIZATIONS_REPOSITORY');
 

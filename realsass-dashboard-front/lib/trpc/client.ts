@@ -33,3 +33,5 @@ export function makeTrpcClient(
     ],
   });
 }
+
+export const useTRPC = trpc;

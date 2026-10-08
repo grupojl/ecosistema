@@ -7,22 +7,22 @@ export function createConfigTemplatesRouter(templatesService: ConfigTemplatesSer
 
     list: tenantProcedure
       .query(({ ctx }) =>
-        templatesService.list(ctx.tenant!.organizationId),
+        templatesService.list(ctx.organizationId),
       ),
 
     resolve: tenantProcedure
       .input(z.object({ key: z.string() }))
       .query(({ ctx, input }) =>
-        templatesService.resolve(ctx.tenant!.organizationId, input.key),
+        templatesService.resolve(ctx.organizationId, input.key),
       ),
 
     render: tenantProcedure
       .input(z.object({
         key:       z.string(),
-        variables: z.record(z.string()),
+        variables: z.record(z.string(), z.string()),
       }))
       .mutation(({ ctx, input }) =>
-        templatesService.renderByKey(ctx.tenant!.organizationId, input.key, input.variables),
+        templatesService.renderByKey(ctx.organizationId, input.key, input.variables),
       ),
 
     create: ownerProcedure
@@ -32,7 +32,7 @@ export function createConfigTemplatesRouter(templatesService: ConfigTemplatesSer
         description: z.string().optional(),
       }))
       .mutation(({ ctx, input }) =>
-        templatesService.create(ctx.tenant!.organizationId, ctx.uid!, input),
+        templatesService.create(ctx.organizationId, ctx.uid!, input),
       ),
   });
 }

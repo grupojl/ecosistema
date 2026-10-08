@@ -2,6 +2,7 @@
 import type { ProfileForClaims } from '@/auth/claims.service';
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as admin            from 'firebase-admin'; // @real/firebase-auth
+import { getAuth }           from 'firebase-admin/auth';
 import { PrismaService }     from '@/prisma/prisma.service';
 import { UsersService }      from '@/users/users.service';
 import { AffiliatesService } from '@/affiliate/affiliate.service';
@@ -54,7 +55,7 @@ export class AuthService {
       const profile = await this.users.buildProfile(firebaseUser.uid);
 
       // ── Emitir custom claims (ADR-003) ──────────────────────────────────
-      if (profile?.tenants.length) {
+      if (profile?.collaborations.length) {
         const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
         if (platformClaims) {
           await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
@@ -88,7 +89,7 @@ export class AuthService {
     const profile = await this.users.buildProfile(firebaseUser.uid);
 
     // ── Emitir custom claims para usuario nuevo ──────────────────────────
-    if (profile?.tenants.length) {
+    if (profile?.collaborations.length) {
       const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
       if (platformClaims) {
         await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
@@ -101,7 +102,7 @@ export class AuthService {
   // ── Reemitir claims (cambio de org activa) ───────────────────────────────
   async refreshClaims(firebaseUid: string): Promise<void> {
     const profile = await this.users.buildProfile(firebaseUid);
-    if (!profile?.tenants.length) return;
+    if (!profile?.collaborations.length) return;
 
     const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
     if (platformClaims) {
@@ -110,9 +111,9 @@ export class AuthService {
   }
 
   async generateCustomToken(firebaseIdToken: string) {
-    let decoded: admin.auth.DecodedIdToken;
+    let decoded: import('firebase-admin/auth').DecodedIdToken;
     try {
-      decoded = await admin.app().auth().verifyIdToken(firebaseIdToken);
+      decoded = await getAuth().verifyIdToken(firebaseIdToken);
     } catch {
       throw new UnauthorizedException('Firebase idToken invalido o expirado');
     }
@@ -127,7 +128,7 @@ export class AuthService {
     const canAccess = user.isOwner || (user.collaborations?.length ?? 0) > 0;
     if (!canAccess) throw new UnauthorizedException('El usuario no tiene acceso al dashboard.');
 
-    const customToken = await admin.app().auth().createCustomToken(decoded.uid, {
+    const customToken = await getAuth().createCustomToken(decoded.uid, {
       isOwner:        user.isOwner,
       organizationId: user.organization?.id ?? null,
     });

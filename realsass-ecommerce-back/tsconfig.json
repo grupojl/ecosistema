@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
+    "module": "commonjs",
+    "moduleResolution": "node10",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -21,13 +20,85 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@/trpc": [
+        "src/trpc/index.ts"
+      ],
+      "@/trpc/trpc": [
+        "src/trpc/trpc.ts"
+      ],
+      "@/types/tenant-context": [
+        "../packages/auth-server/src/types/tenant-context.ts"
+      ],
+      "@/ports/cache.port": [
+        "../packages/auth-server/src/ports/cache.port.ts"
+      ],
+      "@/ports/memory-cache.adapter": [
+        "../packages/auth-server/src/ports/memory-cache.adapter.ts"
+      ],
+      "@/firebase/firebase.module": [
+        "../packages/auth-server/src/firebase/firebase.module.ts"
+      ],
+      "@/guards/firebase-auth.guard": [
+        "../packages/auth-server/src/guards/firebase-auth.guard.ts"
+      ],
+      "@/guards/roles.guard": [
+        "../packages/auth-server/src/guards/roles.guard.ts"
+      ],
+      "@/guards/tenant.guard": [
+        "../packages/auth-server/src/guards/tenant.guard.ts"
+      ],
+      "@/decorators/current-user.decorator": [
+        "../packages/auth-server/src/decorators/current-user.decorator.ts"
+      ],
+      "@/decorators/public.decorator": [
+        "../packages/auth-server/src/decorators/public.decorator.ts"
+      ],
+      "@/decorators/roles.decorator": [
+        "../packages/auth-server/src/decorators/roles.decorator.ts"
+      ],
+      "@/decorators/tenant.decorator": [
+        "../packages/auth-server/src/decorators/tenant.decorator.ts"
+      ],
+      "@/middleware/create-trpc-auth-middleware": [
+        "../packages/auth-server/src/middleware/create-trpc-auth-middleware.ts"
+      ],
+      "@/session": [
+        "../packages/auth-server/src/session/index.ts"
+      ],
+      "@/session/session.service": [
+        "../packages/auth-server/src/session/session.service.ts"
+      ],
+      "@/session/auth-session.controller": [
+        "../packages/auth-server/src/session/auth-session.controller.ts"
+      ],
+      "@/filters/zod-exception.filter": [
+        "../packages/auth-server/src/filters/zod-exception.filter.ts"
+      ],
+      "@/server/context": [
+        "../packages/trpc/dist/server/context.d.ts"
+      ],
+      "@/domain/product.entity": [
+        "src/catalog/domain/product.entity.ts"
+      ],
+      "@/domain/order.errors": [
+        "src/orders/domain/order.errors.ts"
+      ],
+      "@/errors/insufficient-stock.error": [
+        "src/inventory/errors/insufficient-stock.error.ts"
+      ]
     },
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "typeRoots": [
       "../node_modules/@types",
       "./node_modules/@types"
-    ]
+    ],
+    "baseUrl": "./",
+    "ignoreDeprecations": "6.0"
   },
   "extends": "../tsconfig.base.json",
   "exclude": [
@@ -35,6 +106,7 @@
     "dist",
     "**/*.spec.ts",
     "**/*.e2e-spec.ts",
-    "test/**"
+    "test/**",
+    "../realsass-sass-back/src/**/*"
   ]
 }

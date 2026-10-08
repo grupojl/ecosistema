@@ -1,9 +1,9 @@
-import { Phone, Instagram, Globe, MessageSquare } from 'lucide-react';
+import { Phone, Camera, Globe, MessageSquare } from 'lucide-react';
 import type { Canal } from '@/features/chat/types';
 
 const CANAL_CONFIG: Record<Canal, { label: string; color: string; Icon: React.ElementType }> = {
   whatsapp:  { label: 'WhatsApp',  color: 'rgba(37,211,102,0.15)',  Icon: Phone },
-  instagram: { label: 'Instagram', color: 'rgba(225,48,108,0.15)',  Icon: Instagram },
+  instagram: { label: 'Instagram', color: 'rgba(225,48,108,0.15)',  Icon: Camera },
   telegram:  { label: 'Telegram',  color: 'rgba(36,161,222,0.15)',  Icon: MessageSquare },
   web:       { label: 'Web',       color: 'rgba(120,120,120,0.15)', Icon: Globe },
 };

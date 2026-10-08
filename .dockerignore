@@ -1,0 +1,25 @@
+# Contexto de build = raíz del monorepo (ver Dockerfile de cada servicio).
+# Docker NO usa los .dockerignore de las subcarpetas cuando el contexto es la raíz.
+# Todo lo que se genera se construye dentro de la imagen (pnpm install, prisma generate, build).
+
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+**/*.bak
+**/*.bak2
+
+# Cliente Prisma: lo regenera `prisma generate` en cada stage
+**/src/generated
+
+# Secretos locales (se conserva el .env.example)
+**/.env
+**/.env.*
+!**/.env.example
+
+.git
+.github
+.claude
+.vscode

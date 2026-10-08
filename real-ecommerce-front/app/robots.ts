@@ -3,6 +3,10 @@
 import type { MetadataRoute } from 'next'
 import { getSiteUrl } from '@/lib/seo/site'
 
+// SITE_URL es de runtime: sin esto Next prerenderiza robots.txt en el build y, si la variable
+// no está en ese momento, el sitemap queda fuera para siempre.
+export const dynamic = 'force-dynamic'
+
 export default function robots(): MetadataRoute.Robots {
   const site = getSiteUrl()
   return {

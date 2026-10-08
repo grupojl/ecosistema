@@ -17,7 +17,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     organizationId: string,
     variantId:      string,
   ): Promise<InventoryRecord | null> {
-    const inv = await this.prisma.inventory.findFirst({
+    const inv = await this.prisma.inventoryItem.findFirst({
       where: { variantId, variant: { organizationId } },
     });
     return inv as InventoryRecord | null;
@@ -28,7 +28,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     variantId:      string,
     quantity:       number,
   ): Promise<InventoryRecord> {
-    const inv = await this.prisma.inventory.findFirst({
+    const inv = await this.prisma.inventoryItem.findFirst({
       where: { variantId, variant: { organizationId } },
     });
 
@@ -36,7 +36,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       throw new InsufficientStockError(variantId, quantity, inv?.quantityAvailable ?? 0);
     }
 
-    const updated = await this.prisma.inventory.update({
+    const updated = await this.prisma.inventoryItem.update({
       where: { id: inv.id },
       data:  {
         quantityAvailable: inv.quantityAvailable - quantity,
@@ -51,12 +51,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     variantId:      string,
     quantity:       number,
   ): Promise<InventoryRecord> {
-    const inv = await this.prisma.inventory.findFirst({
+    const inv = await this.prisma.inventoryItem.findFirst({
       where: { variantId, variant: { organizationId } },
     });
     if (!inv) throw new Error(`Inventario no encontrado para variante: ${variantId}`);
 
-    const updated = await this.prisma.inventory.update({
+    const updated = await this.prisma.inventoryItem.update({
       where: { id: inv.id },
       data:  {
         quantityAvailable: inv.quantityAvailable + quantity,
@@ -71,12 +71,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     variantId:      string,
     quantity:       number,
   ): Promise<InventoryRecord> {
-    const inv = await this.prisma.inventory.findFirst({
+    const inv = await this.prisma.inventoryItem.findFirst({
       where: { variantId, variant: { organizationId } },
     });
     if (!inv) throw new Error(`Inventario no encontrado para variante: ${variantId}`);
 
-    const updated = await this.prisma.inventory.update({
+    const updated = await this.prisma.inventoryItem.update({
       where: { id: inv.id },
       data:  { quantityAvailable: quantity },
     });
@@ -87,7 +87,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     organizationId: string,
     variantIds:     string[],
   ): Promise<InventoryRecord[]> {
-    const records = await this.prisma.inventory.findMany({
+    const records = await this.prisma.inventoryItem.findMany({
       where: {
         variantId: { in: variantIds },
         variant:   { organizationId },

@@ -1,0 +1,1 @@
+export { router, authProcedure, publicProcedure, ownerProcedure, tenantProcedure } from './trpc';

@@ -28,8 +28,8 @@ export function Navbar() {
   const { firebaseUser, profile, logout } = useAuth()
   const router = useRouter()
 
-  const initials = profile?.email
-    ? profile.email.slice(0, 2).toUpperCase()
+  const initials = profile?.user.email
+    ? profile.user.email.slice(0, 2).toUpperCase()
     : firebaseUser?.email?.slice(0, 2).toUpperCase() ?? 'U'
 
   const photoURL = firebaseUser?.photoURL ?? undefined
@@ -94,7 +94,7 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-48">
                   <div className="px-2 py-1.5">
                     <p className="text-xs text-muted-foreground truncate">
-                      {profile?.email ?? firebaseUser.email}
+                      {profile?.user.email ?? firebaseUser.email}
                     </p>
                   </div>
                   <DropdownMenuSeparator />
@@ -152,3 +152,4 @@ export function Navbar() {
       <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
     </>
   )
+}

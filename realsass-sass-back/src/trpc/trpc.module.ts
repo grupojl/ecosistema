@@ -27,6 +27,10 @@ import { ConfigQuotasService }      from '@/config-quotas/config-quotas.service'
 import { ConfigThemesService }      from '@/config-themes/config-themes.service';
 import { ConfigWebhooksService }    from '@/config-webhooks/config-webhooks.service';
 import { ConfigAuditService }       from '@/config-audit/config-audit.service';
+import { ConfigTemplatesService }    from '@/config-templates/config-templates.service';
+import { AffiliatesService }          from '@/affiliate/affiliate.service';
+import { ConfigTemplatesModule }      from '@/config-templates/config-templates.module';
+import { AffiliatesModule }            from '@/affiliate/affiliate.module';
 import { ConfigSecretsService }     from '@/config-secrets/config-secrets.service';
 
 import { UsersModule }              from '@/users/users.module';
@@ -39,6 +43,8 @@ import { ConfigThemesModule }       from '@/config-themes/config-themes.module';
 import { ConfigWebhooksModule }     from '@/config-webhooks/config-webhooks.module';
 import { ConfigAuditModule }        from '@/config-audit/config-audit.module';
 import { ConfigSecretsModule }      from '@/config-secrets/config-secrets.module';
+import { MarketsService }             from '@/markets/markets.service';
+import { MarketsModule }               from '@/markets/markets.module';
 
 @Injectable()
 export class TrpcService {
@@ -53,6 +59,8 @@ export class TrpcService {
     private readonly webhooks:      ConfigWebhooksService,
     private readonly audit:         ConfigAuditService,
     private readonly secrets:       ConfigSecretsService,
+    private readonly templates:     ConfigTemplatesService,
+    private readonly affiliates:    AffiliatesService,
     private readonly markets:       MarketsService,
   ) {}
 
@@ -69,6 +77,8 @@ export class TrpcService {
       auditService:         this.audit,
       secretsService:       this.secrets,
       marketsService:     this.markets,
+      templatesService:   this.templates,
+      affiliatesService:  this.affiliates,
     });
 
     return createExpressMiddleware({

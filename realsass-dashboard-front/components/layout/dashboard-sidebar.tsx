@@ -10,6 +10,7 @@ import {
   LogOut, ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useActiveOrganization } from '@/features/auth/hooks/use-active-organization';
 import { siteConfig } from '@/config/site';
 import { NAV_GROUPS } from '@/config/navigation';
 import { cn } from '@/lib/utils';
@@ -25,7 +26,9 @@ const STORE_FRONT_URL =
 
 export function DashboardSidebar() {
   const pathname                             = usePathname();
-  const { user, logout, organizationSlug }  = useAuth();
+  const { user, logout }                     = useAuth();
+  const { organization }                     = useActiveOrganization();
+  const organizationSlug                     = organization?.slug ?? null;
   const [menuOpen, setMenuOpen]              = useState(false);
 
   const isActive = (href: string) =>

@@ -12,46 +12,46 @@ import {
 } from '@real/ui';
 import { Loader2 } from 'lucide-react';
 
-interface DeleteProductDialogProps {
+interface ArchiveProductDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  isDeleting: boolean;
+  isArchiving: boolean;
   productName?: string;
 }
 
-export function DeleteProductDialog({
+/** El back no borra productos: se archivan (status ARCHIVED) y se pueden restaurar editándolos. */
+export function ArchiveProductDialog({
   open,
   onClose,
   onConfirm,
-  isDeleting,
+  isArchiving,
   productName,
-}: DeleteProductDialogProps) {
+}: ArchiveProductDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>¿Eliminar producto?</AlertDialogTitle>
+          <AlertDialogTitle>¿Archivar producto?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acción no se puede deshacer. El producto{' '}
             <span className="font-medium text-foreground">{productName}</span>{' '}
-            será eliminado permanentemente del inventario.
+            deja de mostrarse en la tienda. Podés restaurarlo después cambiando su estado.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isArchiving}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            disabled={isDeleting}
+            disabled={isArchiving}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? (
+            {isArchiving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Eliminando...
+                Archivando...
               </>
             ) : (
-              'Eliminar'
+              'Archivar'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

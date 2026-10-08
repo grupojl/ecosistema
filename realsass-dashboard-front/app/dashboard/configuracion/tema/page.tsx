@@ -29,25 +29,34 @@ const RADIUS_OPTIONS = [
   { label: 'Completo', value: '1.5rem'  },
 ];
 
-function ThemePreview({ theme }: { theme: ThemeConfig }) {
+type ThemePreviewData = Pick<
+  ThemeConfig,
+  'name' | 'primaryColor' | 'secondaryColor' | 'accentColor' | 'fontFamily' | 'borderRadius'
+>;
+
+function ThemePreview({ theme }: { theme: ThemePreviewData }) {
+  const primary   = theme.primaryColor   ?? '#000000';
+  const secondary = theme.secondaryColor ?? '#ffffff';
+  const radius    = theme.borderRadius   ?? '0.5rem';
+  const font      = theme.fontFamily     ?? 'DM Sans';
   return (
     <div
       className="rounded-lg border p-3 space-y-2 text-xs"
       style={{
-        background:   theme.secondaryColor,
-        borderColor:  theme.primaryColor + '40',
-        fontFamily:   theme.fontFamily + ', sans-serif',
-        borderRadius: theme.borderRadius,
+        background:   secondary,
+        borderColor:  primary + '40',
+        fontFamily:   font + ', sans-serif',
+        borderRadius: radius,
       }}
     >
       <div
         className="h-5 rounded-sm flex items-center px-2 text-white text-[10px] font-medium"
-        style={{ background: theme.primaryColor, borderRadius: theme.borderRadius }}
+        style={{ background: primary, borderRadius: radius }}
       >
         {theme.name}
       </div>
       <div className="flex gap-1.5">
-        {[theme.primaryColor, theme.secondaryColor, theme.accentColor ?? theme.primaryColor].map((c, i) => (
+        {[primary, secondary, theme.accentColor ?? primary].map((c, i) => (
           <div
             key={i}
             className="size-4 rounded border border-black/10"
@@ -55,10 +64,17 @@ function ThemePreview({ theme }: { theme: ThemeConfig }) {
             title={c}
           />
         ))}
-        <span className="text-[10px] text-gray-500 ml-1">{theme.fontFamily}</span>
+        <span className="text-[10px] text-gray-500 ml-1">{font}</span>
       </div>
     </div>
   );
+}
+
+/** El back valida colores (#RRGGBB) y URLs: los campos vacíos del form no se envían. */
+function toCreatePayload(form: CreateThemeInput): CreateThemeInput {
+  return Object.fromEntries(
+    Object.entries(form).filter(([, v]) => v !== '' && v !== undefined),
+  ) as CreateThemeInput;
 }
 
 const EMPTY_FORM: CreateThemeInput = {
@@ -70,7 +86,7 @@ const EMPTY_FORM: CreateThemeInput = {
 export default function TemaPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useThemes(organizationId);
-  const themes  = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
+  const themes = data ?? [];
 
   const createMutation   = useCreateTheme();
   const activateMutation = useActivateTheme();
@@ -86,7 +102,7 @@ export default function TemaPage() {
     if (!organizationId) return;
     setFormError(null);
     try {
-      await createMutation.mutateAsync({ data: form, orgId: organizationId });
+      await createMutation.mutateAsync(toCreatePayload(form));
       toast.success('Tema creado');
       setModalOpen(false);
       setForm(EMPTY_FORM);
@@ -98,7 +114,7 @@ export default function TemaPage() {
   const handleActivate = async (id: string) => {
     if (!organizationId) return;
     try {
-      await activateMutation.mutateAsync({ id, orgId: organizationId });
+      await activateMutation.mutateAsync({ themeId: id });
       toast.success('Tema activado');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error');
@@ -108,7 +124,7 @@ export default function TemaPage() {
   const handleDelete = async () => {
     if (!deleting || !organizationId) return;
     try {
-      await deleteMutation.mutateAsync({ id: deleting.id, orgId: organizationId });
+      await deleteMutation.mutateAsync({ themeId: deleting.id });
       toast.success('Tema eliminado');
       setDeleting(null);
     } catch (err) {
@@ -140,7 +156,7 @@ export default function TemaPage() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {themes.map((theme: ThemeConfig) => (
+        {themes.map((theme) => (
           <div
             key={theme.id}
             className={cn(
@@ -279,15 +295,12 @@ export default function TemaPage() {
             <div className="space-y-1.5">
               <Label className="text-muted-foreground">Preview</Label>
               <ThemePreview theme={{
-                id: 'preview', name: form.name || 'Preview',
-                organizationId: null, isActive: false, isSystemDefault: false,
+                name: form.name || 'Preview',
                 primaryColor: form.primaryColor ?? '#000000',
                 secondaryColor: form.secondaryColor ?? '#ffffff',
-                accentColor: form.accentColor ?? null,
+                accentColor: form.accentColor || null,
                 fontFamily: form.fontFamily ?? 'DM Sans',
                 borderRadius: form.borderRadius ?? '0.75rem',
-                logoUrl: null, faviconUrl: null, darkMode: false, customCSS: null,
-                createdAt: '', updatedAt: '',
               }} />
             </div>
 

@@ -1,14 +1,14 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z }             from 'zod';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IFeatureFlagsRepository } from '@/config-flags/repository/feature-flags.repository.interface';
 import type { FeatureFlag, UpdateFeatureFlagInput } from '@/domain/feature-flag.entity';
 
 type PrismaFlag = Prisma.FeatureFlagGetPayload<Record<string, never>>;
 
 // Zod schema para el campo Json "conditions" de Prisma
-const ConditionsSchema = z.record(z.unknown()).catch({});
+const ConditionsSchema = z.record(z.string(), z.unknown()).catch({});
 
 @Injectable()
 export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
@@ -42,7 +42,7 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
   }
 
   async update(id: string, input: UpdateFeatureFlagInput): Promise<FeatureFlag> {
-    const row = await this.prisma.featureFlag.update({ where: { id }, data: input });
+    const row = await this.prisma.featureFlag.update({ where: { id }, data: input as any });
     return this.toEntity(row);
   }
 }

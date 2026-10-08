@@ -10,16 +10,15 @@ import {
 import {
   CUSTOMERS_REPOSITORY,
   type ICustomersRepository,
-} from "@/customers/repository/customers.repository.interface.js";
+} from "@/customers/repository/customers.repository.interface";
 import {
   assertValidEmail,
   CustomerNotFoundError,
   InvalidEmailError,
-} from "@/customers/domain/customer.errors.js";
+} from "@/customers/domain/customer.errors";
 
 export interface IdentifyCustomerOutput {
   customerId: string;
-  sessionId:  string;
   isNew:      boolean;
 }
 
@@ -71,7 +70,6 @@ export class CustomersService {
 
     return {
       customerId: customer.id,
-      sessionId:  customer.sessionId,
       isNew,
     };
   }

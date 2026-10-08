@@ -16,7 +16,8 @@
 //   }
 // }
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin'; // @real/firebase-auth
+import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
 
 export interface PlatformClaims {
   organizationId:   string;
@@ -45,7 +46,7 @@ export class ClaimsService {
   // ── Emitir claims ─────────────────────────────────────────────────────────
   async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void> {
     try {
-      await admin.app().auth().setCustomUserClaims(uid, claims);
+      await getAuth().setCustomUserClaims(uid, claims);
       this.logger.log(
         `Claims emitidos → uid: ${uid} org: ${claims.organizationId} role: ${claims.role}`,
       );
@@ -58,7 +59,7 @@ export class ClaimsService {
   // ── Revocar refresh tokens ────────────────────────────────────────────────
   async revokeUserTokens(uid: string): Promise<void> {
     try {
-      await admin.app().auth().revokeRefreshTokens(uid);
+      await getAuth().revokeRefreshTokens(uid);
       this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
     } catch (err) {
       this.logger.error(`Error revocando tokens para ${uid}: ${(err as Error).message}`);

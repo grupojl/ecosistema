@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
+    "module": "commonjs",
+    "moduleResolution": "node10",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -14,6 +13,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "ignoreDeprecations": "6.0",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -21,9 +21,109 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
+    "typeRoots": [
+      "../node_modules/@types"
+    ],
+    "types": [
+      "jest",
+      "node"
+    ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@/domain/affiliate.entity": [
+        "src/affiliate/domain/affiliate.entity.ts"
+      ],
+      "@/domain/collaborator.entity": [
+        "src/collaborators/domain/collaborator.entity.ts"
+      ],
+      "@/domain/audit-log.entity": [
+        "src/config-audit/domain/audit-log.entity.ts"
+      ],
+      "@/domain/feature-flag.entity": [
+        "src/config-flags/domain/feature-flag.entity.ts"
+      ],
+      "@/domain/quota.entity": [
+        "src/config-quotas/domain/quota.entity.ts"
+      ],
+      "@/domain/secret.entity": [
+        "src/config-secrets/domain/secret.entity.ts"
+      ],
+      "@/domain/template.entity": [
+        "src/config-templates/domain/template.entity.ts"
+      ],
+      "@/domain/theme.entity": [
+        "src/config-themes/domain/theme.entity.ts"
+      ],
+      "@/domain/webhook.entity": [
+        "src/config-webhooks/domain/webhook.entity.ts"
+      ],
+      "@/domain/market.entity": [
+        "src/markets/domain/market.entity.ts"
+      ],
+      "@/domain/organization.entity": [
+        "src/organizations/domain/organization.entity.ts"
+      ],
+      "@/domain/user.entity": [
+        "src/users/domain/user.entity.ts"
+      ],
+      "@/types/tenant-context": [
+        "../packages/auth-server/src/types/tenant-context.ts"
+      ],
+      "@/ports/cache.port": [
+        "../packages/auth-server/src/ports/cache.port.ts"
+      ],
+      "@/ports/memory-cache.adapter": [
+        "../packages/auth-server/src/ports/memory-cache.adapter.ts"
+      ],
+      "@/firebase/firebase.module": [
+        "../packages/auth-server/src/firebase/firebase.module.ts"
+      ],
+      "@/guards/firebase-auth.guard": [
+        "../packages/auth-server/src/guards/firebase-auth.guard.ts"
+      ],
+      "@/guards/roles.guard": [
+        "../packages/auth-server/src/guards/roles.guard.ts"
+      ],
+      "@/guards/tenant.guard": [
+        "../packages/auth-server/src/guards/tenant.guard.ts"
+      ],
+      "@/decorators/current-user.decorator": [
+        "../packages/auth-server/src/decorators/current-user.decorator.ts"
+      ],
+      "@/decorators/public.decorator": [
+        "../packages/auth-server/src/decorators/public.decorator.ts"
+      ],
+      "@/decorators/roles.decorator": [
+        "../packages/auth-server/src/decorators/roles.decorator.ts"
+      ],
+      "@/decorators/tenant.decorator": [
+        "../packages/auth-server/src/decorators/tenant.decorator.ts"
+      ],
+      "@/middleware/create-trpc-auth-middleware": [
+        "../packages/auth-server/src/middleware/create-trpc-auth-middleware.ts"
+      ],
+      "@/session": [
+        "../packages/auth-server/src/session/index.ts"
+      ],
+      "@/filters/zod-exception.filter": [
+        "../packages/auth-server/src/filters/zod-exception.filter.ts"
+      ],
+      "@/session/session.service": [
+        "../packages/auth-server/src/session/session.service.ts"
+      ],
+      "@/session/auth-session.controller": [
+        "../packages/auth-server/src/session/auth-session.controller.ts"
+      ]
     }
   },
-  "extends": "../tsconfig.base.json"
+  "extends": "../tsconfig.base.json",
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.e2e-spec.ts",
+    "test/**/*",
+    "../packages/auth-server/src/**/*",
+    "../packages/trpc/src/**/*"
+  ]
 }

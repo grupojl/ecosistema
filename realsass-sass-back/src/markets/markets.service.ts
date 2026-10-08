@@ -56,7 +56,7 @@ export class MarketsService {
       organizationId:    input.organizationId,
       countryCode:       input.countryCode,
       isDefault:         isFirstMarket,
-      fulfillmentConfig: FulfillmentConfigSchema.parse(input.fulfillmentConfig ?? {}),
+      fulfillmentConfig: FulfillmentConfigSchema.parse(input.fulfillmentConfig ?? { priority: 1 }),
     })
     return market.toDTO()
   }
@@ -101,7 +101,7 @@ export class MarketsService {
       organizationId,
       countryCode:       countryCode.toUpperCase(),
       isDefault:         true,
-      fulfillmentConfig: {},
+      fulfillmentConfig: { priority: 1 },
     })
     return market.toDTO()
   }

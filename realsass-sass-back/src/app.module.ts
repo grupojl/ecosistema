@@ -1,7 +1,7 @@
 import { LoggerModule }    from 'nestjs-pino';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { Module, type NestModule, type MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { CorrelationIdMiddleware } from '@/common/middleware/correlation-id.middleware';                     from '@nestjs/common';
+import { CorrelationIdMiddleware } from '@/common/middleware/correlation-id.middleware';
 import { ConfigModule }               from '@nestjs/config';
 import { APP_GUARD }                  from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';

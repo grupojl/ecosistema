@@ -6,18 +6,18 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service.js";
-import { InventoryService }  from "@/inventory/inventory.service.js";
-import { ActivityService }   from "@/activity/activity.service.js";
+import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service";
+import { InventoryService }  from "@/inventory/inventory.service";
+import { ActivityService }   from "@/activity/activity.service";
 import {
   ORDERS_REPOSITORY,
   type IOrdersRepository,
-} from "@/orders/repository/orders.repository.interface.js";
+} from "@/orders/repository/orders.repository.interface";
 import {
   assertValidOrderTransition,
   type OrderStatus,
-} from "@/orders/domain/order.errors.js";
-import type { Prisma } from "@prisma/client";
+} from "@/orders/domain/order.errors";
+import type { Prisma } from "@/generated/prisma";
 
 @Injectable()
 export class OrdersService {
@@ -39,8 +39,8 @@ export class OrdersService {
   }
 
   async listOrders(organizationId: string, sessionId?: string) {
-    if (sessionId) return this.ordersRepository.listBySession(organizationId, sessionId);
-    return this.ordersRepository.listBySession(organizationId, '');
+    if (sessionId) return this.ordersRepository.findByCart(organizationId, sessionId);
+    return this.ordersRepository.findByCart(organizationId, '');
   }
 
   async getOrder(organizationId: string, orderId: string) {
@@ -48,7 +48,7 @@ export class OrdersService {
   }
 
   async listBySession(organizationId: string, sessionId: string) {
-    return this.ordersRepository.listBySession(organizationId, sessionId);
+    return this.ordersRepository.findByCart(organizationId, sessionId);
   }
 
   async checkout(input: {
@@ -105,6 +105,8 @@ export class OrdersService {
         data: {
           organizationId,
           customerId,
+          cartId,
+          subtotalCents:   total,
           status:          'PENDING_PAYMENT',
           totalCents:      total,
           currency:        cart.items[0]?.variant.currency ?? 'ARS',
@@ -112,10 +114,9 @@ export class OrdersService {
           locale:          input.locale ?? null,
           items: {
             create: cart.items.map(i => ({
-              variantId:  i.variantId,
-              quantity:   i.quantity,
-              priceCents: i.variant.priceCents,
-              currency:   i.variant.currency,
+              variantId:              i.variantId,
+              quantity:               i.quantity,
+              unitPriceCentsSnapshot: i.variant.priceCents,
             })),
           },
         },
@@ -124,7 +125,7 @@ export class OrdersService {
 
       await tx.cart.update({
         where: { id: cartId },
-        data:  { status: 'COMPLETED' },
+        data:  { status: 'CONVERTED' },
       });
 
       return order;

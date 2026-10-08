@@ -1,6 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { ITemplatesRepository } from '@/config-templates/repository/templates.repository.interface';
 import type { ContentTemplate, CreateTemplateInput } from '@/domain/template.entity';
 
@@ -13,10 +13,9 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
   private toEntity(row: PrismaTemplate): ContentTemplate {
     return {
       id:             row.id,
-      organizationId: row.organizationId,
+      organizationId: row.organizationId ?? '',
       key:            row.key,
       content:        row.content,
-      description:    row.description,
       createdAt:      row.createdAt,
       updatedAt:      row.updatedAt,
     };
@@ -40,8 +39,8 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
         organizationId: input.organizationId,
         key:            input.key,
         content:        input.content,
-        description:    input.description,
-      },
+        name:           input.key,
+      } as any,
     });
     return this.toEntity(row);
   }

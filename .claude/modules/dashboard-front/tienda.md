@@ -32,6 +32,18 @@ El dueño puede configurar qué puede hacer cada colaborador:
 Si un colaborador no tiene el permiso, la sección no aparece o aparece
 bloqueada.
 
-## Estado actual
+## Estado actual (2026-10-08)
 
-✅ Funcional. Usa features/catalog/hooks y features/orders/hooks con TanStack Query.
+✅ Funcional contra el contrato real de ecommerce-back (`adminCatalog`, `adminInventory`,
+`adminOrders`), vía `features/store/hooks.ts` (tRPC + optimistic updates con rollback).
+
+- **Productos:** alta (nombre, handle autogenerado, descripción, estado, variantes con SKU/título/precio/
+  moneda), edición (nombre, descripción, estado) y stock por variante. "Eliminar" archiva el producto.
+- **Pedidos:** lista con filtro por estado y panel de detalle (ítems, totales, cliente, pago, dirección).
+
+Límites que impone el contrato actual:
+- Las variantes ya creadas no se editan (SKU/precio): falta un procedure en ecommerce-back.
+- Los pedidos son de solo lectura: no existe un procedure para cambiar su estado.
+- Publicar un producto exige stock en alguna variante (regla de dominio); el mensaje del back se
+  muestra en el formulario.
+- Los permisos finos por colaborador descritos arriba no están cableados en estas pantallas.

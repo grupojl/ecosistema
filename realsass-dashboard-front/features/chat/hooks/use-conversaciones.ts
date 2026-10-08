@@ -11,8 +11,8 @@ import {
 import type { ConversacionFilters, EnviarMensajeInput } from '@/features/chat/types';
 
 function useOrgId(): string {
-  const { profile } = useAuth();
-  return profile?.tenants?.[0]?.organizationId ?? '';
+  const { organizationId } = useAuth();
+  return organizationId ?? '';
 }
 
 export function useConversaciones(filters: ConversacionFilters = {}) {

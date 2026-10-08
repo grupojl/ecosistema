@@ -3,19 +3,10 @@ import {
   Logger, UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector }     from '@nestjs/core';
-import * as admin        from 'firebase-admin';
+import { getAuth }       from 'firebase-admin/auth';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import type { CurrentUserPayload } from '@/types/tenant-context';
 
-/**
- * FirebaseAuthGuard — guard global de autenticacion.
- * Registrar como APP_GUARD en AppModule.
- *
- * 1. Si la ruta tiene @Public() pasa sin verificar.
- * 2. Extrae Bearer token del header Authorization.
- * 3. Verifica con Firebase Admin.
- * 4. Inyecta req.user con CurrentUserPayload.
- */
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
   private readonly logger = new Logger(FirebaseAuthGuard.name);
@@ -37,7 +28,7 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     try {
-      const decoded = await admin.app().auth().verifyIdToken(token);
+      const decoded = await getAuth().verifyIdToken(token);
 
       req.user = {
         uid:         decoded.uid,

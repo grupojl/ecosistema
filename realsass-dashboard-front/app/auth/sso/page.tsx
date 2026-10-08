@@ -11,8 +11,8 @@
 import { useEffect, useState }     from 'react';
 import { useRouter }               from 'next/navigation';
 import { Loader2, CircleAlert }    from 'lucide-react';
-import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { initFirebase }            from '@real/auth-client';
+import { signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirebaseAuth }         from '@real/auth-client';
 
 export default function SsoPage() {
   const router = useRouter();
@@ -29,9 +29,8 @@ export default function SsoPage() {
       }
 
       try {
-        // Usar @real/auth-client para inicializar Firebase
-        initFirebase();
-        const firebaseAuth = getAuth();
+        // @real/auth-client inicializa Firebase con NEXT_PUBLIC_FIREBASE_*
+        const firebaseAuth = getFirebaseAuth();
 
         // 1. Firebase establece la sesión con el custom token
         await signInWithCustomToken(firebaseAuth, token);

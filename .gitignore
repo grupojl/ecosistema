@@ -19,3 +19,10 @@ test-results/
 playwright-report/
 url,env.txt
 url,env.txt
+
+# Cliente Prisma: se regenera con `prisma generate` (pnpm contracts / build). Nunca se versiona.
+**/src/generated/
+
+# Respaldos locales
+*.bak
+*.bak2

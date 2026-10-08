@@ -1,24 +1,17 @@
-/**
- * repository/orders.repository.interface.ts — realsass-ecommerce-back
- *
- * Puerto (interface) de la capa Repository para "orders".
- * Token: ORDERS_REPOSITORY
- */
-import type { OrderStatus } from "@/domain/order.errors";
+import type { OrderStatus } from '@/domain/order.errors';
 
-export const ORDERS_REPOSITORY = Symbol("ORDERS_REPOSITORY");
+export const ORDERS_REPOSITORY = Symbol('ORDERS_REPOSITORY');
 
 export interface OrderItemRecord {
-  id:         string;
-  orderId:    string;
-  variantId:  string;
-  quantity:   number;
-  priceCents: number;
-  currency:   string;
+  id:                    string;
+  orderId:               string;
+  variantId:             string;
+  quantity:              number;
+  unitPriceCentsSnapshot: number;
   variant: {
-    id:    string;
-    sku:   string;
-    title: string;
+    id:      string;
+    sku:     string;
+    title:   string;
     product: { id: string; name: string };
   };
 }
@@ -26,8 +19,11 @@ export interface OrderItemRecord {
 export interface OrderRecord {
   id:              string;
   organizationId:  string;
-  sessionId:       string;
+  cartId:          string;
+  customerId:      string;
   status:          OrderStatus;
+  subtotalCents:   number;
+  shippingCents:   number;
   totalCents:      number;
   currency:        string;
   shippingAddress: Record<string, unknown> | null;
@@ -39,31 +35,28 @@ export interface OrderRecord {
 
 export interface CreateOrderInput {
   organizationId:  string;
-  sessionId:       string;
+  cartId:          string;
+  customerId:      string;
   items: Array<{
-    variantId:  string;
-    quantity:   number;
-    priceCents: number;
-    currency:   string;
+    variantId:              string;
+    quantity:               number;
+    unitPriceCentsSnapshot: number;
   }>;
-  totalCents:      number;
-  currency:        string;
+  subtotalCents:    number;
+  shippingCents:    number;
+  totalCents:       number;
+  currency:         string;
   shippingAddress?: Record<string, unknown>;
 }
 
 export interface IOrdersRepository {
   findById(organizationId: string, orderId: string): Promise<OrderRecord | null>;
-
-  findBySession(organizationId: string, sessionId: string): Promise<OrderRecord[]>;
-
+  findByCart(organizationId: string, cartId: string): Promise<OrderRecord[]>;
   listByOrg(
     organizationId: string,
     filters?: { status?: OrderStatus; page?: number; limit?: number },
   ): Promise<{ items: OrderRecord[]; total: number }>;
-
   create(input: CreateOrderInput): Promise<OrderRecord>;
-
   updateStatus(orderId: string, status: OrderStatus): Promise<OrderRecord>;
-
   setPaymentIntent(orderId: string, paymentIntentId: string): Promise<void>;
 }

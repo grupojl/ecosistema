@@ -34,6 +34,16 @@ a lo que hace `POST /auth/session` para el sistema de auth de owners.
   - Server Components: `createServerCaller()` → procedures de `customer.*`
   - Client Components: `trpc.customer.*` hooks (rehidratación)
 
+## Configuración (2026-10-08)
+
+- `proxy.ts` (antes `middleware.ts`) negocia el idioma de `/tienda/*`; ver `modules/ecommerce-front/seo-i18n.md`.
+- `SITE_URL` es de **runtime**. `app/robots.ts` es `force-dynamic` para leerla por request (antes se
+  prerenderizaba en el build y, sin la variable, `robots.txt` quedaba sin la línea `Sitemap`).
+- No usa Firebase ni `@real/auth-client`: el cliente se identifica por email (`customer.identify`).
+- `NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID` es la única fuente del header `x-organization-id` del navegador;
+  los procedures de carrito y checkout lo exigen (limitación para multi-tienda, DT-ENV-03).
+- Variables completas en `.env.example`.
+
 ## Estado de migración pendiente
 
 - `lib/store/client.ts` — fetch REST manual a eliminar → reemplazar por tRPC server caller

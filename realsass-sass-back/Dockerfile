@@ -5,7 +5,7 @@
 #
 # HTTP:  3000 (identidad, orgs, colaboradores, config, auditoría)
 # BullMQ: webhook-delivery
-# Auth: cookies HttpOnly (ADR-004) — SESSION_COOKIE_SECRET requerida
+# Auth: Firebase Session Cookies HttpOnly (ADR-004) — sin secret propio; variables en .env.example
 # Ref: .claude/architecture/05-dockerfile-backend.md
 
 ARG NODE_VERSION=22
@@ -69,4 +69,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://localhost:3000/health || exit 1
 
-CMD exec dumb-init "/app/realsass-sass-back/entrypoint.sh"]
+CMD ["dumb-init", "/app/realsass-sass-back/entrypoint.sh"]

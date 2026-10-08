@@ -104,12 +104,12 @@ export default function ConfigPage() {
                 )}
               </div>
               <Button
-                variant={flag.value ? 'default' : 'outline'}
+                variant={flag.enabled ? 'default' : 'outline'}
                 size="sm"
                 disabled={updateFlag.isPending || !flag.organizationId}
-                onClick={() => updateFlag.mutate({ flagId: flag.id, value: !flag.value })}
+                onClick={() => updateFlag.mutate({ flagId: flag.id, enabled: !flag.enabled })}
               >
-                {flag.value ? 'Activo' : 'Inactivo'}
+                {flag.enabled ? 'Activo' : 'Inactivo'}
               </Button>
             </div>
           ))}

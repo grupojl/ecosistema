@@ -14,18 +14,21 @@ los clientes cuando visitan la tienda.
 
 ## Funciones principales
 
-- **list**: muestra todos los temas de la org (pueden tener varios guardados).
-- **getPublicTheme**: devuelve el tema activo de una org para mostrarlo en la tienda pública.
-  Esta es la función que usa el storefront para saber cómo tiene que verse.
-- **create**: crea un nuevo tema con colores, fuentes y logos.
-- **activate**: activa un tema (desactiva el anterior automáticamente).
-- **remove**: elimina un tema que no está activo.
+- **list** (tRPC): muestra todos los temas de la org (pueden tener varios guardados).
+- **create** (tRPC, solo OWNER): crea un nuevo tema con colores, fuentes y logos.
+- **activate** (tRPC): activa un tema (desactiva el anterior automáticamente).
+- **remove** (tRPC, solo OWNER): elimina un tema que no está activo ni es default del sistema.
+- **getPublicTheme** (solo service/repo): devuelve el tema activo para el storefront. **No está expuesto
+  en el router tRPC** (ver estado actual).
 
 ## ¿Quién lo usa?
 
 - El panel del dueño (sass-front) — para gestionar y editar temas
 - La tienda pública (ecommerce-front) — para aplicar el tema activo visualmente
 
-## Estado actual
+## Estado actual (2026-10-08)
 
-✅ Funcionando. El tema activo se carga al inicio de cada visita al storefront.
+✅ El router tRPC expone `list`, `create`, `activate`, `remove` (antes `list` devolvía un único tema y
+`update` solo llamaba a `activate`; se alineó con lo que implementa el service). Ya no hay `update`.
+⚠️ `realsass-sass-front/lib/config-client.ts` llama `configThemes.getPublicTheme`, que no existe en el
+router: falta decidir si se expone como procedure público o si el storefront lo obtiene por otra vía.

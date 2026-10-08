@@ -1,16 +1,24 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2023",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "target": "ES2023",
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "declaration": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
 }

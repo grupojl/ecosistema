@@ -2,6 +2,8 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
+  FacebookAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
@@ -99,6 +101,19 @@ export async function getIdToken(force = false): Promise<string> {
 
 export async function signInWithGoogle(): Promise<User> {
   const result = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
+  return result.user;
+}
+
+export async function signInWithApple(): Promise<User> {
+  const provider = new OAuthProvider('apple.com');
+  provider.addScope('email');
+  provider.addScope('name');
+  const result = await signInWithPopup(getFirebaseAuth(), provider);
+  return result.user;
+}
+
+export async function signInWithFacebook(): Promise<User> {
+  const result = await signInWithPopup(getFirebaseAuth(), new FacebookAuthProvider());
   return result.user;
 }
 

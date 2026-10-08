@@ -38,7 +38,7 @@ export function createConfigFlagsRouter(flagsService: ConfigFlagsService) {
         enabled:           z.boolean().optional(),
         description:       z.string().max(200).optional(),
         rolloutPercentage: z.number().int().min(0).max(100).optional(),
-        conditions:        z.record(z.unknown()).optional(),
+        conditions:        z.record(z.string(), z.unknown()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const { flagId, ...dto } = input;

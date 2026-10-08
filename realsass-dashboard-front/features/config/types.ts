@@ -1,107 +1,23 @@
 // features/config/types.ts
-// ─── Tipos del Config Service ─────────────────────────────────────────────────
+// ─── Tipos del Config Service — inferidos del contrato SassAppRouter (@real/trpc) ───
+// Nada escrito a mano: si sass-back cambia un shape, el dashboard deja de compilar.
+import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
+import type { SassAppRouter } from '@real/trpc';
 
-// ── Temas ─────────────────────────────────────────────────────────────────────
+type RouterOutputs = inferRouterOutputs<SassAppRouter>;
+type RouterInputs  = inferRouterInputs<SassAppRouter>;
 
-export interface ThemeConfig {
-  id:              string
-  organizationId:  string | null
-  name:            string
-  isActive:        boolean
-  isSystemDefault: boolean
-  primaryColor:    string
-  secondaryColor:  string
-  accentColor:     string | null
-  fontFamily:      string
-  borderRadius:    string
-  logoUrl:         string | null
-  faviconUrl:      string | null
-  darkMode:        boolean
-  customCSS:       string | null
-  createdAt:       string
-  updatedAt:       string
-}
+export type ThemeConfig       = RouterOutputs['configThemes']['list'][number];
+export type CreateThemeInput  = RouterInputs['configThemes']['create'];
 
-export interface CreateThemeInput {
-  name:           string
-  primaryColor?:  string
-  secondaryColor?: string
-  accentColor?:   string
-  fontFamily?:    string
-  borderRadius?:  string
-  logoUrl?:       string
-  faviconUrl?:    string
-  darkMode?:      boolean
-  customCSS?:     string
-}
+export type FeatureFlag       = RouterOutputs['configFlags']['list'][number];
+export type UpdateFlagInput   = Omit<RouterInputs['configFlags']['update'], 'flagId'>;
 
-// ── Feature Flags ──────────────────────────────────────────────────────────────
+export type WebhookEndpoint     = RouterOutputs['configWebhooks']['list'][number];
+export type CreateWebhookInput  = RouterInputs['configWebhooks']['create'];
+export type WebhookDeliveryLog  = RouterOutputs['configWebhooks']['getLogs'][number];
 
-export interface FeatureFlag {
-  id:               string
-  organizationId:   string | null
-  key:              string
-  enabled:          boolean
-  description:      string | null
-  systemTarget:     string
-  rolloutPercentage: number
-  conditions:       Record<string, unknown>
-  createdAt:        string
-  updatedAt:        string
-}
-
-export interface UpdateFlagInput {
-  enabled?:           boolean
-  description?:       string
-  rolloutPercentage?: number
-  conditions?:        Record<string, unknown>
-}
-
-// ── Webhooks ──────────────────────────────────────────────────────────────────
-
-export interface WebhookEndpoint {
-  id:              string
-  url:             string
-  events:          string[]
-  secretPrefix:    string
-  isActive:        boolean
-  description:     string | null
-  lastTriggeredAt: string | null
-  failureCount:    number
-  createdAt:       string
-}
-
-export interface CreateWebhookInput {
-  url:          string
-  events:       string[]
-  description?: string
-}
-
-export interface WebhookDeliveryLog {
-  id:         string
-  webhookId:  string
-  event:      string
-  statusCode: number | null
-  success:    boolean
-  duration:   number | null
-  attempt:    number
-  error:      string | null
-  createdAt:  string
-}
-
-// ── Quotas ────────────────────────────────────────────────────────────────────
-
-export interface QuotaConfig {
-  id:             string
-  organizationId: string
-  resource:       string
-  limit:          number       // -1 = ilimitado
-  currentUsage:   number
-  alertAt:        number       // % para alertar
-  resetAt:        string | null
-  createdAt:      string
-  updatedAt:      string
-}
+export type QuotaConfig       = RouterOutputs['configQuotas']['list'][number];
 
 // Eventos disponibles del config service para webhooks
 export const WEBHOOK_EVENTS = [

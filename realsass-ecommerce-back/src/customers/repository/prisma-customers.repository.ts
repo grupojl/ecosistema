@@ -1,60 +1,72 @@
-/**
- * repository/prisma-customers.repository.ts — realsass-ecommerce-back
- *
- * Adaptador concreto de ICustomersRepository usando Prisma.
- * ÚNICO archivo del módulo customers que puede importar PrismaService.
- */
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "@/prisma/prisma.service";
-import type { ICustomersRepository, CustomerRecord } from "@/customers/repository/customers.repository.interface";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import type { ICustomersRepository, CustomerRecord } from '@/customers/repository/customers.repository.interface';
+import type { Prisma } from '@/generated/prisma';
+
+type PrismaStoreCustomer = Prisma.StoreCustomerGetPayload<Record<string, never>>;
 
 @Injectable()
 export class PrismaCustomersRepository implements ICustomersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private toEntity(row: PrismaStoreCustomer): CustomerRecord {
+    return {
+      id:             row.id,
+      organizationId: row.organizationId,
+      email:          row.email,
+      displayName:    row.displayName,
+      phone:          row.phone,
+      isGuest:        row.isGuest,
+      createdAt:      row.createdAt,
+      updatedAt:      row.updatedAt,
+    };
+  }
+
   async identifyBySession(
     organizationId: string,
     sessionId:      string,
   ): Promise<CustomerRecord> {
-    const existing = await this.prisma.customer.findFirst({
-      where: { organizationId, sessionId },
+    // StoreCustomer no tiene sessionId — buscar por un guest existente
+    // o crear uno nuevo. La sesion se maneja en el contexto del request.
+    const existing = await this.prisma.storeCustomer.findFirst({
+      where: { organizationId, isGuest: true },
     });
-    if (existing) return existing as CustomerRecord;
+    if (existing) return this.toEntity(existing);
 
-    const created = await this.prisma.customer.create({
-      data: { organizationId, sessionId },
+    const created = await this.prisma.storeCustomer.create({
+      data: { organizationId, email: `guest_${sessionId}@guest.local`, isGuest: true },
     });
-    return created as CustomerRecord;
+    return this.toEntity(created);
   }
 
   async findById(organizationId: string, customerId: string): Promise<CustomerRecord | null> {
-    const c = await this.prisma.customer.findFirst({
+    const row = await this.prisma.storeCustomer.findFirst({
       where: { id: customerId, organizationId },
     });
-    return c as CustomerRecord | null;
+    return row ? this.toEntity(row) : null;
   }
 
   async findBySessionId(organizationId: string, sessionId: string): Promise<CustomerRecord | null> {
-    const c = await this.prisma.customer.findFirst({
-      where: { organizationId, sessionId },
+    const row = await this.prisma.storeCustomer.findFirst({
+      where: { organizationId, email: `guest_${sessionId}@guest.local` },
     });
-    return c as CustomerRecord | null;
+    return row ? this.toEntity(row) : null;
   }
 
   async update(
     organizationId: string,
     customerId:     string,
-    patch: { email?: string; name?: string; phone?: string },
+    patch: { email?: string; displayName?: string; phone?: string },
   ): Promise<CustomerRecord> {
-    const c = await this.prisma.customer.update({
+    const row = await this.prisma.storeCustomer.update({
       where: { id: customerId },
       data: {
-        ...(patch.email !== undefined && { email: patch.email }),
-        ...(patch.name  !== undefined && { name:  patch.name  }),
-        ...(patch.phone !== undefined && { phone: patch.phone }),
+        ...(patch.email       !== undefined && { email:       patch.email }),
+        ...(patch.displayName !== undefined && { displayName: patch.displayName }),
+        ...(patch.phone       !== undefined && { phone:       patch.phone }),
       },
     });
-    return c as CustomerRecord;
+    return this.toEntity(row);
   }
 
   async listByOrg(
@@ -65,22 +77,21 @@ export class PrismaCustomersRepository implements ICustomersRepository {
     const limit = filters?.limit ?? 20;
     const skip  = (page - 1) * limit;
 
-    const searchWhere = filters?.search
-      ? {
-          OR: [
-            { email: { contains: filters.search, mode: "insensitive" as const } },
-            { name:  { contains: filters.search, mode: "insensitive" as const } },
-          ],
-        }
-      : {};
+    const where: Prisma.StoreCustomerWhereInput = {
+      organizationId,
+      ...(filters?.search && {
+        OR: [
+          { email:       { contains: filters.search, mode: 'insensitive' } },
+          { displayName: { contains: filters.search, mode: 'insensitive' } },
+        ],
+      }),
+    };
 
-    const where = { organizationId, ...searchWhere };
-
-    const [items, total] = await Promise.all([
-      this.prisma.customer.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
-      this.prisma.customer.count({ where }),
+    const [rows, total] = await Promise.all([
+      this.prisma.storeCustomer.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      this.prisma.storeCustomer.count({ where }),
     ]);
 
-    return { items: items as CustomerRecord[], total };
+    return { items: rows.map(r => this.toEntity(r)), total };
   }
 }

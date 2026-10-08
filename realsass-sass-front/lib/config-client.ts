@@ -11,7 +11,7 @@
 //   export const revalidate = 300  en el layout/page que llame esto.
 
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
-import type { AppRouter } from '@real/trpc';
+import type { SassAppRouter } from '@real/trpc';
 
 // ─── Tipo público (mantenido para compatibilidad con theme-injector.ts) ────────
 
@@ -40,7 +40,7 @@ function getSassBackUrl(): string {
 }
 
 function createServerTrpcClient() {
-  return createTRPCProxyClient<AppRouter>({
+  return createTRPCProxyClient<SassAppRouter>({
     links: [
       httpBatchLink({
         url: `${getSassBackUrl()}/api/v1/trpc`,
@@ -64,7 +64,8 @@ export async function getPublicTheme(orgSlug: string): Promise<PublicTheme> {
   try {
     const client = createServerTrpcClient();
     const theme = await client.configThemes.getPublicTheme.query({ orgSlug });
-    return theme as PublicTheme;
+    // null = la org no tiene tema activo → default
+    return theme ? (theme as PublicTheme) : defaultTheme();
   } catch {
     // Fallback: tema por defecto si el back no responde o el procedure no existe aún.
     // Mismo comportamiento que el cliente REST anterior.

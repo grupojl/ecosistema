@@ -9,8 +9,9 @@ time). Ver `architecture/00-principios.md`.
 Consumido por los 3 fronts. Única fuente de:
 - `apiFetch<T>` — fetch autenticado con retry en 401 (force-refresh de token
   y reintento único), lanza `AppError` tipado
-- Firebase client wrapper: `initFirebase`, `getFirebaseAuth`, `getIdToken`,
-  `signInWithGoogle`, `signOut`
+- Firebase client wrapper: `initFirebase`, `getFirebaseAuth` (auto-inicializa con
+  `NEXT_PUBLIC_FIREBASE_*`; exportado desde 2026-10-08), `getIdToken`, `signInWithGoogle`, `signOut`
+- Sin imports con alias `@/…` dentro del package (el consumidor los resolvería con su propio tsconfig)
 - `AppError` con `AppErrorCode`: AUTH, FORBIDDEN, NOT_FOUND, VALIDATION,
   CONFLICT, RATE_LIMIT, SERVER, NETWORK
 - `setActiveOrganizationId`/`getActiveOrganizationId` — en memoria, NO localStorage
@@ -52,12 +53,15 @@ Para agregar un componente nuevo:
 
 ## @real/trpc
 
-Contratos tRPC compartidos. Exporta:
+Contratos tRPC compartidos (ADR-019). Exporta:
 - `SassAppRouter` — tipo del router de `realsass-sass-back`
 - `EcommerceAppRouter` — tipo del router de `realsass-ecommerce-back`
+- `MarketDTO`, `FulfillmentConfig` (también como `@real/trpc/markets`, la hoja que usan los backs)
 - Context compartido (`server/context.ts`, `server/trpc.ts`)
 
-Los fronts importan: `import type { SassAppRouter } from '@real/trpc'`
+**Tiene build real**: `pnpm --filter @real/trpc build` emite los `.d.ts` de ambos backs a
+`packages/trpc/dist/contracts/`. Necesita `prisma generate` y las fuentes de los dos backs.
+Los fronts importan: `import type { SassAppRouter } from '@real/trpc'` y leen solo de `dist`.
 
 ---
 

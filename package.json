@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "Ecosistema Real — pnpm workspaces",
   "scripts": {
+    "contracts":      "pnpm --filter realsass-sass-back exec prisma generate && pnpm --filter realsass-ecommerce-back exec prisma generate && pnpm --filter @real/trpc build",
     "build":          "pnpm --filter \"./packages/*\" build && pnpm --recursive --filter \"./realsass-*\" --filter \"./real-*\" build",
     "build:packages": "pnpm --filter \"./packages/*\" build",
     "dev":            "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front dev",

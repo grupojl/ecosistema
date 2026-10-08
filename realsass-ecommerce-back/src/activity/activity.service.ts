@@ -1,4 +1,5 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, ActivityEventType } from '@/generated/prisma';
+
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
@@ -11,7 +12,7 @@ export class ActivityService {
   async log(
     organizationId: string,
     sessionId: string,
-    eventType: string,
+    eventType: ActivityEventType,
     customerId?: string,
     payload: Record<string, unknown> = {},
   ) {
@@ -19,7 +20,7 @@ export class ActivityService {
       data: {
         organizationId,
         sessionId,
-        eventType: eventType as string,
+        eventType,
         customerId,
         payload: payload as Prisma.InputJsonValue,
       },

@@ -6,11 +6,11 @@ import { useOrders, useProducts } from '@/features/store/hooks';
 
 export default function DashboardPage() {
   const { organizationId } = useAuth();
-  const { data: ordersData } = useOrders(organizationId ?? '', {});
-  const { data: productsData } = useProducts(organizationId ?? '', {});
+  const { data: ordersData } = useOrders(organizationId);
+  const { data: productsData } = useProducts(organizationId);
 
-  const totalOrders   = (ordersData as { meta?: { total?: number } } | undefined)?.meta?.total   ?? 0;
-  const totalProducts = (productsData as { meta?: { total?: number } } | undefined)?.meta?.total ?? 0;
+  const totalOrders   = ordersData?.length ?? 0;
+  const totalProducts = productsData?.filter((p) => p.status !== 'ARCHIVED').length ?? 0;
 
   const cards = [
     { icon: Package,     label: 'Productos',    value: totalProducts, color: '#60a5fa' },

@@ -44,8 +44,8 @@ dueño si prefiere hacer el trabajo operativo desde acá.
 
 Exclusivamente vía tRPC. Conecta con sass-back y ecommerce-back.
 La cookie de sesión viaja automáticamente.
-Excepción documentada: `lib/chat-ia-client.ts` usa fetch manual porque
-chat-ia-back todavía no tiene router tRPC.
+Excepciones documentadas: `lib/chat-ia-client.ts` (fetch manual: chat-ia-back no tiene router tRPC) y
+`lib/api-client.ts` (puente REST a campañas/pagos, fuera del monorepo). Los tipos vienen de `@real/trpc` (ADR-019).
 
 ## Estado actual
 

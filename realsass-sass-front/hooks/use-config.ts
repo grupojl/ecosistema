@@ -80,7 +80,7 @@ export function useCreateWebhook() {
 
 export function useDeleteWebhook() {
   const queryClient = useQueryClient();
-  return trpc.configWebhooks.delete.useMutation({
+  return trpc.configWebhooks.remove.useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [['configWebhooks', 'list']] });
     },

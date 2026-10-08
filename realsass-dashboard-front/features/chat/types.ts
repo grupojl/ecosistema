@@ -92,7 +92,7 @@ export interface ConversacionIA {
   };
 }
 
-export type ConversacionStatus = 'OPEN' | 'CLOSED' | 'PENDING' | 'RESOLVED';
+export type ConversacionStatus = 'OPEN' | 'CLOSED' | 'PENDING' | 'RESOLVED' | 'HUMAN_TAKEOVER';
 
 export interface MensajeIA {
   id:        string;
@@ -109,4 +109,30 @@ export interface ChatResponse {
   tokensUsed:      number;
   modelUsed:       string;
   usedFaqFallback: boolean;
+}
+
+// ─── Proyectos IA ────────────────────────────────────────────────────
+
+export interface CreateProyectoInput {
+  name:          string;
+  description?:  string;
+  systemPrompt?: string;
+}
+
+export interface UpdateAssistantConfigInput {
+  systemPrompt?: string;
+  temperature?:  number;
+  maxTokens?:    number;
+  model?:        string;
+}
+
+export interface AssistantConfig {
+  id:           string;
+  proyectoId:   string;
+  systemPrompt: string;
+  temperature:  number;
+  maxTokens:    number;
+  model:        string;
+  createdAt:    string;
+  updatedAt:    string;
 }

@@ -3,7 +3,7 @@ import {
   BadRequestException, Logger, Inject,
 } from '@nestjs/common';
 import { PrismaService }       from '@/prisma/prisma.service';
-import { CollaboratorStatus }  from '@prisma/client';
+import { CollaboratorStatus, Prisma } from '@/generated/prisma';
 import { COLLABORATORS_REPOSITORY, type ICollaboratorsRepository } from '@/collaborators/repository/collaborators.repository.interface';
 import type { CollaboratorPermissions } from '@/collaborators/domain/collaborator.entity';
 
@@ -89,7 +89,7 @@ export class CollaboratorsService {
       await this.prisma.$transaction([
         this.prisma.collaborator.update({
           where: { id: existing.id },
-          data: { status: 'PENDING', permissions },
+          data: { status: 'PENDING', permissions: permissions as unknown as Prisma.InputJsonValue },
         }),
         this.prisma.invitation.upsert({
           where:  { collaboratorId: existing.id },
@@ -108,7 +108,7 @@ export class CollaboratorsService {
 
     await this.prisma.$transaction([
       this.prisma.collaborator.create({
-        data: { id: collaboratorId, organizationId: org.id, email: dto.email, status: 'PENDING', permissions },
+        data: { id: collaboratorId, organizationId: org.id, email: dto.email, status: 'PENDING', permissions: permissions as unknown as Prisma.InputJsonValue },
       }),
       this.prisma.invitation.create({
         data: { collaboratorId, token: crypto.randomUUID(), expiresAt },

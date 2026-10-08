@@ -22,7 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <AuthProvider>
+        <AuthProvider sassBackUrl={process.env["NEXT_PUBLIC_SASS_BACK_URL"] ?? ""}>
           {children}
           <Toaster richColors position="top-right" />
         </AuthProvider>

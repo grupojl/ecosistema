@@ -27,7 +27,7 @@ export function useCart() {
   const { customerId } = useCustomerContext();
   const [cartId, setCartId] = useState<string | null>(getStoredCartId);
 
-  const cartQuery = trpc.customer.cartGet.useQuery(
+  const cartQuery = trpc.customer.cart.get.useQuery(
     { cartId: cartId! },
     { enabled: !!cartId && !!customerId },
   );
@@ -39,19 +39,18 @@ export function useAddToCart() {
   const { sessionId } = useCustomerContext();
   const utils         = trpc.useUtils();
 
-  return trpc.customer.cartAddItem.useMutation({
+  return trpc.customer.cart.addItem.useMutation({
     onSuccess: (data) => {
-      const id = data?.id ?? data?.data?.id;
-      if (id) storeCartId(id);
-      void utils.customer.cartGet.invalidate();
+      if (data?.id) storeCartId(data.id);
+      void utils.customer.cart.get.invalidate();
     },
   });
 }
 
 export function useRemoveFromCart() {
   const utils = trpc.useUtils();
-  return trpc.customer.cartRemoveItem.useMutation({
-    onSuccess: () => void utils.customer.cartGet.invalidate(),
+  return trpc.customer.cart.removeItem.useMutation({
+    onSuccess: () => void utils.customer.cart.get.invalidate(),
   });
 }
 
@@ -71,7 +70,7 @@ export function useCheckout() {
     onSuccess: () => {
       // Limpiar cartId tras checkout exitoso
       localStorage.removeItem('ecommerce_cart_id');
-      void utils.customer.cartGet.invalidate();
+      void utils.customer.cart.get.invalidate();
       void utils.customer.orders.invalidate();
     },
   });

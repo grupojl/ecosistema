@@ -8,10 +8,14 @@ import { QUOTA_RESOURCE_LABELS } from '@/features/config/types';
 import type { QuotaConfig } from '@/features/config/types';
 import { cn } from '@/lib/utils';
 
+/** El back no guarda umbral de alerta por quota: se usa uno fijo. */
+const ALERT_AT_PERCENT = 80;
+
 function QuotaBar({ quota }: { quota: QuotaConfig }) {
-  const isUnlimited = quota.limit === -1;
-  const pct         = isUnlimited ? 0 : Math.min((quota.currentUsage / quota.limit) * 100, 100);
-  const isAlert     = !isUnlimited && pct >= quota.alertAt;
+  const limit       = quota.limit ?? -1; // null o negativo = ilimitado
+  const isUnlimited = limit < 0;
+  const pct         = isUnlimited ? 0 : Math.min((quota.currentUsage / limit) * 100, 100);
+  const isAlert     = !isUnlimited && pct >= ALERT_AT_PERCENT;
   const isCritical  = !isUnlimited && pct >= 95;
   const label       = QUOTA_RESOURCE_LABELS[quota.resource] ?? quota.resource;
 
@@ -29,7 +33,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
               Ilimitado
             </span>
           ) : (
-            `${quota.currentUsage} / ${quota.limit}`
+            `${quota.currentUsage} / ${limit}`
           )}
         </p>
       </div>
@@ -47,12 +51,12 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{pct.toFixed(0)}% utilizado</span>
-            <span>{quota.limit - quota.currentUsage} restante{quota.limit - quota.currentUsage !== 1 ? 's' : ''}</span>
+            <span>{limit - quota.currentUsage} restante{limit - quota.currentUsage !== 1 ? 's' : ''}</span>
           </div>
           {isAlert && (
             <p className={cn('text-xs flex items-center gap-1', isCritical ? 'text-destructive' : 'text-amber-500')}>
               <CircleAlert className="h-3 w-3" />
-              {isCritical ? 'Límite casi alcanzado' : `Alerta al ${quota.alertAt}%`}
+              {isCritical ? 'Límite casi alcanzado' : `Alerta al ${ALERT_AT_PERCENT}%`}
             </p>
           )}
         </>
@@ -64,7 +68,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
 export default function QuotasPage() {
   const { organizationId } = useAuth();
   const { data, isLoading, error } = useQuotas(organizationId);
-  const quotas = Array.isArray(data) ? data : ((data as { data?: unknown[] } | undefined)?.data ?? []);
+  const quotas = data ?? [];
 
   if (isLoading) return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -95,7 +99,7 @@ export default function QuotasPage() {
         Uso actual de recursos — se actualiza cada 30 segundos.
       </p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {quotas.map((q: QuotaConfig) => <QuotaBar key={q.id} quota={q} />)}
+        {quotas.map((q) => <QuotaBar key={q.id} quota={q} />)}
       </div>
     </div>
   );

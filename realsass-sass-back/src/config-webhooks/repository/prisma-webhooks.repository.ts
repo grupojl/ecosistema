@@ -1,6 +1,6 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IWebhooksRepository } from '@/config-webhooks/repository/webhooks.repository.interface';
 import type { WebhookEndpoint, WebhookDeliveryLog, CreateWebhookInput } from '@/domain/webhook.entity';
 
@@ -30,7 +30,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
       event:        row.event,
       statusCode:   row.statusCode,
       success:      row.success,
-      responseBody: row.responseBody,
+      responseBody: (row as any).responseBody ?? null,
       createdAt:    row.createdAt,
     };
   }
@@ -47,7 +47,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
 
   async create(input: CreateWebhookInput): Promise<WebhookEndpoint> {
     const row = await this.prisma.webhookEndpoint.create({
-      data: { organizationId: input.organizationId, url: input.url, events: input.events, isActive: true },
+      data: { organizationId: input.organizationId, url: input.url, events: input.events, isActive: true, secretHash: '', secretPrefix: '' } as any,
     });
     return this.toEndpoint(row);
   }

@@ -7,7 +7,7 @@ superficie indexable del ecosistema.
 
 ```
 real-ecommerce-front/
-├── middleware.ts                         negociación de idioma (Edge) — solo /tienda/*
+├── proxy.ts                              negociación de idioma — solo /tienda/* (Next 16: antes middleware.ts)
 ├── app/
 │   ├── [locale]/                         root layout con <html lang={locale}>
 │   │   ├── layout.tsx                    dynamicParams=false · metadataBase
@@ -39,9 +39,10 @@ real-ecommerce-front/
       orden estable, tope 512 chars), `matchLocale`, `isLikelyCrawler`, `negotiateLocale`.
 - [x] **SEO-EF-03** — Diccionarios `es/pt/en` con `satisfies Dictionary`; `t()` y
       `plural()` con `Intl.PluralRules`.
-- [x] **SEO-EF-04** — `middleware.ts`: matcher `['/tienda', '/tienda/:path*']`, 307,
+- [x] **SEO-EF-04** — `proxy.ts` (migrado desde `middleware.ts` el 2026-10-08; Next 16 renombró la convención y el
+      runtime pasó de Edge a Node.js; comportamiento idéntico, verificado con curl): matcher `['/tienda', '/tienda/:path*']`, 307,
       `Vary`, `Cache-Control: private, no-store`, `X-Locale-Source`.
-      ⚠️ Si ya existe un `middleware.ts`, **componer**, no sobrescribir.
+      ⚠️ Si ya existe un `proxy.ts`, **componer**, no sobrescribir.
 - [x] **SEO-EF-05** — `LocaleSwitcher`: `<a hrefLang>` real (funciona sin JS) +
       cookie `NEXT_LOCALE` solo en elección explícita.
 

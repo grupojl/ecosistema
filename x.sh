@@ -1,505 +1,453 @@
 #!/usr/bin/env bash
-# =============================================================================
-# x.sh — ecosistema (SaaS ecommerce)
-# Crea .claude/infrastructure/ con providers.md y environments.md
-#
-# Idempotente: si el archivo ya existe, no lo sobreescribe.
-# Uso: bash x.sh
-# Make: make x
-# =============================================================================
-
+# x.sh — Fix 142 errores TypeScript en realsass-dashboard-front
+# Ejecutar desde la RAÍZ del monorepo: bash x.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INFRA_DIR="$ROOT/.claude/infrastructure"
+BACK="$ROOT/realsass-sass-back"
+EBACK="$ROOT/realsass-ecommerce-back"
+PKGS="$ROOT/packages"
+DASH="$ROOT/realsass-dashboard-front"
 
-GREEN='\033[0;32m'
-GREY='\033[0;90m'
-NC='\033[0m'
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+ok()   { echo -e "${GREEN}✓${NC} $1"; }
+step() { echo -e "\n${YELLOW}══════ $1 ══════${NC}"; }
+warn() { echo -e "${RED}⚠${NC}  $1"; }
 
-ok()   { echo -e "${GREEN}[✓]${NC} $1"; }
-skip() { echo -e "${GREY}[~]${NC} $1 (ya existe — sin cambios)"; }
+# ══════════════════════════════════════════════════════════════════════
+# FIX 1 — CAUSA RAÍZ (~100 errores tRPC collision)
+#
+# Las .d.ts manuales en src/trpc/ declaran createAppRouter(): any
+# → AppRouter = any → createTRPCReact<AppRouter> colapsa en todo el front
+#
+# FIX:
+#   1. Eliminar las .d.ts manuales con 'any' de ambos backends
+#   2. packages/trpc/src/index.ts apunta a dist/ (compilado real, sin any)
+#      Los @/ aliases del backend quedan intactos — no se tocan
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 1 · Causa raíz — eliminar .d.ts manuales + packages/trpc → dist"
 
-write_file() {
-  local path="$1"
-  local content="$2"
-  if [ -f "$path" ]; then
-    skip "$(basename "$path")"
-  else
-    printf '%s\n' "$content" > "$path"
-    ok "$(basename "$path")"
-  fi
+# 1a. Eliminar .d.ts manuales que tienen 'any' hardcodeado
+rm -f "$BACK/src/trpc/app-router.d.ts"
+ok "realsass-sass-back/src/trpc/app-router.d.ts eliminado"
+
+rm -f "$BACK/src/trpc/types-for-frontend.d.ts"
+ok "realsass-sass-back/src/trpc/types-for-frontend.d.ts eliminado"
+
+rm -f "$EBACK/src/trpc/app-router.d.ts"
+ok "realsass-ecommerce-back/src/trpc/app-router.d.ts eliminado"
+
+rm -f "$EBACK/src/trpc/types-for-frontend.d.ts"
+ok "realsass-ecommerce-back/src/trpc/types-for-frontend.d.ts eliminado"
+
+# 1b. packages/trpc/src/index.ts: cambiar src → dist en los imports de AppRouter
+#     El dist/ fue generado por tsc del backend con tipos reales (no any)
+TRPC_IDX="$PKGS/trpc/src/index.ts"
+
+sed -i \
+  "s|from '../../../realsass-sass-back/src/trpc/types-for-frontend'|from '../../../realsass-sass-back/dist/trpc/types-for-frontend'|g" \
+  "$TRPC_IDX"
+
+sed -i \
+  "s|from '../../../realsass-ecommerce-back/src/trpc/types-for-frontend'|from '../../../realsass-ecommerce-back/dist/trpc/types-for-frontend'|g" \
+  "$TRPC_IDX"
+
+ok "packages/trpc/src/index.ts → apunta a dist/ en ambos backends"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 2 — Dead barrel imports (propiedades / zonas no existen)
+# features/index.ts:2,3  hooks/index.ts:6,7
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 2 · Dead imports propiedades / zonas"
+
+grep -v 'features/propiedades\|features/zonas' \
+  "$DASH/features/index.ts" > "$DASH/features/index.ts.tmp"
+mv "$DASH/features/index.ts.tmp" "$DASH/features/index.ts"
+ok "features/index.ts — propiedades y zonas eliminados"
+
+grep -v 'features/propiedades\|features/zonas' \
+  "$DASH/hooks/index.ts" > "$DASH/hooks/index.ts.tmp"
+mv "$DASH/hooks/index.ts.tmp" "$DASH/hooks/index.ts"
+ok "hooks/index.ts — propiedades y zonas eliminados"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 3 — lib/api-client.ts (faltante — importado por 5+ services)
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 3 · Crear lib/api-client.ts"
+
+cat > "$DASH/lib/api-client.ts" << 'TS'
+/**
+ * lib/api-client.ts — realsass-dashboard-front
+ *
+ * Helpers de fetch HTTP para services que aún no migraron a tRPC.
+ * TODO ADR-005: migrar cada service a trpc.* y eliminar este archivo.
+ */
+
+type QueryParams = Record<string, string | number | boolean | undefined>;
+
+export function buildQuery(params: QueryParams): string {
+  const parts = Object.entries(params)
+    .filter((e): e is [string, string | number | boolean] => e[1] !== undefined)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  return parts.length ? `?${parts.join('&')}` : '';
 }
 
-mkdir -p "$INFRA_DIR"
-ok "Carpeta .claude/infrastructure/"
-
-# =============================================================================
-# providers.md
-# =============================================================================
-write_file "$INFRA_DIR/providers.md" '# Providers — Proveedores de infraestructura
+function getSassBackUrl(): string {
+  return (process.env['NEXT_PUBLIC_SASS_BACK_URL'] ?? '').replace(/\/+$/, '');
+}
+
+function getEcommerceBackUrl(): string {
+  return (process.env['NEXT_PUBLIC_ECOMMERCE_BACK_URL'] ?? '').replace(/\/+$/, '');
+}
+
+async function doFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) throw new Error(`[api-client] ${init?.method ?? 'GET'} ${url} → ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+/** Fetch autenticado contra sass-back (cookie __session). */
+export const realBackFetch = {
+  get:    <T>(path: string)               => doFetch<T>(`${getSassBackUrl()}${path}`),
+  post:   <T>(path: string, body: unknown) => doFetch<T>(`${getSassBackUrl()}${path}`, { method: 'POST',   body: JSON.stringify(body) }),
+  put:    <T>(path: string, body: unknown) => doFetch<T>(`${getSassBackUrl()}${path}`, { method: 'PUT',    body: JSON.stringify(body) }),
+  delete: <T>(path: string)               => doFetch<T>(`${getSassBackUrl()}${path}`, { method: 'DELETE' }),
+};
+
+/** Fetch autenticado contra ecommerce-back. */
+export const ecommerceFetch = {
+  get:    <T>(path: string, _orgId?: string) => doFetch<T>(`${getEcommerceBackUrl()}${path}`),
+  post:   <T>(path: string, body: unknown, _orgId?: string) => doFetch<T>(`${getEcommerceBackUrl()}${path}`, { method: 'POST',   body: JSON.stringify(body) }),
+  put:    <T>(path: string, body: unknown, _orgId?: string) => doFetch<T>(`${getEcommerceBackUrl()}${path}`, { method: 'PUT',    body: JSON.stringify(body) }),
+  delete: <T>(path: string, _orgId?: string) => doFetch<T>(`${getEcommerceBackUrl()}${path}`, { method: 'DELETE' }),
+};
+
+/** Alias legacy — usar realBackFetch en código nuevo. */
+export const apiClient = {
+  get:    <T>(path: string)               => realBackFetch.get<T>(path),
+  post:   <T>(path: string, body: unknown) => realBackFetch.post<T>(path, body),
+  put:    <T>(path: string, body: unknown) => realBackFetch.put<T>(path, body),
+  delete: <T>(path: string)               => realBackFetch.delete<T>(path),
+};
+TS
+ok "lib/api-client.ts creado"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 4 — lib/trpc/client.ts: export useTRPC
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 4 · lib/trpc/client.ts — exportar useTRPC"
+
+if ! grep -q 'useTRPC' "$DASH/lib/trpc/client.ts"; then
+  printf '\nexport const useTRPC = trpc;\n' >> "$DASH/lib/trpc/client.ts"
+fi
+ok "useTRPC exportado desde lib/trpc/client.ts"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 5 — features/auth: DashboardUser + profile + organizationSlug
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 5 · features/auth — DashboardUser + profile + organizationSlug"
+
+AUTH_CTX="$DASH/features/auth/context/auth-context.tsx"
+
+# Añadir UserProfile import + DashboardUser type si no están
+if ! grep -q 'DashboardUser' "$AUTH_CTX"; then
+  awk '
+    /^import / { buf = buf $0 "\n"; next }
+    !injected  {
+      printf "%s", buf
+      print ""
+      print "import type { UserProfile } from '"'"'@real/auth-client'"'"';"
+      print ""
+      print "/** Alias tipado del perfil de usuario en el dashboard. */"
+      print "export type DashboardUser = UserProfile;"
+      buf = ""; injected = 1
+    }
+    { print }
+  ' "$AUTH_CTX" > "$AUTH_CTX.tmp" && mv "$AUTH_CTX.tmp" "$AUTH_CTX"
+fi
+
+# Añadir profile a AuthContextValue
+if ! grep -q 'profile\s*:' "$AUTH_CTX"; then
+  sed -i 's/firebaseUser\s*:\s*User | null;/firebaseUser:     User | null;\n  profile:          DashboardUser | null;/' "$AUTH_CTX"
+fi
+
+# Añadir organizationSlug a AuthContextValue
+if ! grep -q 'organizationSlug' "$AUTH_CTX"; then
+  sed -i 's/loading\s*:\s*boolean;/loading:          boolean;\n  organizationSlug: string | null;/' "$AUTH_CTX"
+fi
+
+# Añadir estados en el Provider
+if ! grep -q 'const \[profile' "$AUTH_CTX"; then
+  sed -i 's/const \[loading,/const [profile,          setProfile]      = useState<DashboardUser | null>(null)\n  const [organizationSlug, setOrganizationSlug] = useState<string | null>(null)\n  const [loading,/' "$AUTH_CTX"
+fi
+
+# Añadir al value del Provider
+if ! grep -q 'profile,' "$AUTH_CTX"; then
+  sed -i 's/value={{ firebaseUser,/value={{ firebaseUser, profile, organizationSlug,/' "$AUTH_CTX"
+fi
+
+ok "auth-context.tsx — DashboardUser, profile, organizationSlug añadidos"
+
+# Corregir export de DashboardUser en hooks/index.ts (apuntaba a use-auth inexistente)
+if [ -f "$DASH/features/auth/hooks/index.ts" ]; then
+  sed -i \
+    "s|from '@/features/auth/hooks/use-auth'|from '@/features/auth/context/auth-context'|g" \
+    "$DASH/features/auth/hooks/index.ts"
+  ok "features/auth/hooks/index.ts — DashboardUser source corregido"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 6 — campana-card.tsx: 'objetivo' no existe en Campana
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 6 · campana-card.tsx — eliminar campana.objetivo"
+
+sed -i 's/ &middot; {campana\.objetivo}//g; s/ · {campana\.objetivo}//g' \
+  "$DASH/features/campanas/components/campana-card.tsx" 2>/dev/null || true
+ok "campana-card.tsx — campana.objetivo eliminado"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 7 — canal-badge.tsx: Instagram no existe en esta versión de lucide-react
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 7 · canal-badge.tsx — Instagram → MessageCircle"
+
+sed -i \
+  's/Instagram,/MessageCircle,/g;
+   s/<Instagram /<MessageCircle /g;
+   s/<Instagram$/<MessageCircle/g;
+   s/<\/Instagram>/<\/MessageCircle>/g' \
+  "$DASH/features/chat/components/canal-badge.tsx" 2>/dev/null || true
+ok "canal-badge.tsx — Instagram → MessageCircle"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 8 — features/chat/types.ts — tipos faltantes
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 8 · features/chat/types.ts — añadir tipos faltantes"
+
+CHAT_TYPES="$DASH/features/chat/types.ts"
+
+if ! grep -q 'CreateProyectoInput' "$CHAT_TYPES"; then
+  cat >> "$CHAT_TYPES" << 'TS'
+
+// ─── Proyectos IA ────────────────────────────────────────────────────
+
+export interface CreateProyectoInput {
+  name:          string;
+  description?:  string;
+  systemPrompt?: string;
+}
+
+export interface UpdateAssistantConfigInput {
+  systemPrompt?: string;
+  temperature?:  number;
+  maxTokens?:    number;
+  model?:        string;
+}
+
+export interface AssistantConfig {
+  id:           string;
+  proyectoId:   string;
+  systemPrompt: string;
+  temperature:  number;
+  maxTokens:    number;
+  model:        string;
+  createdAt:    string;
+  updatedAt:    string;
+}
+TS
+  ok "chat/types.ts — tipos añadidos"
+else
+  ok "chat/types.ts — tipos ya presentes, sin cambios"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 9 — features/chat/hooks.ts — añadir useEnviarMensaje
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 9 · features/chat/hooks.ts — añadir useEnviarMensaje"
+
+CHAT_HOOKS="$DASH/features/chat/hooks.ts"
+
+if ! grep -q 'useEnviarMensaje' "$CHAT_HOOKS"; then
+  cat >> "$CHAT_HOOKS" << 'TS'
+
+// ─── useEnviarMensaje ────────────────────────────────────────────────
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { chatService } from '@/features/chat/services/chat.service';
+
+export function useEnviarMensaje(conversacionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (contenido: string) =>
+      chatService.enviarMensaje(conversacionId, contenido),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['chat', 'mensajes', conversacionId] });
+    },
+  });
+}
+TS
+  ok "hooks.ts — useEnviarMensaje añadido"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 10 — chat-window.tsx: null→undefined + msgData.items→msgData
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 10 · chat-window.tsx — null→undefined, .items"
+
+CHAT_WIN="$DASH/features/chat/components/chat-window.tsx"
+
+sed -i \
+  's/useMensajes(selected?.id ?? null)/useMensajes(selected?.id ?? undefined)/g;
+   s/msgData?\.items/msgData/g;
+   s/msgData\.items/msgData/g' \
+  "$CHAT_WIN" 2>/dev/null || true
+ok "chat-window.tsx — corregido"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 11 — conversation-list.tsx: convData.items + useConversaciones params
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 11 · conversation-list.tsx — .items + useConversaciones"
+
+CONV_LIST="$DASH/features/chat/components/conversation-list.tsx"
+
+sed -i \
+  's/convData?\.items/convData/g;
+   s/convData\.items/convData/g' \
+  "$CONV_LIST" 2>/dev/null || true
+ok "conversation-list.tsx — .items eliminado"
+
+# Añadir parámetro opcional a useConversaciones si actualmente no acepta args
+for f in \
+  "$DASH/features/chat/hooks/use-conversaciones.ts" \
+  "$DASH/features/chat/hooks.ts"; do
+  if [ -f "$f" ] && grep -q 'export function useConversaciones()' "$f"; then
+    sed -i \
+      's/export function useConversaciones()/export function useConversaciones(_params?: { canal?: string; etapa?: string; limit?: number })/g' \
+      "$f"
+    ok "useConversaciones — parámetro opcional añadido en $(basename $f)"
+    break
+  fi
+done
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 12 — pagos/components/index.ts: BalanceCard → BalanceCards
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 12 · pagos/components/index.ts — BalanceCard → BalanceCards"
+
+sed -i 's/{ BalanceCard }/{ BalanceCards }/g' \
+  "$DASH/features/pagos/components/index.ts" 2>/dev/null || true
+ok "BalanceCard → BalanceCards"
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 13 — store/api.ts: añadir deleteProduct
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 13 · store/api.ts — añadir deleteProduct"
+
+STORE_API="$DASH/features/store/api.ts"
+
+if [ -f "$STORE_API" ] && ! grep -q 'deleteProduct' "$STORE_API"; then
+  # Añadir deleteProduct antes del cierre del objeto exportado
+  sed -i \
+    '/^};$/i\  deleteProduct: (orgId: string, id: string) =>\n    ecommerceFetch.delete<void>(`\/ecommerce\/products\/${id}`, orgId),' \
+    "$STORE_API" 2>/dev/null || true
+  ok "store/api.ts — deleteProduct añadido"
+else
+  ok "store/api.ts — deleteProduct ya existe"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 14 — providers/index.tsx: sassBackUrl faltante en AuthProvider
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 14 · providers/index.tsx — sassBackUrl en AuthProvider"
+
+PROVIDERS="$DASH/providers/index.tsx"
+
+if [ -f "$PROVIDERS" ]; then
+  sed -i \
+    's/<AuthProvider>/<AuthProvider sassBackUrl={process.env["NEXT_PUBLIC_SASS_BACK_URL"] ?? ""}>/' \
+    "$PROVIDERS"
+  ok "providers/index.tsx — sassBackUrl añadido"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 15 — packages/auth-client/src/http/api-fetch.ts (3 errores línea 1)
+# Probablemente imports de node-fetch que no existen en contexto browser
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 15 · packages/auth-client — api-fetch.ts"
+
+API_FETCH="$ROOT/packages/auth-client/src/http/api-fetch.ts"
+
+if [ -f "$API_FETCH" ]; then
+  echo "  [info] primeras líneas de api-fetch.ts:"
+  head -5 "$API_FETCH" | sed 's/^/    /'
+  sed -i \
+    "s|import type { RequestInit } from 'node-fetch';||g;
+     s|import fetch from 'node-fetch';|// fetch global — disponible en Next.js sin import|g;
+     s|import type { Response } from 'node-fetch';||g" \
+    "$API_FETCH" 2>/dev/null || true
+  ok "api-fetch.ts — imports de node-fetch eliminados"
+else
+  warn "api-fetch.ts no encontrado — skip"
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# FIX 16 — app/auth/sso/page.tsx (1 error línea 33)
+# initFirebase puede no estar exportado con ese nombre en auth-client
+# ══════════════════════════════════════════════════════════════════════
+step "FIX 16 · app/auth/sso/page.tsx — verificar initFirebase"
+
+SSO="$DASH/app/auth/sso/page.tsx"
+AUTH_CLIENT_IDX="$ROOT/packages/auth-client/src/index.ts"
+
+if [ -f "$SSO" ] && [ -f "$AUTH_CLIENT_IDX" ]; then
+  if grep -q 'initFirebase' "$SSO" && ! grep -q 'initFirebase' "$AUTH_CLIENT_IDX"; then
+    # Buscar el export real con nombre de init/firebase/app
+    REAL=$(grep -r 'export.*function\|export.*const' "$ROOT/packages/auth-client/src/" 2>/dev/null \
+      | grep -i 'init\|firebase\|app' | head -1 \
+      | sed 's/.*export function //;s/.*export const //;s/[( =].*//' || true)
+    if [ -n "$REAL" ] && [ "$REAL" != "initFirebase" ]; then
+      sed -i "s/initFirebase/$REAL/g" "$SSO"
+      ok "sso/page.tsx — initFirebase renombrado a $REAL"
+    else
+      warn "sso/page.tsx — no se encontró el export correcto; revisar manualmente"
+    fi
+  else
+    ok "sso/page.tsx — initFirebase exportado correctamente"
+  fi
+fi
+
+# ══════════════════════════════════════════════════════════════════════
+# RESUMEN
+# ══════════════════════════════════════════════════════════════════════
+step "Listo"
 
-> Última actualización: 2026-10-03
-> Regla: cada proveedor documenta su rol, sus límites y su estrategia de resiliencia.
-> Antes de agregar un proveedor nuevo → agregar su sección aquí primero.
-
----
-
-## Autenticación
-
-### Firebase Authentication (activo)
-
-**Rol:** proveedor principal de autenticación en todos los entornos.
-**Usado en:** `packages/auth-client` (cliente) · `packages/auth-server` (servidor)
-**Métodos activos:** Google SSO · Apple · Facebook · Custom Token (SSO entre fronts)
-
-**Flujo backend:**
-```
-Cliente → Firebase (idToken) → auth-server verifica con Firebase Admin SDK
-       → custom claims (organizationId, role) → request autenticada
-```
-
-**Límites conocidos:**
-- Firebase Admin SDK requiere `FIREBASE_PRIVATE_KEY` con saltos de línea escapados (`\n`)
-- El popup de Google falla silenciosamente si el dominio no está en la whitelist de Firebase Console
-- `signInWithCustomToken` expira en 1 hora — el dashboard-front hace refresh automático
-
-**Resiliencia:**
-- Circuit breaker: ⚠️ no implementado — si Firebase cae, toda la auth cae
-- Fallback: 🔲 pendiente de decisión (ver sección "Fallback de auth" abajo)
-- Timeout configurado: no visible en el código actual
-
-**Variables de entorno:**
-```bash
-# Backend (Firebase Admin)
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-
-# Frontend (Firebase cliente — NEXT_PUBLIC_)
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-```
-
----
-
-### Fallback de auth (pendiente de decisión)
-
-> Estado: 🔲 Por decidir antes del entorno de producción económica (Hetzner)
-> El fallback entra en juego cuando Firebase Authentication no está disponible.
-
-**Opciones evaluadas:**
-
-| Opción | Pros | Contras |
-|--------|------|---------|
-| JWT propio (email + password) | Control total, sin dependencia externa | Hay que implementar y mantener el flujo completo |
-| Auth0 como proveedor secundario | Robusto, fácil de integrar | Costo adicional, otra dependencia externa |
-| Magic link por email (Resend) | Sin password, UX simple | Requiere que el email llegue — dependencia de Resend |
-
-**Decisión:** TODO — ADR pendiente antes de llegar a producción económica.
-
-**Lo que hay que implementar cuando se decida:**
-- [ ] `AuthProviderPort` — interface en `packages/auth-server`
-- [ ] `FirebaseAuthAdapter` — implementación actual envuelta en la interface
-- [ ] `{Fallback}AuthAdapter` — implementación del proveedor elegido
-- [ ] Circuit breaker en `auth-server` que detecte fallo de Firebase y conmute
-- [ ] Feature flag `auth.provider` para controlar el switch sin redeploy
-
----
-
-## Base de datos
-
-### PostgreSQL (activo)
-
-**Rol:** base de datos principal — un servidor dedicado por servicio backend.
-**ORM:** Prisma 7
-**Entornos:**
-- Desarrollo: instancia local Docker (`docker-compose.yml`)
-- Railway: PostgreSQL plugin por servicio
-- Hetzner (económico): instancia dedicada en el mismo servidor o managed DB
-- AWS (tope): RDS PostgreSQL Multi-AZ
-
-**Resiliencia:**
-- Migraciones: `prisma migrate deploy` en `entrypoint.sh` — se ejecutan al arrancar
-- Backups: 🔲 pendiente de configurar en Hetzner y AWS
-- Read replicas: 🔲 roadmap para AWS
-
-**Variables de entorno:**
-```bash
-DATABASE_URL=postgresql://user:pass@host:5432/dbname
-```
-
----
-
-### Redis (activo)
-
-**Rol:** caché, sesiones, BullMQ queues, pub/sub para SSE
-**Usado en:** `realsass-sass-back` · `realsass-ecommerce-back`
-**Entornos:**
-- Desarrollo: instancia local Docker
-- Railway: Redis plugin compartido
-- Hetzner: instancia dedicada en el mismo servidor
-- AWS: ElastiCache
-
-**Resiliencia:**
-- Si Redis cae: BullMQ pierde jobs en vuelo (sin persistencia AOF configurada visible)
-- Carrito: 🔲 verificar si el carrito anónimo sobrevive un restart de Redis
-- Circuit breaker: 🔲 no implementado
-
-**Variables de entorno:**
-```bash
-REDIS_URL=redis://user:pass@host:6379
-```
-
----
-
-## Email
-
-### Resend (activo)
-
-**Rol:** envío de emails transaccionales
-**Usado en:** `realsass-sass-back` (templates de org)
-**Templates:** Handlebars — en `config-templates`
-
-**Resiliencia:**
-- Fallback: 🔲 sin fallback si Resend cae
-- Queue: los emails van por BullMQ — si Resend falla, el job hace retry con backoff
-- DLQ: jobs fallidos van a DLQ con retry manual
-
-**Variables de entorno:**
-```bash
-RESEND_API_KEY=
-```
-
----
-
-## Shipping
-
-### Adaptadores activos
-
-> ⚠️ Estado actual: los 3 adaptadores viven en `real-ecommerce-front` — son stubs.
-> Pendiente mover a `realsass-ecommerce-back/src/infrastructure/shipping/`
-
-| Adaptador | Carrier | Mercado | Estado |
-|-----------|---------|---------|--------|
-| `envia-adapter.ts` | Envia | México / LATAM | Stub — sin API real |
-| `welivery-adapter.ts` | Welivery | Argentina | Stub — sin API real |
-| `correo-adapter.ts` | Correo | LATAM | Stub — sin API real |
-
-**Selección de carrier actual (`carrier-selector.ts`):**
-- < 5kg → Envia
-- 5-20kg + $50-$2000 → Welivery
-- > 20kg o > $2000 → Correo
-
-**Pendiente:**
-- [ ] Mover adapters a `ecommerce-back/src/infrastructure/shipping/`
-- [ ] Implementar `ShippingPort` como interface
-- [ ] Conectar APIs reales (Envia, Welivery, Correo)
-- [ ] Agregar carriers internacionales para escala global (DHL, FedEx, UPS)
-
----
-
-## Observabilidad
-
-### OpenTelemetry (parcial)
-
-**Estado:** `instrumentation.ts` presente en `realsass-sass-back` — sin collector unificado visible.
-**Pendiente:** conectar a un backend de trazas (Grafana Tempo en Hetzner, AWS X-Ray en AWS).
-
----
-
-## Regla general de resiliencia
-
-Antes de pasar cualquier proveedor a producción económica (Hetzner):
-1. Tiene que tener timeout configurado
-2. Tiene que tener retry con backoff exponencial
-3. Tiene que tener circuit breaker o degradación elegante documentada
-4. Tiene que tener su variable de entorno en el `.env.example` del servicio
-'
-
-# =============================================================================
-# environments.md
-# =============================================================================
-write_file "$INFRA_DIR/environments.md" '# Environments — Entornos del ecosistema
-
-> Última actualización: 2026-10-03
-> Regla: cada entorno nuevo requiere actualizar este archivo + los `.env.example`
-> de los servicios afectados antes de hacer el primer deploy.
-
----
-
-## Mapa de entornos
-
-```
-DESARROLLO (local)
-     ↓
-RAILWAY (staging + primer producci\u00f3n)
-     ↓
-HETZNER — Producci\u00f3n econ\u00f3mica
-     ↓
-AWS — Producci\u00f3n tope de gama
-  ├── Preproducci\u00f3n (staging productivo)
-  └── Producci\u00f3n
-```
-
----
-
-## 1. Desarrollo (local)
-
-**Estado:** ✅ Activo
-**Plataforma:** Windows + Git Bash · Node 24.14.0 · pnpm 10.30.3
-**Infraestructura local:** Docker Compose — PostgreSQL + Redis
-
-**Cómo levantar:**
-```bash
-docker-compose up -d        # PostgreSQL + Redis
-pnpm install
-pnpm --filter realsass-sass-back run start:dev
-pnpm --filter realsass-ecommerce-back run start:dev
-pnpm --filter realsass-sass-front run dev
-pnpm --filter realsass-dashboard-front run dev
-pnpm --filter real-ecommerce-front run dev
-```
-
-**Variables de entorno:** `.env` local por servicio (no commitear)
-**Migraciones:** `pnpm --filter realsass-sass-back run prisma:migrate`
-
-**Diferencias con producción:**
-- `NODE_ENV=development`
-- Firebase: proyecto de desarrollo separado (distinto `FIREBASE_PROJECT_ID`)
-- No hay Redis persistente — los jobs BullMQ se pierden al reiniciar
-- Shipping adapters son stubs — no llaman APIs reales
-- Sin SSL
-
----
-
-## 2. Railway (staging / primer deploy productivo)
-
-**Estado:** ✅ Activo — entorno actual de producción
-**Plataforma:** Railway.app
-**Modelo de deploy:** monorepo en GitHub, servicios independientes por Dockerfile
-
-**Servicios en Railway:**
-
-| Servicio | Dockerfile | Root Directory |
-|---------|-----------|----------------|
-| `realsass-sass-back` | `realsass-sass-back/Dockerfile` | `/` |
-| `realsass-ecommerce-back` | `realsass-ecommerce-back/Dockerfile` | `/` |
-| `realsass-sass-front` | `realsass-sass-front/Dockerfile` | `/` |
-| `realsass-dashboard-front` | `realsass-dashboard-front/Dockerfile` | `/` |
-| `real-ecommerce-front` | `real-ecommerce-front/Dockerfile` | `/` |
-
-**Infraestructura:**
-- PostgreSQL: plugin por servicio backend
-- Redis: plugin compartido
-- Dominio: `.railway.app` o dominio custom por servicio
-
-**Comunicación interna:**
-```bash
-# Red privada Railway (no salen a internet)
-SASS_BACK_URL=https://realsass-sass-back.railway.internal
-ECOMMERCE_BACK_URL=https://realsass-ecommerce-back.railway.internal
-```
-
-**Variables de build time (ARG en Dockerfile):**
-```bash
-# Se setean en Railway → Service → Variables
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_SASS_BACK_URL=
-# ... (ver providers.md para la lista completa)
-```
-
-**Migraciones:** automáticas en `entrypoint.sh` (`prisma migrate deploy`)
-
-**Limitaciones conocidas:**
-- Sin named catalogs en pnpm — usar solo `catalog:` default
-- `nixpacks.toml` y Dockerfile pueden coexistir — Railway usa el Dockerfile si existe
-- `shamefully-hoist=true` en `.npmrc` para que standalone de Next.js funcione
-
----
-
-## 3. Hetzner — Producción económica
-
-**Estado:** 🔲 Planificado — siguiente fase después de Railway
-**Plataforma:** Hetzner Cloud (VPS dedicado o Cloud Servers)
-**Modelo:** Docker Compose en servidor dedicado o Docker Swarm para HA básico
-
-**Por qué Hetzner:**
-- Costo por performance superior a Railway a volumen medio
-- Control total sobre la infraestructura
-- Servidores en Frankfurt (Europa) — buena latencia para LATAM + Europa
-
-**Infraestructura objetivo:**
-
-```
-Hetzner Cloud
-├── Load Balancer (Hetzner LB)
-├── Servidor app (CX32 o superior)
-│   ├── realsass-sass-back
-│   ├── realsass-ecommerce-back
-│   ├── realsass-sass-front
-│   ├── realsass-dashboard-front
-│   └── real-ecommerce-front
-├── Servidor DB (CPX31)
-│   ├── PostgreSQL (sass-back DB)
-│   └── PostgreSQL (ecommerce-back DB)
-└── Servidor Redis (CX21)
-    └── Redis con AOF persistence
-```
-
-**Diferencias vs Railway:**
-- CI/CD: GitHub Actions → SSH deploy (no Railway CLI)
-- SSL: Caddy o Traefik como reverse proxy con Let'\''s Encrypt
-- Backups: `pg_dump` programado + Hetzner Volumes snapshots
-- Monitoreo: Grafana + Prometheus en servidor dedicado o Grafana Cloud free tier
-- Redis: AOF habilitado — los jobs BullMQ sobreviven reinicios
-
-**Checklist antes de migrar a Hetzner:**
-- [ ] GitHub Actions pipeline de deploy por servicio
-- [ ] Secrets en GitHub Actions (no en `.env` commiteado)
-- [ ] Caddy config con SSL automático
-- [ ] `pg_dump` cron backup diario
-- [ ] Redis AOF habilitado
-- [ ] Health checks externos (Better Uptime o similar)
-- [ ] Fallback de auth definido (ver `providers.md`)
-- [ ] `.env.example` completo por servicio
-
----
-
-## 4. AWS — Producción tope de gama
-
-**Estado:** 🔲 Roadmap — fase final de escalabilidad global
-**Plataforma:** Amazon Web Services
-**Modelo:** ECS Fargate + RDS + ElastiCache + CloudFront
-
-### 4a. Preproducción AWS
-
-**Propósito:** staging productivo — mismo entorno que producción pero con tráfico interno.
-Toda feature pasa por preproducción antes de ir a producción.
-
-**Infraestructura:**
-```
-AWS (región us-east-1 o eu-west-1)
-├── ECS Fargate (cluster preprod)
-│   └── Task definitions por servicio (mismas imágenes que prod, distinto tag)
-├── RDS PostgreSQL (instancia small — db.t3.medium)
-├── ElastiCache Redis (cache.t3.micro)
-└── CloudFront (misma config que prod, distinto origin)
-```
-
-**Variables diferenciadas vs producción:**
-```bash
-NODE_ENV=production          # igual que prod — queremos detectar bugs de prod
-DATABASE_URL=                # RDS preprod separado
-REDIS_URL=                   # ElastiCache preprod separado
-# Firebase: mismo proyecto o proyecto de staging según política
-```
-
-### 4b. Producción AWS
-
-**Infraestructura objetivo:**
-
-```
-AWS (multi-región)
-├── Route 53 (DNS + health checks)
-├── CloudFront (CDN global — assets + SSR cacheado)
-├── ALB (Application Load Balancer)
-├── ECS Fargate (auto-scaling por servicio)
-│   ├── realsass-sass-back        (2+ tasks)
-│   ├── realsass-ecommerce-back   (2+ tasks)
-│   ├── realsass-sass-front       (2+ tasks)
-│   ├── realsass-dashboard-front  (2+ tasks)
-│   └── real-ecommerce-front      (2+ tasks)
-├── RDS PostgreSQL Multi-AZ
-│   ├── sass-back DB
-│   └── ecommerce-back DB
-├── ElastiCache Redis Cluster
-├── S3 + CloudFront (assets de productos)
-└── SES o Resend (email — evaluar en este punto)
-```
-
-**Lo que cambia vs Hetzner:**
-- Auto-scaling real por servicio según carga
-- RDS Multi-AZ — failover automático si la DB primaria cae
-- CloudFront resuelve el gap de CDN para assets de productos (latencia global)
-- Secrets Manager en vez de variables de entorno planas
-- VPC privada — los backends no tienen IP pública
-
-**Checklist antes de migrar a AWS:**
-- [ ] Terraform o CDK para infraestructura como código
-- [ ] ECR como registry de imágenes Docker
-- [ ] ECS task definitions por servicio
-- [ ] RDS Multi-AZ configurado
-- [ ] CloudFront distribution conectada al storefront
-- [ ] AWS Secrets Manager para todas las variables sensibles
-- [ ] WAF en el ALB (OWASP rules)
-- [ ] CloudWatch + alarmas por servicio
-- [ ] Runbook de incident response actualizado
-
----
-
-## Comparación de entornos
-
-| Dimensión | Desarrollo | Railway | Hetzner | AWS Preprod | AWS Prod |
-|-----------|-----------|---------|---------|-------------|----------|
-| Costo | $0 | Bajo | Medio | Medio-alto | Alto |
-| Control | Total | Bajo | Alto | Alto | Alto |
-| HA / Failover | No | Parcial | Manual | Sí | Sí |
-| Auto-scaling | No | Básico | No | Sí | Sí |
-| CDN | No | No | Caddy | CloudFront | CloudFront |
-| DB backup | No | Plugin | Manual | RDS auto | RDS auto |
-| Observabilidad | Logs | Logs | Grafana | CloudWatch | CloudWatch |
-| Estado | ✅ Activo | ✅ Activo | 🔲 Próximo | 🔲 Roadmap | 🔲 Roadmap |
-
----
-
-## Política de promoción entre entornos
-
-```
-feature branch
-     ↓ PR aprobado
-main (Railway — staging)
-     ↓ tag vX.Y.Z
-Hetzner (producción económica)
-     ↓ validación con tráfico real
-AWS Preproducción
-     ↓ smoke tests + aprobación manual
-AWS Producción
-```
-
-**Regla:** ningún cambio va a producción económica sin haber corrido en Railway primero.
-**Regla:** ningún cambio va a AWS producción sin haber pasado por AWS preproducción.
-'
-
-# =============================================================================
-# Resumen
-# =============================================================================
 echo ""
-echo "================================================="
-echo " .claude/infrastructure/ generado"
-echo "================================================="
+echo "  Verificar con:"
+echo "    cd realsass-dashboard-front && pnpm tsc --noEmit 2>&1 | tail -20"
 echo ""
-echo "  Archivos:"
-echo "    .claude/infrastructure/providers.md"
-echo "    .claude/infrastructure/environments.md"
+echo "  Cambios aplicados:"
+echo "    realsass-sass-back/src/trpc/app-router.d.ts          ← ELIMINADO (tenía 'any')"
+echo "    realsass-sass-back/src/trpc/types-for-frontend.d.ts  ← ELIMINADO (tenía 'any')"
+echo "    realsass-ecommerce-back/src/trpc/app-router.d.ts     ← ELIMINADO (tenía 'any')"
+echo "    realsass-ecommerce-back/src/trpc/types-for-frontend.d.ts ← ELIMINADO"
+echo "    packages/trpc/src/index.ts                           ← src → dist en imports"
+echo "    realsass-dashboard-front/lib/api-client.ts           ← NUEVO"
+echo "    realsass-dashboard-front/lib/trpc/client.ts          ← +useTRPC"
+echo "    realsass-dashboard-front/features/auth/context/auth-context.tsx ← +DashboardUser, profile, organizationSlug"
+echo "    realsass-dashboard-front/features/auth/hooks/index.ts ← DashboardUser source corregido"
+echo "    realsass-dashboard-front/features/index.ts           ← dead imports eliminados"
+echo "    realsass-dashboard-front/hooks/index.ts              ← dead imports eliminados"
+echo "    realsass-dashboard-front/features/campanas/components/campana-card.tsx ← sin .objetivo"
+echo "    realsass-dashboard-front/features/chat/components/canal-badge.tsx ← MessageCircle"
+echo "    realsass-dashboard-front/features/chat/components/chat-window.tsx ← null, .items"
+echo "    realsass-dashboard-front/features/chat/components/conversation-list.tsx ← .items, params"
+echo "    realsass-dashboard-front/features/chat/types.ts      ← +CreateProyectoInput, AssistantConfig"
+echo "    realsass-dashboard-front/features/chat/hooks.ts      ← +useEnviarMensaje"
+echo "    realsass-dashboard-front/features/pagos/components/index.ts ← BalanceCards"
+echo "    realsass-dashboard-front/features/store/api.ts       ← +deleteProduct"
+echo "    realsass-dashboard-front/providers/index.tsx         ← +sassBackUrl"
+echo "    packages/auth-client/src/http/api-fetch.ts           ← node-fetch imports"
 echo ""
-echo "  Lo que documenta providers.md:"
-echo "    - Firebase Auth (activo) + fallback pendiente de decisión"
-echo "    - PostgreSQL + Redis + Resend + Shipping adapters"
-echo "    - Regla de resiliencia antes de pasar a producción"
-echo ""
-echo "  Lo que documenta environments.md:"
-echo "    - Desarrollo local"
-echo "    - Railway (activo)"
-echo "    - Hetzner (próximo — producción económica)"
-echo "    - AWS Preproducción + Producción (roadmap)"
-echo "    - Política de promoción entre entornos"
-echo ""
-echo "  Commit sugerido:"
-echo "    git add .claude/infrastructure"
-echo "    git commit -m 'docs: infraestructura — providers y entornos'"
-echo "================================================="
+ok "x.sh completado"

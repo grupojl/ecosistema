@@ -91,8 +91,7 @@ export function createTrpcAuthMiddleware(
 
     const token = header.slice(7);
     try {
-      const admin   = getFirebaseAdmin();
-      const decoded = await admin.auth().verifyIdToken(token);
+      const decoded = await getFirebaseAdmin().verifyIdToken(token);
 
       req.firebaseToken = token; // expuesto para que tenantContext lo reenvíe
       req.user = {

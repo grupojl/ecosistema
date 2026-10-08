@@ -8,10 +8,9 @@ import { ScrollArea } from '@real/ui';
 import { Skeleton } from '@real/ui';
 import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/helpers';
-import { useMensajes, useEnviarMensaje } from '@/features/chat/hooks';
 import { CanalBadge } from '@/features/chat/components/canal-badge';
 import { EtapaBadge } from '@/features/chat/components/etapa-badge';
-import type { Conversacion } from '@/features/chat/types';
+import type { Conversacion, Mensaje } from '@/features/chat/types';
 
 interface MensajeSkeletonProps { count?: number }
 function MensajeSkeleton({ count = 3 }: MensajeSkeletonProps) {
@@ -28,17 +27,16 @@ function MensajeSkeleton({ count = 3 }: MensajeSkeletonProps) {
 
 interface ChatWindowProps {
   selected: Conversacion | null;
+  mensajes: Mensaje[];
+  isLoading?: boolean;
+  isSending?: boolean;
+  onEnviar: (contenido: string) => void;
   headerExtra?: React.ReactNode;
 }
 
-export function ChatWindow({ selected, headerExtra }: ChatWindowProps) {
+export function ChatWindow({ selected, mensajes, isLoading: msgLoading = false, isSending = false, onEnviar, headerExtra }: ChatWindowProps) {
   const bottomRef    = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLInputElement>(null);
-
-  const { data: msgData, isLoading: msgLoading } = useMensajes(selected?.id ?? null);
-  const enviarMensaje = useEnviarMensaje();
-
-  const mensajes = msgData?.items ?? [];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,7 +48,7 @@ export function ChatWindow({ selected, headerExtra }: ChatWindowProps) {
     if (!input || !input.value.trim() || !selected) return;
     const contenido = input.value.trim();
     input.value = '';
-    enviarMensaje.mutate({ conversacionId: selected.id, contenido });
+    onEnviar(contenido);
   };
 
   return (
@@ -128,10 +126,10 @@ export function ChatWindow({ selected, headerExtra }: ChatWindowProps) {
           <Input
             ref={inputRef}
             placeholder={selected ? 'Escribe un mensaje...' : 'Selecciona una conversacion'}
-            disabled={!selected || enviarMensaje.isPending}
+            disabled={!selected || isSending}
             className="flex-1 bg-secondary border-border"
           />
-          <Button type="submit" size="icon" disabled={!selected || enviarMensaje.isPending}>
+          <Button type="submit" size="icon" disabled={!selected || isSending}>
             <Send className="h-4 w-4" />
           </Button>
         </form>

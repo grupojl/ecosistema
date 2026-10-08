@@ -23,7 +23,7 @@ export class ConfigQuotasService {
     const quota = await this.repo.findByResource(organizationId, resource);
     if (!quota) return; // sin quota configurada = sin límite
     if (quota.limit !== null && quota.currentUsage >= quota.limit) {
-      throw new QuotaExceededException(resource, quota.limit);
+      throw new QuotaExceededException(resource, quota.limit, quota.currentUsage);
     }
   }
 

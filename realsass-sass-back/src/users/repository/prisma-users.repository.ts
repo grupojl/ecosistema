@@ -1,7 +1,8 @@
 import { Injectable }    from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@prisma/client';
+import type { Prisma }   from '@/generated/prisma';
 import type { IUsersRepository } from '@/users/repository/users.repository.interface';
+import type { OrganizationAccessResult } from '@real/auth-server';
 import type { User, UserProfile, UpsertUserInput } from '@/domain/user.entity';
 
 type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
@@ -44,7 +45,7 @@ export class PrismaUsersRepository implements IUsersRepository {
         : null,
       collaborations: row.collaborations.map(c => ({
         organizationId: c.organizationId,
-        role:           'COLLABORATOR',
+        role:           'MEMBER' as import('@real/auth-server').TenantRole,
         permissions: { ...DEFAULT_PERMISSIONS, ...(c.permissions as Record<string, boolean>) },
       })),
     };
@@ -90,7 +91,7 @@ export class PrismaUsersRepository implements IUsersRepository {
     return row ? this.toProfile(row) : null;
   }
 
-  async getOrganizationAccess(firebaseUid: string, organizationId: string) {
+  async getOrganizationAccess(firebaseUid: string, organizationId: string): Promise<OrganizationAccessResult> {
     const user = await this.prisma.user.findUnique({
       where:   { firebaseUid },
       include: {
@@ -104,7 +105,7 @@ export class PrismaUsersRepository implements IUsersRepository {
     if (user.organization?.id === organizationId) {
       return {
         canAccess: true, userId: user.id, organizationId,
-        role: 'OWNER',
+        role: 'OWNER' as import('@real/auth-server').TenantRole,
         permissions: Object.fromEntries(Object.keys(DEFAULT_PERMISSIONS).map(k => [k, true])),
       };
     }
@@ -113,7 +114,7 @@ export class PrismaUsersRepository implements IUsersRepository {
     if (collab) {
       return {
         canAccess: true, userId: user.id, organizationId,
-        role: 'COLLABORATOR',
+        role: 'MEMBER' as import('@real/auth-server').TenantRole,
         permissions: { ...DEFAULT_PERMISSIONS, ...(collab.permissions as Record<string, boolean>) },
       };
     }

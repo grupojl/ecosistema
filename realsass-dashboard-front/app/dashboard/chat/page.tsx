@@ -12,6 +12,7 @@ const STATUS_LABEL: Record<ConversacionStatus, string> = {
   PENDING:        'Pendiente',
   HUMAN_TAKEOVER: 'Requiere agente',
   RESOLVED:       'Resuelta',
+  CLOSED:         'Cerrada',
 };
 
 const STATUS_VARIANT: Record<
@@ -22,10 +23,15 @@ const STATUS_VARIANT: Record<
   PENDING:        'secondary',
   HUMAN_TAKEOVER: 'destructive',
   RESOLVED:       'outline',
+  CLOSED:         'outline',
 };
 
+// chat-ia-back devuelve `status` como string libre: se tipa al leer, con fallback.
+const statusOf = (status: string): ConversacionStatus | null =>
+  status in STATUS_LABEL ? (status as ConversacionStatus) : null;
+
 export default function ChatIAPage() {
-  const { data, isLoading, refetch, isRefetching } = useConversaciones({ limit: 50 });
+  const { data: conversaciones, isLoading, refetch, isRefetching } = useConversaciones({ limit: 50 });
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -65,7 +71,7 @@ export default function ChatIAPage() {
       )}
 
       {/* Empty */}
-      {!isLoading && !data?.data?.length && (
+      {!isLoading && !conversaciones?.length && (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
           <MessageSquare className="h-12 w-12 opacity-30" />
           <p className="font-medium">Sin conversaciones activas</p>
@@ -76,44 +82,43 @@ export default function ChatIAPage() {
       )}
 
       {/* Lista */}
-      {data?.data && data.data.length > 0 && (
+      {conversaciones && conversaciones.length > 0 && (
         <div className="divide-y rounded-lg border bg-card">
-          {data.data.map((conv) => (
+          {conversaciones.map((conv) => {
+            const status = statusOf(conv.status);
+            const lastAt = conv.lastMessage?.createdAt ?? conv.updatedAt;
+            return (
             <div
               key={conv.id}
               className="flex items-center justify-between gap-4 px-4 py-3"
             >
               <div className="flex flex-col gap-1 min-w-0">
                 <span className="font-medium truncate">
-                  {conv.contactName ?? 'Contacto desconocido'}
+                  {conv.contact?.name ?? conv.contact?.username ?? conv.contact?.phone ?? 'Contacto desconocido'}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {conv.channelType}
-                  {conv.lastMessageAt && (
-                    <> · {new Date(conv.lastMessageAt).toLocaleString('es-AR')}</>
+                  {lastAt && (
+                    <> · {new Date(lastAt).toLocaleString('es-AR')}</>
                   )}
                 </span>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {conv.unreadCount > 0 && (
-                  <span className="text-xs font-semibold bg-primary text-primary-foreground rounded-full px-2 py-0.5">
-                    {conv.unreadCount}
-                  </span>
-                )}
-                <Badge variant={STATUS_VARIANT[conv.status]}>
-                  {STATUS_LABEL[conv.status]}
+                <Badge variant={status ? STATUS_VARIANT[status] : 'outline'}>
+                  {status ? STATUS_LABEL[status] : conv.status}
                 </Badge>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Total */}
-      {data?.total != null && (
+      {conversaciones && conversaciones.length > 0 && (
         <p className="text-xs text-muted-foreground text-right">
-          {data.total} conversación{data.total !== 1 ? 'es' : ''} en total
+          {conversaciones.length} conversación{conversaciones.length !== 1 ? 'es' : ''} en total
         </p>
       )}
     </div>

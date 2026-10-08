@@ -1,11 +1,11 @@
 'use client';
 
 import { ExternalLink, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/features/auth/hooks/use-auth';
+import { useActiveOrganization } from '@/features/auth/hooks/use-active-organization';
 import { Button } from '@real/ui';
 
 export default function PreviewPage() {
-  const { activeOrg } = useAuth();
+  const { organization: activeOrg } = useActiveOrganization();
   const storeFrontUrl = process.env.NEXT_PUBLIC_STORE_FRONT_URL;
 
   if (!storeFrontUrl) {

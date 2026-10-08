@@ -10,8 +10,7 @@ import { cn } from '@/lib/utils';
 import { formatRelativeTime } from '@/lib/helpers';
 import { CanalBadge } from '@/features/chat/components/canal-badge';
 import { EtapaBadge, ETAPA_CONFIG } from '@/features/chat/components/etapa-badge';
-import { useConversaciones } from '@/features/chat/hooks';
-import type { Canal, EtapaCliente } from '@/features/chat/types';
+import type { Canal, Conversacion, EtapaCliente } from '@/features/chat/types';
 
 const CANAL_LABELS: Record<Canal, string> = {
   whatsapp: 'WhatsApp', instagram: 'Instagram', telegram: 'Telegram', web: 'Web',
@@ -42,34 +41,32 @@ function ConversacionSkeleton() {
 }
 
 interface ConversationListProps {
+  conversaciones: Conversacion[];
+  isLoading?: boolean;
+  error?: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }
 
-export function ConversationList({ selectedId, onSelect }: ConversationListProps) {
+export function ConversationList({ conversaciones, isLoading = false, error = false, selectedId, onSelect }: ConversationListProps) {
   const [search,      setSearch]      = useState('');
   const [filterCanal, setFilterCanal] = useState<Canal | ''>('');
   const [filterEtapa, setFilterEtapa] = useState<EtapaCliente | ''>('');
   const [showFilters, setShowFilters] = useState(false);
 
-  const {
-    data: convData,
-    isLoading,
-    error,
-  } = useConversaciones({ canal: filterCanal || undefined, etapa: filterEtapa || undefined, limit: 50 });
-
-  const conversaciones = convData?.items ?? [];
-  const totalNoLeidos  = conversaciones.reduce((acc, c) => acc + (c.noLeidos ?? 0), 0);
+  const totalNoLeidos = conversaciones.reduce((acc, c) => acc + (c.noLeidos ?? 0), 0);
 
   const filtered = useMemo(() => {
-    if (!search) return conversaciones;
     const q = search.toLowerCase();
     return conversaciones.filter(
       (c) =>
-        c.cliente.nombre.toLowerCase().includes(q) ||
-        c.ultimoMensaje?.contenido.toLowerCase().includes(q),
+        (!filterCanal || c.cliente.canal === filterCanal) &&
+        (!filterEtapa || c.cliente.etapa === filterEtapa) &&
+        (!q ||
+          c.cliente.nombre.toLowerCase().includes(q) ||
+          c.ultimoMensaje?.contenido.toLowerCase().includes(q)),
     );
-  }, [conversaciones, search]);
+  }, [conversaciones, search, filterCanal, filterEtapa]);
 
   return (
     <div className="flex flex-col h-full">

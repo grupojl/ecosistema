@@ -1,6 +1,4 @@
 export * from '@/features/auth';
-export * from '@/features/propiedades';
-export * from '@/features/zonas';
 export * from '@/features/config';
 export * from '@/features/config-themes';
 export * from '@/features/config-flags';

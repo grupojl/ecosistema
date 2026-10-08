@@ -1,7 +1,8 @@
 import {
   CanActivate, ExecutionContext, ForbiddenException, Injectable,
 } from '@nestjs/common';
-import * as admin from 'firebase-admin'; // @real/firebase-auth
+import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
 
 /**
  * StepUpGuard — exige re-autenticacion reciente (maximo 5 minutos).
@@ -23,7 +24,7 @@ export class StepUpGuard implements CanActivate {
 
     if (!token) throw new ForbiddenException('Token requerido para esta accion');
 
-    const decoded  = await admin.app().auth().verifyIdToken(token);
+    const decoded  = await getAuth().verifyIdToken(token);
     const authTime = decoded.auth_time * 1_000;
 
     if (Date.now() - authTime > this.WINDOW_MS) {

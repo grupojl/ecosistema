@@ -39,7 +39,7 @@ export class ConfigWebhooksService {
   async test(organizationId: string, id: string) {
     const webhook = await this.repo.findById(id);
     if (!webhook || webhook.organizationId !== organizationId) throw new NotFoundException();
-    await this.delivery.dispatch(webhook, 'test', { test: true });
+    await this.delivery.dispatch(webhook.organizationId, 'test', { test: true });
     return { ok: true };
   }
 }
