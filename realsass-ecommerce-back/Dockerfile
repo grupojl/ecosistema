@@ -14,6 +14,10 @@ ARG PNPM_VERSION=10.30.3
 FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS deps
 
 RUN apk add --no-cache dumb-init
+# Un ARG declarado antes del primer FROM NO existe dentro de los stages: hay que re-declararlo.
+# Sin esto ${PNPM_VERSION} queda vacío, corepack baja el pnpm más nuevo (pnpm@*) y se rompen el
+# lockfile y las políticas de .npmrc (en pnpm 11+ ignore-scripts / shamefully-hoist no se leen de ahí).
+ARG PNPM_VERSION
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app
@@ -32,6 +36,7 @@ RUN pnpm install --frozen-lockfile
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS build
 
+ARG PNPM_VERSION
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app

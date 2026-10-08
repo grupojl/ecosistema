@@ -65,6 +65,11 @@ emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verific
   los 8 `RUN --mount=type=cache` (5 servicios + 3 stages `contracts`); el build reinstala dependencias cada vez.
   Las plantillas `architecture/05-dockerfile-backend.md` y `06-dockerfile-frontend.md` todavía los muestran
   (contratos inmutables: no se tocaron).
+- [x] **pnpm sin versión en los 5 Dockerfiles**: `ARG PNPM_VERSION` estaba declarado solo antes del primer `FROM`,
+  así que dentro de cada stage `${PNPM_VERSION}` quedaba vacío y Railway usó pnpm 12.10.1 (`pnpm@*`) en vez del
+  10.30.3 previsto. Con pnpm 12 fallaban el stage `contracts` (corría `prisma generate` del `postinstall`) y el
+  stage `deps` (`ERR_PNPM_IGNORED_BUILDS`). Re-declarado en cada stage. Verificado en directorio limpio con
+  `pnpm@10.30.3` real: instalación de ambos stages, `@real/trpc build` y `next build` pasan.
 - [x] **Backs — `entrypoint.sh`** usaba `node_modules/.bin/prisma` pero `node_modules` está en `/app/node_modules`:
   ahora agrega `../node_modules/.bin` al PATH. Reproducido (`No such file or directory`) y verificado.
 - [x] **Backs — `prisma.config.ts`** no se copiaba al runtime (con Prisma 7 la URL de la base sale de ese archivo).

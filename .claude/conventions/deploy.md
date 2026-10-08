@@ -78,6 +78,11 @@ propias instancias gestionadas.
 
 ## Reglas de Dockerfile aprendidas en Railway (2026-10-08)
 
+- **Re-declarar `ARG PNPM_VERSION` dentro de cada stage**: un `ARG` declarado antes del primer `FROM` no existe
+  dentro de los stages. Sin la re-declaración `pnpm@${PNPM_VERSION}` queda como `pnpm@*`, corepack baja el pnpm
+  más nuevo (12.x en octubre de 2026) y el build rompe: `ERR_PNPM_IGNORED_BUILDS` y el `postinstall` de Prisma
+  corriendo aunque `.npmrc` tenga `ignore-scripts=true` (pnpm 11+ ya no lee esas opciones de `.npmrc`). Síntoma en
+  el log: `Preparing pnpm@* for immediate activation`. Las plantillas de `architecture/05` y `06` tienen este error.
 - **Sin `RUN --mount=type=cache`**: Railway exige `id=s/<id-del-servicio>-…` y un Dockerfile no conoce ese id
   (`dockerfile invalid: … missing the cacheKey prefix`). Las plantillas de `architecture/05` y `06` todavía los
   muestran: no copiarlos.
