@@ -51,6 +51,12 @@ COPY --from=deps /app/packages/auth-server/node_modules      ./packages/auth-ser
 COPY --from=deps /app/packages/trpc/node_modules             ./packages/trpc/node_modules
 COPY --from=deps /app/realsass-ecommerce-back/node_modules   ./realsass-ecommerce-back/node_modules
 
+# @real/trpc/markets y @/server/context se leen de packages/trpc/dist (ADR-019). El back solo
+# necesita el paso "core" (hoja sin ciclo, no depende de los backs); el build completo
+# (contratos de ambos backs) es solo para los fronts.
+WORKDIR /app/packages/trpc
+RUN pnpm exec tsc -p tsconfig.core.json
+
 WORKDIR /app/realsass-ecommerce-back
 
 RUN pnpm prisma generate
