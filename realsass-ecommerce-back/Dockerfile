@@ -46,6 +46,10 @@ COPY tsconfig.base.json                 ./
 COPY packages/auth-server/              ./packages/auth-server/
 COPY packages/trpc/                     ./packages/trpc/
 COPY realsass-ecommerce-back/           ./realsass-ecommerce-back/
+# node_modules por workspace (symlinks + .bin/prisma): sin esto `pnpm prisma` no se encuentra
+COPY --from=deps /app/packages/auth-server/node_modules      ./packages/auth-server/node_modules
+COPY --from=deps /app/packages/trpc/node_modules             ./packages/trpc/node_modules
+COPY --from=deps /app/realsass-ecommerce-back/node_modules   ./realsass-ecommerce-back/node_modules
 
 WORKDIR /app/realsass-ecommerce-back
 
