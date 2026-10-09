@@ -148,6 +148,10 @@ CREATE TABLE "orders" (
     "payment_intent_id" TEXT,
     "shipping_address" JSONB NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "market_id" TEXT,
+    "visitor_country_code" TEXT,
+    "locale" TEXT,
+    "fulfillment_snapshot" JSONB NOT NULL DEFAULT '{}',
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
