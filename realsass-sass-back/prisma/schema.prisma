@@ -46,7 +46,7 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization?
+  organizations  Organization[]
   affiliateData  AffiliateData?
   collaborations Collaborator[]
 
@@ -55,7 +55,7 @@ model User {
 
 model Organization {
   id          String  @id @default(uuid())
-  userId      String  @unique
+  userId      String
   name        String?
   description String?
   logoUrl     String?
@@ -89,6 +89,7 @@ model Organization {
   webhooks      WebhookEndpoint[]
   configAudit   ConfigAuditLog[]
 
+  @@index([userId])
   @@map("organizations")
 }
 
@@ -251,7 +252,9 @@ model WebhookEndpoint {
   organizationId  String
   url             String
   events          Json      @default("[]")
-  secretHash      String
+  // El secreto de firma se guarda CIFRADO (AES-256-GCM), no hasheado: el servidor necesita el valor
+  // para firmar cada entrega (HMAC). La columna conserva el nombre original para no migrar.
+  secretEncrypted String    @map("secretHash")
   secretPrefix    String
   isActive        Boolean   @default(true)
   description     String?

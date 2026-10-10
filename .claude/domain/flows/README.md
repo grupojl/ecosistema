@@ -32,6 +32,8 @@ Lo que nunca debe ocurrir en este flujo.
 
 | Flow | Usuarios | Servicios | Estado |
 |------|----------|-----------|--------|
+| `owner-organizacion.md` | Dueño de organización (OWNER) | sass-front + sass-back + dashboard-front + ms | 🟡 Decisiones cerradas (D1-D6) |
+| `mapa.md` | Vista global de todos los flujos | — | 🟡 |
 | `saas-onboarding.md` | Nuevo tenant | sass-back + sass-front | 🔲 |
 | `tenant-store.md` | Tenant activo | sass-back + dashboard-front + ecommerce-back | 🔲 |
 | `storefront-buy.md` | Comprador | ecommerce-back + ecommerce-front | 🔲 |

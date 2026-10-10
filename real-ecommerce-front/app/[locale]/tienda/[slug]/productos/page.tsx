@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProducts } from '@/lib/store'
 import { toProductView, formatPrice, paginate, parsePageParam } from '@/lib/catalog/product-view'
-import { useStore } from '@/app/[locale]/tienda/[slug]/store-provider'
+import { requireStore } from '@/lib/store'
 import { getDictionary, t, plural, intlLocale, isLocale } from '@/lib/i18n'
 import { indexableLocalesForStore } from '@/lib/seo/indexing'
 import { buildAlternates, robotsFor } from '@/lib/seo/site'
@@ -24,7 +24,7 @@ async function loadPage(params: Props['params'], searchParams: Props['searchPara
   const { page: pageStr } = await searchParams
   if (!isLocale(localeRaw)) notFound()
   const page = parsePageParam(pageStr)
-  const store = useStore()
+  const store = await requireStore(slug)
 
   const rawProducts = await getProducts(store.organizationId)
   const views = rawProducts.map(toProductView)

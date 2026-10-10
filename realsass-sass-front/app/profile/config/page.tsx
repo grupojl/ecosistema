@@ -20,10 +20,9 @@ import {
   useQuotas,
   useThemes,
   useActivateTheme,
-  useWebhooks,
-  useCreateWebhook,
-  useDeleteWebhook,
 } from '@/hooks/use-config'
+import { WebhooksSection } from '@/components/config/webhooks-section'
+import { SecretsSection }  from '@/components/config/secrets-section'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,28 +58,23 @@ function ErrorState({ message }: { message: string }) {
 
 export default function ConfigPage() {
   const router       = useRouter()
-  const { profile }  = useAuth()
-
-  const organizationId = profile?.organization?.id ?? null
+  const { activeOrganizationId: organizationId } = useAuth()
 
   // ── TanStack Query — datos de servidor ────────────────────────────────────
   const { data: flags,    isLoading: flagsLoading,    error: flagsError }    = useFeatureFlags()
   const { data: quotas,   isLoading: quotasLoading,   error: quotasError }   = useQuotas()
   const { data: themes,   isLoading: themesLoading,   error: themesError }   = useThemes()
-  const { data: webhooks, isLoading: webhooksLoading, error: webhooksError } = useWebhooks()
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const updateFlag     = useUpdateFeatureFlag()
   const activateTheme  = useActivateTheme()
-  const createWebhook  = useCreateWebhook()
-  const deleteWebhook  = useDeleteWebhook()
 
   if (!organizationId) {
     return <ErrorState message="No hay organización activa seleccionada." />
   }
 
-  const isLoading = flagsLoading || quotasLoading || themesLoading || webhooksLoading
-  const hasError  = flagsError || quotasError || themesError || webhooksError
+  const isLoading = flagsLoading || quotasLoading || themesLoading
+  const hasError  = flagsError || quotasError || themesError
 
   if (isLoading) return <LoadingSkeleton />
   if (hasError)  return <ErrorState message="Error al cargar la configuración. Intentá de nuevo." />
@@ -151,34 +145,9 @@ export default function ConfigPage() {
         </section>
       )}
 
-      {/* Webhooks */}
-      {webhooks && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Webhooks</h2>
-            <Button
-              size="sm"
-              disabled={createWebhook.isPending}
-              onClick={() => createWebhook.mutate({ url: '', events: [] })}
-            >
-              Agregar
-            </Button>
-          </div>
-          {webhooks.map(wh => (
-            <div key={wh.id} className="flex items-center justify-between p-4 rounded-lg border">
-              <p className="text-sm font-mono truncate max-w-xs">{wh.url}</p>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={deleteWebhook.isPending}
-                onClick={() => deleteWebhook.mutate({ webhookId: wh.id })}
-              >
-                Eliminar
-              </Button>
-            </div>
-          ))}
-        </section>
-      )}
+      {/* Webhooks y claves sensibles: piden confirmar la identidad al crear, rotar o borrar */}
+      <WebhooksSection />
+      <SecretsSection />
     </div>
   )
 }

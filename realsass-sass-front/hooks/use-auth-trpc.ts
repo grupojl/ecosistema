@@ -12,11 +12,14 @@
  */
 import { useQueryClient }  from '@tanstack/react-query';
 import { trpc }            from '@/lib/trpc/client';
+import { useAuth }         from '@/context/auth-context';
 
 // ── auth.me — perfil completo cacheado ───────────────────────────────────────
 
 export function useMe() {
+  const { sessionReady } = useAuth();
   return trpc.auth.me.useQuery(undefined, {
+    enabled:   sessionReady,
     staleTime: 5 * 60 * 1000,  // 5 min — el perfil no cambia frecuentemente
     retry:     1,
   });

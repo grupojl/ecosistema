@@ -1,6 +1,7 @@
 'use client'
 import { trpc } from '@/lib/trpc/client'
 import { useOrganizationId } from '@/hooks/use-organization-id'
+import { useAuth } from '@/context/auth-context'
 
 // Lista de países LATAM soportados
 const SUPPORTED_COUNTRIES: Record<string, string> = {
@@ -18,11 +19,12 @@ const SUPPORTED_COUNTRIES: Record<string, string> = {
 
 export function MarketsManager() {
   const orgId = useOrganizationId()
+  const { sessionReady } = useAuth()
   const utils = trpc.useUtils()
 
   const { data: markets = [], isLoading } = trpc.markets.list.useQuery(
     { organizationId: orgId ?? '' },
-    { enabled: !!orgId },
+    { enabled: !!orgId && sessionReady },
   )
 
   const setDefault = trpc.markets.setDefault.useMutation({

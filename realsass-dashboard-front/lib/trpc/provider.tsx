@@ -20,7 +20,8 @@ const sassTrpcUrl = () =>
 
 const ecommerceTrpcUrl = () => {
   const base = process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? process.env.NEXT_PUBLIC_ECOMMERCE_BACK_URL;
-  return base ? `${base.replace(/\/+$/, '')}/api/v1/trpc` : '/api/v1/trpc';
+  // Tolera que la variable ya traiga /api/v1 (el .env.local de desarrollo lo tenía): evita /api/v1/api/v1/trpc.
+  return base ? `${base.replace(/\/+$/, '').replace(/\/api\/v1$/, '')}/api/v1/trpc` : '/api/v1/trpc';
 };
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {

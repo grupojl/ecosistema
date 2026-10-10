@@ -14,6 +14,6 @@ import { ConfigAuditModule }        from '@/config-audit/config-audit.module';
     CryptoService,
     { provide: SECRETS_REPOSITORY, useClass: PrismaSecretsRepository },
   ],
-  exports:     [ConfigSecretsService],
+  exports:     [ConfigSecretsService, CryptoService],
 })
 export class ConfigSecretsModule {}

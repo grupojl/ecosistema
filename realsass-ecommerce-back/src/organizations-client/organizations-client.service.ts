@@ -20,7 +20,7 @@ export class OrganizationsClientService {
   private readonly baseUrl: string;
 
   constructor(private readonly redis: RedisService) {
-    this.baseUrl = (process.env['ORGANIZATIONS_SERVICE_URL'] ?? 'http://localhost:3000').replace(/\/+$/, '');
+    this.baseUrl = (process.env['ORGANIZATIONS_SERVICE_URL'] ?? 'http://localhost:3020').replace(/\/+$/, '');
   }
 
   private cacheKey(firebaseUid: string, organizationId: string): string {
@@ -28,7 +28,7 @@ export class OrganizationsClientService {
   }
 
   async getAccess(
-    firebaseToken: string,
+    _firebaseToken: string, // sin uso: con sesión por cookie no hay Bearer que reenviar (ADR-004)
     firebaseUid: string,
     organizationId: string,
   ): Promise<OrganizationAccessResult> {
@@ -39,7 +39,7 @@ export class OrganizationsClientService {
       return JSON.parse(cached) as OrganizationAccessResult;
     }
 
-    const result = await this.fetchFromOrganizationsService(firebaseToken, organizationId);
+    const result = await this.fetchFromOrganizationsService(firebaseUid, organizationId);
 
     if (result.canAccess) {
       await this.redis.set(key, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => undefined);
@@ -48,32 +48,37 @@ export class OrganizationsClientService {
     return result;
   }
 
+  /**
+   * Canal servicio-a-servicio: pregunta a sass-back si el usuario puede operar la organización,
+   * autenticándose con INTERNAL_API_KEY. No depende del token ni de la cookie del usuario.
+   */
   private async fetchFromOrganizationsService(
-    firebaseToken: string,
+    firebaseUid: string,
     organizationId: string,
   ): Promise<OrganizationAccessResult> {
-    const url = `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/auth/organization-access?organizationId=${encodeURIComponent(organizationId)}`;
+    const url = `${this.baseUrl}/internal/access/${encodeURIComponent(organizationId)}/${encodeURIComponent(firebaseUid)}`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${firebaseToken}` },
+        headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' },
         signal: controller.signal,
       });
 
       if (response.status === 401) {
-        throw new UnauthorizedException('Token rechazado por real-back');
+        // La credencial de servicio no coincide con la de real-back: es un error de configuración, no del usuario.
+        this.logger.error('real-back rechazó INTERNAL_API_KEY — revisar que sea la misma en ambos servicios');
+        throw new ServiceUnavailableException('Servicio de identidad mal configurado');
       }
       if (!response.ok) {
         throw new ForbiddenException(`real-back respondió ${response.status} para organizationId=${organizationId}`);
       }
 
-      const body = (await response.json()) as { data: OrganizationAccessResult };
-      return body.data;
+      return (await response.json()) as OrganizationAccessResult;
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) throw error;
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException || error instanceof ServiceUnavailableException) throw error;
       this.logger.error('No se pudo contactar a real-back', error as Error);
       throw new ServiceUnavailableException('Servicio de identidad no disponible temporalmente');
     } finally {

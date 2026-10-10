@@ -10,6 +10,18 @@ export interface SessionCookieOptions {
   sameSite: 'strict' | 'lax' | 'none';
   maxAge:   number;
   path:     string;
+  /** Dominio raíz compartido (ej. ".midominio.com") para que la sesión viaje al subdominio del dashboard. */
+  domain?:  string;
+}
+
+/**
+ * COOKIE_DOMAIN: con el dashboard en un subdominio del sass-front, la cookie debe emitirse para el dominio
+ * raíz. Sin definir (desarrollo en localhost) queda host-only, que localhost ya comparte entre puertos.
+ * Al borrarla se usa el mismo dominio: si no coincide, el navegador no la elimina.
+ */
+function cookieDomain(): { domain?: string } {
+  const d = process.env['COOKIE_DOMAIN']?.trim();
+  return d ? { domain: d } : {};
 }
 
 export interface VerifiedSession {
@@ -54,7 +66,7 @@ export class SessionService {
   }
 
   cookieOptions(secure = true): SessionCookieOptions {
-    return { httpOnly: true, secure, sameSite: 'strict', maxAge: SESSION_COOKIE_MAX_AGE_MS, path: '/' };
+    return { httpOnly: true, secure, sameSite: 'strict', maxAge: SESSION_COOKIE_MAX_AGE_MS, path: '/', ...cookieDomain() };
   }
 
   getCookieOptions(): SessionCookieOptions {
@@ -62,6 +74,6 @@ export class SessionService {
   }
 
   getClearCookieOptions(): SessionCookieOptions {
-    return { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 0, path: '/' };
+    return { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 0, path: '/', ...cookieDomain() };
   }
 }

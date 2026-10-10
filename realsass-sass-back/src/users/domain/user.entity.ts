@@ -10,9 +10,18 @@ export interface User {
   updatedAt:       Date;
 }
 
+export interface OrganizationSummary {
+  id:   string;
+  name: string | null;
+  slug: string | null;
+}
+
 export interface UserProfile {
   user:            User;
-  organization:    { id: string; name: string | null; slug: string | null } | null;
+  /** Organización por defecto (la más antigua que posee). Se mantiene por compatibilidad. */
+  organization:    OrganizationSummary | null;
+  /** D3: todas las organizaciones de las que el usuario es dueño. */
+  organizations:   OrganizationSummary[];
   collaborations:  Array<{ organizationId: string; role: string; permissions: Record<string, boolean> }>;
 }
 

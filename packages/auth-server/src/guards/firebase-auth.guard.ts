@@ -5,6 +5,7 @@ import {
 import { Reflector }     from '@nestjs/core';
 import { getAuth }       from 'firebase-admin/auth';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
+import { SESSION_COOKIE_NAME } from '@/session/session.service';
 import type { CurrentUserPayload } from '@/types/tenant-context';
 
 @Injectable()
@@ -22,13 +23,17 @@ export class FirebaseAuthGuard implements CanActivate {
 
     const req   = ctx.switchToHttp().getRequest();
     const token = this.extractToken(req);
+    // ADR-004: sin Bearer, la sesión viaja en la cookie HttpOnly __session.
+    const sessionCookie = token ? undefined : (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_COOKIE_NAME];
 
-    if (!token) {
+    if (!token && !sessionCookie) {
       throw new UnauthorizedException('Token de autenticacion requerido');
     }
 
     try {
-      const decoded = await getAuth().verifyIdToken(token);
+      const decoded = token
+        ? await getAuth().verifyIdToken(token)
+        : await getAuth().verifySessionCookie(sessionCookie as string, true);
 
       req.user = {
         uid:         decoded.uid,

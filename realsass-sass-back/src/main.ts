@@ -42,7 +42,7 @@ async function bootstrap() {
     transform:        true,
   }));
 
-  const port = process.env.PORT ?? 3000;
+  const port = process.env.PORT ?? 3020;
   app.useGlobalFilters(new (require('@real/auth-server').ZodExceptionFilter)());
   await app.listen(port);
 }

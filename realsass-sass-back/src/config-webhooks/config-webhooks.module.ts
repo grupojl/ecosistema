@@ -7,11 +7,13 @@ import { PrismaWebhooksRepository }  from '@/config-webhooks/repository/prisma-w
 import { WEBHOOKS_REPOSITORY }       from '@/config-webhooks/repository/webhooks.repository.interface';
 import { PrismaModule }              from '@/prisma/prisma.module';
 import { ConfigAuditModule }         from '@/config-audit/config-audit.module';
+import { ConfigSecretsModule }       from '@/config-secrets/config-secrets.module';
 
 @Module({
   imports: [
     PrismaModule,
     ConfigAuditModule,
+    ConfigSecretsModule, // CryptoService: cifra/descifra el secreto de firma
     BullModule.registerQueue({ name: WEBHOOK_QUEUE }),
   ],
   

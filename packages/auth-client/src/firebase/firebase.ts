@@ -5,6 +5,7 @@ import {
   FacebookAuthProvider,
   OAuthProvider,
   signInWithPopup,
+  reauthenticateWithPopup,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
@@ -21,15 +22,9 @@ export interface FirebaseConfig {
 
 let _app: FirebaseApp | null = null;
 
-/**
- * env() — lee variables de entorno de forma compatible con browser y Node.
- * Next.js inyecta NEXT_PUBLIC_* en el bundle como strings literales.
- * El cast evita la dependencia de @types/node en un package browser.
- */
-function env(key: string): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (globalThis as any /* @real/browser-compat */).process?.env?.[key] as string | undefined;
-}
+// Next.js reemplaza process.env.NEXT_PUBLIC_* por strings literales en build.
+// Se declara el mínimo para no depender de @types/node en un package browser.
+declare const process: { env: Record<string, string | undefined> };
 
 /**
  * initFirebase — inicializa Firebase con una config explicita.
@@ -59,12 +54,14 @@ function getOrInitApp(): FirebaseApp {
     return _app;
   }
 
-  const apiKey            = env('NEXT_PUBLIC_FIREBASE_API_KEY');
-  const authDomain        = env('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
-  const projectId         = env('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
-  const storageBucket     = env('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
-  const messagingSenderId = env('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
-  const appId             = env('NEXT_PUBLIC_FIREBASE_APP_ID');
+  // Acceso LITERAL a process.env.NEXT_PUBLIC_*: Next solo las inlinea en el
+  // bundle del browser cuando la referencia es estática (no `env(key)` dinámico).
+  const apiKey            = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain        = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId         = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket     = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const appId             = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
   if (!apiKey || !projectId) {
     throw new Error(
@@ -115,6 +112,23 @@ export async function signInWithApple(): Promise<User> {
 export async function signInWithFacebook(): Promise<User> {
   const result = await signInWithPopup(getFirebaseAuth(), new FacebookAuthProvider());
   return result.user;
+}
+
+/**
+ * reauthenticate — confirma de nuevo la identidad del usuario con su mismo proveedor (step-up).
+ * Renueva el auth_time del token; el llamador debe recrear después la cookie de sesión.
+ * No aplica a sesiones abiertas con custom token (SSO al dashboard): no tienen proveedor.
+ */
+export async function reauthenticate(): Promise<void> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user) throw new Error('No hay usuario autenticado');
+  const providerId = user.providerData[0]?.providerId;
+  const provider =
+    providerId === 'google.com'   ? new GoogleAuthProvider()   :
+    providerId === 'facebook.com' ? new FacebookAuthProvider() :
+    providerId === 'apple.com'    ? new OAuthProvider('apple.com') : null;
+  if (!provider) throw new Error('No se puede confirmar tu identidad con esta sesión. Cerrá sesión y volvé a ingresar.');
+  await reauthenticateWithPopup(user, provider);
 }
 
 export async function signOut(): Promise<void> {

@@ -51,13 +51,13 @@ export class CollaboratorsService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async listCollaborators(firebaseUid: string) {
-    const org = await this.getOrgForOwner(firebaseUid);
+  async listCollaborators(firebaseUid: string, activeOrganizationId?: string | null) {
+    const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     return this.repo.findAllByOrganization(org.id);
   }
 
-  async inviteCollaborator(firebaseUid: string, dto: InviteCollaboratorDto) {
-    const org = await this.getOrgForOwner(firebaseUid);
+  async inviteCollaborator(firebaseUid: string, dto: InviteCollaboratorDto, activeOrganizationId?: string | null) {
+    const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
 
     // Verificar que no se invite a sí mismo
     const owner = await this.prisma.user.findUnique({ where: { firebaseUid } });
@@ -119,15 +119,15 @@ export class CollaboratorsService {
     return { collaborator, inviteLink: this.buildLink(org.id, collaboratorId) };
   }
 
-  async updateCollaborator(firebaseUid: string, collaboratorId: string, dto: UpdateCollaboratorDto) {
-    const org = await this.getOrgForOwner(firebaseUid);
+  async updateCollaborator(firebaseUid: string, collaboratorId: string, dto: UpdateCollaboratorDto, activeOrganizationId?: string | null) {
+    const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     const col = await this.repo.findById(collaboratorId, org.id);
     if (!col) throw new NotFoundException('Collaborator not found');
     return this.repo.update(collaboratorId, { permissions: dto as Partial<CollaboratorPermissions> });
   }
 
-  async removeCollaborator(firebaseUid: string, collaboratorId: string) {
-    const org = await this.getOrgForOwner(firebaseUid);
+  async removeCollaborator(firebaseUid: string, collaboratorId: string, activeOrganizationId?: string | null) {
+    const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     const col = await this.repo.findById(collaboratorId, org.id);
     if (!col) throw new NotFoundException('Collaborator not found');
     await this.repo.remove(collaboratorId);
@@ -162,12 +162,15 @@ export class CollaboratorsService {
 
   // ── Privados ────────────────────────────────────────────────────────────────
 
-  private async getOrgForOwner(firebaseUid: string) {
+  /** D3/D4: la organización propia indicada por el header; si no es propia o falta, la más antigua. */
+  private async getOrgForOwner(firebaseUid: string, activeOrganizationId?: string | null) {
     const user = await this.prisma.user.findUnique({
-      where: { firebaseUid }, include: { organization: true },
+      where: { firebaseUid }, include: { organizations: { orderBy: { createdAt: 'asc' } } },
     });
-    if (!user?.organization) throw new NotFoundException('Organization not found');
-    return user.organization;
+    const org = (activeOrganizationId ? user?.organizations.find(o => o.id === activeOrganizationId) : undefined)
+      ?? user?.organizations[0];
+    if (!org) throw new NotFoundException('Organization not found');
+    return org;
   }
 
   private buildLink(organizationId: string, collaboratorId: string): string {

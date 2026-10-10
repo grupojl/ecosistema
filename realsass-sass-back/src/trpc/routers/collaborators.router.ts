@@ -28,7 +28,7 @@ export function createCollaboratorsRouter(collaboratorsService: CollaboratorsSer
 
     list: authProcedure
       .query(({ ctx }) =>
-        collaboratorsService.listCollaborators(ctx.uid!),
+        collaboratorsService.listCollaborators(ctx.uid!, ctx.organizationId),
       ),
 
     invite: authProcedure
@@ -37,7 +37,7 @@ export function createCollaboratorsRouter(collaboratorsService: CollaboratorsSer
         permissions: permissionsSchema.optional(),
       }))
       .mutation(({ ctx, input }) =>
-        collaboratorsService.inviteCollaborator(ctx.uid!, input),
+        collaboratorsService.inviteCollaborator(ctx.uid!, input, ctx.organizationId),
       ),
 
     update: authProcedure
@@ -46,13 +46,13 @@ export function createCollaboratorsRouter(collaboratorsService: CollaboratorsSer
         permissions:    permissionsSchema,
       }))
       .mutation(({ ctx, input }) =>
-        collaboratorsService.updateCollaborator(ctx.uid!, input.collaboratorId, input.permissions),
+        collaboratorsService.updateCollaborator(ctx.uid!, input.collaboratorId, input.permissions, ctx.organizationId),
       ),
 
     remove: authProcedure
       .input(z.object({ collaboratorId: z.string().uuid() }))
       .mutation(({ ctx, input }) =>
-        collaboratorsService.removeCollaborator(ctx.uid!, input.collaboratorId),
+        collaboratorsService.removeCollaborator(ctx.uid!, input.collaboratorId, ctx.organizationId),
       ),
 
     acceptInvitation: authProcedure

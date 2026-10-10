@@ -3,7 +3,7 @@
 // app/dashboard/chat/prueba/page.tsx
 //
 // Página de testing manual contra chat-ia-back — endpoint público del
-// asistente por proyecto: POST /projects/:slug/assistant/chat
+// asistente por organización: POST /api/v1/assistant/chat
 //
 // Deliberadamente NO depende de features/chat/hooks ni de chat-ia-client.ts
 // para mantenerse aislada de cualquier contrato interno del dashboard que
@@ -13,17 +13,11 @@
 import { useCallback, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { getIdToken } from '@real/auth-client';
+import { useActiveOrganization } from '@/features/auth/hooks/use-active-organization';
 import { CircleAlert, Bot, Loader2, Send, User as UserIcon } from 'lucide-react';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
-import { Label } from '@real/ui';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@real/ui';
+import { Card, CardContent } from '@real/ui';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -48,8 +42,11 @@ function genUserId(): string {
 }
 
 export default function PruebaAsistentePage() {
-  const [organizationId, setOrganizationId] = useState('');
-  const [projectSlug, setProjectSlug] = useState('mi-primer-proyecto');
+  // La tienda activa define el organizationId; el back resuelve el asistente por
+  // organización (sin projectSlug).
+  const { organization } = useActiveOrganization();
+  const organizationId = organization?.id ?? '';
+
   const [userId] = useState<string>(genUserId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -60,8 +57,8 @@ export default function PruebaAsistentePage() {
     const text = input.trim();
     if (!text || sending) return;
 
-    if (!organizationId.trim()) {
-      setError('Falta el Organization ID.');
+    if (!organizationId) {
+      setError('Todavía no hay una tienda activa.');
       return;
     }
 
@@ -73,18 +70,15 @@ export default function PruebaAsistentePage() {
     try {
       const token = await getIdToken();
 
-      const res = await fetch(
-        `${CHAT_IA_URL}/api/v1/projects/${encodeURIComponent(projectSlug)}/assistant/chat`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'x-organization-id': organizationId.trim(),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId, message: text }),
+      const res = await fetch(`${CHAT_IA_URL}/api/v1/assistant/chat`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-organization-id': organizationId,
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({ userId, message: text }),
+      });
 
       if (!res.ok) {
         let msg = `Error ${res.status}`;
@@ -104,7 +98,7 @@ export default function PruebaAsistentePage() {
     } finally {
       setSending(false);
     }
-  }, [input, sending, organizationId, projectSlug, userId]);
+  }, [input, sending, organizationId, userId]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -123,32 +117,9 @@ export default function PruebaAsistentePage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Configuración</CardTitle>
-          <CardDescription>User ID de prueba: {userId}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="org-id">Organization ID</Label>
-            <Input
-              id="org-id"
-              value={organizationId}
-              onChange={(e) => setOrganizationId(e.target.value)}
-              placeholder="f8a5c145-6058-4fcd-8c42-30f9b4e0c792"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="project-slug">Project slug</Label>
-            <Input
-              id="project-slug"
-              value={projectSlug}
-              onChange={(e) => setProjectSlug(e.target.value)}
-              placeholder="mi-primer-proyecto"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-sm text-muted-foreground">
+        Asistente de <span className="font-medium text-foreground">{organization?.name || organization?.slug || '...'}</span>
+      </p>
 
       <Card>
         <CardContent className="flex flex-col gap-3 p-4">

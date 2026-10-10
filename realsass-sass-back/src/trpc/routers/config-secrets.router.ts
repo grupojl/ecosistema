@@ -1,39 +1,19 @@
 /**
  * src/trpc/routers/config-secrets.router.ts
  *
- * Secrets cifrados con AES-256-GCM.
- * El valor nunca se devuelve en claro — list() omite valueEncrypted.
+ * Secrets cifrados con AES-256-GCM (iv y tag propios por valor).
+ * El valor NUNCA se devuelve: list() solo expone nombre, pista (últimos 4), destino y fechas.
  *
- * Firmas reales:
- *   ConfigSecretsService.list(organizationId)
- *   ConfigSecretsService.create(organizationId, userId, dto, ip?)
- *   ConfigSecretsService.rotate(organizationId, userId, id, value, ip?)
- *   ConfigSecretsService.revoke(organizationId, userId, id, ip?)
- *
- * NOTA: rotate y revoke en el controller REST usan @StepUpGuard
- * (re-autenticación en los últimos 5 min). En tRPC lo delegamos
- * al mismo StepUp verificando auth_time del token Firebase en el middleware.
+ * Crear, rotar y revocar exigen re-autenticación reciente (step-up, ver trpc/step-up.ts).
+ * Todas las operaciones por id están acotadas a la organización activa.
  */
-import { z }               from 'zod';
+import { z }                      from 'zod';
 import { router, ownerProcedure } from '@/trpc';
-import * as admin          from 'firebase-admin'; // @real/firebase-auth
-import { getAuth }         from 'firebase-admin/auth';
-import { TRPCError }       from '@trpc/server';
+import { enforceStepUp }          from '@/trpc/step-up';
 import type { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
 
-const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
-
-/** Verifica re-autenticación reciente (igual que StepUpGuard) */
-async function enforceStepUp(token: string): Promise<void> {
-  const decoded  = await getAuth().verifyIdToken(token);
-  const authTime = decoded.auth_time * 1000;
-  if (Date.now() - authTime > STEP_UP_WINDOW_MS) {
-    throw new TRPCError({
-      code:    'FORBIDDEN',
-      message: 'Re-autenticación requerida (ventana de 5 minutos)',
-    });
-  }
-}
+const SecretKey = z.string().trim().regex(/^[A-Za-z][A-Za-z0-9_.-]{1,99}$/, 'Usá letras, números, _ . - (2 a 100 caracteres)');
+const SecretValue = z.string().min(1).max(4096);
 
 export function createConfigSecretsRouter(secretsService: ConfigSecretsService) {
   return router({
@@ -44,29 +24,28 @@ export function createConfigSecretsRouter(secretsService: ConfigSecretsService) 
 
     create: ownerProcedure
       .input(z.object({
-        key:          z.string().max(100),
-        value:        z.string(),
+        key:          SecretKey,
+        value:        SecretValue,
         description:  z.string().max(300).optional(),
         systemTarget: z.enum(['chat', 'payments', 'ads', 'all']).optional(),
         expiresAt:    z.string().datetime().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        return secretsService.create(ctx.organizationId, ctx.uid, input as Parameters<typeof secretsService.create>[2], ctx.req.ip);
+        await enforceStepUp(ctx.req);
+        return secretsService.create(ctx.organizationId, ctx.uid, input, ctx.req.ip);
       }),
 
     rotate: ownerProcedure
-      .input(z.object({ secretId: z.string().uuid(), value: z.string() }))
+      .input(z.object({ secretId: z.string().uuid(), value: SecretValue }))
       .mutation(async ({ ctx, input }) => {
-        const token = ctx.req.headers.authorization?.split(' ')[1] ?? '';
-        await enforceStepUp(token);
+        await enforceStepUp(ctx.req);
         return secretsService.rotate(ctx.organizationId, ctx.uid, input.secretId, input.value, ctx.req.ip);
       }),
 
     revoke: ownerProcedure
       .input(z.object({ secretId: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
-        const token = ctx.req.headers.authorization?.split(' ')[1] ?? '';
-        await enforceStepUp(token);
+        await enforceStepUp(ctx.req);
         return secretsService.revoke(ctx.organizationId, ctx.uid, input.secretId, ctx.req.ip);
       }),
   });

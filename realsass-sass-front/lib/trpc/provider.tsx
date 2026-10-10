@@ -6,7 +6,8 @@
  * Usa cookies HttpOnly (ADR-004) — sin Bearer token en headers.
  */
 import { useState }        from 'react';
-import { QueryClient }     from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getActiveOrganizationId } from '@real/auth-client';
 import { trpc, makeTrpcClient } from '@/lib/trpc/client';
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {
@@ -16,12 +17,15 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
       process.env.NEXT_PUBLIC_SASS_BACK_URL
         ? `${process.env.NEXT_PUBLIC_SASS_BACK_URL}/api/v1/trpc`
         : '/api/v1/trpc',
+      getActiveOrganizationId,
     ),
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      {children}
-    </trpc.Provider>
+    <QueryClientProvider client={queryClient}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        {children}
+      </trpc.Provider>
+    </QueryClientProvider>
   );
 }

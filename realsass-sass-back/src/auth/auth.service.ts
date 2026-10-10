@@ -1,12 +1,14 @@
 // realsass-sass-back/src/auth/auth.service.ts
 import type { ProfileForClaims } from '@/auth/claims.service';
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as admin            from 'firebase-admin'; // @real/firebase-auth
 import { getAuth }           from 'firebase-admin/auth';
 import { PrismaService }     from '@/prisma/prisma.service';
 import { UsersService }      from '@/users/users.service';
 import { AffiliatesService } from '@/affiliate/affiliate.service';
 import { ClaimsService }     from '@/auth/claims.service';
+import { OrganizationsService } from '@/organizations/organizations.service';
+import { randomBytes }       from 'node:crypto';
 import type { CurrentUserPayload } from '@real/auth-server';
 
 /**
@@ -17,14 +19,30 @@ import type { CurrentUserPayload } from '@real/auth-server';
  */
 // Mapea UserProfile al shape que espera ClaimsService
 // Hace explícito el contrato entre los dos servicios (ADR-007)
-function toProfileForClaims(profile: { collaborations: Array<{ organizationId: string; role: string; organization?: Record<string, unknown> }> }): import('@/auth/claims.service').ProfileForClaims {
+function toProfileForClaims(profile: {
+  organizations:  Array<{ id: string; name: string | null; slug: string | null }>;
+  collaborations: Array<{ organizationId: string; role: string; organization?: Record<string, unknown> }>;
+}): import('@/auth/claims.service').ProfileForClaims {
   return {
-    tenants: profile.collaborations.map(c => ({
-      organizationId: c.organizationId,
-      organization:   c.organization ?? {},
-      role:           c.role,
-    })),
+    tenants: [
+      // D3: las organizaciones propias entran como OWNER (ADR-003); antes solo se emitían las colaboraciones.
+      ...profile.organizations.map(o => ({
+        organizationId: o.id,
+        organization:   { name: o.name, slug: o.slug } as Record<string, unknown>,
+        role:           'OWNER',
+      })),
+      ...profile.collaborations.map(c => ({
+        organizationId: c.organizationId,
+        organization:   c.organization ?? {},
+        role:           c.role,
+      })),
+    ],
   };
+}
+
+/** D2: código de afiliado aleatorio y no adivinable (no deriva del id ni del uid). */
+function generateAffiliateCode(): string {
+  return 'ref-' + randomBytes(5).toString('hex');
 }
 
 @Injectable()
@@ -36,7 +54,23 @@ export class AuthService {
     private readonly users:      UsersService,
     private readonly affiliates: AffiliatesService,
     private readonly claims:     ClaimsService,
+    private readonly orgs:       OrganizationsService,
   ) {}
+
+  /**
+   * D1 + D2: todo usuario tiene código de afiliado y al menos una organización.
+   * Idempotente: se llama en cada sync, así también repara cuentas creadas antes de esta regla.
+   */
+  private async ensureDefaults(user: { id: string; email: string; displayName: string | null; isOwner: boolean; affiliateCode: string | null }) {
+    if (!user.affiliateCode) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { affiliateCode: generateAffiliateCode() } });
+    }
+    const { created } = await this.orgs.ensureDefaultOrganization(user);
+    if ((created || !user.isOwner)) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
+    }
+    if (created) this.logger.log('Organización por defecto creada para ' + user.email);
+  }
 
   async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string) {
     const existing = await this.prisma.user.findUnique({
@@ -52,10 +86,11 @@ export class AuthService {
         },
       });
       this.logger.log(`Usuario sincronizado: ${existing.email}`);
+      await this.ensureDefaults(existing);
       const profile = await this.users.buildProfile(firebaseUser.uid);
 
       // ── Emitir custom claims (ADR-003) ──────────────────────────────────
-      if (profile?.collaborations.length) {
+      if (profile && (profile.organizations.length || profile.collaborations.length)) {
         const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
         if (platformClaims) {
           await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
@@ -73,6 +108,7 @@ export class AuthService {
         avatarUrl:   firebaseUser.avatarUrl,
         isOwner:     false,
         isAffiliate: false,
+        affiliateCode: generateAffiliateCode(),
       },
     });
 
@@ -80,16 +116,18 @@ export class AuthService {
 
     if (affiliateCode) {
       try {
-        await this.affiliates.registerReferral(newUser.id, affiliateCode);
+        // Firma real: registerReferral(affiliateCode, newUserId). Antes se pasaban invertidos.
+        await this.affiliates.registerReferral(affiliateCode, newUser.id);
       } catch (err) {
         this.logger.warn(`Error referido ${affiliateCode}: ${(err as Error).message}`);
       }
     }
 
+    await this.ensureDefaults(newUser);
     const profile = await this.users.buildProfile(firebaseUser.uid);
 
     // ── Emitir custom claims para usuario nuevo ──────────────────────────
-    if (profile?.collaborations.length) {
+    if (profile && (profile.organizations.length || profile.collaborations.length)) {
       const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
       if (platformClaims) {
         await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
@@ -102,12 +140,34 @@ export class AuthService {
   // ── Reemitir claims (cambio de org activa) ───────────────────────────────
   async refreshClaims(firebaseUid: string): Promise<void> {
     const profile = await this.users.buildProfile(firebaseUid);
-    if (!profile?.collaborations.length) return;
+    if (!profile || !(profile.organizations.length || profile.collaborations.length)) return;
 
     const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
     if (platformClaims) {
       await this.claims.setOrgClaims(firebaseUid, platformClaims);
     }
+  }
+
+  /**
+   * SSO sass-front → dashboard-front. La identidad sale de la sesión (cookie __session),
+   * no de un idToken que el cliente tenga que reenviar.
+   */
+  async generateCustomTokenForUid(firebaseUid: string) {
+    const user = await this.prisma.user.findUnique({
+      where:   { firebaseUid },
+      include: { organizations: { orderBy: { createdAt: 'asc' } }, collaborations: true },
+    });
+    if (!user) throw new UnauthorizedException('Usuario no registrado.');
+
+    const canAccess = user.organizations.length > 0 || (user.collaborations?.length ?? 0) > 0;
+    if (!canAccess) throw new ForbiddenException('El usuario no tiene acceso al dashboard.');
+
+    const customToken = await getAuth().createCustomToken(firebaseUid, {
+      isOwner:        user.organizations.length > 0,
+      organizationId: user.organizations[0]?.id ?? null,
+    });
+    this.logger.log('customToken SSO generado: ' + user.email);
+    return { customToken };
   }
 
   async generateCustomToken(firebaseIdToken: string) {
@@ -120,17 +180,17 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where:   { firebaseUid: decoded.uid },
-      include: { organization: true, collaborations: true },
+      include: { organizations: { orderBy: { createdAt: 'asc' } }, collaborations: true },
     });
 
     if (!user) throw new UnauthorizedException('Usuario no registrado. Llama a /auth/sync primero.');
 
-    const canAccess = user.isOwner || (user.collaborations?.length ?? 0) > 0;
+    const canAccess = user.organizations.length > 0 || (user.collaborations?.length ?? 0) > 0;
     if (!canAccess) throw new UnauthorizedException('El usuario no tiene acceso al dashboard.');
 
     const customToken = await getAuth().createCustomToken(decoded.uid, {
-      isOwner:        user.isOwner,
-      organizationId: user.organization?.id ?? null,
+      isOwner:        user.organizations.length > 0,
+      organizationId: user.organizations[0]?.id ?? null,
     });
 
     this.logger.log(`customToken SSO generado: ${user.email}`);

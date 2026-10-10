@@ -1,7 +1,9 @@
 import { trpc } from '@/lib/trpc/client';
+import { useAuth } from '@/context/auth-context';
 
 export function useMyOrganization() {
-  return trpc.organizations.me.useQuery(undefined, { staleTime: 60_000 });
+  const { sessionReady } = useAuth();
+  return trpc.organizations.me.useQuery(undefined, { staleTime: 60_000, enabled: sessionReady });
 }
 
 export function useUpdateOrganization() {

@@ -69,6 +69,16 @@ export function createAuthRouter(
       }),
 
     /**
+     * auth.createDashboardSso — custom token Firebase para entrar al dashboard-front.
+     * Reemplaza al POST /auth/firebase-sso (REST), que era un stub que solo redirigía.
+     * La identidad sale de la cookie de sesión; no hace falta reenviar el idToken.
+     */
+    createDashboardSso: authProcedure
+      .mutation(async ({ ctx }) => {
+        return authService.generateCustomTokenForUid(ctx.uid);
+      }),
+
+    /**
      * auth.selectRole — selecciona el rol/organización activa del usuario.
      * Después de esto el front debe llamar auth.refreshClaims + getIdToken(true).
      */

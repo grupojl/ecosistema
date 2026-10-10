@@ -35,7 +35,8 @@ config-quotas, config-secrets, config-themes, config-webhooks, organizations
 
 - `collaborators.service.ts` mantiene PrismaService para tx de invitación
 - DTOs class-validator en controllers REST legacy (no se agrega más)
-- `auth.*` router tRPC no incluye firebase-sso ni organization-access (REST back-to-back)
+- `auth.*` router tRPC incluye `createDashboardSso` (SSO sass-front → dashboard-front). El REST `POST /auth/firebase-sso` se eliminó (era un stub).
+- El acceso a una organización entre backs va por `GET /internal/access/:organizationId/:firebaseUid` con `x-internal-api-key` (reemplaza a `GET /auth/organization-access`, que exigía reenviar el Bearer del usuario).
 
 ## Bug conocido en schema
 

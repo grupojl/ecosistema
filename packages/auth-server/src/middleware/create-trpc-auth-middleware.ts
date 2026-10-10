@@ -24,6 +24,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { getFirebaseAdmin }                      from '@/firebase/firebase.module';
+import { SESSION_COOKIE_NAME }                   from '@/session/session.service';
 import type {
   CurrentUserPayload,
   TenantContext,
@@ -85,15 +86,24 @@ export function createTrpcAuthMiddleware(
     next: NextFunction,
   ): Promise<void> => {
     const header = req.headers['authorization'];
-    if (!header?.startsWith('Bearer ')) {
+    const bearer = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
+
+    // ADR-004: sin Bearer, la sesión viaja en la cookie HttpOnly __session.
+    const sessionCookie = bearer
+      ? undefined
+      : (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_COOKIE_NAME];
+
+    if (!bearer && !sessionCookie) {
       return next();
     }
 
-    const token = header.slice(7);
     try {
-      const decoded = await getFirebaseAdmin().verifyIdToken(token);
+      const decoded = bearer
+        ? await getFirebaseAdmin().verifyIdToken(bearer)
+        : await getFirebaseAdmin().verifySessionCookie(sessionCookie as string, true);
 
-      req.firebaseToken = token; // expuesto para que tenantContext lo reenvíe
+      // Solo hay token raw para reenviar entre backs cuando llegó por Bearer.
+      if (bearer) req.firebaseToken = bearer;
       req.user = {
         uid:         decoded.uid,
         email:       decoded.email        ?? '',

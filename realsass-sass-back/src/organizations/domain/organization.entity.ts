@@ -26,8 +26,13 @@ export interface UpdateOrganizationInput {
 }
 
 export interface CreateOrganizationInput {
-  userId:      string;
-  firebaseUid: string;
+  userId:       string;
+  firebaseUid:  string;
+  /** D1: nombre inicial, p. ej. "Tienda de Ana". Editable después. */
+  name?:        string;
+  /** Slug inicial; si falta, el repositorio genera uno no adivinable. */
+  slug?:        string;
+  countryCode?: string;
 }
 
 /** Espejo de enum StoreStatus (schema.prisma) — el dominio no importa Prisma. */

@@ -1,20 +1,16 @@
 /**
  * src/trpc/routers/config-webhooks.router.ts
  *
- * Gestión de endpoints webhook (CRUD del dashboard).
- * El delivery outbound (BullMQ processor) permanece en REST — es llamada de sistema.
- *
- * Firmas reales:
- *   ConfigWebhooksService.list(organizationId)
- *   ConfigWebhooksService.create(organizationId, userId, dto)
- *     dto: { url: string, events: string[] }
- *   ConfigWebhooksService.remove(organizationId, userId, id)
- *   ConfigWebhooksService.getLogs(organizationId, id, take)
- *   ConfigWebhooksService.test(organizationId, id)   ← también disponible
+ * El secreto de firma (HMAC) se genera en el servidor, se guarda cifrado y se devuelve EN CLARO una sola
+ * vez: al crear el webhook o al rotarlo. Después solo se ve una pista (últimos 4 caracteres).
+ * Crear, rotar y eliminar exigen re-autenticación reciente (step-up).
  */
-import { z }               from 'zod';
+import { z }                      from 'zod';
 import { router, ownerProcedure } from '@/trpc';
+import { enforceStepUp }          from '@/trpc/step-up';
 import type { ConfigWebhooksService } from '@/config-webhooks/config-webhooks.service';
+
+const EventName = z.string().trim().min(1).max(64).regex(/^(\*|[a-z0-9_.:-]+)$/i, 'Evento inválido');
 
 export function createConfigWebhooksRouter(webhooksService: ConfigWebhooksService) {
   return router({
@@ -25,17 +21,26 @@ export function createConfigWebhooksRouter(webhooksService: ConfigWebhooksServic
 
     create: ownerProcedure
       .input(z.object({
-        url:         z.string().url(),
-        events:      z.array(z.string()).min(1),
+        url:         z.string().trim().url().max(2048),
+        events:      z.array(EventName).min(1).max(20),
         description: z.string().max(200).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        await enforceStepUp(ctx.req);
         return webhooksService.create(ctx.organizationId, ctx.uid, input);
+      }),
+
+    rotateSecret: ownerProcedure
+      .input(z.object({ webhookId: z.string().uuid() }))
+      .mutation(async ({ ctx, input }) => {
+        await enforceStepUp(ctx.req);
+        return webhooksService.rotateSecret(ctx.organizationId, ctx.uid, input.webhookId);
       }),
 
     remove: ownerProcedure
       .input(z.object({ webhookId: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
+        await enforceStepUp(ctx.req);
         return webhooksService.remove(ctx.organizationId, ctx.uid, input.webhookId);
       }),
 

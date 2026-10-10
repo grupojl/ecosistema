@@ -10,7 +10,7 @@ export const NAV_GROUPS = [
   {
     label: 'Módulos',
     items: [
-      { name: 'Chat IA',  href: '/dashboard/chat',     icon: 'MessageSquare', active: false },
+      { name: 'Chat IA',  href: '/dashboard/chat',     icon: 'MessageSquare', active: true  },
       { name: 'Pagos',    href: '/dashboard/pagos',    icon: 'CreditCard',    active: false },
       { name: 'Campañas', href: '/dashboard/campanas', icon: 'TrendingUp',    active: false },
     ],

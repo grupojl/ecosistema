@@ -28,7 +28,9 @@ export class ConfigFlagsService {
 
   async update(organizationId: string, userId: string, id: string, dto: UpdateFlagDto) {
     const flag = await this.repo.findById(id);
-    if (!flag) throw new NotFoundException(`FeatureFlag ${id} not found`);
+    // Los flags globales (organizationId null) y los de otra organización no se pueden editar desde acá:
+    // antes un dueño podía cambiar un flag global y afectar a todos los tenants.
+    if (!flag || flag.organizationId !== organizationId) throw new NotFoundException('FeatureFlag no encontrado');
 
     const previous = JSON.stringify({ enabled: flag.enabled });
     const updated  = await this.repo.update(id, dto);

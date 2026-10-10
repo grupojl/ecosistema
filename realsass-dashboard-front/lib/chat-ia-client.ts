@@ -20,7 +20,8 @@ import { AppError }   from '@real/auth-client';
 function getChatIaUrl(): string {
   const url = process.env.NEXT_PUBLIC_CHAT_IA_URL;
   if (!url) throw new AppError('SERVER', '[chat-ia-client] NEXT_PUBLIC_CHAT_IA_URL no definida');
-  return url;
+  // chat-ia-back expone todo bajo el prefijo global /api/v1.
+  return `${url.replace(/\/+$/, '')}/api/v1`;
 }
 
 // ─── Tipos de respuesta de chat-ia-back ──────────────────────────────────────
@@ -63,8 +64,8 @@ export function buildQuery(params: Record<string, unknown>): string {
 
 // ─── Fetch autenticado ────────────────────────────────────────────────────────
 
-async function getHeaders(organizationId: string): Promise<Record<string, string>> {
-  const token = await getIdToken();
+async function getHeaders(organizationId: string, forceRefresh = false): Promise<Record<string, string>> {
+  const token = await getIdToken(forceRefresh);
   return {
     'Content-Type':     'application/json',
     'Authorization':    `Bearer ${token ?? ''}`,
@@ -78,9 +79,15 @@ export async function chatIaFetch<T>(
   options:        RequestInit = {},
 ): Promise<T> {
   const url     = `${getChatIaUrl()}${path}`;
-  const headers = await getHeaders(organizationId);
+  const doFetch = async (forceRefresh: boolean) => {
+    const headers = await getHeaders(organizationId, forceRefresh);
+    return fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+  };
 
-  const res = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+  let res = await doFetch(false);
+  // Los custom claims (organizationId, permissions.chat) los emite sass-back en
+  // POST /auth/session; un token anterior no los trae hasta refrescarse.
+  if (res.status === 401 || res.status === 403) res = await doFetch(true);
 
   if (!res.ok) {
     let msg = `chat-ia-back error ${res.status}`;

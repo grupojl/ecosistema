@@ -22,14 +22,19 @@ import {
   useState, useCallback, useRef, type ReactNode,
 } from 'react'
 import { useRouter }                        from 'next/navigation'
-import { getFirebaseAuth, onAuthStateChanged, signOut, type User } from '@real/auth-client'
+import { getFirebaseAuth, onAuthStateChanged, signOut, setActiveOrganizationId, reauthenticate as firebaseReauthenticate, type User } from '@real/auth-client'
 import { AppError }                         from '@/lib/errors'
 
 // ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
 
+export interface OrganizationSummary { id: string; name: string | null; slug: string | null }
+
 export interface UserProfile {
   user:           { id: string; email: string | null; displayName: string | null; photoUrl: string | null }
-  organization:   { id: string; name: string | null; slug: string | null } | null
+  /** Organización por defecto (la más antigua que posee). */
+  organization:   OrganizationSummary | null
+  /** D3: todas las organizaciones que posee el usuario. */
+  organizations:  OrganizationSummary[]
   collaborations: Array<{ organizationId: string; role: string; permissions: Record<string, boolean> }>
 }
 
@@ -39,16 +44,20 @@ function getSassBackUrl(): string {
   return process.env.NEXT_PUBLIC_SASS_BACK_URL ?? ''
 }
 
-async function createSessionCookie(idToken: string): Promise<void> {
+/** Devuelve true solo si el back confirmó la cookie (antes un 401/500 se ignoraba en silencio). */
+async function createSessionCookie(idToken: string): Promise<boolean> {
   try {
-    await fetch(`${getSassBackUrl()}/auth/session`, {
+    const res = await fetch(`${getSassBackUrl()}/auth/session`, {
       method:      'POST',
       credentials: 'include',
       headers:     { 'Content-Type': 'application/json' },
       body:        JSON.stringify({ idToken }),
     })
+    if (!res.ok) console.warn('[auth] POST /auth/session respondió', res.status)
+    return res.ok
   } catch (err) {
     console.warn('[auth] createSessionCookie failed', err)
+    return false
   }
 }
 
@@ -70,15 +79,18 @@ async function deleteSessionCookie(): Promise<void> {
 async function trpcSyncUser(token: string, affiliateCode?: string): Promise<void> {
   const url   = `${getSassBackUrl()}/api/v1/trpc/auth.sync`
   const input = { affiliateCode }
-  await fetch(`${url}?input=${encodeURIComponent(JSON.stringify(input))}`, {
+  const res = await fetch(`${url}?input=${encodeURIComponent(JSON.stringify(input))}`, {
     method:      'POST',
     credentials: 'include',
     headers:     {
       'Content-Type':  'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ json: input }),
+    body: JSON.stringify(input), // el input va tal cual en el body (el POST ignora el query string)
   })
+  if (!res.ok) {
+    throw new AppError('No pudimos preparar tu cuenta', res.status === 401 ? 'AUTH' : 'UNKNOWN', res.status)
+  }
 }
 
 async function trpcGetMe(token: string): Promise<UserProfile | null> {
@@ -88,8 +100,9 @@ async function trpcGetMe(token: string): Promise<UserProfile | null> {
       credentials: 'include',
       headers:     { 'Authorization': `Bearer ${token}` },
     })
+    // Sin transformer en el router: el resultado viene en result.data (antes se leía .json y daba siempre null)
     const json = await res.json()
-    return json?.result?.data?.json ?? null
+    return (json?.result?.data as UserProfile | undefined) ?? null
   } catch {
     return null
   }
@@ -102,8 +115,41 @@ interface AuthContextValue {
   profile:        UserProfile | null
   loading:        boolean
   busy:           boolean
+  /**
+   * true cuando la cookie de sesión ya está creada y la organización activa resuelta.
+   * Las consultas autenticadas (tRPC) deben esperar a este valor: evita los 401 de arranque.
+   */
+  sessionReady:   boolean
+  /** D4: organización activa; viaja en el header x-organization-id. */
+  activeOrganizationId: string | null
+  switchOrganization:   (organizationId: string) => void
+  /** Step-up: confirma la identidad con el proveedor y renueva la cookie (auth_time fresco). */
+  reauthenticate: () => Promise<void>
   refreshProfile: () => Promise<void>
   logout:         () => Promise<void>
+}
+
+const ACTIVE_ORG_KEY = 'activeOrganizationId'
+
+function readStoredOrg(): string | null {
+  try { return window.localStorage.getItem(ACTIVE_ORG_KEY) } catch { return null }
+}
+function storeOrg(id: string | null): void {
+  try {
+    if (id) window.localStorage.setItem(ACTIVE_ORG_KEY, id)
+    else window.localStorage.removeItem(ACTIVE_ORG_KEY)
+  } catch { /* storage bloqueado: la org activa vive solo en memoria */ }
+}
+
+/** La org guardada si el usuario aún tiene acceso; si no, la primera propia o, en su defecto, la primera colaboración. */
+function resolveActiveOrg(profile: UserProfile): string | null {
+  const accessible = new Set([
+    ...profile.organizations.map(o => o.id),
+    ...profile.collaborations.map(c => c.organizationId),
+  ])
+  const stored = readStoredOrg()
+  if (stored && accessible.has(stored)) return stored
+  return profile.organizations[0]?.id ?? profile.collaborations[0]?.organizationId ?? null
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -125,6 +171,14 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   const [profile,      setProfile]      = useState<UserProfile | null>(null)
   const [loading,      setLoading]      = useState(true)
   const [busy,         setBusy]         = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [activeOrganizationId, setActiveOrgState] = useState<string | null>(null)
+
+  const applyActiveOrg = useCallback((id: string | null) => {
+    setActiveOrganizationId(id) // módulo de @real/auth-client: lo lee el header de tRPC
+    storeOrg(id)
+    setActiveOrgState(id)
+  }, [])
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -148,10 +202,15 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       const freshToken = await user.getIdToken(true)
 
       // REST — bootstrap del sistema de auth (ADR-004)
-      await createSessionCookie(freshToken)
+      const cookieOk = await createSessionCookie(freshToken)
 
       const me = await trpcGetMe(freshToken)
-      if (me) setProfile(me)
+      if (me) {
+        setProfile(me)
+        applyActiveOrg(resolveActiveOrg(me))
+      }
+      // Las consultas tRPC autenticadas arrancan recién ahora (cookie confirmada + org activa lista).
+      setSessionReady(cookieOk)
 
       scheduleTokenRefresh(user)
     } catch (err) {
@@ -161,7 +220,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     } finally {
       setBusy(false)
     }
-  }, [refCode, scheduleTokenRefresh])
+  }, [refCode, scheduleTokenRefresh, applyActiveOrg])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
@@ -170,6 +229,8 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
         await syncAndLoad(user)
       } else {
         setProfile(null)
+        setSessionReady(false)
+        applyActiveOrg(null)
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
       }
       setLoading(false)
@@ -178,7 +239,21 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       unsubscribe()
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
-  }, [syncAndLoad])
+  }, [syncAndLoad, applyActiveOrg])
+
+  const switchOrganization = useCallback((organizationId: string) => {
+    // D4: cambiar de organización NO reemite la cookie; solo cambia el header de los próximos requests.
+    applyActiveOrg(organizationId)
+  }, [applyActiveOrg])
+
+  const reauthenticate = useCallback(async () => {
+    if (!firebaseUser) throw new AppError('Tu sesión terminó. Ingresá de nuevo.', 'AUTH')
+    await firebaseReauthenticate()
+    const fresh = await firebaseUser.getIdToken(true) // trae el auth_time nuevo
+    if (!(await createSessionCookie(fresh))) {
+      throw new AppError('No pudimos renovar tu sesión segura. Intentá de nuevo.', 'UNKNOWN')
+    }
+  }, [firebaseUser])
 
   const refreshProfile = useCallback(async () => {
     if (!firebaseUser) return
@@ -186,11 +261,16 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     try {
       const token = await firebaseUser.getIdToken()
       const me    = await trpcGetMe(token)
-      if (me) setProfile(me)
+      if (me) {
+        setProfile(me)
+        // Si la org activa ya no es accesible (p. ej. te quitaron el acceso), se re-resuelve.
+        const ids = new Set([...me.organizations.map(o => o.id), ...me.collaborations.map(c => c.organizationId)])
+        if (!activeOrganizationId || !ids.has(activeOrganizationId)) applyActiveOrg(resolveActiveOrg(me))
+      }
     } finally {
       setBusy(false)
     }
-  }, [firebaseUser])
+  }, [firebaseUser, activeOrganizationId, applyActiveOrg])
 
   const logout = useCallback(async () => {
     setBusy(true)
@@ -198,14 +278,16 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       await deleteSessionCookie()
       await signOut()
       setProfile(null)
+      setSessionReady(false)
+      applyActiveOrg(null)
       router.push('/')
     } finally {
       setBusy(false)
     }
-  }, [router])
+  }, [router, applyActiveOrg])
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, profile, loading, busy, refreshProfile, logout }}>
+    <AuthContext.Provider value={{ firebaseUser, profile, loading, busy, sessionReady, activeOrganizationId, switchOrganization, reauthenticate, refreshProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )

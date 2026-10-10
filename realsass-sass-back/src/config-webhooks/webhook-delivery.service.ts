@@ -42,17 +42,32 @@ export class WebhookDeliveryService {
       const events = wh.events as string[];
       if (!events.includes(event) && !events.includes('*')) continue;
 
-      await this.queue.add(
-        'deliver',
-        { webhookId: wh.id, event, payload, url: wh.url, secretHash: wh.secretHash },
-        {
-          attempts: Number(process.env['WEBHOOK_MAX_RETRIES'] ?? 3),
-          backoff:  { type: 'exponential', delay: 1000 },
-          removeOnComplete: 100,
-          removeOnFail:     200,
-        },
-      );
+      await this.enqueue(wh.id, event, payload);
     }
+  }
+
+  /** Encola una entrega para un webhook puntual, ignorando su filtro de eventos (botón "probar"). */
+  async dispatchTo(webhookId: string, event: string, payload: unknown): Promise<void> {
+    if (!this.queue) {
+      this.logger.debug('[no-op] dispatchTo ignorado (Redis deshabilitado): ' + event);
+      return;
+    }
+    await this.enqueue(webhookId, event, payload);
+  }
+
+  // El job NO lleva el secreto ni la URL: el processor los lee de la base al entregar.
+  // Redis es un servicio aparte y no debe guardar material de firma.
+  private async enqueue(webhookId: string, event: string, payload: unknown): Promise<void> {
+    await this.queue!.add(
+      'deliver',
+      { webhookId, event, payload },
+      {
+        attempts: Number(process.env['WEBHOOK_MAX_RETRIES'] ?? 3),
+        backoff:  { type: 'exponential', delay: 1000 },
+        removeOnComplete: 100,
+        removeOnFail:     200,
+      },
+    );
   }
 
   signPayload(secret: string, body: string): string {

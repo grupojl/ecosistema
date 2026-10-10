@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProductByHandle } from '@/lib/store'
 import { toProductView, formatPrice } from '@/lib/catalog/product-view'
-import { useStore } from '@/app/[locale]/tienda/[slug]/store-provider'
+import { requireStore } from '@/lib/store'
 import { getDictionary, t, intlLocale, isLocale } from '@/lib/i18n'
 import { indexableLocalesForStore } from '@/lib/seo/indexing'
 import { buildAlternates, robotsFor, getSiteUrl, absoluteUrl, localizedPath } from '@/lib/seo/site'
@@ -17,7 +17,7 @@ interface Props {
 async function loadProduct(params: Props['params']) {
   const { locale: localeRaw, slug, handle } = await params
   if (!isLocale(localeRaw)) notFound()
-  const store = useStore()
+  const store = await requireStore(slug)
 
   const raw = await getProductByHandle(store.organizationId, handle)
   if (!raw) notFound()

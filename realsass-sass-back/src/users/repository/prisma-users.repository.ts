@@ -8,7 +8,7 @@ import type { User, UserProfile, UpsertUserInput } from '@/domain/user.entity';
 type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
 type PrismaUserWithOrg = Prisma.UserGetPayload<{
   include: {
-    organization: true;
+    organizations: true;
     collaborations: { include: { organization: { select: { id: true; name: true; slug: true } } } };
   };
 }>;
@@ -38,11 +38,11 @@ export class PrismaUsersRepository implements IUsersRepository {
   }
 
   private toProfile(row: PrismaUserWithOrg): UserProfile {
+    const owned = row.organizations.map(o => ({ id: o.id, name: o.name, slug: o.slug }));
     return {
       user: this.toUser(row),
-      organization: row.organization
-        ? { id: row.organization.id, name: row.organization.name, slug: row.organization.slug }
-        : null,
+      organization:  owned[0] ?? null,
+      organizations: owned,
       collaborations: row.collaborations.map(c => ({
         organizationId: c.organizationId,
         role:           'MEMBER' as import('@real/auth-server').TenantRole,
@@ -81,7 +81,7 @@ export class PrismaUsersRepository implements IUsersRepository {
     const row = await this.prisma.user.findUnique({
       where:   { firebaseUid },
       include: {
-        organization:   true,
+        organizations:  { orderBy: { createdAt: 'asc' } },
         collaborations: {
           where:   { status: 'ACTIVE' },
           include: { organization: { select: { id: true, name: true, slug: true } } },
@@ -95,14 +95,15 @@ export class PrismaUsersRepository implements IUsersRepository {
     const user = await this.prisma.user.findUnique({
       where:   { firebaseUid },
       include: {
-        organization:   true,
+        organizations:  { where: { id: organizationId }, select: { id: true } },
         collaborations: { where: { organizationId, status: 'ACTIVE' } },
       },
     });
 
     if (!user) return { canAccess: false, reason: 'User not found' };
 
-    if (user.organization?.id === organizationId) {
+    // D4: el acceso se valida contra la base en cada request, no contra la cookie.
+    if (user.organizations.length > 0) {
       return {
         canAccess: true, userId: user.id, organizationId,
         role: 'OWNER' as import('@real/auth-server').TenantRole,

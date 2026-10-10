@@ -34,6 +34,19 @@ export class CryptoService {
     };
   }
 
+  /** Cifra y devuelve todo en un solo string (iv.tag.cifrado, base64): para columnas únicas. */
+  seal(plaintext: string): string {
+    const p = this.encrypt(plaintext);
+    return [p.iv, p.tag, p.encrypted].join('.');
+  }
+
+  /** Inverso de seal(). */
+  open(sealed: string): string {
+    const [iv, tag, encrypted] = sealed.split('.');
+    if (!iv || !tag || !encrypted) throw new Error('Valor cifrado con formato inválido');
+    return this.decrypt(encrypted, iv, tag);
+  }
+
   decrypt(encryptedB64: string, ivB64: string, tagB64: string): string {
     const key       = this.masterKey();
     const iv        = Buffer.from(ivB64, 'base64');

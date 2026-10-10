@@ -4,6 +4,16 @@
 
 ---
 
+## Sesión 2026-10-10 — Flujo del dueño, dashboard y storefront
+
+Ver `domain/flows/owner-organizacion.md` §10, §10 bis y §10 ter. Además, en el storefront:
+
+- [x] **ecommerce-back montaba tRPC en `/api/v1/api/v1/trpc`**: `setGlobalPrefix('api/v1')` también se antepone a `forRoutes()` de middleware, así que `forRoutes('/api/v1/trpc')` quedaba duplicado. Todos los clientes llaman a `/api/v1/trpc` → 404 ("Unable to transform response from server"). Ahora `forRoutes('/trpc')`.
+- [x] **real-ecommerce-front**: 4 páginas (Server Components) llamaban a `useStore()`, un hook de contexto de cliente ("Attempted to call useStore() from the server"). Reemplazado por `requireStore(slug)` (comparte el `cache()` de `resolveStore`). El typecheck no lo detectaba: **falta un test de render de las páginas del storefront**.
+- [ ] [DT-TEST-02] Test de humo del storefront (home, productos, 404) y del montaje de rutas de ecommerce-back.
+
+---
+
 ## Sesión 2026-10-08 — Contratos desde `dist` + dashboard-front (ADR-019)
 
 ### Cerrado ✅

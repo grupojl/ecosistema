@@ -7,11 +7,14 @@
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { trpc }           from '@/lib/trpc/client';
+import { useAuth }         from '@/context/auth-context';
 
 // ── Lista de colaboradores ────────────────────────────────────────────────────
 
 export function useCollaborators() {
+  const { sessionReady } = useAuth();
   return trpc.collaborators.list.useQuery(undefined, {
+    enabled:   sessionReady,
     staleTime: 30 * 1000,
   });
 }

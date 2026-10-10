@@ -1071,6 +1071,9 @@ importers:
       bullmq:
         specifier: 'catalog:'
         version: 6.3.8(ioredis@6.0.0)(pg@8.23.0)
+      cookie-parser:
+        specifier: 'catalog:'
+        version: 1.4.7
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -1129,6 +1132,9 @@ importers:
       '@types/bcryptjs':
         specifier: 'catalog:'
         version: 2.4.6
+      '@types/cookie-parser':
+        specifier: 'catalog:'
+        version: 1.4.10(@types/express@5.0.6)
       '@types/express':
         specifier: 'catalog:'
         version: 5.0.6

@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProducts, getCategoryByHandle } from '@/lib/store'
 import { toProductView, formatPrice } from '@/lib/catalog/product-view'
-import { useStore } from '@/app/[locale]/tienda/[slug]/store-provider'
+import { requireStore } from '@/lib/store'
 import { getDictionary, intlLocale, isLocale } from '@/lib/i18n'
 import { indexableLocalesForStore } from '@/lib/seo/indexing'
 import { buildAlternates, robotsFor } from '@/lib/seo/site'
@@ -24,7 +24,7 @@ interface Props {
 async function loadCategory(params: Props['params']) {
   const { locale: localeRaw, slug, categoria } = await params
   if (!isLocale(localeRaw)) notFound()
-  const store = useStore()
+  const store = await requireStore(slug)
 
   const category = await getCategoryByHandle(store.organizationId, categoria)
   if (!category) notFound()

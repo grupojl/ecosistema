@@ -9,6 +9,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { cookies }                                    from 'next/headers';
 import { createTRPCClient, httpBatchLink }            from '@trpc/client';
 import type { AppRouter }                             from '@/lib/trpc/router-type';
+import { ProfileView }                                from './profile-view';
 
 function getSassBackUrl(): string {
   return (process.env['SASS_BACK_URL'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? '')
@@ -45,8 +46,7 @@ export default async function ProfilePage() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      {/* ProfileView es el Client Component con 'use client' */}
-      {/* Importar: import { ProfileView } from '@/components/profile/profile-view' */}
+      <ProfileView />
     </HydrationBoundary>
   );
 }

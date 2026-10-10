@@ -26,6 +26,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import { Public }                           from '@real/auth-server';
 import { InternalApiKeyGuard }              from '@/internal/internal-api-key.guard';
 import { InternalOrganizationsService }     from '@/internal/internal-organizations.service';
 import {
@@ -39,6 +40,7 @@ import { ZodValidationPipe }            from '@/common/pipes/zod-validation.pipe
 
 @ApiTags('internal')
 @ApiHeader({ name: 'x-internal-api-key', required: true })
+@Public() // el APP_GUARD de Firebase no aplica: acá manda InternalApiKeyGuard (x-internal-api-key)
 @UseGuards(InternalApiKeyGuard)
 @Controller('internal/organizations')
 export class InternalOrganizationsController {

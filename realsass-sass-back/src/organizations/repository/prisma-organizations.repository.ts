@@ -1,4 +1,5 @@
 import { Injectable }    from '@nestjs/common';
+import { randomBytes }   from 'node:crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z }             from 'zod';
 import type { Prisma }   from '@/generated/prisma';
@@ -37,19 +38,37 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
   }
 
   async findByFirebaseUid(firebaseUid: string): Promise<Organization | null> {
-    const user = await this.prisma.user.findUnique({
-      where:   { firebaseUid },
-      include: { organization: true },
+    const rows = await this.listByFirebaseUid(firebaseUid);
+    return rows[0] ?? null;
+  }
+
+  async listByFirebaseUid(firebaseUid: string): Promise<Organization[]> {
+    const rows = await this.prisma.organization.findMany({
+      where:   { user: { firebaseUid } },
+      orderBy: { createdAt: 'asc' },
     });
-    return user?.organization ? this.toEntity(user.organization) : null;
+    return rows.map(r => this.toEntity(r));
   }
 
   async findByUserId(userId: string): Promise<Organization | null> {
-    const user = await this.prisma.user.findUnique({
-      where:   { id: userId },
-      include: { organization: true },
+    const row = await this.prisma.organization.findFirst({
+      where:   { userId },
+      orderBy: { createdAt: 'asc' },
     });
-    return user?.organization ? this.toEntity(user.organization) : null;
+    return row ? this.toEntity(row) : null;
+  }
+
+  countByUserId(userId: string): Promise<number> {
+    return this.prisma.organization.count({ where: { userId } });
+  }
+
+  async resolveUserId(firebaseUid: string): Promise<string | null> {
+    const u = await this.prisma.user.findUnique({ where: { firebaseUid }, select: { id: true } });
+    return u?.id ?? null;
+  }
+
+  async slugExists(slug: string): Promise<boolean> {
+    return (await this.prisma.organization.count({ where: { slug } })) > 0;
   }
 
   async findBySlug(slug: string): Promise<StoreInfo | null> {
@@ -68,7 +87,10 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
     const row    = await client.organization.create({
       data: {
         user:            { connect: { id: input.userId } },
-        slug:            `org-${input.userId}`,
+        // Ya no puede derivarse del userId: un usuario puede tener varias organizaciones.
+        slug:            input.slug ?? `org-${randomBytes(4).toString('hex')}`,
+        ...(input.name        ? { name:        input.name }        : {}),
+        ...(input.countryCode ? { countryCode: input.countryCode } : {}),
         enabledProducts: {},
       },
     });

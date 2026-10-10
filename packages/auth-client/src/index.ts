@@ -11,7 +11,7 @@ export type {
 // Firebase
 export {
   initFirebase, getFirebaseAuth, getIdToken,
-  signInWithGoogle, signInWithApple, signInWithFacebook, signOut,
+  signInWithGoogle, signInWithApple, signInWithFacebook, signOut, reauthenticate,
 } from './firebase/firebase';
 export type { FirebaseConfig } from './firebase/firebase';
 

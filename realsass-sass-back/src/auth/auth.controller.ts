@@ -31,21 +31,8 @@ export class AuthController {
     private readonly usersService: UsersService,
   ) {}
 
-  /**
-   * POST /api/v1/auth/firebase-sso
-   * Redirect entre sass-front y dashboard-front tras auth Firebase.
-   * Mantiene en REST porque necesita res.redirect() — tRPC no lo soporta.
-   */
-  @Post('firebase-sso')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  async firebaseSso(
-    @Body() body: { idToken: string; redirectTo?: string },
-    @Res() res: Response,
-  ) {
-    const redirectUrl = body.redirectTo ?? process.env.DASHBOARD_FRONT_URL ?? '/';
-    return res.redirect(redirectUrl);
-  }
+  // POST /auth/firebase-sso se eliminó: era un stub que solo hacía res.redirect() y el front nunca lo
+  // pudo usar (esperaba un JSON con customToken). Ahora es el procedure tRPC auth.createDashboardSso.
 
   /**
    * GET /api/v1/auth/organization-access

@@ -43,8 +43,8 @@ FIREBASE_PRIVATE_KEY=
 # [realsass-ecommerce-back]
 # -----------------------------------------------------------------
 
-PORT_ECOMMERCE_BACK=3003
-ECOMMERCE_BACK_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+PORT_ECOMMERCE_BACK=3023
+ECOMMERCE_BACK_ALLOWED_ORIGINS=http://localhost:3020,http://localhost:3021
 
 # Llamada inter-servicio → realsass-sass-back
 ORGANIZATIONS_SERVICE_PREFIX=/api/v1
@@ -56,7 +56,7 @@ CONFIG_CACHE_TTL_ORG_ACCESS=30
 # -----------------------------------------------------------------
 
 PORT_SASS_BACK=3004
-SASS_BACK_ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3002
+SASS_BACK_ALLOWED_ORIGINS=http://localhost:3021,http://localhost:3022
 
 # Cifrado de secretos — generar con: openssl rand -hex 32
 CONFIG_MASTER_KEY=
@@ -76,7 +76,7 @@ WEBHOOK_MAX_RETRIES=3
 # [real-ecommerce-front]
 # -----------------------------------------------------------------
 
-PORT_ECOMMERCE_FRONT=3000
+PORT_ECOMMERCE_FRONT=3020
 
 # ID de la organización que sirve este storefront (1 front = 1 org)
 NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID=
@@ -86,14 +86,14 @@ NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID=
 # [realsass-dashboard-front]
 # -----------------------------------------------------------------
 
-PORT_DASHBOARD_FRONT=3001
+PORT_DASHBOARD_FRONT=3021
 
 
 # -----------------------------------------------------------------
 # [realsass-sass-front]
 # -----------------------------------------------------------------
 
-PORT_SASS_FRONT=3002
+PORT_SASS_FRONT=3022
 
 
 # -----------------------------------------------------------------

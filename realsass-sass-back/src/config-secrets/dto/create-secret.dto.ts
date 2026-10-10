@@ -4,7 +4,9 @@
  * El service lo encripta y pasa campos separados al repo.
  */
 export interface CreateSecretDto {
-  key:          string;
-  value:        string;   // plaintext — encriptado en el service, nunca en DB
-  description?: string;
+  key:           string;
+  value:         string;   // plaintext — encriptado en el service, nunca en DB
+  description?:  string;
+  systemTarget?: 'chat' | 'payments' | 'ads' | 'all';
+  expiresAt?:    string;   // ISO 8601
 }

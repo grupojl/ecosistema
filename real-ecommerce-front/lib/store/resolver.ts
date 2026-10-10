@@ -13,6 +13,7 @@
  *   Antes un catch-all devolvía null: una caída de sass-back = 404 masivo.
  */
 import { cache } from 'react';
+import { notFound } from 'next/navigation';
 import { TRPCClientError } from '@trpc/client';
 import { createStoreCaller } from '@/lib/trpc/server';
 import type { StoreInfo } from '@/lib/trpc/types';
@@ -26,6 +27,17 @@ export function trpcErrorCode(err: unknown): string | null {
     return data.code;
   }
   return null;
+}
+
+/**
+ * Para Server Components (páginas): la tienda del slug o 404.
+ * Reemplaza a useStore() — ese es un hook de contexto de cliente y no puede llamarse en un Server Component
+ * (rompía con "Attempted to call useStore() from the server"). Comparte el cache() de resolveStore con el layout.
+ */
+export async function requireStore(slug: string): Promise<StoreInfo> {
+  const store = await resolveStore(slug);
+  if (!store) notFound();
+  return store;
 }
 
 export const resolveStore = cache(async (slug: string): Promise<StoreInfo | null> => {

@@ -95,6 +95,8 @@ export class TrpcModule implements NestModule {
 
     consumer
       .apply(firebaseAuth, tenantContext, this.trpcService.handler)
-      .forRoutes('/api/v1/trpc');
+      // main.ts hace setGlobalPrefix('api/v1') y Nest lo antepone también a las rutas de middleware:
+      // con '/api/v1/trpc' quedaba montado en /api/v1/api/v1/trpc y los fronts (que llaman a /api/v1/trpc) recibían 404.
+      .forRoutes('/trpc');
   }
 }
