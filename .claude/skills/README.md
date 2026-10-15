@@ -1,6 +1,6 @@
 # Skills del proyecto
 
-> Estado: ✅ 11 skills escritas · 2 sin probar de punta a punta (dependen de un staging real)
+> Estado: ✅ 12 skills escritas · 3 sin probar de punta a punta (staging real, incidente real, ADR-028 aún Propuesto)
 > Última actualización: 2026-10-15
 
 Una skill es un procedimiento que Claude carga cuando la tarea coincide con su `description`. **Los ADRs son el qué y el por qué
@@ -18,6 +18,7 @@ Una skill es un procedimiento que Claude carga cuando la tarea coincide con su `
 | Frontend | [`nueva-vista-front`](nueva-vista-front/SKILL.md) | Páginas/vistas en los 3 fronts | lint + typecheck + build + 3 anchos | ◐ sigue `02-frontend-capas.md` |
 | Calidad | [`antes-de-mergear`](antes-de-mergear/SKILL.md) | Antes de mergear o dar por terminado | los 5 jobs del CI + reglas duras | ✅ los comandos se corrieron hoy |
 | Calidad | [`nueva-dependencia`](nueva-dependencia/SKILL.md) | Agregar/mover/quitar dependencias | `phantom-deps` + `audit:deps` + frozen-lockfile | ◐ sigue ADR-018 |
+| Escritorio | [`desktop-tauri`](desktop-tauri/SKILL.md) | Shell Tauri, capabilities, deep links, updater, firma (ADR-028) | `cargo test/clippy/audit/deny` + S10/S11 + prueba con la app instalada | ❌ ADR-028 aún Propuesto |
 | Operación | [`deploy-staging`](deploy-staging/SKILL.md) | Preparar/validar un deploy a Railway | 5 `docker build` + `/health` + humo | ❌ sin staging |
 | Operación | [`runbook-incidente`](runbook-incidente/SKILL.md) | Algo falla en producción | mitigación + postmortem + test | ❌ sin incidente real |
 | Docs | [`cerrar-sesion`](cerrar-sesion/SKILL.md) | Terminar una sesión de trabajo | evidencia por ítem, contratos intactos | ✅ aplicada 2026-10-15 |

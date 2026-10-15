@@ -329,3 +329,30 @@ Verifica   seguridad.sh S8-S10 + rls.int-spec de cada back (con el rol eco_app) 
 Cobertura: ecommerce-back completo; sass-back fase 1 (secretos, webhooks, cuotas, mercados); fase 2 pendiente.
 Ver `decisions/ADR-027-row-level-security.md` y `architecture/13-seguridad-por-capa-norte.md` (criterio de 10/10 por capa).
 Línea base de los 10 pilares del ecosistema con su puntaje y evidencia: `modules/pilares-audit.md` (documento vivo).
+
+---
+
+## Escritorio — dashboard con Tauri (ADR-028, **Propuesto**)
+
+### El norte
+
+**Un solo producto, dos formas de instalarlo.** La app de escritorio es una distribución nativa del dashboard web, con una
+cáscara Rust de privilegios mínimos. Referencia verificada: **Hoppscotch Desktop** (cliente web empaquetado con Tauri).
+No se encontró un caso público de Next.js App Router + Server Components + cookie HttpOnly bajo Tauri, así que la decisión
+final se confirma con un spike (Fase 0).
+
+### Reglas no negociables (resumen; el detalle es R1–R12 en `architecture/14`)
+
+```
+Modelo     Fase 1 = cáscara remota (Tauri abre el dashboard por https); el build del dashboard NO cambia
+Login      navegador del sistema + código de un solo uso (60 s) + PKCE + deep link; nunca popup de Google embebido
+Sesión     cookie __session HttpOnly de siempre; sin tokens en localStorage ni en la URL
+Permisos   capabilities vacías por defecto; el dominio remoto no recibe fs/shell/http amplio (auditoría S11)
+Navegación el webview solo va al dominio del dashboard; lo externo, al navegador
+Cadena     Rust bajo ADR-018: Cargo.lock, cargo audit y cargo deny bloqueantes
+Updater    firmado (requireSignedVersion); la clave privada fuera del repo y con respaldo
+Prerrequis ADR-026 (CSP con nonces) antes de cualquier capability remota no trivial
+```
+
+Ver `architecture/14-desktop-tauri-norte.md`, `decisions/ADR-028-desktop-tauri.md`, el plan en `roadmap/desktop-tauri.md`
+(incluye las decisiones que necesita del dueño) y la skill `skills/desktop-tauri/SKILL.md`.

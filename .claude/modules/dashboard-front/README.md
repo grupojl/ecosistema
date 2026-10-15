@@ -15,6 +15,10 @@ A los **colaboradores** de una organización — personas que el dueño invitó
 a gestionar el negocio con permisos específicos. También puede usarlo el
 dueño si prefiere hacer el trabajo operativo desde acá.
 
+## Versión de escritorio
+
+Se está evaluando una versión instalable (Tauri): ver [Dashboard de escritorio](desktop.md).
+
 ## Páginas principales
 
 | Sección | Ruta | Qué hace |
