@@ -42,7 +42,7 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
   }
 
   async update(id: string, input: UpdateFeatureFlagInput): Promise<FeatureFlag> {
-    const row = await this.prisma.featureFlag.update({ where: { id }, data: input as any });
+    const row = await this.prisma.featureFlag.update({ where: { id }, data: { ...input, conditions: input.conditions as Prisma.InputJsonObject | undefined } });
     return this.toEntity(row);
   }
 }

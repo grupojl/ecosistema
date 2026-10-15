@@ -37,7 +37,7 @@ export function createAuthRouter(
      */
     me: authProcedure
       .query(async ({ ctx }) => {
-        return usersService.getMyProfile(ctx.uid!);
+        return usersService.getMyProfile(ctx.uid);
       }),
 
     /**
@@ -51,7 +51,7 @@ export function createAuthRouter(
       }))
       .mutation(async ({ ctx, input }) => {
         await authService.syncUser(
-          { uid: ctx.uid!, email: ctx.req.user?.email ?? '', displayName: ctx.req.user?.displayName ?? null, avatarUrl: ctx.req.user?.avatarUrl ?? null },
+          { uid: ctx.uid, email: ctx.req.user?.email ?? '', displayName: ctx.req.user?.displayName ?? null, avatarUrl: ctx.req.user?.avatarUrl ?? null },
           input.affiliateCode,
         );
         return { ok: true };
@@ -64,7 +64,7 @@ export function createAuthRouter(
      */
     refreshClaims: authProcedure
       .mutation(async ({ ctx }) => {
-        await authService.refreshClaims(ctx.uid!);
+        await authService.refreshClaims(ctx.uid);
         return { ok: true };
       }),
 
@@ -88,7 +88,7 @@ export function createAuthRouter(
         organizationId: z.string().uuid().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        return usersService.selectRole(ctx.uid!, {
+        return usersService.selectRole(ctx.uid, {
           role:           input.role,
           organizationId: input.organizationId,
         });

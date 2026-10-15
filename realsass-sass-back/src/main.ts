@@ -1,21 +1,24 @@
 import { NestFactory }      from '@nestjs/core';
-import { ValidationPipe }   from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 import helmet               from 'helmet';
 import cookieParser         from 'cookie-parser';
 import { AppModule }        from '@/app.module';
+import {
+  ZodExceptionFilter, parseAllowedOrigins, requireEnv, trustProxyHops,
+} from '@real/auth-server';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // ── Falla cerrado: sin su configuración de seguridad el servicio NO levanta ──
+  // INTERNAL_API_KEY admite varias claves separadas por coma ("nueva,vieja") para rotar sin caída.
+  requireEnv('INTERNAL_API_KEY', { minLength: process.env.NODE_ENV === 'production' ? 32 : 1 });
+  // ALLOWED_ORIGINS: lista explícita. credentials: true con origin '*' es una vulnerabilidad CORS activa.
+  const allowedOrigins = parseAllowedOrigins();
 
-  // ── Seguridad: CORS ───────────────────────────────────────────────────────
-  // ALLOWED_ORIGINS requerido — sin él el servidor no arranca.
-  // credentials: true + origin explícito → compatible con cookies HttpOnly (ADR-004).
-  // credentials: true con origin: '*' es una vulnerabilidad CORS activa.
-  const rawOrigins = process.env.ALLOWED_ORIGINS ?? '';
-  if (!rawOrigins) {
-    throw new Error('ALLOWED_ORIGINS no está definida — el servidor no puede arrancar sin CORS configurado');
-  }
-  const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Detrás de Railway el cliente real llega en X-Forwarded-For: sin esto el rate limit ve una sola IP.
+  app.set('trust proxy', trustProxyHops());
 
   app.enableCors({
     origin:      allowedOrigins,
@@ -33,18 +36,29 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // ── Seguridad: Helmet ─────────────────────────────────────────────────────
-  app.use(helmet());
+  // Esto es una API: no sirve HTML, así que la CSP es la más estricta posible. La UI de bull-board
+  // (/admin/queues, protegida con API key) sí necesita scripts propios y usa los defaults de helmet.
+  const apiHelmet = helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc:     ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri:        ["'none'"],
+        formAction:     ["'none'"],
+      },
+    },
+  });
+  const uiHelmet = helmet();
+  app.use((req: Request, res: Response, next: NextFunction) =>
+    (req.path.includes('/admin/queues') ? uiHelmet : apiHelmet)(req, res, next));
 
-  // ── Validación global ─────────────────────────────────────────────────────
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist:        true,
-    forbidNonWhitelisted: true,
-    transform:        true,
-  }));
+  // Validación: Zod (ZodValidationPipe en cada @Body/@Query que lo necesita, input() en tRPC). No hay un
+  // ValidationPipe global: ningún DTO usa class-validator (ADR-024).
 
   const port = process.env.PORT ?? 3020;
-  app.useGlobalFilters(new (require('@real/auth-server').ZodExceptionFilter)());
+  app.useGlobalFilters(new ZodExceptionFilter());
   await app.listen(port);
 }
 
-bootstrap();
+void bootstrap();

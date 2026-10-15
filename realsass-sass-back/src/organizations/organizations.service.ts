@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { QuotaExceededException } from '@/common/exceptions/quota-exceeded.exception';
 import { Prisma } from '@/generated/prisma';
 import { MarketsService } from '@/markets/markets.service';
+import { runInTenant } from '@/prisma/tenant-context';
 import type { UpdateOrganizationInput, StoreInfo } from '@/organizations/domain/organization.entity';
 import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
 
@@ -73,7 +74,8 @@ export class OrganizationsService {
    */
   async createForUserWithDefaultMarket(userId: string, countryCode = 'AR', name?: string) {
     const org = await this.createForUser(userId, undefined, name, countryCode);
-    await this.marketsService.seedDefaultMarket(org.id, countryCode);
+    // ADR-027: la organización recién creada es el único tenant visible mientras se siembra su Market default.
+    await runInTenant(org.id, () => this.marketsService.seedDefaultMarket(org.id, countryCode));
     return org;
   }
 

@@ -32,7 +32,7 @@ export function createConfigTemplatesRouter(templatesService: ConfigTemplatesSer
         description: z.string().optional(),
       }))
       .mutation(({ ctx, input }) =>
-        templatesService.create(ctx.organizationId, ctx.uid!, input),
+        templatesService.create(ctx.organizationId, ctx.uid, input),
       ),
   });
 }

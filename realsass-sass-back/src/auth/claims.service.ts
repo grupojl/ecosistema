@@ -16,8 +16,7 @@
 //   }
 // }
 import { Injectable, Logger } from '@nestjs/common';
-import * as admin from 'firebase-admin';
-import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
+import { getFirebaseAdmin } from '@real/auth-server';
 
 export interface PlatformClaims {
   organizationId:   string;
@@ -46,7 +45,7 @@ export class ClaimsService {
   // ── Emitir claims ─────────────────────────────────────────────────────────
   async setOrgClaims(uid: string, claims: PlatformClaims): Promise<void> {
     try {
-      await getAuth().setCustomUserClaims(uid, claims);
+      await getFirebaseAdmin().setCustomUserClaims(uid, claims);
       this.logger.log(
         `Claims emitidos → uid: ${uid} org: ${claims.organizationId} role: ${claims.role}`,
       );
@@ -59,7 +58,7 @@ export class ClaimsService {
   // ── Revocar refresh tokens ────────────────────────────────────────────────
   async revokeUserTokens(uid: string): Promise<void> {
     try {
-      await getAuth().revokeRefreshTokens(uid);
+      await getFirebaseAdmin().revokeRefreshTokens(uid);
       this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
     } catch (err) {
       this.logger.error(`Error revocando tokens para ${uid}: ${(err as Error).message}`);
@@ -68,11 +67,10 @@ export class ClaimsService {
 
   // ── Construir claims desde el perfil ─────────────────────────────────────
   buildClaimsFromProfile(profile: ProfileForClaims): PlatformClaims | null {
-    if (!profile.tenants.length) return null;
-
     // OWNER tiene prioridad, luego el primero disponible
     const tenant =
-      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0]!;
+      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0];
+    if (!tenant) return null;
 
     const org = tenant.organization;
 

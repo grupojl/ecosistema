@@ -11,7 +11,9 @@ export class ConfigCacheService {
 
   async get<T>(orgId: string, tipo: string, k: string): Promise<T | null> {
     const raw = await this.redis.get(this.key(orgId, tipo, k));
-    return raw ? (JSON.parse(raw) as T) : null;
+    if (!raw) return null;
+    // Una entrada corrupta equivale a "no está en caché": quien lee vuelve a la fuente (igual que RedisService.getJson).
+    try { return JSON.parse(raw) as T; } catch { return null; }
   }
 
   async set(orgId: string, tipo: string, k: string, value: unknown, ttl: number): Promise<void> {

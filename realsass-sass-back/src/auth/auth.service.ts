@@ -1,9 +1,8 @@
 // realsass-sass-back/src/auth/auth.service.ts
-import type { ProfileForClaims } from '@/auth/claims.service';
-import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
-import * as admin            from 'firebase-admin'; // @real/firebase-auth
-import { getAuth }           from 'firebase-admin/auth';
-import { PrismaService }     from '@/prisma/prisma.service';
+import { ForbiddenException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { getFirebaseAdmin } from '@real/auth-server';
+import { USERS_REPOSITORY, type IUsersRepository } from '@/users/repository/users.repository.interface';
+import type { UserAccount } from '@/domain/user.entity';
 import { UsersService }      from '@/users/users.service';
 import { AffiliatesService } from '@/affiliate/affiliate.service';
 import { ClaimsService }     from '@/auth/claims.service';
@@ -28,7 +27,7 @@ function toProfileForClaims(profile: {
       // D3: las organizaciones propias entran como OWNER (ADR-003); antes solo se emitían las colaboraciones.
       ...profile.organizations.map(o => ({
         organizationId: o.id,
-        organization:   { name: o.name, slug: o.slug } as Record<string, unknown>,
+        organization:   { name: o.name, slug: o.slug },
         role:           'OWNER',
       })),
       ...profile.collaborations.map(c => ({
@@ -50,7 +49,8 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly prisma:     PrismaService,
+    @Inject(USERS_REPOSITORY)
+    private readonly accounts:   IUsersRepository,
     private readonly users:      UsersService,
     private readonly affiliates: AffiliatesService,
     private readonly claims:     ClaimsService,
@@ -61,29 +61,24 @@ export class AuthService {
    * D1 + D2: todo usuario tiene código de afiliado y al menos una organización.
    * Idempotente: se llama en cada sync, así también repara cuentas creadas antes de esta regla.
    */
-  private async ensureDefaults(user: { id: string; email: string; displayName: string | null; isOwner: boolean; affiliateCode: string | null }) {
+  private async ensureDefaults(user: Pick<UserAccount, 'id' | 'email' | 'displayName' | 'isOwner' | 'affiliateCode'>) {
     if (!user.affiliateCode) {
-      await this.prisma.user.update({ where: { id: user.id }, data: { affiliateCode: generateAffiliateCode() } });
+      await this.accounts.updateAccount(user.id, { affiliateCode: generateAffiliateCode() });
     }
     const { created } = await this.orgs.ensureDefaultOrganization(user);
     if ((created || !user.isOwner)) {
-      await this.prisma.user.update({ where: { id: user.id }, data: { isOwner: true } });
+      await this.accounts.updateAccount(user.id, { isOwner: true });
     }
     if (created) this.logger.log('Organización por defecto creada para ' + user.email);
   }
 
   async syncUser(firebaseUser: CurrentUserPayload, affiliateCode?: string) {
-    const existing = await this.prisma.user.findUnique({
-      where: { firebaseUid: firebaseUser.uid },
-    });
+    const existing = await this.accounts.findAccountByFirebaseUid(firebaseUser.uid);
 
     if (existing) {
-      await this.prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          displayName: firebaseUser.displayName ?? existing.displayName,
-          avatarUrl:   firebaseUser.avatarUrl   ?? existing.avatarUrl,
-        },
+      await this.accounts.updateAccount(existing.id, {
+        displayName: firebaseUser.displayName ?? existing.displayName,
+        avatarUrl:   firebaseUser.avatarUrl   ?? existing.avatarUrl,
       });
       this.logger.log(`Usuario sincronizado: ${existing.email}`);
       await this.ensureDefaults(existing);
@@ -91,25 +86,21 @@ export class AuthService {
 
       // ── Emitir custom claims (ADR-003) ──────────────────────────────────
       if (profile && (profile.organizations.length || profile.collaborations.length)) {
-        const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
+        const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile));
         if (platformClaims) {
           await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
         }
       }
 
-      return { isNew: false, user: profile! };
+      return { isNew: false, user: profile };
     }
 
-    const newUser = await this.prisma.user.create({
-      data: {
-        firebaseUid: firebaseUser.uid,
-        email:       firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        avatarUrl:   firebaseUser.avatarUrl,
-        isOwner:     false,
-        isAffiliate: false,
-        affiliateCode: generateAffiliateCode(),
-      },
+    const newUser = await this.accounts.createAccount({
+      firebaseUid:   firebaseUser.uid,
+      email:         firebaseUser.email,
+      displayName:   firebaseUser.displayName,
+      avatarUrl:     firebaseUser.avatarUrl,
+      affiliateCode: generateAffiliateCode(),
     });
 
     this.logger.log(`Nuevo usuario: ${newUser.email}`);
@@ -128,13 +119,13 @@ export class AuthService {
 
     // ── Emitir custom claims para usuario nuevo ──────────────────────────
     if (profile && (profile.organizations.length || profile.collaborations.length)) {
-      const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
+      const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile));
       if (platformClaims) {
         await this.claims.setOrgClaims(firebaseUser.uid, platformClaims);
       }
     }
 
-    return { isNew: true, user: profile! };
+    return { isNew: true, user: profile };
   }
 
   // ── Reemitir claims (cambio de org activa) ───────────────────────────────
@@ -142,7 +133,7 @@ export class AuthService {
     const profile = await this.users.buildProfile(firebaseUid);
     if (!profile || !(profile.organizations.length || profile.collaborations.length)) return;
 
-    const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile!));
+    const platformClaims = this.claims.buildClaimsFromProfile(toProfileForClaims(profile));
     if (platformClaims) {
       await this.claims.setOrgClaims(firebaseUid, platformClaims);
     }
@@ -153,47 +144,42 @@ export class AuthService {
    * no de un idToken que el cliente tenga que reenviar.
    */
   async generateCustomTokenForUid(firebaseUid: string) {
-    const user = await this.prisma.user.findUnique({
-      where:   { firebaseUid },
-      include: { organizations: { orderBy: { createdAt: 'asc' } }, collaborations: true },
-    });
-    if (!user) throw new UnauthorizedException('Usuario no registrado.');
+    const access = await this.accounts.findAccessSummary(firebaseUid);
+    if (!access) throw new UnauthorizedException('Usuario no registrado.');
 
-    const canAccess = user.organizations.length > 0 || (user.collaborations?.length ?? 0) > 0;
+    // Solo cuentan colaboraciones ACTIVAS: un colaborador removido o pendiente no obtiene token.
+    const canAccess = access.organizationIds.length > 0 || access.activeCollaborations > 0;
     if (!canAccess) throw new ForbiddenException('El usuario no tiene acceso al dashboard.');
 
-    const customToken = await getAuth().createCustomToken(firebaseUid, {
-      isOwner:        user.organizations.length > 0,
-      organizationId: user.organizations[0]?.id ?? null,
+    const customToken = await getFirebaseAdmin().createCustomToken(firebaseUid, {
+      isOwner:        access.organizationIds.length > 0,
+      organizationId: access.organizationIds[0] ?? null,
     });
-    this.logger.log('customToken SSO generado: ' + user.email);
+    this.logger.log('customToken SSO generado: ' + access.email);
     return { customToken };
   }
 
   async generateCustomToken(firebaseIdToken: string) {
-    let decoded: import('firebase-admin/auth').DecodedIdToken;
+    let decoded: Awaited<ReturnType<ReturnType<typeof getFirebaseAdmin>['verifyIdToken']>>;
     try {
-      decoded = await getAuth().verifyIdToken(firebaseIdToken);
+      decoded = await getFirebaseAdmin().verifyIdToken(firebaseIdToken);
     } catch {
       throw new UnauthorizedException('Firebase idToken invalido o expirado');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where:   { firebaseUid: decoded.uid },
-      include: { organizations: { orderBy: { createdAt: 'asc' } }, collaborations: true },
-    });
+    const access = await this.accounts.findAccessSummary(decoded.uid);
 
-    if (!user) throw new UnauthorizedException('Usuario no registrado. Llama a /auth/sync primero.');
+    if (!access) throw new UnauthorizedException('Usuario no registrado. Llama a /auth/sync primero.');
 
-    const canAccess = user.organizations.length > 0 || (user.collaborations?.length ?? 0) > 0;
+    const canAccess = access.organizationIds.length > 0 || access.activeCollaborations > 0;
     if (!canAccess) throw new UnauthorizedException('El usuario no tiene acceso al dashboard.');
 
-    const customToken = await getAuth().createCustomToken(decoded.uid, {
-      isOwner:        user.organizations.length > 0,
-      organizationId: user.organizations[0]?.id ?? null,
+    const customToken = await getFirebaseAdmin().createCustomToken(decoded.uid, {
+      isOwner:        access.organizationIds.length > 0,
+      organizationId: access.organizationIds[0] ?? null,
     });
 
-    this.logger.log(`customToken SSO generado: ${user.email}`);
-    return { customToken, uid: decoded.uid, email: user.email };
+    this.logger.log(`customToken SSO generado: ${access.email}`);
+    return { customToken, uid: decoded.uid, email: access.email };
   }
 }

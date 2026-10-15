@@ -50,7 +50,7 @@ export interface SessionRevokedEvent extends SecurityEventBase {
   reason: 'logout' | 'admin' | 'security';
 }
 
-type SecurityEvent =
+export type SecurityEvent =
   | AuthFailureEvent
   | CrossTenantAttemptEvent
   | RateLimitHitEvent

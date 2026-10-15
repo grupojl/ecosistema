@@ -6,6 +6,7 @@ import { CryptoService } from '@/config-secrets/crypto.service';
 import { WEBHOOK_QUEUE } from '@/config-webhooks/webhook-delivery.service';
 import { assertPublicHttpUrl } from '@/common/security/assert-public-url';
 import * as crypto from 'crypto';
+import { runAsSystem } from '@/prisma/tenant-context';
 
 const TIMEOUT = Number(process.env['WEBHOOK_DELIVERY_TIMEOUT'] ?? 5000);
 
@@ -18,7 +19,16 @@ export class WebhookDeliveryProcessor extends WorkerHost {
     private readonly cryptoService: CryptoService,
   ) { super(); }
 
-  async process(job: Job): Promise<void> {
+  /**
+   * El job solo lleva el id del webhook (ni el secreto ni la URL: Redis no guarda material de firma), así que el worker
+   * no conoce la organización de antemano. Corre como sistema (ADR-027): es código de confianza que solo lee/actualiza
+   * el endpoint y su log de entregas; no atiende peticiones de usuarios.
+   */
+  process(job: Job): Promise<void> {
+    return runAsSystem('entrega de webhook (worker BullMQ)', () => this.deliver(job));
+  }
+
+  private async deliver(job: Job): Promise<void> {
     const { webhookId, event, payload } = job.data as { webhookId: string; event: string; payload: unknown };
     const start = Date.now();
     let statusCode: number | null = null;
@@ -38,7 +48,10 @@ export class WebhookDeliveryProcessor extends WorkerHost {
       // Se revalida en cada entrega: el DNS pudo cambiar desde que se creó el webhook.
       await assertPublicHttpUrl(endpoint.url);
 
-      const body      = JSON.stringify({ event, payload, timestamp: new Date().toISOString() });
+      // El timestamp va DENTRO del body firmado (no se puede alterar) y también en un header para que el
+      // receptor rechace replays sin parsear: recomendado descartar si |now - timestamp| > 5 minutos.
+      const timestamp = new Date().toISOString();
+      const body      = JSON.stringify({ event, payload, timestamp });
       const signature = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
 
       const controller = new AbortController();
@@ -46,7 +59,7 @@ export class WebhookDeliveryProcessor extends WorkerHost {
       try {
         const res = await fetch(endpoint.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Webhook-Signature': signature, 'X-Webhook-Event': event },
+          headers: { 'Content-Type': 'application/json', 'X-Webhook-Signature': signature, 'X-Webhook-Event': event, 'X-Webhook-Timestamp': timestamp },
           body,
           signal: controller.signal,
           redirect: 'error', // un redirect podría llevar a una dirección interna

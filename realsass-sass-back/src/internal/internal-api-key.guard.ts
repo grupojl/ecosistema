@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
+import { identifyCaller } from '@real/auth-server';
 
 @Injectable()
 export class InternalApiKeyGuard implements CanActivate {
@@ -28,12 +29,17 @@ export class InternalApiKeyGuard implements CanActivate {
     const key  = req.headers['x-internal-api-key'] as string | undefined;
     const expected = this.config.getOrThrow<string>('INTERNAL_API_KEY');
 
-    if (!key || key !== expected) {
+    // Tiempo constante. INTERNAL_API_KEY admite varias entradas: "nueva,vieja" (rotación sin caída) o una por
+    // servicio "ecommerce=<clave>,superadmin=<clave>" (se audita quién llama y se revoca de a uno).
+    const caller = identifyCaller(key, expected);
+    if (!caller) {
       this.logger.warn(
         `[InternalApiKeyGuard] Unauthorized attempt from ${req.ip} — key mismatch`,
       );
       throw new UnauthorizedException('Invalid internal API key');
     }
+    (req as Request & { internalCaller?: string }).internalCaller = caller;
+    this.logger.debug(`[InternalApiKeyGuard] llamada autorizada de "${caller}" a ${req.method} ${req.path}`);
     return true;
   }
 }

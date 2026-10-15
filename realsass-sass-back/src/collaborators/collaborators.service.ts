@@ -3,7 +3,6 @@ import {
   BadRequestException, Logger, Inject,
 } from '@nestjs/common';
 import { PrismaService }       from '@/prisma/prisma.service';
-import { CollaboratorStatus, Prisma } from '@/generated/prisma';
 import { COLLABORATORS_REPOSITORY, type ICollaboratorsRepository } from '@/collaborators/repository/collaborators.repository.interface';
 import type { CollaboratorPermissions } from '@/collaborators/domain/collaborator.entity';
 
@@ -89,7 +88,7 @@ export class CollaboratorsService {
       await this.prisma.$transaction([
         this.prisma.collaborator.update({
           where: { id: existing.id },
-          data: { status: 'PENDING', permissions: permissions as unknown as Prisma.InputJsonValue },
+          data: { status: 'PENDING', permissions: { ...permissions } },
         }),
         this.prisma.invitation.upsert({
           where:  { collaboratorId: existing.id },
@@ -108,7 +107,7 @@ export class CollaboratorsService {
 
     await this.prisma.$transaction([
       this.prisma.collaborator.create({
-        data: { id: collaboratorId, organizationId: org.id, email: dto.email, status: 'PENDING', permissions: permissions as unknown as Prisma.InputJsonValue },
+        data: { id: collaboratorId, organizationId: org.id, email: dto.email, status: 'PENDING', permissions: { ...permissions } },
       }),
       this.prisma.invitation.create({
         data: { collaboratorId, token: crypto.randomUUID(), expiresAt },
@@ -123,7 +122,7 @@ export class CollaboratorsService {
     const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     const col = await this.repo.findById(collaboratorId, org.id);
     if (!col) throw new NotFoundException('Collaborator not found');
-    return this.repo.update(collaboratorId, { permissions: dto as Partial<CollaboratorPermissions> });
+    return this.repo.update(collaboratorId, { permissions: dto });
   }
 
   async removeCollaborator(firebaseUid: string, collaboratorId: string, activeOrganizationId?: string | null) {
@@ -143,8 +142,24 @@ export class CollaboratorsService {
     return inv;
   }
 
+  /** Público (sin auth): solo lo que necesita la pantalla de invitación, nunca el token ni ids internos. */
+  async getPublicInvitationInfo(token: string) {
+    const inv = await this.getInvitationInfo(token);
+    return {
+      expiresAt: inv.expiresAt,
+      used:      inv.usedAt !== null,
+      collaborator: {
+        email:        inv.collaborator.email,
+        organization: { name: inv.collaborator.organization.name },
+      },
+    };
+  }
+
   async acceptInvitation(token: string, firebaseUid: string) {
     const inv = await this.getInvitationInfo(token);
+    // Una invitación se usa UNA vez. Sin esto, un colaborador removido conservaba el token (vigente 7 días)
+    // y podía volver a aceptarlo, recuperando el acceso que el dueño le había quitado.
+    if (inv.usedAt) throw new BadRequestException('Invitation already used');
     const user = await this.prisma.user.findUnique({ where: { firebaseUid } });
     if (!user) throw new NotFoundException('User not found');
     if (inv.collaborator.email !== user.email) throw new ForbiddenException('Email mismatch');

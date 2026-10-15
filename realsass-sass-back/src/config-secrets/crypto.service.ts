@@ -54,6 +54,6 @@ export class CryptoService {
     const encrypted = Buffer.from(encryptedB64, 'base64');
     const decipher  = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
-    return decipher.update(encrypted) + decipher.final('utf8');
+    return decipher.update(encrypted, undefined, 'utf8') + decipher.final('utf8');
   }
 }

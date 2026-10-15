@@ -27,7 +27,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-server/package.json  ./packages/auth-server/
 COPY realsass-sass-back/package.json    ./realsass-sass-back/
 
-RUN echo "shamefully-hoist=true" >> .npmrc
+# Sin shamefully-hoist (ADR-018): cada workspace resuelve solo lo que declara en su package.json.
 
 # Sin --mount=type=cache: Railway exige que el id lleve el prefijo s/<id-del-servicio>- y un Dockerfile
 # no conoce ese id (error "missing the cacheKey prefix"). Sin cache, cada build reinstala las dependencias.
@@ -66,6 +66,8 @@ WORKDIR /app/realsass-sass-back
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# pnpm sin hoisting: las dependencias del servicio viven en <servicio>/node_modules (symlinks al store .pnpm de la raíz).
+COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/node_modules   ./node_modules
 COPY --from=build --chown=nestjs:nodejs /app/node_modules                         ../node_modules
 COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/dist              ./dist
 COPY --from=build --chown=nestjs:nodejs /app/realsass-sass-back/prisma            ./prisma

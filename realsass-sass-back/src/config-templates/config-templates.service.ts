@@ -24,7 +24,7 @@ export class ConfigTemplatesService {
   }
 
   renderTemplate(content: string, variables: Record<string, string>): string {
-    return content.replace(/\{\{(\w+)\}\}/g, (_, k) => variables[k] ?? `{{${k}}}`);
+    return content.replace(/\{\{(\w+)\}\}/g, (_match: string, k: string) => variables[k] ?? `{{${k}}}`);
   }
 
   async renderByKey(organizationId: string, key: string, vars: Record<string, string>) {

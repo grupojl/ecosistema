@@ -38,7 +38,7 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
       organizationId: row.organizationId,
       userId:         row.userId,
       email:          row.email,
-      status:         row.status as Collaborator['status'],
+      status:         row.status,
       permissions:    { ...DEFAULT_PERMISSIONS, ...parsedPermissions },
       createdAt:      row.invitedAt,
       updatedAt:      row.updatedAt,

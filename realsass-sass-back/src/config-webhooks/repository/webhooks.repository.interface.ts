@@ -5,6 +5,8 @@ export const WEBHOOKS_REPOSITORY = Symbol('WEBHOOKS_REPOSITORY');
 /** Las operaciones por id exigen organizationId: un webhook de otra organización se trata como inexistente. */
 export interface IWebhooksRepository {
   findAllByOrg(organizationId: string): Promise<WebhookEndpoint[]>;
+  /** Endpoints ACTIVOS de la organización (los que reciben entregas). */
+  findActiveByOrg(organizationId: string): Promise<WebhookEndpoint[]>;
   findById(id: string, organizationId: string): Promise<WebhookEndpoint | null>;
   create(input: PersistWebhookInput): Promise<WebhookEndpoint>;
   updateSecret(id: string, organizationId: string, secretEncrypted: string, secretHint: string): Promise<boolean>;

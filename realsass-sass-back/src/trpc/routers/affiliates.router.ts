@@ -6,12 +6,12 @@ export function createAffiliatesRouter(affiliatesService: AffiliatesService) {
 
     me: authProcedure
       .query(({ ctx }) =>
-        affiliatesService.getMyProfile(ctx.uid!),
+        affiliatesService.getMyProfile(ctx.uid),
       ),
 
     myReferrals: authProcedure
       .query(({ ctx }) =>
-        affiliatesService.getMyReferrals(ctx.uid!),
+        affiliatesService.getMyReferrals(ctx.uid),
       ),
   });
 }

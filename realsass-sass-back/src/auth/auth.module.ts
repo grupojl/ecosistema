@@ -10,7 +10,7 @@
  *   POST   /auth/refresh-claims → reemite custom claims (cambio de org activa)
  */
 import { Module }                                       from '@nestjs/common';
-import { SessionService, AuthSessionController }        from '@real/auth-server';
+import { SessionService }                                from '@real/auth-server';
 import { AuthSessionThrottledController }               from '@/auth/auth-session-throttled.controller';
 import { AuthService }                                  from '@/auth/auth.service';
 import { AuthController }                               from '@/auth/auth.controller';

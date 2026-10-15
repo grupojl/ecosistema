@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node10",
+    "module": "node16",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -12,17 +12,16 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
-    "ignoreDeprecations": "6.0",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "strictPropertyInitialization": false,
+    "noFallthroughCasesInSwitch": true,
     "typeRoots": [
-      "../node_modules/@types"
+      "./node_modules/@types"
     ],
     "types": [
       "jest",
@@ -30,43 +29,43 @@
     ],
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@/domain/affiliate.entity": [
-        "src/affiliate/domain/affiliate.entity.ts"
+        "./src/affiliate/domain/affiliate.entity.ts"
       ],
       "@/domain/collaborator.entity": [
-        "src/collaborators/domain/collaborator.entity.ts"
+        "./src/collaborators/domain/collaborator.entity.ts"
       ],
       "@/domain/audit-log.entity": [
-        "src/config-audit/domain/audit-log.entity.ts"
+        "./src/config-audit/domain/audit-log.entity.ts"
       ],
       "@/domain/feature-flag.entity": [
-        "src/config-flags/domain/feature-flag.entity.ts"
+        "./src/config-flags/domain/feature-flag.entity.ts"
       ],
       "@/domain/quota.entity": [
-        "src/config-quotas/domain/quota.entity.ts"
+        "./src/config-quotas/domain/quota.entity.ts"
       ],
       "@/domain/secret.entity": [
-        "src/config-secrets/domain/secret.entity.ts"
+        "./src/config-secrets/domain/secret.entity.ts"
       ],
       "@/domain/template.entity": [
-        "src/config-templates/domain/template.entity.ts"
+        "./src/config-templates/domain/template.entity.ts"
       ],
       "@/domain/theme.entity": [
-        "src/config-themes/domain/theme.entity.ts"
+        "./src/config-themes/domain/theme.entity.ts"
       ],
       "@/domain/webhook.entity": [
-        "src/config-webhooks/domain/webhook.entity.ts"
+        "./src/config-webhooks/domain/webhook.entity.ts"
       ],
       "@/domain/market.entity": [
-        "src/markets/domain/market.entity.ts"
+        "./src/markets/domain/market.entity.ts"
       ],
       "@/domain/organization.entity": [
-        "src/organizations/domain/organization.entity.ts"
+        "./src/organizations/domain/organization.entity.ts"
       ],
       "@/domain/user.entity": [
-        "src/users/domain/user.entity.ts"
+        "./src/users/domain/user.entity.ts"
       ],
       "@/types/tenant-context": [
         "../packages/auth-server/src/types/tenant-context.ts"
@@ -120,8 +119,9 @@
   },
   "extends": "../tsconfig.base.json",
   "exclude": [
-    "src/**/*.spec.ts",
-    "src/**/*.e2e-spec.ts",
+    "./src/**/*.spec.ts",
+    "./src/**/*.e2e-spec.ts",
+    "./src/**/*.int-spec.ts",
     "test/**/*",
     "../packages/auth-server/src/**/*",
     "../packages/trpc/src/**/*"

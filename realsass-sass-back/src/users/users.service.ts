@@ -1,5 +1,4 @@
 import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import { Prisma }              from '@/generated/prisma';
 import { USERS_REPOSITORY, type IUsersRepository } from '@/users/repository/users.repository.interface';
 import type { OrganizationAccessResult }            from '@real/auth-server';
 
@@ -45,17 +44,5 @@ export class UsersService {
     const profile = await this.repo.buildProfile(firebaseUid);
     if (!profile) throw new NotFoundException('User not found');
     return { ok: true, role: dto.role };
-  }
-
-  /** Upsert de usuario — llamado desde AuthService.syncUser() */
-  async upsertUser(
-    firebaseUid:  string,
-    email?:       string,
-    displayName?: string,
-    photoUrl?:    string,
-    referredByCode?: string,
-    tx?: Prisma.TransactionClient,
-  ) {
-    return this.repo.upsert({ firebaseUid, email, displayName, photoUrl, referredByCode }, tx);
   }
 }

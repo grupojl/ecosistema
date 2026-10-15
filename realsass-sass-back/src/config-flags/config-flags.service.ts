@@ -21,7 +21,7 @@ export class ConfigFlagsService {
   }
 
   /** Flags evaluados/filtrados según rol y plan */
-  async getForOrg(organizationId: string, role?: string, plan?: string) {
+  async getForOrg(organizationId: string, _role?: string, _plan?: string) {
     const flags = await this.repo.findAllByOrg(organizationId);
     return flags.filter(f => f.enabled);
   }

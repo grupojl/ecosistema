@@ -65,7 +65,7 @@ export class PrismaAffiliateRepository implements IAffiliateRepository {
     });
   }
 
-  async ensureProfile(userId: string, referralCode: string): Promise<AffiliateProfile> {
+  async ensureProfile(userId: string, _referralCode: string): Promise<AffiliateProfile> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const data = await this.prisma.affiliateData.upsert({
       where:  { userId },

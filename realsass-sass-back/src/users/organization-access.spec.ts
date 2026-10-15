@@ -1,109 +1,59 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from '@/users/users.service';
-import { PrismaService } from '@/prisma/prisma.service';
-import { OrganizationsService } from '@/organizations/organizations.service';
-import { CollaboratorStatus } from '@/generated/prisma';
-import { FULL_COLLABORATOR_PERMISSIONS } from '@/users/types/organization-access.types';
+import { PrismaUsersRepository } from '@/users/repository/prisma-users.repository';
+import type { PrismaService } from '@/prisma/prisma.service';
 
-describe('UsersService.getOrganizationAccess', () => {
-  let service: UsersService;
-  let prisma: {
-    user: { findUnique: jest.Mock };
-    organization: { findUnique: jest.Mock };
-    collaborator: { findFirst: jest.Mock };
-  };
+/**
+ * Aislamiento de tenant: es la consulta que decide si un usuario puede operar una organización
+ * (la usan sass-back y, vía /internal/access, ecommerce-back). Si falla acá, falla el multi-tenant.
+ */
+describe('PrismaUsersRepository.getOrganizationAccess (aislamiento de tenant)', () => {
+  const findUnique = jest.fn();
+  const repo = new PrismaUsersRepository({ user: { findUnique } } as unknown as PrismaService);
 
-  beforeEach(async () => {
-    prisma = {
-      user: { findUnique: jest.fn() },
-      organization: { findUnique: jest.fn() },
-      collaborator: { findFirst: jest.fn() },
-    };
+  beforeEach(() => findUnique.mockReset());
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        { provide: PrismaService, useValue: prisma },
-        { provide: OrganizationsService, useValue: {} },
-      ],
-    }).compile();
+  it('usuario inexistente => sin acceso', async () => {
+    findUnique.mockResolvedValue(null);
 
-    service = module.get(UsersService);
+    expect(await repo.getOrganizationAccess('uid-x', 'org-1')).toEqual({ canAccess: false, reason: 'User not found' });
   });
 
-  it('retorna canAccess=false si el usuario no existe', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
+  it('dueño de la organización => OWNER con todos los permisos', async () => {
+    findUnique.mockResolvedValue({ id: 'user-1', organizations: [{ id: 'org-1' }], collaborations: [] });
 
-    const result = await service.getOrganizationAccess('uid-x', 'org-1');
+    const result = await repo.getOrganizationAccess('uid-x', 'org-1');
 
-    expect(result).toEqual({ canAccess: false, reason: 'Usuario no encontrado' });
+    expect(result).toMatchObject({ canAccess: true, userId: 'user-1', organizationId: 'org-1', role: 'OWNER' });
+    expect(Object.values(result.permissions ?? {}).every(Boolean)).toBe(true);
   });
 
-  it('retorna canAccess=false si la organización no existe', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-    prisma.organization.findUnique.mockResolvedValue(null);
-
-    const result = await service.getOrganizationAccess('uid-x', 'org-1');
-
-    expect(result).toEqual({ canAccess: false, reason: 'Organización no encontrada' });
-  });
-
-  it('retorna role OWNER con permisos completos si el usuario es dueño de la org', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-    prisma.organization.findUnique.mockResolvedValue({ id: 'org-1', userId: 'user-1' });
-
-    const result = await service.getOrganizationAccess('uid-x', 'org-1');
-
-    expect(result).toEqual({
-      canAccess: true,
-      userId: 'user-1',
-      organizationId: 'org-1',
-      role: 'OWNER',
-      permissions: FULL_COLLABORATOR_PERMISSIONS,
-    });
-  });
-
-  it('retorna canAccess=false si no es owner ni colaborador activo', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-    prisma.organization.findUnique.mockResolvedValue({ id: 'org-1', userId: 'other-user' });
-    prisma.collaborator.findFirst.mockResolvedValue(null);
-
-    const result = await service.getOrganizationAccess('uid-x', 'org-1');
-
-    expect(result).toEqual({ canAccess: false, reason: 'No tenés acceso a esta organización' });
-    expect(prisma.collaborator.findFirst).toHaveBeenCalledWith({
-      where: { organizationId: 'org-1', userId: 'user-1', status: CollaboratorStatus.ACTIVE },
-    });
-  });
-
-  it('retorna role COLLABORATOR con los permisos granulares del colaborador', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-    prisma.organization.findUnique.mockResolvedValue({ id: 'org-1', userId: 'other-user' });
-    prisma.collaborator.findFirst.mockResolvedValue({
-      canViewListings: true,
-      canCreateListings: false,
-      canEditListings: true,
-      canDeleteListings: false,
-      canViewStats: true,
-      canManageLeads: false,
-      canManageCollaborators: false,
+  it('colaborador activo => MEMBER con los permisos por defecto + los suyos', async () => {
+    findUnique.mockResolvedValue({
+      id: 'user-2', organizations: [],
+      collaborations: [{ permissions: { canEditListings: true } }],
     });
 
-    const result = await service.getOrganizationAccess('uid-x', 'org-1');
+    const result = await repo.getOrganizationAccess('uid-y', 'org-1');
 
-    expect(result).toEqual({
-      canAccess: true,
-      userId: 'user-1',
-      organizationId: 'org-1',
-      role: 'COLLABORATOR',
-      permissions: {
-        canViewListings: true,
-        canCreateListings: false,
-        canEditListings: true,
-        canDeleteListings: false,
-        canViewStats: true,
-        canManageLeads: false,
-        canManageCollaborators: false,
+    expect(result).toMatchObject({ canAccess: true, userId: 'user-2', role: 'MEMBER' });
+    expect(result.permissions).toMatchObject({ canViewListings: true, canEditListings: true, canDeleteListings: false });
+  });
+
+  it('ni dueño ni colaborador de ESA organización => sin acceso', async () => {
+    findUnique.mockResolvedValue({ id: 'user-3', organizations: [], collaborations: [] });
+
+    expect(await repo.getOrganizationAccess('uid-z', 'org-1')).toEqual({ canAccess: false, reason: 'No access' });
+  });
+
+  it('la consulta se acota SIEMPRE a la organización pedida y a colaboraciones ACTIVAS', async () => {
+    findUnique.mockResolvedValue(null);
+
+    await repo.getOrganizationAccess('uid-x', 'org-42');
+
+    expect(findUnique).toHaveBeenCalledWith({
+      where:   { firebaseUid: 'uid-x' },
+      include: {
+        organizations:  { where: { id: 'org-42' }, select: { id: true } },
+        collaborations: { where: { organizationId: 'org-42', status: 'ACTIVE' } },
       },
     });
   });

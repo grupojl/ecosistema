@@ -42,6 +42,11 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
     };
   }
 
+  async findActiveByOrg(organizationId: string): Promise<WebhookEndpoint[]> {
+    const rows = await this.prisma.webhookEndpoint.findMany({ where: { organizationId, isActive: true } });
+    return rows.map(r => this.toEndpoint(r));
+  }
+
   async findAllByOrg(organizationId: string): Promise<WebhookEndpoint[]> {
     const rows = await this.prisma.webhookEndpoint.findMany({ where: { organizationId }, orderBy: { createdAt: 'asc' } });
     return rows.map(r => this.toEndpoint(r));

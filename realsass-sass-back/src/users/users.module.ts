@@ -12,6 +12,6 @@ import { OrganizationsModule }     from '@/organizations/organizations.module';
     UsersService,
     { provide: USERS_REPOSITORY, useClass: PrismaUsersRepository },
   ],
-  exports:     [UsersService],
+  exports:     [UsersService, USERS_REPOSITORY],
 })
 export class UsersModule {}

@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { getAuth }   from 'firebase-admin/auth';
+import { getFirebaseAdmin } from '@real/auth-server';
 import type { Request } from 'express';
 import { SESSION_COOKIE_NAME } from '@real/auth-server';
 import { AppCodeError } from '@/trpc/app-code-error';
@@ -20,8 +20,8 @@ export async function enforceStepUp(req: Request): Promise<void> {
 
   let authTimeSec: number | undefined;
   try {
-    if (bearer) authTimeSec = (await getAuth().verifyIdToken(bearer)).auth_time;
-    else if (cookie) authTimeSec = (await getAuth().verifySessionCookie(cookie, true)).auth_time;
+    if (bearer) authTimeSec = (await getFirebaseAdmin().verifyIdToken(bearer)).auth_time;
+    else if (cookie) authTimeSec = (await getFirebaseAdmin().verifySessionCookie(cookie, true)).auth_time;
   } catch {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Sesión inválida o vencida' });
   }

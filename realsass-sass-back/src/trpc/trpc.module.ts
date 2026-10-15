@@ -13,10 +13,12 @@ import {
   type MiddlewareConsumer,
 } from '@nestjs/common';
 import { createExpressMiddleware }  from '@trpc/server/adapters/express';
-import { createTrpcAuthMiddleware } from '@real/auth-server';
+import { createRateLimitMiddleware, createTrpcAuthMiddleware, RedisRateLimitStore } from '@real/auth-server';
+import { RedisService } from '@/redis/redis.service';
 
 import { createAppRouter }          from '@/trpc/app-router';
 import { createTrpcContext }        from '@/trpc/trpc';
+import { IP_RATE_LIMIT, USER_RATE_LIMIT } from '@/trpc/rate-limit.config';
 
 import { UsersService }             from '@/users/users.service';
 import { AuthService }              from '@/auth/auth.service';
@@ -115,13 +117,23 @@ export class TrpcService {
   providers: [TrpcService],
 })
 export class TrpcModule implements NestModule {
-  constructor(private readonly trpcService: TrpcService) {}
+  constructor(
+    private readonly trpcService: TrpcService,
+    private readonly redis: RedisService,
+  ) {}
 
   configure(consumer: MiddlewareConsumer): void {
     const { firebaseAuth, tenantContext } = this.trpcService.authMiddleware;
 
+    // ThrottlerGuard solo cubre controllers: /trpc es middleware de Express y estaba sin límite.
+    // 1) por IP, ANTES de verificar el token  2) por usuario, DESPUÉS de autenticar
+    // Contador en Redis (compartido entre réplicas); sin Redis cae a memoria por instancia.
+    const store     = new RedisRateLimitStore(this.redis);
+    const ipLimit   = createRateLimitMiddleware({ ...IP_RATE_LIMIT, store });
+    const userLimit = createRateLimitMiddleware({ ...USER_RATE_LIMIT, store });
+
     consumer
-      .apply(firebaseAuth, tenantContext, this.trpcService.handler)
+      .apply(ipLimit, firebaseAuth, tenantContext, userLimit, this.trpcService.handler)
       .forRoutes('/api/v1/trpc');
   }
 }

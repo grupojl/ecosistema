@@ -37,7 +37,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.client.on('reconnecting', (d: number) => this.logger.log(`Redis reconectando en ${d}ms...`));
     this.client.on('connect',      ()          => this.logger.log('Redis conectado ✓'));
     try { await this.client.connect(); }
-    catch (e) { this.logger.error(`Redis no disponible: ${e} — modo no-op`); this.client = null; }
+    catch (e) { this.logger.error(`Redis no disponible: ${e instanceof Error ? e.message : String(e)} — modo no-op`); this.client = null; }
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -60,6 +60,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     } else {
       await this.client.set(key, value);
     }
+  }
+
+  /**
+   * Contador atómico con vencimiento (rate limit compartido entre réplicas). El INCR y el PEXPIRE van en un
+   * mismo script Lua: si el proceso muere entre los dos, la clave no queda sin TTL (bloqueo permanente).
+   * null = Redis deshabilitado.
+   */
+  async incrWithTtl(key: string, ttlMs: number): Promise<number | null> {
+    if (!this.client) return null;
+    const total = await this.client.eval(
+      "local c = redis.call('INCR', KEYS[1]) if c == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end return c",
+      1, key, String(ttlMs),
+    );
+    return Number(total);
   }
 
   async del(...keys: string[]): Promise<void> {

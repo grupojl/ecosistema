@@ -6,6 +6,8 @@ export const FulfillmentConfigSchema = z.object({
   contactEmail: z.string().email().optional(),
   notes:        z.string().optional(),
   priority:     z.number().int().min(1).default(1),
+  /** Tarifa plana de envío del Market, en centavos. El checkout la lee de acá, nunca del cliente. */
+  shippingCents: z.number().int().min(0).optional(),
 })
 export type FulfillmentConfig = z.infer<typeof FulfillmentConfigSchema>
 
@@ -42,7 +44,7 @@ export class Market {
     this.updatedAt         = props.updatedAt
   }
 
-  static fromPrisma(raw: MarketProps): Market {
+  static fromPrisma(raw: Omit<MarketProps, 'fulfillmentConfig'> & { fulfillmentConfig: unknown }): Market {
     // Validar fulfillmentConfig con Zod al hidratar desde DB
     const config = FulfillmentConfigSchema.parse(
       typeof raw.fulfillmentConfig === 'string'

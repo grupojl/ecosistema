@@ -32,7 +32,7 @@ export class PrismaAuditRepository implements IAuditRepository {
   }
 
   async create(input: CreateAuditLogInput): Promise<void> {
-    await this.prisma.configAuditLog.create({ data: input as any });
+    await this.prisma.configAuditLog.create({ data: { ...input, diff: input.diff as Prisma.InputJsonObject | undefined } });
   }
 
   async findByOrg(

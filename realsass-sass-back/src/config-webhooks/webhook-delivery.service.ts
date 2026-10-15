@@ -1,11 +1,12 @@
 // src/config-webhooks/webhook-delivery.service.ts
 // La queue es opcional: cuando REDIS_ENABLED=false dispatch() es no-op.
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectQueue }                  from '@nestjs/bullmq';
 import { Queue }                        from 'bullmq';
 import { OnEvent }                      from '@nestjs/event-emitter';
-import { PrismaService }                from '@/prisma/prisma.service';
+import { WEBHOOKS_REPOSITORY, type IWebhooksRepository } from '@/config-webhooks/repository/webhooks.repository.interface';
 import * as crypto                      from 'crypto';
+import { runInTenant }                  from '@/prisma/tenant-context';
 
 export const WEBHOOK_QUEUE = 'webhook-delivery';
 
@@ -14,7 +15,7 @@ export class WebhookDeliveryService {
   private readonly logger = new Logger(WebhookDeliveryService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(WEBHOOKS_REPOSITORY) private readonly webhooks: IWebhooksRepository,
     @Optional() @InjectQueue(WEBHOOK_QUEUE) private readonly queue: Queue | null,
   ) {}
 
@@ -34,13 +35,11 @@ export class WebhookDeliveryService {
       return;
     }
 
-    const webhooks = await this.prisma.webhookEndpoint.findMany({
-      where: { organizationId, isActive: true },
-    });
+    // ADR-027: puede dispararse desde un evento fuera de una petición tRPC; el alcance se abre explícitamente.
+    const endpoints = await runInTenant(organizationId, () => this.webhooks.findActiveByOrg(organizationId));
 
-    for (const wh of webhooks) {
-      const events = wh.events as string[];
-      if (!events.includes(event) && !events.includes('*')) continue;
+    for (const wh of endpoints) {
+      if (!wh.events.includes(event) && !wh.events.includes('*')) continue;
 
       await this.enqueue(wh.id, event, payload);
     }
