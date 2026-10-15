@@ -328,3 +328,4 @@ Verifica   seguridad.sh S8-S10 + rls.int-spec de cada back (con el rol eco_app) 
 
 Cobertura: ecommerce-back completo; sass-back fase 1 (secretos, webhooks, cuotas, mercados); fase 2 pendiente.
 Ver `decisions/ADR-027-row-level-security.md` y `architecture/13-seguridad-por-capa-norte.md` (criterio de 10/10 por capa).
+Línea base de los 10 pilares del ecosistema con su puntaje y evidencia: `modules/pilares-audit.md` (documento vivo).

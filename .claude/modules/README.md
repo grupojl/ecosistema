@@ -24,6 +24,10 @@ El sistema tiene **dos motores principales** (backends) y **tres pantallas** (fr
 - `@real/trpc` → el "contrato" tipado entre motores y pantallas
 - `@real/ui` → los botones, formularios y componentes visuales de las 3 pantallas
 
+## Línea base del ecosistema
+
+- [Pilares y puntajes](pilares-audit.md) — los 10 pilares con nota, evidencia y qué falta para subir (documento vivo)
+
 ## Índice completo
 
 ### Pantalla del dueño (sass-front)
