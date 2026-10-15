@@ -14,8 +14,8 @@ import { trpc, makeTrpcClient } from '@/lib/trpc/client';
 import { ecommerceTrpc, makeEcommerceTrpcClient } from '@/lib/trpc/ecommerce-client';
 
 const sassTrpcUrl = () =>
-  process.env.NEXT_PUBLIC_REAL_BACK_URL
-    ? `${process.env.NEXT_PUBLIC_REAL_BACK_URL}/api/v1/trpc`
+  process.env.NEXT_PUBLIC_SASS_BACK_URL
+    ? `${process.env.NEXT_PUBLIC_SASS_BACK_URL}/api/v1/trpc`
     : '/api/v1/trpc';
 
 const ecommerceTrpcUrl = () => {

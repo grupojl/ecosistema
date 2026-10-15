@@ -6,7 +6,8 @@
  *
  * Headers por request:
  *   x-organization-id: fijo desde NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID
- *   x-customer-id:     customerId del cliente (CustomerContext, sin Firebase)
+ *   Cookie HttpOnly store_session: sesión firmada del cliente (la manda el navegador con
+ *   credentials: 'include'; el JavaScript no la ve).
  *
  * Sin Authorization — los clientes del storefront no usan Firebase.
  */
@@ -16,18 +17,18 @@ import type { AppRouter }  from '@/lib/trpc/router-type';
 
 export const trpc = createTRPCReact<AppRouter>();
 
-export function createTrpcClient(getCustomerId: () => string | null) {
+export function createTrpcClient() {
   const orgId = process.env.NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID ?? '';
 
   return trpc.createClient({
     links: [
       httpBatchLink({
         url: `${process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? ''}/api/v1/trpc`,
+        // La cookie de sesión del cliente (HttpOnly) viaja sola con credentials: 'include'.
+        fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
         headers() {
-          const customerId = getCustomerId();
           const result: Record<string, string> = {};
           if (orgId)      result['x-organization-id'] = orgId;
-          if (customerId) result['x-customer-id']      = customerId;
           return result;
         },
       }),

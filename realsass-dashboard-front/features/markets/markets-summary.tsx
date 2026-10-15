@@ -6,7 +6,8 @@ interface MarketsSummaryProps {
 }
 
 export function MarketsSummary({ organizationId }: MarketsSummaryProps) {
-  const { data = [] } = trpc.markets.list.useQuery({ organizationId })
+  // La organización viaja en el header x-organization-id; el prop solo evita consultar sin organización activa.
+  const { data = [] } = trpc.markets.list.useQuery(undefined, { enabled: organizationId !== '' })
 
   const activeCount = data.filter(m => m.isActive).length
 

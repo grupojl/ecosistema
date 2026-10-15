@@ -15,7 +15,7 @@ import ShoppingBagModal from '@/components/shopping-bag-modal';
 import { useShoppingBagStore } from '@/stores/use-shopping-bag-store';
 
 export default function Header() {
-  const { isOpen, open, close } = useShoppingBagStore();
+  const { open, close } = useShoppingBagStore();
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

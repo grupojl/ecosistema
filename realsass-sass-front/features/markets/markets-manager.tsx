@@ -23,7 +23,7 @@ export function MarketsManager() {
   const utils = trpc.useUtils()
 
   const { data: markets = [], isLoading } = trpc.markets.list.useQuery(
-    { organizationId: orgId ?? '' },
+    undefined, // la organización viaja en el header x-organization-id, no en el input
     { enabled: !!orgId && sessionReady },
   )
 

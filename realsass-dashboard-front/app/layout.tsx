@@ -42,7 +42,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <QueryProvider>
-          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_REAL_BACK_URL!}>
+          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_SASS_BACK_URL!}>
             <TrpcProvider>{children}</TrpcProvider>
             <Toaster
               theme="dark"

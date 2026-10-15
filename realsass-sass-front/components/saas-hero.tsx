@@ -1,7 +1,6 @@
 "use client"
 
 import { motion } from "framer-motion"
-import Image from "next/image"
 import { ArrowRight, Play } from "lucide-react"
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 30 }

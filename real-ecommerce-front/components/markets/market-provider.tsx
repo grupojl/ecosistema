@@ -1,5 +1,4 @@
 'use client'
-import { useEffect } from 'react'
 import { MarketBanner } from '@/components/markets/market-banner'
 
 interface MarketProviderProps {

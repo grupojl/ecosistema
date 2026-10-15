@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Plus, Trash2, Loader2, CircleAlert, Star, Palette } from 'lucide-react';
+import { Check, Plus, Trash2, Loader2, CircleAlert, Star } from 'lucide-react';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';

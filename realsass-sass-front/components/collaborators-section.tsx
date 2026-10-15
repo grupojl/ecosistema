@@ -7,13 +7,11 @@
  */
 import { useState }        from 'react'
 import { Users, Plus, Trash2, Copy, Check, Loader2, CircleAlert, Mail } from 'lucide-react'
-import { Button, Input, Badge, Skeleton, Switch, Label } from '@real/ui'
-import { useAuth }         from '@/context/auth-context'
+import { Button, Input, Badge, Skeleton } from '@real/ui'
 import {
   useCollaborators,
   useInviteCollaborator,
   useRemoveCollaborator,
-  useUpdateCollaboratorPermissions,
 } from '@/hooks/use-collaborators'
 import { getErrorMessage } from '@/lib/errors'
 

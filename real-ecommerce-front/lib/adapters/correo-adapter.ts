@@ -10,7 +10,6 @@ export class CorreoAdapter implements ShippingAdapter {
 
   async calculateShipping(details: ShipmentDetails): Promise<CarrierQuote> {
     // Stub: Simulate API call to Correo
-    console.log("[v0] Correo: Calculating shipping for:", details)
 
     // Mock pricing for heavy/high-value packages
     const basePrice = 200
@@ -26,9 +25,8 @@ export class CorreoAdapter implements ShippingAdapter {
     }
   }
 
-  async createShipment(details: ShipmentDetails) {
+  async createShipment(_details: ShipmentDetails) {
     // Stub: Simulate shipment creation
-    console.log("[v0] Correo: Creating shipment for:", details)
 
     return {
       trackingNumber: `COR${Date.now()}${Math.random().toString(36).substring(7)}`.toUpperCase(),
@@ -36,9 +34,8 @@ export class CorreoAdapter implements ShippingAdapter {
     }
   }
 
-  async getTracking(trackingNumber: string) {
+  async getTracking(_trackingNumber: string) {
     // Stub: Simulate tracking lookup
-    console.log("[v0] Correo: Getting tracking for:", trackingNumber)
 
     return {
       status: "delivered",

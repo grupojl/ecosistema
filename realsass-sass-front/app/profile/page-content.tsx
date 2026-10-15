@@ -19,7 +19,7 @@ import {
   Copy, AlertCircle, ChevronLeft, Star, Settings, Link as LinkIcon,
 } from 'lucide-react'
 import {
-  Button, Input, Badge, Skeleton, Avatar, AvatarFallback, AvatarImage,
+  Button, Input, Badge, Avatar, AvatarFallback, AvatarImage,
 } from '@real/ui'
 import { useAuth }                 from '@/context/auth-context'
 import { useMe, useSelectRole, useRefreshClaims } from '@/hooks/use-auth-trpc'
@@ -100,7 +100,7 @@ function OrgForm({ onBack }: { onBack: () => void }) {
     onSuccess: () => onBack(),
   })
 
-  const org = (me as any)?.organization
+  const org = me?.organization
   const [name, setName]   = useState(org?.name ?? '')
   const [desc, setDesc]   = useState(org?.description ?? '')
 
@@ -153,7 +153,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
     </div>
   )
 
-  const profile        = me as any
+  const profile        = me
   // D3/D4: la organización que se muestra es la activa; si no hay, la primera propia.
   const orgs           = (profile?.organizations ?? []) as Array<{ id: string; name: string | null; slug: string | null }>
   const org            = orgs.find(o => o.id === activeOrganizationId) ?? orgs[0] ?? profile?.organization
@@ -227,7 +227,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
           <p className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" /> Mis colaboraciones
           </p>
-          {collaborations.map((c: any) => (
+          {collaborations.map((c) => (
             <div key={c.organizationId} className="flex items-center justify-between text-sm py-1">
               <span className="truncate text-muted-foreground">{c.organizationId}</span>
               <Badge variant="secondary">Colaborador</Badge>

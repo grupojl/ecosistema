@@ -26,7 +26,7 @@ COPY packages/ui/package.json             ./packages/ui/
 COPY packages/trpc/package.json           ./packages/trpc/
 COPY realsass-sass-front/package.json     ./realsass-sass-front/
 
-RUN echo "shamefully-hoist=true" >> .npmrc
+# Sin shamefully-hoist (ADR-018): cada workspace resuelve solo lo que declara en su package.json.
 
 # Sin --mount=type=cache: Railway exige que el id lleve el prefijo s/<id-del-servicio>- y un Dockerfile
 # no conoce ese id (error "missing the cacheKey prefix"). Sin cache, cada build reinstala las dependencias.
@@ -90,6 +90,11 @@ ENV NEXT_PUBLIC_DASHBOARD_FRONT_URL=$NEXT_PUBLIC_DASHBOARD_FRONT_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules      ./node_modules
+# Sin hoisting, las dependencias de cada workspace están en su propio node_modules (symlinks al store .pnpm).
+COPY --from=deps /app/packages/auth-client/node_modules ./packages/auth-client/node_modules
+COPY --from=deps /app/packages/ui/node_modules          ./packages/ui/node_modules
+COPY --from=deps /app/packages/trpc/node_modules        ./packages/trpc/node_modules
+COPY --from=deps /app/realsass-sass-front/node_modules ./realsass-sass-front/node_modules
 COPY tsconfig.base.json                 ./
 COPY package.json pnpm-workspace.yaml   ./
 COPY packages/auth-client/              ./packages/auth-client/
@@ -99,7 +104,7 @@ COPY --from=contracts /app/packages/trpc/dist ./packages/trpc/dist
 COPY realsass-sass-front/               ./realsass-sass-front/
 
 WORKDIR /app/realsass-sass-front
-RUN /app/node_modules/.bin/next build
+RUN ./node_modules/.bin/next build
 
 # ─── Stage 4: runtime ─────────────────────────────────────────────────────────
 FROM --platform=linux/amd64 node:${NODE_VERSION}-alpine AS runtime

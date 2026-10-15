@@ -1,6 +1,6 @@
 "use client"
 
-export default function ShoppingBagModal({ onClose }: { onClose: () => void }) {
+export default function ShoppingBagModal(_props: { onClose: () => void }) {
   return (
     <div
       className="absolute right-0 mt-2 w-96 bg-black/95 backdrop-blur-sm border border-gray-800 rounded-lg shadow-2xl overflow-hidden"

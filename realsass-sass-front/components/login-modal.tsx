@@ -6,8 +6,6 @@
  * Migrado de @/lib/firebase → @real/auth-client (ADR-006).
  */
 import { useState }          from 'react'
-import { useRouter }         from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2 }           from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -55,7 +53,6 @@ function FacebookIcon() {
 type Provider = 'google' | 'apple' | 'facebook'
 
 export function LoginModal({ open, onOpenChange }: LoginModalProps) {
-  const router    = useRouter()
   const isMobile  = useIsMobile()
   const [loading, setLoading] = useState<Provider | null>(null)
   const [error,   setError]   = useState<string | null>(null)

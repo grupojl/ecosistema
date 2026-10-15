@@ -24,7 +24,7 @@ export interface ShippingAdapter {
   name: string
   calculateShipping(details: ShipmentDetails): Promise<CarrierQuote>
   createShipment(details: ShipmentDetails): Promise<{ trackingNumber: string; label: string }>
-  getTracking(trackingNumber: string): Promise<any>
+  getTracking(trackingNumber: string): Promise<unknown>
 }
 
 export function selectCarrier(weight: number, value: number): "envia" | "welivery" | "correo" {

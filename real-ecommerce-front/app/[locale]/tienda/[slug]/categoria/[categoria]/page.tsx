@@ -37,7 +37,6 @@ export default async function CategoriaPage({ params }: Props) {
   const { locale, slug, store, category, products } = await loadCategory(params)
   const dict = getDictionary(locale)
   const intlTag = intlLocale(locale, store.countryCode)
-  const storeName = store.name ?? slug
   const path = `/${locale}/tienda/${slug}/categoria/${category.handle}`
 
   return (

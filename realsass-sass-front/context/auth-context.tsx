@@ -24,6 +24,7 @@ import {
 import { useRouter }                        from 'next/navigation'
 import { getFirebaseAuth, onAuthStateChanged, signOut, setActiveOrganizationId, reauthenticate as firebaseReauthenticate, type User } from '@real/auth-client'
 import { AppError }                         from '@/lib/errors'
+import { createBearerCaller, trpcHttpStatus } from '@/lib/trpc/vanilla'
 
 // ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
 
@@ -72,37 +73,22 @@ async function deleteSessionCookie(): Promise<void> {
   }
 }
 
-// ─── Helpers tRPC imperativo (fuera de hooks — solo en el context) ────────────
-// Usamos fetch directo al endpoint tRPC porque estamos fuera del ciclo de React.
+// ─── tRPC imperativo (fuera de hooks — solo en el context) ────────────────────
+// Cliente tipado de lib/trpc/vanilla.ts (antes: fetch + ?input= armado a mano, sin tipos).
 // Los componentes deben usar useMe() y useSyncUser() de use-auth-trpc.ts.
 
 async function trpcSyncUser(token: string, affiliateCode?: string): Promise<void> {
-  const url   = `${getSassBackUrl()}/api/v1/trpc/auth.sync`
-  const input = { affiliateCode }
-  const res = await fetch(`${url}?input=${encodeURIComponent(JSON.stringify(input))}`, {
-    method:      'POST',
-    credentials: 'include',
-    headers:     {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(input), // el input va tal cual en el body (el POST ignora el query string)
-  })
-  if (!res.ok) {
-    throw new AppError('No pudimos preparar tu cuenta', res.status === 401 ? 'AUTH' : 'UNKNOWN', res.status)
+  try {
+    await createBearerCaller(getSassBackUrl(), token).auth.sync.mutate({ affiliateCode })
+  } catch (err) {
+    const status = trpcHttpStatus(err)
+    throw new AppError('No pudimos preparar tu cuenta', status === 401 ? 'AUTH' : 'UNKNOWN', status)
   }
 }
 
 async function trpcGetMe(token: string): Promise<UserProfile | null> {
   try {
-    const url = `${getSassBackUrl()}/api/v1/trpc/auth.me`
-    const res = await fetch(url, {
-      credentials: 'include',
-      headers:     { 'Authorization': `Bearer ${token}` },
-    })
-    // Sin transformer en el router: el resultado viene en result.data (antes se leía .json y daba siempre null)
-    const json = await res.json()
-    return (json?.result?.data as UserProfile | undefined) ?? null
+    return await createBearerCaller(getSassBackUrl(), token).auth.me.query()
   } catch {
     return null
   }

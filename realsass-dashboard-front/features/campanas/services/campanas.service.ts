@@ -1,4 +1,4 @@
-import { apiClient, buildQuery } from '@/lib/api-client';
+import { apiClient, buildQuery } from '@/lib/external-client';
 import type { MetricasCampana, PaginatedCampanas, CampanaFilters } from '@/features/campanas/types';
 
 export const getCampanas = (filters: CampanaFilters = {}): Promise<PaginatedCampanas> =>

@@ -1,9 +1,11 @@
 /**
  * context/customer-context.tsx
  *
- * Estado del cliente logueado en el storefront.
- * customerId se obtiene llamando a customer.identify (tRPC publicProcedure).
- * Se persiste en localStorage para que el carrito sobreviva a recargas.
+ * Estado del cliente del storefront.
+ *
+ * La credencial es una cookie HttpOnly (`store_session`) que emite el servidor en customer.identify:
+ * el JavaScript del front nunca ve el token, así que un XSS no puede robarlo (ADR-004). Acá solo
+ * guardamos el customerId, que es informativo (no da acceso a nada) y sirve para habilitar queries.
  *
  * ADR-005 + ADR-006: 0 fetch REST de negocio en el storefront.
  * La única excepción documentada es POST/DELETE /auth/session (cookies HttpOnly).
@@ -17,27 +19,23 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { createStoreCaller } from '@/lib/trpc/server';
+import { createBrowserCaller } from '@/lib/trpc/browser';
 
 // ─── Shape del contexto ────────────────────────────────────────────────────
 
 interface CustomerContextValue {
   customerId:    string | null;
-  sessionId:     string;
   setCustomerId: (id: string) => void;
   clearCustomer: () => void;
 }
 
 const CustomerContext = createContext<CustomerContextValue | null>(null);
 
-// ─── Helpers de persistencia ───────────────────────────────────────────────
+// ─── Persistencia (solo el id, no es una credencial) ───────────────────────
 
 const CUSTOMER_KEY = 'store:customerId';
-const SESSION_KEY  = 'store:sessionId';
-
-function generateSessionId(): string {
-  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
+// Claves de versiones anteriores (sessionId elegido por el cliente): ya no valen nada.
+const LEGACY_KEYS  = ['store:sessionId'];
 
 function readStorage(key: string): string | null {
   if (typeof window === 'undefined') return null;
@@ -58,17 +56,12 @@ function clearStorage(...keys: string[]): void {
 
 export function CustomerProvider({ children }: { children: ReactNode }) {
   const [customerId, setCustomerIdState] = useState<string | null>(null);
-  const [sessionId,  setSessionIdState]  = useState<string>('');
 
   // Restaurar desde localStorage al montar (solo client-side)
   useEffect(() => {
-    const storedCustomerId = readStorage(CUSTOMER_KEY);
-    const storedSessionId  = readStorage(SESSION_KEY) ?? generateSessionId();
-
-    if (storedCustomerId) setCustomerIdState(storedCustomerId);
-
-    if (!readStorage(SESSION_KEY)) writeStorage(SESSION_KEY, storedSessionId);
-    setSessionIdState(storedSessionId);
+    clearStorage(...LEGACY_KEYS);
+    const stored = readStorage(CUSTOMER_KEY);
+    if (stored) setCustomerIdState(stored);
   }, []);
 
   const setCustomerId = (id: string) => {
@@ -82,7 +75,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CustomerContext.Provider value={{ customerId, sessionId, setCustomerId, clearCustomer }}>
+    <CustomerContext.Provider value={{ customerId, setCustomerId, clearCustomer }}>
       {children}
     </CustomerContext.Provider>
   );
@@ -96,31 +89,29 @@ export function useCustomerContext(): CustomerContextValue {
   return ctx;
 }
 
-// ─── identifyCustomer — tRPC publicProcedure ───────────────────────────────
+// ─── identify / logout — tRPC publicProcedure desde el NAVEGADOR ───────────
 //
-// Reemplaza el fetch REST a POST /ecommerce/public/:orgId/customers/identify
-// El procedure customer.identify es @Public() en ecommerce-back —
-// no requiere Firebase ni customerId previo.
+// Tienen que ejecutarse en el navegador (no con el server caller de RSC): la respuesta trae un
+// Set-Cookie y solo el navegador puede guardarlo. `credentials: 'include'` hace que viaje la cookie.
 //
-// Se llama desde componentes de checkout al capturar el email del cliente.
-// El customerId resultante se persiste en CustomerContext (localStorage).
+// customer.identify abre (o continúa) la sesión: devuelve el customerId y deja la cookie HttpOnly.
+// Nunca devuelve una cuenta existente a partir de un email. Se llama desde los componentes de
+// checkout; el customerId resultante se guarda con `setCustomerId`.
+
+export interface IdentifyContact {
+  email?:       string;
+  displayName?: string;
+  phone?:       string;
+}
 
 export async function identifyCustomer(
   organizationId: string,
-  email:          string,
-  displayName?:   string,
-  phone?:         string,
-  cartId?:        string,
+  contact:        IdentifyContact = {},
 ): Promise<string> {
-  const caller = createStoreCaller(organizationId);
-
-  const result = await caller.customer.identify.mutate({
-    organizationId,
-    email,
-    displayName,
-    phone,
-    cartId: cartId ?? undefined,
-  });
-
+  const result = await createBrowserCaller(organizationId).customer.identify.mutate({ organizationId, ...contact });
   return result.customerId;
+}
+
+export async function logoutCustomer(organizationId: string): Promise<void> {
+  await createBrowserCaller(organizationId).customer.logout.mutate();
 }

@@ -10,7 +10,6 @@ export class WeliveryAdapter implements ShippingAdapter {
 
   async calculateShipping(details: ShipmentDetails): Promise<CarrierQuote> {
     // Stub: Simulate API call to Welivery
-    console.log("[v0] Welivery: Calculating shipping for:", details)
 
     // Mock pricing based on weight and value
     const basePrice = 120
@@ -26,9 +25,8 @@ export class WeliveryAdapter implements ShippingAdapter {
     }
   }
 
-  async createShipment(details: ShipmentDetails) {
+  async createShipment(_details: ShipmentDetails) {
     // Stub: Simulate shipment creation
-    console.log("[v0] Welivery: Creating shipment for:", details)
 
     return {
       trackingNumber: `WLV${Date.now()}${Math.random().toString(36).substring(7)}`.toUpperCase(),
@@ -36,9 +34,8 @@ export class WeliveryAdapter implements ShippingAdapter {
     }
   }
 
-  async getTracking(trackingNumber: string) {
+  async getTracking(_trackingNumber: string) {
     // Stub: Simulate tracking lookup
-    console.log("[v0] Welivery: Getting tracking for:", trackingNumber)
 
     return {
       status: "in_transit",

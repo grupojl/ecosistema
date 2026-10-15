@@ -11,7 +11,7 @@
  *   - invalidación automática en mutations
  */
 import { useRouter }         from 'next/navigation'
-import { Loader2, CircleAlert, ArrowLeft } from 'lucide-react'
+import { CircleAlert, ArrowLeft } from 'lucide-react'
 import { Button }            from '@real/ui'
 import { useAuth }           from '@/context/auth-context'
 import {

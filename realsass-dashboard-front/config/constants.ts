@@ -1,6 +1,5 @@
 // config/constants.ts
 
-export const REAL_BACK_URL     = process.env.NEXT_PUBLIC_REAL_BACK_URL     ?? '';
 export const ECOMMERCE_API_URL = process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? '';
 
 // ─── TanStack Query keys ──────────────────────────────────────────────────────

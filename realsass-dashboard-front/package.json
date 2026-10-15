@@ -39,6 +39,9 @@
     "@radix-ui/react-toggle": "catalog:",
     "@radix-ui/react-toggle-group": "catalog:",
     "@radix-ui/react-tooltip": "catalog:",
+    "@real/auth-client": "workspace:*",
+    "@real/trpc": "workspace:*",
+    "@real/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@trpc/client": "catalog:",
     "@trpc/react-query": "catalog:",
@@ -49,6 +52,7 @@
     "cmdk": "catalog:",
     "date-fns": "catalog:",
     "embla-carousel-react": "catalog:",
+    "firebase": "catalog:",
     "input-otp": "catalog:",
     "lucide-react": "catalog:",
     "next": "catalog:",
@@ -63,19 +67,20 @@
     "tailwind-merge": "catalog:",
     "vaul": "catalog:",
     "zod": "catalog:",
-    "zustand": "catalog:",
-    "@real/auth-client": "workspace:*",
-    "@real/ui": "workspace:*",
-    "@real/trpc": "workspace:*"
+    "zustand": "catalog:"
   },
   "devDependencies": {
+    "@eslint/js": "catalog:",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "globals": "catalog:",
     "postcss": "catalog:",
     "tailwindcss": "catalog:",
     "tw-animate-css": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
   }
 }

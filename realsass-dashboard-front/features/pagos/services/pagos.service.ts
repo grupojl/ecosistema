@@ -1,4 +1,4 @@
-import { apiClient, buildQuery } from '@/lib/api-client';
+import { apiClient, buildQuery } from '@/lib/external-client';
 import type { BalanceSummary, PaginatedTransacciones, TransaccionFilters } from '@/features/pagos/types';
 
 export const getBalance = (): Promise<BalanceSummary> =>

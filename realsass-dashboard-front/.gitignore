@@ -9,7 +9,6 @@ node_modules/
 .env*.local
 .DS_Store
 
-railway.json
 
 x.sh
 real-dashboard-front.xml

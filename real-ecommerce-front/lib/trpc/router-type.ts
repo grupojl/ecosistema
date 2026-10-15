@@ -9,7 +9,7 @@
  *   customer.*                                          → CustomerContext (sin Firebase)
  *
  * El storefront usa customer.* — sin Bearer token, identificado por
- * x-customer-id header seteado tras POST /customers/identify.
+ * cookie HttpOnly store_session (sesión firmada) emitida por customer.identify.
  */
 import type { EcommerceAppRouter } from '@real/trpc';
 

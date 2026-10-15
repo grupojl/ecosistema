@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { Loader2, Apple } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();

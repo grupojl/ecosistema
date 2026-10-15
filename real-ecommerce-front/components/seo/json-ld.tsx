@@ -5,7 +5,7 @@ export function JsonLd({ data }: { data: JsonLdObject | JsonLdObject[] }) {
   return (
     <script
       type="application/ld+json"
-      // eslint-disable-next-line react/no-danger -- contenido escapado por serializeJsonLd
+      // dangerouslySetInnerHTML a propósito: el JSON-LD se serializa y escapa en serializeJsonLd
       dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
     />
   );

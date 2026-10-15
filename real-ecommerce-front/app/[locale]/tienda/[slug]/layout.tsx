@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { resolveStore } from '@/lib/store'
 import { StoreProvider } from '@/app/[locale]/tienda/[slug]/store-provider'
-import { isLocale, getDictionary, t, primaryLocaleForCountry } from '@/lib/i18n'
+import { isLocale, getDictionary, t } from '@/lib/i18n'
 import { indexableLocalesForStore } from '@/lib/seo/indexing'
 import { buildAlternates, robotsFor } from '@/lib/seo/site'
 import { JsonLd } from '@/components/seo/json-ld'
@@ -42,7 +42,7 @@ export default async function StoreLayout({ children, params }: Props) {
           <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               {store.logoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
+                // <img> a propósito: el logo viene de la URL de la org (dominio arbitrario), no pasa por next/image
                 <img src={store.logoUrl} alt={storeName} className="h-8 w-8 rounded object-cover" />
               )}
               <span className="font-semibold text-lg">{storeName}</span>

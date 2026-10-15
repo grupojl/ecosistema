@@ -1,7 +1,7 @@
 // next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Los Dockerfiles copian .next/standalone (imagen mínima). Con shamefully-hoist el trazado
+  // Los Dockerfiles copian .next/standalone (imagen mínima). Sin hoisting el trazado
   // incluye node_modules desde la raíz del workspace; verificado arrancando server.js.
   output: 'standalone',
 
@@ -80,6 +80,7 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
         ],
       },
     ]

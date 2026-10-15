@@ -2,19 +2,15 @@
  * lib/trpc/provider.tsx
  *
  * TrpcProvider para real-ecommerce-front.
- * Lee el customerId desde CustomerContext para inyectarlo en los headers.
- * Debe ir DENTRO de CustomerProvider en el árbol de componentes.
+ * La sesión del cliente viaja en una cookie HttpOnly: el provider no maneja ningún token.
  */
 'use client';
 
 import { useState }                         from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, createTrpcClient }           from '@/lib/trpc/client';
-import { useCustomerContext }               from '@/context/customer-context';
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {
-  const { customerId } = useCustomerContext();
-
   const [queryClient] = useState(() =>
     new QueryClient({
       defaultOptions: {
@@ -28,7 +24,7 @@ export function TrpcProvider({ children }: { children: React.ReactNode }) {
   );
 
   const [trpcClient] = useState(() =>
-    createTrpcClient(() => customerId),
+    createTrpcClient(),
   );
 
   return (

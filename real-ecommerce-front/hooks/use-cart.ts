@@ -8,7 +8,7 @@
  */
 'use client';
 
-import { useState, useEffect }  from 'react';
+import { useState }             from 'react';
 import { trpc }                 from '@/lib/trpc/client';
 import { useCustomerContext }   from '@/context/customer-context';
 import { useLocaleStore }       from '@/stores/use-locale-store';
@@ -25,7 +25,7 @@ function storeCartId(id: string): void {
 
 export function useCart() {
   const { customerId } = useCustomerContext();
-  const [cartId, setCartId] = useState<string | null>(getStoredCartId);
+  const [cartId] = useState<string | null>(getStoredCartId);
 
   const cartQuery = trpc.customer.cart.get.useQuery(
     { cartId: cartId! },
@@ -36,8 +36,7 @@ export function useCart() {
 }
 
 export function useAddToCart() {
-  const { sessionId } = useCustomerContext();
-  const utils         = trpc.useUtils();
+  const utils = trpc.useUtils();
 
   return trpc.customer.cart.addItem.useMutation({
     onSuccess: (data) => {
