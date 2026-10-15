@@ -96,7 +96,8 @@ COPY packages/ui/package.json           ./packages/ui/
 COPY packages/trpc/package.json         ./packages/trpc/
 COPY <SERVICE_DIR>/package.json         ./<SERVICE_DIR>/
 
-RUN echo "shamefully-hoist=true" >> .npmrc
+# Sin shamefully-hoist (ADR-018 F2): en el stage build se copian los node_modules de cada workspace
+# (packages/auth-client, packages/ui, packages/trpc y el propio front) y se compila con ./node_modules/.bin/next.
 
 RUN --mount=type=cache,id=pnpm-<SERVICE_DIR>,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile

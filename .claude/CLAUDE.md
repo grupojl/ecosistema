@@ -232,3 +232,99 @@ CI/local   `pnpm contracts` (prisma generate de ambos backs + @real/trpc build) 
 
 **Pendiente:** `docker build` real de los 3 fronts (solo se simuló en un directorio limpio).
 Ver `decisions/ADR-019-contratos-trpc-desde-dist.md` y `modules/packages/trpc.md`.
+
+---
+
+## Docs del ecosistema — contenido gestionado desde superadmin (ADR-020)
+
+### El norte
+
+**Stripe Docs** (experiencia) · **Diátaxis** (estructura) · **Google Dev Docs Style Guide** (redacción) ·
+**Markdoc** (formato seguro) · **Sanity / Contentful** (modelo de CMS headless)
+
+*El contenido es dato, no código: lo edita el superadmin, lo versiona el sistema y el front solo lo renderiza.*
+
+### Reglas no negociables
+
+```
+Contenido  Markdoc en DB. Nunca MDX ni HTML crudo. Tags en whitelist
+Estructura Toda página declara kind: tutorial | how-to | reference | explanation
+Estados    draft -> published con versiones. El front solo lee published
+Transporte Contrato REST interno de superadmin (x-internal-api-key), solo servidor
+```
+
+Front: `realsass-docs-front` (puerto 3024). Lee de superadmin (ADR-021); un ecosistema por deploy (`DOCS_ECOSYSTEM_ID`).
+Ver `architecture/12-docs-norte.md` y `decisions/ADR-020-docs-front.md`.
+
+---
+
+## Calidad del monorepo — las reglas se verifican solas (ADR-022)
+
+### El norte
+
+**Una regla que no falla en CI no es una regla.**
+
+### Reglas no negociables
+
+```
+TypeScript strict + noUncheckedIndexedAccess (backs, auth-server). Sin any, @ts-ignore ni as unknown as (salvo dobles de test)
+Validación Zod es la ÚNICA librería (tRPC input() / ZodValidationPipe). Sin class-validator, class-transformer ni joi
+Lint       `lint` nunca modifica código (lint:fix aparte). fetch solo en FETCH_ALLOWLIST (eslint.config.mjs)
+Tests      spec al lado del archivo; cobertura con umbral que solo sube (jest.config.js); nunca contra una base real
+CI         ci.yml: quality (contracts→lint→typecheck→build) + tests + pnpm audit + auditorías. Todo bloqueante
+Deps       import externo declarado en su workspace (scripts/audit/phantom-deps.cjs). Sin shamefully-hoist
+Repo       sin *.bak ni *PATCH.md. .env.make es local. Auditorías en scripts/audit/. Node en .nvmrc, pnpm en packageManager
+Local      pnpm check (= lo que corre el CI) · make a (auditorías) · pnpm setup:hooks (pre-commit contra secretos)
+```
+
+Ver `decisions/ADR-022-calidad-monorepo.md`, `ADR-024-tests-y-validacion.md` y `roadmap/deuda-tecnica.md` (sesión 2026-10-14).
+
+---
+
+## Seguridad — lo que el cliente fabrica no es una credencial (ADR-023)
+
+### El norte
+
+**Nada que el cliente pueda fabricar es una credencial · todo falla cerrado · todo secreto es rotable.**
+
+### Reglas no negociables
+
+```
+Identidad  customerId solo de la cookie HttpOnly store_session (firmada). Nunca de un header
+Carrito    el sessionId del carrito es el customerId de la sesión (getOwnedCart)
+Arranque   sin ALLOWED_ORIGINS, INTERNAL_API_KEY ni CUSTOMER_SESSION_SECRET el servicio NO levanta
+CORS       lista explícita; "*" y origin:true prohibidos
+Claves     identifyCaller / firstKey; INTERNAL_API_KEY: "nueva,vieja" (rotar) o "servicio=clave,…" (una por servicio)
+Tienda     customer.identify solo para tiendas que existen y están abiertas
+/trpc      rate limit por IP y por usuario, contador en Redis (los guards de Nest no cubren middlewares Express)
+Servicios  timeout en toda llamada entre servicios; circuit breaker en las críticas
+Verifica   scripts/audit/seguridad.sh (S1-S10) + los tests de seguridad (job "tests" del CI)
+```
+
+Ver `decisions/ADR-023-modelo-de-seguridad.md` (modelo de amenazas, rotación y riesgo residual).
+Pendientes de diseño: `ADR-025` (cuentas recurrentes por email) y `ADR-026` (CSP con nonces).
+
+---
+
+## Aislamiento por fila — la base también filtra (ADR-027)
+
+### El norte
+
+**Dos capas independientes de aislamiento entre organizaciones: la aplicación (`where`) y la base (Row Level Security).**
+*Si un `where` falta, la base devuelve vacío en lugar de datos ajenos.*
+
+### Reglas no negociables
+
+```
+Políticas  ENABLE + FORCE ROW LEVEL SECURITY en toda tabla de negocio; tablas hijas heredan del padre
+Default    sin alcance de tenant => 0 filas y escrituras rechazadas (olvidarse rompe fuerte, nunca filtra)
+Alcance    lo fija TenantAwarePool en cada conexión; tRPC lo abre tras autorizar; fuera de una petición: runInTenant
+Salida     runAsSystem(razón, fn) solo desde los archivos de la auditoría S8
+Roles      migraciones = dueño (MIGRATION_DATABASE_URL) · servicio = eco_app sin BYPASSRLS (DATABASE_URL)
+Arranque   NODE_ENV=production con un rol que saltea RLS => el servicio NO arranca
+Mutaciones toda mutación tRPC sin sesión está en scripts/audit/public-mutations.allowlist (S10)
+Verifica   seguridad.sh S8-S10 + rls.int-spec de cada back (con el rol eco_app) + mutación de las políticas
+```
+
+Cobertura: ecommerce-back completo; sass-back fase 1 (secretos, webhooks, cuotas, mercados); fase 2 pendiente.
+Ver `decisions/ADR-027-row-level-security.md` y `architecture/13-seguridad-por-capa-norte.md` (criterio de 10/10 por capa).

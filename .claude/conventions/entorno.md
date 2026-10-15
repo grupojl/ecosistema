@@ -26,14 +26,16 @@ a `catalog:`.
 
 ## .npmrc (raíz del monorepo)
 enable-pre-post-scripts=true
-shamefully-hoist=true
 strict-peer-dependencies=false
 auto-install-peers=true
 link-workspace-packages=true
 dedupe-peer-dependents=true
 ignore-scripts=true
 
-Nota (2026-10-08): `shamefully-hoist=true` NO impide `output: 'standalone'`. Los tres fronts lo usan
+Nota (2026-10-14): se quitó `shamefully-hoist` (ADR-018 F2, ADR-022): el monorepo compila y los 4 fronts y los 2 backs
+arrancan sin hoisting. Los Dockerfiles copian los `node_modules` de cada workspace en vez de depender de la raíz.
+
+Nota (2026-10-08, vigente): `output: 'standalone'` funciona igual con y sin hoisting. Los tres fronts lo usan
 (`.next/standalone` trae `node_modules` y `<front>/server.js`) y se verificó armando el runtime del
 Dockerfile (standalone + static + public) y arrancando `server.js`: los tres responden HTTP 200.
 `realsass-sass-front` era el único sin `output: 'standalone'`, por lo que su imagen no podía construirse.

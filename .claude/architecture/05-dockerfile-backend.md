@@ -125,7 +125,7 @@ COPY packages/auth-server/package.json  ./packages/auth-server/
 COPY packages/trpc/package.json         ./packages/trpc/
 COPY <SERVICE_DIR>/package.json         ./<SERVICE_DIR>/
 
-RUN echo "shamefully-hoist=true" >> .npmrc
+# Sin shamefully-hoist (ADR-018 F2): cada workspace resuelve solo lo que declara en su package.json.
 
 RUN --mount=type=cache,id=pnpm-<SERVICE_DIR>,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
@@ -282,8 +282,9 @@ jobs:
 4. `exec node dist/main.js` en entrypoint
 5. `prisma generate` en stage `build`, antes de `pnpm build`
 6. `pnpm install --frozen-lockfile` siempre
-7. `shamefully-hoist=true` — no es opcional en este stack
-8. Solo `dist/`, `node_modules`, `prisma/`, `package.json` en runtime
+7. Sin `shamefully-hoist` — el runtime copia también `<servicio>/node_modules` (symlinks al store `.pnpm`) y el
+   `entrypoint.sh` busca `prisma` en `<servicio>/node_modules/.bin` (ADR-018, ADR-022)
+8. Solo `dist/`, `node_modules` (raíz + del servicio), `prisma/`, `package.json` en runtime
 9. Usuario `nestjs` UID 1001 — CIS Benchmarks / SOC2 / PCI
 10. Build context siempre la raíz del monorepo
 11. `pnpm audit --audit-level=high` en CI

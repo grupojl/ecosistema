@@ -16,7 +16,7 @@ el dominio. Si hay contradicción entre el código y este archivo, el dominio ga
   README.md                    ← índice y reglas
   vision.md                    ← qué es el producto, a quién va, qué problema resuelve
   brand.md                     ← nombre, personalidad, tono de comunicación
-  ui.md                        ← sistema de diseño: colores, tipografía, tokens
+  ui-front.md                  ← norte de UI/UX + sistema de diseño: colores, tipografía, tokens
   flows/
     README.md                  ← cómo leer los flujos
     owner-organizacion.md      ← flujo del dueño: login → org → config → dashboard → colaboradores
@@ -34,7 +34,7 @@ el dominio. Si hay contradicción entre el código y este archivo, el dominio ga
 |---------|-----------|--------|
 | `vision.md` | Propósito, usuarios, mercado | 🔲 Por completar |
 | `brand.md` | Nombre, personalidad, tono | 🔲 Por completar |
-| `ui.md` | Tokens de diseño, fuentes, colores | 🔲 Por completar |
+| `ui-front.md` | Norte de UI/UX, referencias, tokens de diseño, fuentes, colores | 🔶 Norte definido, tokens por completar |
 | `flows/owner-organizacion.md` | Flujo del dueño, errores y notificaciones | 🟡 Decisiones cerradas (D1-D6) |
 | `flows/mapa.md` | Diagrama global | 🟡 |
 | `flows/saas-onboarding.md` | Registro hasta org activa | 🔲 Por completar |
@@ -45,7 +45,7 @@ el dominio. Si hay contradicción entre el código y este archivo, el dominio ga
 
 ## Regla de mantenimiento
 
-- Cambio en identidad visual → actualizar `ui.md`
+- Cambio en identidad visual → actualizar `ui-front.md`
 - Cambio en nombre o tono → actualizar `brand.md`
 - Cambio en flujo de usuario → actualizar el flow correspondiente
 - Cambio en propuesta de valor → actualizar `vision.md`

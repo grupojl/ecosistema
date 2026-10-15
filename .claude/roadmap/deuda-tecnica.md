@@ -1,6 +1,139 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-10-08
+Última actualización: 2026-10-15
+
+---
+
+## Sesión 2026-10-15 (2) — Seguridad por capa: RLS, markets, checkout (ADR-027)
+
+### Cerrado ✅ (verificado en esta sesión)
+- [x] **Row Level Security** (ADR-027). ecommerce-back completo; sass-back fase 1 (secretos, webhooks + log, cuotas, mercados).
+  `TenantAwarePool` + `withTenantScope` en tRPC + `runInTenant`/`runAsSystem`; rol `eco_app` sin `BYPASSRLS`; el servicio no
+  arranca en producción con un rol que saltea RLS. Probado contra Postgres 16 real con `eco_app`: 15 casos en ecommerce-back
+  y 14 en sass-back; con el rol administrador fallan 12 de 14 (los tests sí prueban la base).
+- [x] **Vulnerabilidad real: `sass-back` `markets.create/update/setDefault/delete` eran públicos** y aceptaban la organización o el
+  id por input (cualquiera podía crear, cambiar o borrar mercados ajenos). Ahora `ownerProcedure` con la organización del
+  contexto + verificación de pertenencia por id. `markets.resolve` exigía `x-internal-api-key` pero **nadie la validaba**:
+  ahora `internalProcedure`. Fronts actualizados (`list` ya no recibe `organizationId`).
+- [x] **`deleteAccount` inseguro** (público, anonimizaba cualquier cuenta con solo `customerId`): era código muerto pero figuraba como
+  hecho. Borrado y reemplazado por `customer.deleteAccount` autenticado (el id sale de la sesión firmada).
+- [x] **Stock**: `PrismaInventoryRepository.reserve/release` atómicos (UPDATE condicional). 20 reservas simultáneas por 1 unidad con
+  stock 5 => exactamente 5 ganan.
+- [x] **Checkout idempotente**: el carrito se reclama con un UPDATE atómico; 20 checkouts simultáneos del mismo carrito => 1 orden
+  y stock reservado una vez; un reintento devuelve la misma orden; otro cliente no la recupera. Se probó con mutación (6/6 fallan
+  sin el reclamo).
+- [x] **Rate limit**: probado con dos instancias reales sobre Redis (comparten el contador; el control en memoria lo duplica).
+  Si el store falla, el middleware degrada a un límite local por instancia en lugar de dejar pasar todo.
+- [x] **BullMQ**: entrega de webhooks de punta a punta (Redis + Postgres + receptor HTTP reales): firma HMAC verificable,
+  reintentos con backoff, agotamiento tras 3 intentos, aislamiento por organización, el job no lleva secreto ni URL.
+- [x] **Mutación manual de `enforceOwner`** (pendiente del ADR-024): con el guard debilitado fallan 36 tests en sass-back (1 en
+  ecommerce-back, donde ningún router usa `ownerOnlyProcedure` todavía).
+- [x] **`docker build` de los 5 servicios** (exit 0; 205 MB, 210 MB y ~82 MB los fronts).
+- [x] **Test de humo del storefront** (home, listado y layout ejecutados con el resolver real) + guard estático de la frontera
+  servidor/cliente. Probado con mutación (`useStore()` reintroducido => 5 tests fallan).
+- [x] Auditorías nuevas en `seguridad.sh`: **S8** (`runAsSystem`), **S9** (RLS cableado e idéntico en ambos backs), **S10**
+  (mutaciones públicas en lista explícita; detecta el bug original de markets). C5 ahora excluye `*-spec.ts`.
+- [x] Cobertura unitaria: sass-back 67 % -> 73 % (478 tests), ecommerce-back 70 % -> 75 % (330 tests); umbrales subidos a 72 y 73.
+- [x] CI: el job `integration` crea el rol `eco_app`, migra con el administrador y corre los specs de RLS con `eco_app`.
+
+### Pendiente ⏳ (honesto)
+- [ ] **RLS fase 2 en sass-back**: collaborators, invitations, users, organizations, affiliate_data y las tablas con filas globales
+  (theme_configs, feature_flags, content_templates, config_audit_logs). Se consultan antes de conocer la organización o mezclan
+  filas globales y propias: necesitan políticas distintas y revisar el flujo de login (ver ADR-027).
+- [ ] **RLS no probado en Railway.** Falta: crear el rol `eco_app` en cada base, definir `MIGRATION_DATABASE_URL` y `DATABASE_URL`,
+  y comprobar en los logs que no aparece el aviso de rol que saltea RLS. Medir la latencia del `set_config` por conexión.
+- [ ] **Nada de esto corrió en el CI de GitHub** ni hay branch protection.
+- [ ] **Los contenedores no se levantaron** (solo se construyeron las imágenes).
+- [ ] **CSP con nonces (ADR-026)**: no se implementó a propósito: obliga a render dinámico (pierde ISR en el storefront) y solo se
+  valida en un navegador real.
+- [ ] **Pagos**: sigue sin existir el servicio; `paymentIntentId` es null. Cuando exista: idempotencia con el proveedor,
+  confirmación por webhook entrante firmado y transiciones de estado en un solo sentido.
+- [ ] **E2E con Playwright** (login y checkout en un navegador): no hecho.
+- [ ] Los eventos `config.flag.updated` / `config.theme.activated` que se emiten no coinciden con los `@OnEvent('config.flag.changed')`
+  del despachador de webhooks: hoy esos cambios no disparan webhooks. Detectado, sin corregir.
+- [ ] Rate limit más estricto y progresivo por cuenta en login/registro.
+- [ ] Backups, alertas y runbook operativo sin definir.
+
+---
+
+## Sesión 2026-10-15 — Integración contra Postgres real
+
+### Cerrado ✅
+- [x] [WEL-01] Migraciones verificadas contra Postgres 16 limpio: `migrate deploy` aplica las de ambos backs y `migrate diff` da "No difference detected" contra `schema.prisma`. Ahora lo vigila el CI.
+- [x] [DT-Q-16] Test de concurrencia contra Postgres real: 20 checkouts simultáneos por 1 unidad con stock 5 → exactamente 5 ganan, stock final 0 / reservado 5; pedir de más no deja stock negativo; una transacción que falla revierte la reserva.
+- [x] Tests de aislamiento entre tenants con base real (`src/__tests__/integration/tenant-isolation.int-spec.ts`, 9 en ecommerce-back y 7 en sass-back): catálogo, inventario, órdenes, feature flags (incluye que ni una org puede editar un flag global), temas y webhooks.
+- [x] Job `integration` en `ci.yml` (Postgres como servicio, migraciones, deriva, `pnpm test:int`). **Agregarlo a los jobs exigidos en la branch protection.**
+- [x] 10 specs vacíos de entidades (`*.entity.spec.ts`, 30 `it.todo`) borrados: las entidades son interfaces, no hay lógica que probar.
+
+### Cobertura de sass-back (DT-Q-17, parte 1) ✅
+- [x] Cobertura unitaria **32/20/31/32 → 56/40/50/56** (líneas/funciones/ramas/sentencias); umbral en `jest.config.js` subido a 55/39/49/55. 27 suites, 339 tests (antes 174).
+- [x] Specs nuevos de los services de config con repositories falsos: webhooks (anti-SSRF, secreto mostrado una sola vez y guardado cifrado), secrets (valor nunca en claro ni en auditoría), themes, flags, quotas, templates y affiliate.
+- [x] `src/trpc/authorization.spec.ts` (101 tests, routers REALES): sin sesión ⇒ 401, sin organización ⇒ 400, header de org sin membresía ⇒ 403, **colaborador en procedures de dueño ⇒ 403 sin tocar el service** (los services son dobles que explotan si se los alcanza), la organización sale del contexto y no del input, traducción de errores de negocio. Con control positivo (el dueño sí pasa). Cubre el "colaborador sin permiso recibe 403" del checklist de capa 6.
+- [x] Bug de proceso: `config-themes.router.ts.bak2` seguía versionado (el pre-commit solo frena archivos nuevos). Borrado, y la auditoría `arquitectura.sh` tiene el check **A8** (sin `*.bak*`, `*.orig`, `*.rej`, `*PATCH.md` versionados).
+- [x] Auditorías ajustadas con criterio, sin aflojar lo que importa: `testing.sh` E1 exige spec solo a los archivos de `domain/` que exportan código ejecutable (los 10 con lógica lo tienen); `contratos-tipado.sh` B2 reconoce `*-spec.ts` (integración/e2e) como tests, donde `as unknown as` está permitido para dobles.
+- [ ] Quedan sin tests unitarios: `redis.service` (9 %), `health.controller`, `internal-organizations.controller` (clave de servicio), `auth-session-throttled.controller`, `claims.service`, ramas de `markets.service` y `trpc.ts` (61 %). Los repositories Prisma los cubre la integración, que **no** cuenta en el umbral unitario: evaluar medir su cobertura aparte.
+- [ ] La mutación manual de `enforceOwner` (ADR-024) no se ejecutó: el entorno bloqueó correr tests con el guard debilitado. Se mitigó con un control positivo; queda por hacer a mano.
+
+### Cobertura (parte 2) y Redis ✅ / 🔶
+- [x] Cobertura unitaria: **sass-back 67 % de líneas** (67/51/59 sentencias-funciones-ramas; 37 suites, 423 tests) y **ecommerce-back 70 %** (70/60/64; 21 suites, 278 tests). Umbrales subidos a 66/50/58/66 y 69/58/63/69. **0 `it.todo`** en todo el monorepo.
+- [x] Nuevos specs en sass-back: `RedisService` (no-op, reintentos, Lua atómico, JSON corrupto), `health` (ok/degraded/down), `InternalApiKeyGuard` (401, rotación, clave por servicio, y regresión: el controller conserva el guard), controller interno, sesión con throttle (regresión: 10 req/min), `ClaimsService`, **`enforceStepUp` y `StepUpGuard`** (ventana de 5 min, sesión vieja con cookie renovada), `ConfigCacheService`, `UsersService`, contexto y formateador de errores de tRPC (en producción un 500 no expone el mensaje).
+- [x] Nuevos specs en ecommerce-back: `src/trpc/authorization.spec.ts` (47 tests con los routers reales: admin/dueño/cliente, sesión de la tienda A no sirve en la B, control positivo), `RedisService`, `MarketResolverService`.
+- [x] **Dos bugs reales corregidos al escribir los tests**: `ConfigCacheService.get` (sass-back) y `MarketResolverService.resolveMarket` (ecommerce-back) hacían `JSON.parse` sin protección sobre el caché: una entrada corrupta en Redis rompía la lectura (y el checkout). Ahora se tratan como "no está en caché".
+- [x] Borrados los dos `cross-tenant.spec.ts` (8 `it.todo`): los 4 casos están cubiertos por la integración y las matrices de autorización.
+- [x] **Tests de Redis real** (`redis.int-spec.ts` en ambos backs): TTL que vence, contador Lua atómico (50 incrementos concurrentes ⇒ exactamente 1..50), ventana fija, contador **compartido entre dos réplicas**, invalidación de caché por organización, health con Redis real, caché del resolver. Se saltean con aviso si falta `TEST_REDIS_URL`; en el CI es **obligatoria** y el job `integration` tiene un servicio Redis. **Ejecutados el 2026-10-15 contra Redis 7 y Postgres 16 reales en Docker: 16/16 en cada back, estables en 3 corridas repetidas** (el primer intento tuvo 3 fallos de un helper mío con `import()` dinámico, no del código).
+- [ ] Fallo aislado visto una vez en una corrida en frío (`trpc-context.spec` y `config-themes.service.spec` marcadas FAIL; 402 de 423 tests); 5 corridas posteriores y la verificación completa pasaron limpias. No reproducido: si reaparece, capturar la salida completa.
+- [ ] Siguen sin cubrir (unitarios): `markets.service` (ramas), `app-router`, `auth.router`, `config-webhooks.router`, `instrumentation.ts` y los repositories Prisma (los cubre la integración, que no cuenta en el umbral unitario).
+- [ ] Docker + Redis pendientes: BullMQ con Redis real (entrega de webhooks con reintentos), rate limit de `/trpc` entre dos instancias de la app y `docker build` de los 5 servicios.
+
+### Cómo correr la integración en local
+```bash
+docker run -d --name eco-test-pg -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -p 55432:5432 postgres:16-alpine
+docker exec eco-test-pg psql -U test -c "create database sass_test" -c "create database ecommerce_test"
+docker run -d --name eco-test-redis -p 56379:6379 redis:7-alpine     # opcional en local, obligatorio en el CI
+# aplicar migraciones (DATABASE_URL explícita: NUNCA la del .env, apunta a Railway)
+DATABASE_URL=postgresql://test:test@localhost:55432/sass_test pnpm --filter realsass-sass-back exec prisma migrate deploy
+DATABASE_URL=postgresql://test:test@localhost:55432/ecommerce_test pnpm --filter realsass-ecommerce-back exec prisma migrate deploy
+TEST_DATABASE_URL=… TEST_REDIS_URL=redis://localhost:56379 pnpm --filter <back> run test:int   # se niega a correr si las URLs no son locales
+```
+
+### Pendiente derivado
+- [ ] Borrar `src/__tests__/security/cross-tenant.spec.ts` en ambos backs (4 `it.todo` cada uno): los 4 casos de sass-back están cubiertos (integración + `authorization.spec.ts`); en ecommerce falta el equivalente 401/403 de `adminProcedure`/`ownerOnlyProcedure`/`customerProcedure`.
+- [ ] [DT-Q-17] Seguir: tests de los routers de ecommerce-back, repositories de users/collaborators/markets (integración) y los controllers listados arriba.
+- [ ] `PrismaInventoryRepository.reserve` hace leer-modificar-escribir sin atomicidad; hoy nadie lo llama (el checkout usa `reserveWithinTransaction`). Borrarlo o volverlo un UPDATE condicional.
+
+---
+
+## Sesión 2026-10-14 — Calidad, seguridad y tests (ADR-022, 023, 024)
+
+### Cerrado ✅
+- [x] Backs con `strict` + `noUncheckedIndexedAccess`, `module`/`moduleResolution` node16 sin `baseUrl` ni `ignoreDeprecations`; sin `any`, sin `require()` y sin `as unknown as` fuera de los dobles de test.
+- [x] `lint` sin `--fix` (`lint:fix` aparte), ignora `src/generated`; regla `no-restricted-globals: fetch` + `FETCH_ALLOWLIST` en los 4 fronts. 0 errores y 0 warnings en los 6 workspaces. `typecheck` real en todos los paquetes.
+- [x] `pnpm audit`: 24 vulnerabilidades (3 críticas) → 0. `overrides` consolidados (una regla por paquete/major).
+- [x] Dependencias fantasma → 0 (`scripts/audit/phantom-deps.cjs`, ahora también sobre `generated/`): `@types/pg`, `@prisma/client-runtime-utils`, `eslint`+plugins, `firebase`, `@types/express`, `zod`, `webpack-node-externals`.
+- [x] Catálogo depurado (`bull`, `bcrypt`, `@nestjs/jwt`, `@trpc/next`, `keyv`, `resend`, `uuid`, `joi`, `class-validator`, `class-transformer` y sus `@types`). **Zod única validación**: se quitó el `ValidationPipe` global (inerte).
+- [x] `shamefully-hoist` fuera de `.npmrc` y de los 5 Dockerfiles (el runtime copia los `node_modules` del servicio; `entrypoint.sh` busca `prisma` en el `.bin` del servicio). Verificado en clon limpio: build + arranque de backs y fronts.
+- [x] Repo: 33 `*.bak`/`*PATCH.md` borrados, `.env.make` pasó a local (plantilla `.env.make.example`), auditorías en `scripts/audit/`, `.editorconfig`, `.gitattributes`, `.nvmrc`, `packageManager`, hook de pre-commit contra secretos (`pnpm setup:hooks`).
+- [x] [WEL-05] 15 workflows → `ci.yml` (quality, tests, dependencies, audits) + `secrets.yml` (gitleaks) + Dependabot (el que ya existía se conservó).
+- [x] [DT-Q-02 / A1] Prisma directo → repositorio en `auth.service`, `webhook-delivery.service`, `internal-organizations.service`.
+- [x] [DT-Q-03 / A3] `firebase-admin` directo en sass-back → `getFirebaseAdmin()` de `@real/auth-server`.
+- [x] [DT-Q-04 / ADR-005] `dashboard-front/lib/api-client.ts` eliminado (sus clientes REST apuntaban a endpoints que ya no existen); queda `lib/external-client.ts` solo para campañas/pagos. `sass-front/auth-context` usa un cliente tRPC tipado.
+- [x] [DT-Q-05 / ADR-014] El checkout guarda `marketId`, `visitorCountryCode` y `fulfillmentSnapshot` en la orden, y `subtotal + envío = total`.
+- [x] [DT-Q-06] Tests: config de jest única en ambos backs y en `@real/auth-server`; 3 suites + 1 de scripts (ver ADR-024). `audit testing` en 0.
+- [x] [DT-Q-08 / ADR-023] Seguridad: sesión firmada del cliente en cookie HttpOnly, carrito atado a su dueño, CORS fail-closed, claves de servicio rotables y por servicio, rate limit sobre `/trpc` (Redis), `trust proxy`, timeouts + circuit breaker, errores sin detalles, cabeceras en los 4 fronts, `identify` solo para tiendas abiertas, pre-commit contra secretos.
+- [x] Bugs reales corregidos al escribir los tests (tabla en ADR-024): `RolesGuard` fallaba abierto, bypass del anti-SSRF por IPv6, re-aceptación de invitaciones por colaboradores removidos, token SSO para colaboradores removidos, errores 500 en lugar de 404/409/422 en ecommerce, breaker abierto por 403, cifrado multibyte, importes de la orden.
+
+### Pendiente
+- [ ] [DT-Q-07] GitHub: correr el CI una vez (no hay acceso desde acá), activar branch protection exigiendo los 4 jobs, y definir `GITLEAKS_LICENSE` si el repo es de una organización (lo es: `grupojl/ecosistema`).
+- [ ] [DT-Q-11] **`docker build` real de los 5 servicios** (sin Docker en la máquina de desarrollo): validar el layout nuevo antes de mergear a la rama de deploy.
+- [ ] [DT-Q-10] **Antes de desplegar ecommerce-back**: definir `CUSTOMER_SESSION_SECRET` y `ALLOWED_ORIGINS`; tu `.env` local también necesita `CUSTOMER_SESSION_SECRET` (`openssl rand -hex 32`) o el servicio no arranca. `COOKIE_DOMAIN` compartido con el storefront. Los carritos en curso se pierden.
+- [ ] [DT-Q-12] ADR-025: cuentas recurrentes (verificación por email). Requiere proveedor de email + decisión de producto.
+- [ ] [DT-Q-13] ADR-026: CSP con nonces. Requiere validar en un navegador (login, checkout) y un período en Report-Only.
+- [x] [DT-Q-14] El envío ya no lo manda el cliente: `customer.checkout` ignora `shippingCents` y lo toma de `fulfillmentConfig.shippingCents` (tarifa plana del Market, validada con Zod en sass-back). Sin tarifa → 0. Test: el cliente no puede fijarlo.
+- [x] [DT-Q-15] `collaborators.getInvitationInfo` (público) devuelve `getPublicInvitationInfo`: `expiresAt`, `used`, email del invitado y nombre de la organización. Sin ids ni token.
+- [x] [DT-Q-16] Stock: `quantity_available` es neto de reservas (reservar resta, liberar suma, catálogo y `setStock` lo leen tal cual). El guard de `reserveWithinTransaction` pasó de `available - reserved >= n` a `available >= n` (descontaba dos veces). Cubierto por test del SQL. **Falta** un test de concurrencia contra Postgres real (DT-Q-17).
+- [ ] [DT-Q-17] Cobertura de sass-back 33 %: repositories Prisma y routers (Postgres efímera en el CI); e2e del storefront/dashboard (Playwright).
+- [x] [DT-Q-19] Auditoría C4: `prisma-internal-organizations.repository.ts` agregado a las excepciones (cross-tenant por diseño). `run.sh --ci`: sin hallazgos.
+- [x] [DT-Q-18] `UsersService.upsertUser` / `repo.upsert` no tenían callers: borrados (el alta usa `AuthService` con código aleatorio).
 
 ---
 
@@ -91,20 +224,18 @@ emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verific
 
 ### Pendiente — variables de entorno
 
-- [ ] [DT-ENV-01] dashboard: el back de sass se llama `NEXT_PUBLIC_REAL_BACK_URL` en layout/provider/constants y
-  `NEXT_PUBLIC_SASS_BACK_URL` en `api-client`/`providers`. Hoy hay que definir ambas. Unificar en `SASS_BACK_URL`.
+- [x] [DT-ENV-01] dashboard unificado en `NEXT_PUBLIC_SASS_BACK_URL` (igual que sass-front). Si tenés un `.env.local` viejo con `NEXT_PUBLIC_REAL_BACK_URL`, renombrarlo; en Railway cambiar la variable de build.
 - [x] [DT-ENV-02] **Cerrado**: sass-back no arrancaba (`Worker requires a connection`) porque se había perdido el
   `BullModule.forRoot`; restaurado en `AppModule` leyendo `REDIS_URL` (`src/redis/bull-connection.ts`).
   Sigue haciendo falta un Redis real para los webhooks: no se probó contra uno.
 - [ ] [DT-ENV-03] storefront: `x-organization-id` del navegador sale de una variable fija; no sirve para varias
   tiendas en un mismo despliegue. Resolver la organización por slug (ya la entrega `customer.resolveStore`).
-- [ ] [DT-ENV-04] ecommerce-back: la imagen usa `PORT=3001` y local `3005`; alinear.
-- [ ] [DT-ENV-05] `realsass-dashboard-front/.env.local.example` y `realsass-sass-front/.env.local.example` quedaron
-  duplicados y desactualizados (mencionan servicios inexistentes y `/api/v1` en las URLs): borrarlos.
+- [x] [DT-ENV-04] ecommerce-back: la imagen usa `PORT=3025` (ENV, EXPOSE y HEALTHCHECK), igual que local y `puertos.md`.
+- [x] [DT-ENV-05] `.env.local.example` duplicados de dashboard y sass-front borrados (queda `.env.example`).
 
 ### Pendiente — P0
 
-- [ ] **[DT-TEST-01] Los tests de los backs no se pueden ejecutar** (verificado 2026-10-08): `pnpm test` falla porque cada back
+- [x] **[DT-TEST-01] Los tests de los backs no se pueden ejecutar** (verificado 2026-10-08): `pnpm test` falla porque cada back — **Cerrado 2026-10-14 (DT-Q-06)**: los tests corren.
   tiene `jest.config.js` **y** la clave `jest` en `package.json` ("Multiple configurations found"); con
   `--config jest.config.js` las 16 suites (8 por back) fallan sin correr un solo test por TS5011 (TypeScript 6 exige
   `rootDir` en ts-jest). Es previo a la sesión del ADR-019. Prerrequisito de S4-E (tests de backend).
@@ -113,8 +244,8 @@ emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verific
 
 ### Pendiente — P1
 
-- [ ] [DT-CI-01] `ci-*-front.yml` corren `lint` y `build`; el lint de los fronts no se verificó.
-- [ ] [DT-CI-02] Hay 15 workflows con jobs duplicados (`ci-*` y `realsass-*`/`trpc-contract`): unificar en los 7 documentados.
+- [x] [DT-CI-01] `ci-*-front.yml` corren `lint` y `build`; el lint de los fronts no se verificó. — **Cerrado**: lint de los 4 fronts en 0 (ADR-022).
+- [x] [DT-CI-02] Hay 15 workflows con jobs duplicados (`ci-*` y `realsass-*`/`trpc-contract`): unificar en los 7 documentados. — **Cerrado**: `ci.yml` + `secrets.yml` (WEL-05).
 - [ ] [DT-SF-01] `sass-front`: `UserProfile.isOwner` no existe en el contrato; "dueño" se deriva de
   `profile.organization !== null`. Confirmar la regla.
 - [ ] [DT-DASH-01] ecommerce-back: procedure para editar variantes (SKU/precio) y para cambiar el estado de un
@@ -222,9 +353,8 @@ Sin esto, `pnpm typecheck` falla en los repositories por Prisma Client no genera
 - realsass-dashboard-front/app/dashboard/tienda/pedidos/page.tsx
 Patrón documentado en .claude/decisions/ADR-009.
 
-### [WEL-05] GitHub Actions — 7 workflows
-Documentados en .claude/decisions/ADR-013.
-Trigger: antes de onboardear al primer colaborador externo.
+### [WEL-05] GitHub Actions ✅ resuelto 2026-10-14
+Reemplazados por un único `ci.yml` + `secrets.yml` (ver ADR-022). Pendiente: branch protection (WEL-06 / DT-Q-07).
 
 ### [WEL-06] Branch protection en GitHub
 ### [WEL-07] OTEL_EXPORTER_OTLP_ENDPOINT en Railway

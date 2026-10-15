@@ -8,6 +8,7 @@
 | 4 | Repository | Capa entre Application y Prisma. El Service llama `this.xRepository.find(...)`, nunca `this.prisma.x`. | Ningún `*.service.ts` importa `PrismaService` directamente (excepción: collaborators.service.ts para tx). | ✅ 11 módulos sass-back + catalog ecommerce-back |
 | 5 | Contrato compartido (AppRouter) | `@real/trpc` exporta el tipo real del router — nunca `AnyRouter`. | Cambiar un procedure sin romper el build de los fronts es la señal de que el contrato está bien tipado. | ✅ SassAppRouter + EcommerceAppRouter — sin casts as any |
 | 6 | Multi-tenant como invariante transversal | Todo modelo con datos de negocio lleva `organizationId`. | Un query sin `organizationId` en el `where` es bug crítico. | ✅ respetado en todos los modelos |
+| 7 | Aislamiento por fila en la base (ADR-027) | Row Level Security forzado, default-deny, rol de aplicación sin `BYPASSRLS`. La base filtra aunque el `where` falte. | Código fuera de una petición abre su alcance con `runInTenant`; `runAsSystem` solo en los archivos de la auditoría S8. | ✅ ecommerce-back completo · ✅ sass-back fase 1 · ⏳ sass-back fase 2 |
 
 ## Servicios backend en el roadmap (hoy 2, meta 6)
 

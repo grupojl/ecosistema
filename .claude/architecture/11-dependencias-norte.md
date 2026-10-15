@@ -224,7 +224,7 @@ onlyBuiltDependencies:
 ### F2 — Enforcement
 
 - [ ] Reglas de "Dependencias (post ADR-018)" en `03-reglas-duras.md` bloquean en CI
-- [ ] `shamefully-hoist=false` + `public-hoist-pattern` mínimo, documentado en Excepciones
+- [x] `shamefully-hoist=false` — hecho 2026-10-14 (ADR-022): `.npmrc` y los 5 Dockerfiles; contracts + lint + typecheck + build pasan y los backs y fronts arrancan sin hoisting
 - [ ] `minimumReleaseAge` + `onlyBuiltDependencies`, validados en un deploy de Railway
 - [ ] `--frozen-lockfile` verificado en el Dockerfile / nixpacks de cada servicio
 

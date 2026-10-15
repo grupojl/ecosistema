@@ -92,7 +92,7 @@ NEXT_PUBLIC_SASS_BACK_URL=
 **Limitaciones conocidas:**
 - Sin named catalogs en pnpm — usar solo `catalog:` default
 - `nixpacks.toml` y Dockerfile pueden coexistir — Railway usa el Dockerfile si existe
-- `shamefully-hoist=true` en `.npmrc` para que standalone de Next.js funcione
+- Sin `shamefully-hoist` (desde 2026-10-14): standalone de Next.js funciona igual; cada workspace declara lo que usa (ADR-018)
 
 ---
 

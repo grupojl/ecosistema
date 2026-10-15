@@ -27,6 +27,29 @@ Un query sin `organizationId` es filtración de datos entre tenants.
 → Enforcement objetivo: ESLint rule `@real/no-unscoped-prisma-query`
 → Estado: manual — revisión obligatoria en PR
 
+### 🔴 Toda mutación tRPC sin sesión está en la lista explícita
+Un `publicProcedure.mutation` es una decisión de seguridad. Se agrega a `scripts/audit/public-mutations.allowlist` con su
+motivo; la organización y el id del usuario salen del contexto, nunca del input.
+→ Enforcement: auditoría S10 (bloqueante en CI)
+→ Origen: `markets.create/update/delete` fueron públicos y aceptaban la organización por input (ADR-027)
+
+### 🔴 `runAsSystem()` solo desde los archivos autorizados
+Es la única salida del aislamiento por fila: ve todas las organizaciones. Exige una razón.
+→ Enforcement: auditoría S8 · Lista y motivos: ADR-027
+
+### 🔴 Código fuera de una petición abre su alcance de tenant
+Jobs, listeners y controllers internos usan `runInTenant(orgId, fn)`; sin alcance la base devuelve vacío (a propósito).
+`tenant-context.ts` y `tenant-aware-pool.ts` son idénticos en ambos backs.
+→ Enforcement: auditoría S9 + `rls.int-spec` de cada back (con el rol `eco_app`)
+
+### 🔴 En producción el servicio se conecta con el rol `eco_app`, nunca con un superusuario
+Un superusuario ignora RLS. `PrismaService` se niega a arrancar con `NODE_ENV=production` si el rol saltea RLS.
+→ Enforcement: `prisma.service.spec` + chequeo de arranque
+
+### 🔴 Un UPDATE/DELETE por id de un recurso del tenant verifica pertenencia
+El id de otra organización responde igual que uno inexistente (404) y no escribe nada.
+→ Enforcement: tests de pertenencia en los services + `rls.int-spec`
+
 ### 🔴 Ningún service importa PrismaService directamente (post-migración)
 Una vez que un módulo migra a Repository, el service no puede importar Prisma.
 → Enforcement objetivo: `dependency-cruiser` rule `no-prisma-in-service`
