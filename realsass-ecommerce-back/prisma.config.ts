@@ -9,6 +9,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // ADR-027: las migraciones las corre el dueño de las tablas (MIGRATION_DATABASE_URL); el servicio usa el rol
+    // sin privilegios `eco_app` (DATABASE_URL), al que sí le aplica Row Level Security. Sin la primera, se usa la segunda.
+    url: process.env["MIGRATION_DATABASE_URL"] ?? process.env["DATABASE_URL"],
   },
 });

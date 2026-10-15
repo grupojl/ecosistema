@@ -33,7 +33,7 @@ export class PrismaCartRepository implements ICartRepository {
       where:   { organizationId, sessionId, status: "ACTIVE" },
       include: CART_WITH_ITEMS,
     });
-    return cart as CartRecord | null;
+    return cart;
   }
 
   async findById(
@@ -44,7 +44,7 @@ export class PrismaCartRepository implements ICartRepository {
       where:   { id: cartId, organizationId },
       include: CART_WITH_ITEMS,
     });
-    return cart as CartRecord | null;
+    return cart;
   }
 
   async create(
@@ -55,7 +55,7 @@ export class PrismaCartRepository implements ICartRepository {
       data:    { organizationId, sessionId, status: "ACTIVE" },
       include: CART_WITH_ITEMS,
     });
-    return cart as CartRecord;
+    return cart;
   }
 
   async upsertItem(
@@ -83,7 +83,7 @@ export class PrismaCartRepository implements ICartRepository {
       where:   { id: cartId },
       include: CART_WITH_ITEMS,
     });
-    return cart as CartRecord;
+    return cart;
   }
 
   async removeItem(cartId: string, variantId: string): Promise<CartRecord> {
@@ -98,7 +98,7 @@ export class PrismaCartRepository implements ICartRepository {
       where:   { id: cartId },
       include: CART_WITH_ITEMS,
     });
-    return cart as CartRecord;
+    return cart;
   }
 
   async complete(cartId: string): Promise<void> {

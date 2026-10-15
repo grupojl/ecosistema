@@ -16,10 +16,20 @@ import {
   CustomerNotFoundError,
   InvalidEmailError,
 } from "@/customers/domain/customer.errors";
+import { CustomerSessionService, type CustomerSession } from "@/customers/customer-session.service";
 
 export interface IdentifyCustomerOutput {
   customerId: string;
   isNew:      boolean;
+  /** Sesión firmada. Es la ÚNICA credencial del storefront: el router la entrega en una cookie HttpOnly. */
+  token:      string;
+  expiresAt:  Date;
+}
+
+export interface IdentifyContact {
+  email?:       string;
+  displayName?: string;
+  phone?:       string;
 }
 
 @Injectable()
@@ -27,20 +37,24 @@ export class CustomersService {
   constructor(
     @Inject(CUSTOMERS_REPOSITORY)
     private readonly customersRepository: ICustomersRepository,
+    private readonly sessions: CustomerSessionService,
   ) {}
 
+  /**
+   * Abre (o continúa) la sesión del cliente.
+   *
+   *  - Con una sesión VÁLIDA de la misma organización: se continúa esa sesión.
+   *  - Sin sesión: se crea un invitado NUEVO. Nunca se busca por email ni se devuelve un cliente
+   *    existente: saber un email no da acceso a la cuenta de nadie.
+   */
   async identify(
     organizationId: string,
-    sessionId:      string,
-    email?:         string,
-    name?:          string,
-    phone?:         string,
-    cartId?:        string,
+    current:        CustomerSession | null,
+    contact:        IdentifyContact = {},
   ): Promise<IdentifyCustomerOutput> {
-    // Validar email si viene
-    if (email) {
+    if (contact.email) {
       try {
-        assertValidEmail(email);
+        assertValidEmail(contact.email);
       } catch (err) {
         throw new UnprocessableEntityException(
           err instanceof InvalidEmailError ? err.message : "Email inválido",
@@ -48,30 +62,15 @@ export class CustomersService {
       }
     }
 
-    // identifyBySession hace upsert — crea si no existe, retorna si existe
-    const customer = await this.customersRepository.identifyBySession(
-      organizationId,
-      sessionId,
-    );
+    const continuing = current && current.organizationId === organizationId
+      ? await this.customersRepository.findById(organizationId, current.customerId)
+      : null;
+    const customer = continuing ?? (await this.customersRepository.createGuest(organizationId));
 
-    const isNew = !customer.email && !email;
+    await this.customersRepository.attachContact(organizationId, customer.id, contact);
 
-    // Actualizar datos si vinieron
-    if (email || name || phone) {
-      await this.customersRepository.update(organizationId, customer.id, {
-        ...(email && { email }),
-        ...(name  && { name }),
-        ...(phone && { phone }),
-      });
-    }
-
-    // cartId se maneja en CartService — aquí solo identificamos al customer
-    void cartId;
-
-    return {
-      customerId: customer.id,
-      isNew,
-    };
+    const { token, expiresAt } = this.sessions.issue({ customerId: customer.id, organizationId });
+    return { customerId: customer.id, isNew: !continuing, token, expiresAt };
   }
 
   async findById(organizationId: string, customerId: string) {
@@ -82,14 +81,10 @@ export class CustomersService {
     return customer;
   }
 
-  async findBySession(organizationId: string, sessionId: string) {
-    return this.customersRepository.findBySessionId(organizationId, sessionId);
-  }
-
   async update(
     organizationId: string,
     customerId:     string,
-    patch: { email?: string; name?: string; phone?: string },
+    patch: { email?: string; displayName?: string; phone?: string },
   ) {
     if (patch.email) {
       try {
@@ -105,6 +100,13 @@ export class CustomersService {
     if (!exists) throw new NotFoundException(new CustomerNotFoundError(customerId).message);
 
     return this.customersRepository.update(organizationId, customerId, patch);
+  }
+
+  /** GDPR/LGPD: el cliente anonimiza SU cuenta. El id sale de la sesión firmada, nunca del input. */
+  async deleteAccount(organizationId: string, customerId: string): Promise<{ anonymizedAt: Date }> {
+    const done = await this.customersRepository.anonymize(organizationId, customerId);
+    if (!done) throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+    return { anonymizedAt: new Date() };
   }
 
   async listByOrg(

@@ -35,7 +35,7 @@ export interface CartRecord {
   id:             string;
   organizationId: string;
   sessionId:      string;
-  status:         "ACTIVE" | "COMPLETED" | "ABANDONED";
+  status:         "ACTIVE" | "CONVERTED" | "ABANDONED";
   createdAt:      Date;
   updatedAt:      Date;
   items:          CartItemRecord[];

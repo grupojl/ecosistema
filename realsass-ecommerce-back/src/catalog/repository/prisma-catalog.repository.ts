@@ -61,7 +61,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       include: PRODUCT_INCLUDE,
     });
 
-    return created as ProductRecord;
+    return created;
   }
 
   async findByIdAdmin(
@@ -72,7 +72,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       where: { id: productId, organizationId },
       include: PRODUCT_INCLUDE,
     });
-    return found as ProductRecord | null;
+    return found;
   }
 
   async listAdmin(organizationId: string): Promise<ProductRecord[]> {
@@ -81,7 +81,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       include: PRODUCT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    return list as ProductRecord[];
+    return list;
   }
 
   async updateProduct(
@@ -94,7 +94,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       data: patch,
       include: PRODUCT_INCLUDE,
     });
-    return updated as ProductRecord;
+    return updated;
   }
 
   async listPublished(
@@ -112,7 +112,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
       include: PRODUCT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    return list as ProductRecord[];
+    return list;
   }
 
   async findPublishedByHandle(
@@ -123,6 +123,6 @@ export class PrismaCatalogRepository implements CatalogRepository {
       where: { organizationId, handle, status: 'PUBLISHED' },
       include: PRODUCT_INCLUDE,
     });
-    return found as ProductRecord | null;
+    return found;
   }
 }

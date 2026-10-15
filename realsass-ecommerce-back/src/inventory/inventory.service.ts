@@ -50,19 +50,20 @@ export class InventoryService {
     sku:       string,
     quantity:  number,
   ): Promise<void> {
+    // Modelo (DT-Q-16): quantity_available YA es neto de reservas (reservar lo resta, liberar lo suma, el catálogo
+    // y setStock lo leen/escriben tal cual). quantity_reserved es solo contable. Filtrar por available - reserved
+    // descontaba dos veces. El UPDATE condicional es atómico: dos checkouts concurrentes no pueden vender el último.
     const rowsAffected = await tx.$executeRaw`
       UPDATE inventory_items
       SET    quantity_available = quantity_available - ${quantity},
              quantity_reserved  = quantity_reserved  + ${quantity}
       WHERE  variant_id = ${variantId}
-        AND (quantity_available - quantity_reserved) >= ${quantity}
+        AND quantity_available >= ${quantity}
     `;
 
     if (rowsAffected === 0) {
       const current = await tx.inventoryItem.findFirst({ where: { variantId } });
-      const available = current
-        ? (current.quantityAvailable - current.quantityReserved)
-        : 0;
+      const available = current?.quantityAvailable ?? 0;
       throw new InsufficientStockError(sku, quantity, available);
     }
   }

@@ -15,7 +15,6 @@ import {
 import {
   CartNotFoundError,
   CartItemNotFoundError,
-  InsufficientStockForCartError,
   assertValidQuantity,
 } from "@/cart/domain/cart.errors";
 
@@ -31,6 +30,18 @@ export class CartService {
     const existing = await this.cartRepository.findActiveBySession(organizationId, sessionId);
     if (existing) return existing;
     return this.cartRepository.create(organizationId, sessionId);
+  }
+
+  /**
+   * Carrito del storefront: su sessionId ES el customerId de la sesión firmada, así que un cliente
+   * solo ve y modifica su propio carrito. Mismo NOT_FOUND si no existe o es de otro (sin oráculo).
+   */
+  async getOwnedCart(organizationId: string, cartId: string, customerId: string) {
+    const cart = await this.cartRepository.findById(organizationId, cartId);
+    if (!cart || cart.sessionId !== customerId) {
+      throw new NotFoundException(`Carrito ${cartId} no encontrado`);
+    }
+    return cart;
   }
 
   async getCart(organizationId: string, cartId: string) {
@@ -51,6 +62,8 @@ export class CartService {
     } catch (err) {
       throw new UnprocessableEntityException(err instanceof Error ? err.message : String(err));
     }
+    // Si el cliente indica un carrito, tiene que ser suyo (sessionId = customerId de la sesión firmada).
+    if (cartId) await this.getOwnedCart(organizationId, cartId, sessionId);
     const resolvedCartId = cartId
       ?? (await this.cartRepository.findActiveBySession(organizationId, sessionId))?.id
       ?? (await this.cartRepository.create(organizationId, sessionId)).id;

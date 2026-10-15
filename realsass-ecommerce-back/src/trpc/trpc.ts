@@ -10,21 +10,25 @@ import type { TenantRole } from '@real/auth-server';
  *   role           → resuelto por applyTenantContext (llama a OrganizationsClientService)
  *   userId         → id interno del User en real-back
  *
- * CustomerContext (cliente del storefront logueado):
- *   customerId     → de header x-customer-id (seteado tras identify())
- *   organizationId → de header x-organization-id (org del storefront que visita)
+ * CustomerContext (cliente del storefront):
+ *   customerId     → de la sesión FIRMADA (cookie HttpOnly store_session, emitida por customer.identify).
+ *                    Nunca de un id que mande el cliente: lo que el cliente puede fabricar no es una credencial.
+ *   organizationId → de header x-organization-id; debe coincidir con la org de la sesión
  *
  * Procedures exportados:
  *   publicProcedure    → sin auth
  *   adminProcedure     → requiere uid + organizationId + role (OWNER o COLLABORATOR)
  *   ownerOnlyProcedure → requiere uid + organizationId + role === 'OWNER'
- *   customerProcedure  → requiere customerId + organizationId
+ *   customerProcedure  → requiere sesión válida + organizationId igual al de la sesión
  */
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
+import { HttpException } from '@nestjs/common';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { CUSTOMER_SESSION_COOKIE, type CustomerSessionService } from '@/customers/customer-session.service';
+import { isUuid, runInTenant } from '@/prisma/tenant-context';
 
 // Extiende Request con los campos que inyectan los middlewares de auth
 interface AuthenticatedRequest extends Request {
@@ -36,13 +40,15 @@ interface AuthenticatedRequest extends Request {
 
 export interface TrpcContext {
   req:            Request;
+  res:            Response;   // identify/logout setean la cookie de sesión
   // Admin
   uid:            string | null;
   organizationId: string | null;
   role:           'OWNER' | 'COLLABORATOR' | null;
   userId:         string | null;   // id interno (real-back), resuelto por TenantGuard
-  // Customer
+  // Customer (solo si el token firmado es válido)
   customerId:     string | null;
+  customerOrganizationId: string | null;
 }
 
 // Contextos de salida de cada middleware. Con nombre a propósito: si `next({ ctx: { ...ctx } })`
@@ -67,7 +73,11 @@ type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
   TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, false
 >;
 
-export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
+export function createTrpcContextFactory(sessions: CustomerSessionService) {
+  return ({ req, res }: CreateExpressContextOptions): TrpcContext => buildTrpcContext(req, res, sessions);
+}
+
+function buildTrpcContext(req: Request, res: Response, sessions: CustomerSessionService): TrpcContext {
   const typedReq       = req as AuthenticatedRequest;
   const user           = typedReq.user   ?? null;
   const tenant         = typedReq.tenant ?? null;
@@ -76,13 +86,22 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
     (req.headers['x-organization-id'] as string | undefined) ??
     null;
 
+  // La credencial viaja SOLO en la cookie HttpOnly (cookie-parser la expone en req.cookies).
+  const cookies: unknown = (req as { cookies?: unknown }).cookies;
+  const rawToken = typeof cookies === 'object' && cookies !== null
+    ? (cookies as Record<string, unknown>)[CUSTOMER_SESSION_COOKIE]
+    : undefined;
+  const session = sessions.verify(typeof rawToken === 'string' ? rawToken : null);
+
   return {
     req,
+    res,
     uid:            user?.uid         ?? null,
     organizationId,
     role:           (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
     userId:         tenant?.userId    ?? null,
-    customerId:     (req.headers['x-customer-id'] as string | undefined) ?? null,
+    customerId:     session?.customerId     ?? null,
+    customerOrganizationId: session?.organizationId ?? null,
   };
 }
 
@@ -90,8 +109,11 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
 
 const t = initTRPC.context<TrpcContext>().create({
   errorFormatter({ shape, error }) {
+    // En producción un error inesperado no expone su mensaje (puede traer SQL, rutas o detalles de Prisma).
+    const hideMessage = process.env['NODE_ENV'] === 'production' && shape.data.code === 'INTERNAL_SERVER_ERROR';
     return {
       ...shape,
+      message: hideMessage ? 'Error interno del servidor' : shape.message,
       data: {
         ...shape.data,
         zodError:
@@ -104,6 +126,41 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 // ─── Middlewares ──────────────────────────────────────────────────────────────
+
+/** HTTP status de una excepción de Nest → código tRPC. */
+function statusToTrpcCode(status: number): TRPCError['code'] {
+  switch (status) {
+    case 400: return 'BAD_REQUEST';
+    case 401: return 'UNAUTHORIZED';
+    case 403: return 'FORBIDDEN';
+    case 404: return 'NOT_FOUND';
+    case 409: return 'CONFLICT';
+    case 422: return 'UNPROCESSABLE_CONTENT';
+    case 429: return 'TOO_MANY_REQUESTS';
+    case 503: return 'SERVICE_UNAVAILABLE';
+    default:  return 'INTERNAL_SERVER_ERROR';
+  }
+}
+
+/**
+ * Los services lanzan excepciones de Nest (NotFound, Conflict, UnprocessableEntity…) y tRPC convierte
+ * CUALQUIER excepción que no sea TRPCError en INTERNAL_SERVER_ERROR: el storefront recibía un 500 (con el
+ * mensaje oculto en producción) donde correspondía un 404 / 409 / 422. Acá se traducen a su código.
+ */
+const mapNestErrors = t.middleware(async ({ next }) => {
+  const result = await next();
+  if (!result.ok && result.error.code === 'INTERNAL_SERVER_ERROR' && result.error.cause instanceof HttpException) {
+    const cause = result.error.cause;
+    const body  = cause.getResponse();
+    const raw   = typeof body === 'object' && body !== null && 'message' in body ? (body as { message?: unknown }).message : cause.message;
+    throw new TRPCError({
+      code:    statusToTrpcCode(cause.getStatus()),
+      message: Array.isArray(raw) ? raw.join(', ') : typeof raw === 'string' ? raw : cause.message,
+      cause,
+    });
+  }
+  return result;
+});
 
 /** Admin autenticado (OWNER o COLLABORATOR) */
 const enforceAdmin = t.middleware(({ ctx, next }) => {
@@ -123,18 +180,34 @@ const enforceOwnerOnly = t.middleware(({ ctx, next }) => {
   return next({ ctx: owner });
 });
 
-/** Cliente del storefront logueado (customerId en header) */
+/** Cliente del storefront con sesión firmada válida, y solo dentro de la organización de esa sesión. */
 const enforceCustomer = t.middleware(({ ctx, next }) => {
-  if (!ctx.customerId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Header x-customer-id requerido' });
+  if (!ctx.customerId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Sesión de cliente requerida' });
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
+  // Un token emitido para la tienda A no sirve en la tienda B.
+  if (ctx.customerOrganizationId !== ctx.organizationId) throw new TRPCError({ code: 'FORBIDDEN', message: 'La sesión no corresponde a esta tienda' });
   const customer: CustomerTrpcContext = { ...ctx, customerId: ctx.customerId, organizationId: ctx.organizationId };
   return next({ ctx: customer });
 });
 
+/**
+ * ADR-027 — Row Level Security. Una vez autorizada la petición (la organización ya está validada contra la membresía
+ * o contra la sesión firmada), todo lo que el handler consulte ve SOLO las filas de esa organización, aunque una
+ * consulta se olvide del `where`. Va DESPUÉS de enforce*: nunca abre un alcance con una organización sin validar.
+ */
+const withTenantScope = t.middleware(({ ctx, next }) => {
+  const organizationId = ctx.organizationId;
+  if (!organizationId || !isUuid(organizationId)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id inválido' });
+  }
+  return runInTenant(organizationId, () => next());
+});
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-export const { router, procedure: publicProcedure } = t;
+export const { router } = t;
+export const publicProcedure = t.procedure.use(mapNestErrors);
 
-export const adminProcedure:     ProcedureWith<AdminTrpcContext> = t.procedure.use(enforceAdmin);
-export const ownerOnlyProcedure: ProcedureWith<OwnerOnlyTrpcContext> = t.procedure.use(enforceOwnerOnly);
-export const customerProcedure:  ProcedureWith<CustomerTrpcContext> = t.procedure.use(enforceCustomer);
+export const adminProcedure:     ProcedureWith<AdminTrpcContext> = t.procedure.use(mapNestErrors).use(enforceAdmin).use(withTenantScope);
+export const ownerOnlyProcedure: ProcedureWith<OwnerOnlyTrpcContext> = t.procedure.use(mapNestErrors).use(enforceOwnerOnly).use(withTenantScope);
+export const customerProcedure:  ProcedureWith<CustomerTrpcContext> = t.procedure.use(mapNestErrors).use(enforceCustomer).use(withTenantScope);

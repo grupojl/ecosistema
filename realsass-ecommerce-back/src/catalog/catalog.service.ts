@@ -47,7 +47,7 @@ export class CatalogService {
     try {
       validateProductDraft(draft);
     } catch (err) {
-      throw this.toHttpException(err);
+      this.toHttpException(err);
     }
 
     const alreadyExists = await this.catalogRepository.existsByHandle(

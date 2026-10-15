@@ -57,24 +57,47 @@ export class OrdersService {
     cartId:              string;
     customerId:          string;
     shippingAddress:     Record<string, unknown>;
-    shippingCents?:      number;
     visitorCountryCode?: string;
     locale?:             string;
   }) {
     const {
       organizationId, cartId, customerId,
-      shippingAddress, shippingCents = 0,
+      shippingAddress,
     } = input;
 
-    // Resolver market ANTES de la transacción (HTTP + Redis cache — ADR-014)
+    // ADR-014: se resuelve ANTES de la transacción (HTTP + cache Redis) para no abrir la tx con una llamada de red.
+    // El resultado se guarda en la orden (snapshot): si el dueño cambia después el Market, la orden conserva el
+    // fulfillment con el que se vendió.
     const market = await this.orgsClient.resolveMarket(
       organizationId,
       input.visitorCountryCode ?? 'default',
     );
 
+    // El envío sale del Market resuelto por el servidor; el cliente no lo puede fijar (DT-Q-14).
+    const rate = market.fulfillmentConfig['shippingCents'];
+    const shippingCents = typeof rate === 'number' && Number.isInteger(rate) && rate >= 0 ? rate : 0;
+
     return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      // Idempotencia: el carrito se RECLAMA con un UPDATE atómico (ACTIVE -> CONVERTED). Dos checkouts simultáneos del
+      // mismo carrito (doble clic, reintento tras un timeout) se serializan en el bloqueo de la fila: el segundo ve el
+      // carrito ya convertido, no reserva stock y recibe la MISMA orden del primero. Antes ambos reservaban stock y
+      // recién el INSERT de la orden chocaba con la restricción única de cartId (un error de base sin traducir).
+      const claimed = await tx.cart.updateMany({
+        where: { id: cartId, organizationId, status: 'ACTIVE' },
+        data:  { status: 'CONVERTED' },
+      });
+      if (claimed.count === 0) {
+        // customerId en el filtro: nadie recupera la orden de un carrito ajeno.
+        const existing = await tx.order.findFirst({
+          where:   { cartId, organizationId, customerId },
+          include: { items: true },
+        });
+        if (existing) return existing;
+        throw new BadRequestException('Carrito vacío o no encontrado');
+      }
+
       const cart = await tx.cart.findFirst({
-        where:   { id: cartId, organizationId, status: 'ACTIVE' },
+        where:   { id: cartId, organizationId },
         include: {
           items: {
             include: { variant: { include: { inventory: true } } },
@@ -82,6 +105,7 @@ export class OrdersService {
         },
       });
 
+      // Si falla algo de acá en adelante la transacción entera se revierte, incluido el reclamo del carrito.
       if (!cart || cart.items.length === 0) {
         throw new BadRequestException('Carrito vacío o no encontrado');
       }
@@ -106,12 +130,19 @@ export class OrdersService {
           organizationId,
           customerId,
           cartId,
-          subtotalCents:   total,
+          // subtotal = solo los ítems; subtotal + envío = total (antes el subtotal guardaba el total con envío
+          // y el envío no se persistía, así que la orden no cerraba).
+          subtotalCents:   itemsTotal,
+          shippingCents,
           status:          'PENDING_PAYMENT',
           totalCents:      total,
           currency:        cart.items[0]?.variant.currency ?? 'ARS',
           shippingAddress: shippingAddress as Prisma.InputJsonValue,
           locale:          input.locale ?? null,
+          // ADR-014: 'default' es el fallback cuando sass-back no responde (no es un Market real => sin marketId).
+          marketId:            market.id === 'default' ? null : market.id,
+          visitorCountryCode:  input.visitorCountryCode?.toUpperCase() ?? null,
+          fulfillmentSnapshot: market.fulfillmentConfig as Prisma.InputJsonValue,
           items: {
             create: cart.items.map(i => ({
               variantId:              i.variantId,
@@ -121,11 +152,6 @@ export class OrdersService {
           },
         },
         include: { items: true },
-      });
-
-      await tx.cart.update({
-        where: { id: cartId },
-        data:  { status: 'CONVERTED' },
       });
 
       return order;
@@ -143,7 +169,7 @@ export class OrdersService {
     if (!order) throw new NotFoundException(`Orden ${orderId} no encontrada`);
 
     try {
-      assertValidOrderTransition(order.status as OrderStatus, to);
+      assertValidOrderTransition(order.status, to);
     } catch (err) {
       throw new BadRequestException(err instanceof Error ? err.message : String(err));
     }

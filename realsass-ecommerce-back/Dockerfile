@@ -27,7 +27,7 @@ COPY packages/auth-server/package.json      ./packages/auth-server/
 COPY packages/trpc/package.json             ./packages/trpc/
 COPY realsass-ecommerce-back/package.json   ./realsass-ecommerce-back/
 
-RUN echo "shamefully-hoist=true" >> .npmrc
+# Sin shamefully-hoist (ADR-018): cada workspace resuelve solo lo que declara en su package.json.
 
 # Sin --mount=type=cache: Railway exige que el id lleve el prefijo s/<id-del-servicio>- y un Dockerfile
 # no conoce ese id (error "missing the cacheKey prefix"). Sin cache, cada build reinstala las dependencias.
@@ -72,8 +72,10 @@ RUN addgroup --system --gid 1001 nodejs \
 WORKDIR /app/realsass-ecommerce-back
 
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3025
 
+# pnpm sin hoisting: las dependencias del servicio viven en <servicio>/node_modules (symlinks al store .pnpm de la raíz).
+COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/node_modules   ./node_modules
 COPY --from=build --chown=nestjs:nodejs /app/node_modules                            ../node_modules
 COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/dist            ./dist
 COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/prisma          ./prisma
@@ -82,10 +84,10 @@ COPY --from=build --chown=nestjs:nodejs /app/realsass-ecommerce-back/package.jso
 COPY --chown=nestjs:nodejs realsass-ecommerce-back/entrypoint.sh                     ./entrypoint.sh
 
 USER nestjs
-EXPOSE 3001
+EXPOSE 3025
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
+  CMD wget -qO- http://localhost:3025/health || exit 1
 
 # entrypoint.sh se invoca con sh: en git no tiene bit ejecutable (modo 100644)
 CMD ["dumb-init", "sh", "/app/realsass-ecommerce-back/entrypoint.sh"]

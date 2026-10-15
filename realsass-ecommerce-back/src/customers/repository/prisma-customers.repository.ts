@@ -1,6 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { ICustomersRepository, CustomerRecord } from '@/customers/repository/customers.repository.interface';
+import type { ICustomersRepository, CustomerRecord, CustomerContactPatch } from '@/customers/repository/customers.repository.interface';
 import type { Prisma } from '@/generated/prisma';
 
 type PrismaStoreCustomer = Prisma.StoreCustomerGetPayload<Record<string, never>>;
@@ -22,19 +23,22 @@ export class PrismaCustomersRepository implements ICustomersRepository {
     };
   }
 
-  async identifyBySession(
-    organizationId: string,
-    sessionId:      string,
-  ): Promise<CustomerRecord> {
-    // StoreCustomer no tiene sessionId — buscar por un guest existente
-    // o crear uno nuevo. La sesion se maneja en el contexto del request.
-    const existing = await this.prisma.storeCustomer.findFirst({
-      where: { organizationId, isGuest: true },
+  async anonymize(organizationId: string, customerId: string): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const found = await tx.storeCustomer.findFirst({ where: { id: customerId, organizationId }, select: { id: true } });
+      if (!found) return false;
+      await tx.customerAddress.deleteMany({ where: { customerId } });
+      await tx.storeCustomer.update({
+        where: { id: customerId },
+        data: { email: `deleted_${randomUUID()}@deleted.local`, displayName: null, phone: null, isGuest: true },
+      });
+      return true;
     });
-    if (existing) return this.toEntity(existing);
+  }
 
+  async createGuest(organizationId: string): Promise<CustomerRecord> {
     const created = await this.prisma.storeCustomer.create({
-      data: { organizationId, email: `guest_${sessionId}@guest.local`, isGuest: true },
+      data: { organizationId, email: `guest_${randomUUID()}@guest.local`, isGuest: true },
     });
     return this.toEntity(created);
   }
@@ -46,17 +50,37 @@ export class PrismaCustomersRepository implements ICustomersRepository {
     return row ? this.toEntity(row) : null;
   }
 
-  async findBySessionId(organizationId: string, sessionId: string): Promise<CustomerRecord | null> {
-    const row = await this.prisma.storeCustomer.findFirst({
-      where: { organizationId, email: `guest_${sessionId}@guest.local` },
-    });
-    return row ? this.toEntity(row) : null;
+  async attachContact(
+    organizationId: string,
+    customerId:     string,
+    patch:          CustomerContactPatch,
+  ): Promise<CustomerRecord> {
+    let email = patch.email?.trim().toLowerCase();
+    if (email) {
+      const taken = await this.prisma.storeCustomer.findFirst({
+        where:  { organizationId, email, NOT: { id: customerId } },
+        select: { id: true },
+      });
+      if (taken) email = undefined; // no se enlaza una cuenta ajena ni se revela que existe
+    }
+    const data = {
+      ...(email              && { email }),
+      ...(patch.displayName  && { displayName: patch.displayName }),
+      ...(patch.phone        && { phone:       patch.phone }),
+    };
+    if (Object.keys(data).length === 0) {
+      const current = await this.findById(organizationId, customerId);
+      if (!current) throw new Error(`Cliente ${customerId} no encontrado`);
+      return current;
+    }
+    const row = await this.prisma.storeCustomer.update({ where: { id: customerId }, data });
+    return this.toEntity(row);
   }
 
   async update(
     organizationId: string,
     customerId:     string,
-    patch: { email?: string; displayName?: string; phone?: string },
+    patch: CustomerContactPatch,
   ): Promise<CustomerRecord> {
     const row = await this.prisma.storeCustomer.update({
       where: { id: customerId },

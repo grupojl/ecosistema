@@ -22,7 +22,10 @@ export class MarketResolverService {
     const cacheKey = `market:${organizationId}:${code}`
 
     const cached = await this.redis.get(cacheKey)
-    if (cached) return JSON.parse(cached) as MarketDTO
+    if (cached) {
+      // Una entrada corrupta equivale a "no está en caché": se vuelve a consultar en lugar de romper el checkout.
+      try { return JSON.parse(cached) as MarketDTO } catch { /* cae a la consulta */ }
+    }
 
     const url = `${sassBackUrl}/trpc/markets.resolve?input=${encodeURIComponent(
       JSON.stringify({ organizationId, countryCode: code === 'default' ? 'AR' : code })
@@ -30,6 +33,7 @@ export class MarketResolverService {
 
     const res = await fetch(url, {
       headers: { 'x-internal-api-key': internalApiKey },
+      signal: AbortSignal.timeout(5_000),
     })
     if (!res.ok) throw new Error(`resolveMarket failed: ${res.status}`)
 

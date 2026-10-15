@@ -11,10 +11,12 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:int": "jest --config jest.integration.config.js --forceExit",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:generate": "prisma generate",
@@ -26,34 +28,35 @@
   "dependencies": {
     "@nestjs/bullmq": "catalog:",
     "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/event-emitter": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
-    "cookie-parser": "catalog:",
-    "nestjs-pino": "catalog:",
-    "pino": "catalog:",
-    "pino-pretty": "catalog:",
-    "@willsoto/nestjs-prometheus": "catalog:",
-    "prom-client": "catalog:",
     "@nestjs/throttler": "catalog:",
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
+    "@prisma/client-runtime-utils": "catalog:",
+    "@real/auth-server": "workspace:*",
+    "@real/trpc": "workspace:*",
     "@trpc/server": "catalog:",
+    "@willsoto/nestjs-prometheus": "catalog:",
     "bcryptjs": "catalog:",
     "bullmq": "catalog:",
+    "cookie-parser": "catalog:",
     "dotenv": "catalog:",
     "firebase-admin": "catalog:",
     "helmet": "catalog:",
     "ioredis": "catalog:",
+    "nestjs-pino": "catalog:",
     "pg": "catalog:",
+    "pino": "catalog:",
+    "pino-pretty": "catalog:",
+    "prom-client": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "swagger-ui-express": "catalog:",
-    "zod": "catalog:",
-    "@real/trpc": "workspace:*",
-    "@nestjs/config": "catalog:",
-    "@real/auth-server": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@eslint/eslintrc": "catalog:",
@@ -66,9 +69,9 @@
     "@types/express": "catalog:",
     "@types/jest": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "@types/qs": "catalog:",
     "@types/supertest": "catalog:",
-    "@types/uuid": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "eslint-plugin-prettier": "catalog:",
@@ -83,26 +86,7 @@
     "ts-node": "catalog:",
     "tsconfig-paths": "catalog:",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@\/(.*)$": "<rootDir>/$1"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "typescript-eslint": "catalog:",
+    "webpack-node-externals": "catalog:"
   }
 }

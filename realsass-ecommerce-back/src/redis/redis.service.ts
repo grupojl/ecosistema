@@ -42,6 +42,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.set(key, value, 'EX', ttlSeconds);
   }
 
+  /**
+   * Contador atómico con vencimiento (rate limit compartido entre réplicas). El INCR y el PEXPIRE van en un
+   * mismo script Lua: si el proceso muere entre los dos, la clave no queda sin TTL (bloqueo permanente).
+   * null = Redis deshabilitado.
+   */
+  async incrWithTtl(key: string, ttlMs: number): Promise<number | null> {
+    if (!REDIS_ENABLED || !this.client) return null;
+    const total = await this.client.eval(
+      "local c = redis.call('INCR', KEYS[1]) if c == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end return c",
+      1, key, String(ttlMs),
+    );
+    return Number(total);
+  }
+
   async del(key: string): Promise<void> {
     if (!REDIS_ENABLED || !this.client) return;
     await this.client.del(key);

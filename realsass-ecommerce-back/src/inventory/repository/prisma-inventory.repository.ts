@@ -20,50 +20,50 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     const inv = await this.prisma.inventoryItem.findFirst({
       where: { variantId, variant: { organizationId } },
     });
-    return inv as InventoryRecord | null;
+    return inv;
   }
 
+  /**
+   * Reserva atómica: el UPDATE condicional decide en la base, así que dos reservas concurrentes no pueden vender la
+   * misma unidad (antes: leer, comparar en memoria y escribir; entre la lectura y la escritura otro podía reservar).
+   */
   async reserve(
     organizationId: string,
     variantId:      string,
     quantity:       number,
   ): Promise<InventoryRecord> {
-    const inv = await this.prisma.inventoryItem.findFirst({
-      where: { variantId, variant: { organizationId } },
+    const { count } = await this.prisma.inventoryItem.updateMany({
+      where: { variantId, variant: { organizationId }, quantityAvailable: { gte: quantity } },
+      data:  { quantityAvailable: { decrement: quantity }, quantityReserved: { increment: quantity } },
     });
 
-    if (!inv || inv.quantityAvailable < quantity) {
-      throw new InsufficientStockError(variantId, quantity, inv?.quantityAvailable ?? 0);
+    const current = await this.findByVariant(organizationId, variantId);
+    if (count === 0 || !current) {
+      throw new InsufficientStockError(variantId, quantity, current?.quantityAvailable ?? 0);
     }
-
-    const updated = await this.prisma.inventoryItem.update({
-      where: { id: inv.id },
-      data:  {
-        quantityAvailable: inv.quantityAvailable - quantity,
-        quantityReserved:  inv.quantityReserved  + quantity,
-      },
-    });
-    return updated as InventoryRecord;
+    return current;
   }
 
+  /** Libera stock reservado, también atómico (una sola sentencia, sin leer antes). */
   async release(
     organizationId: string,
     variantId:      string,
     quantity:       number,
   ): Promise<InventoryRecord> {
-    const inv = await this.prisma.inventoryItem.findFirst({
-      where: { variantId, variant: { organizationId } },
-    });
-    if (!inv) throw new Error(`Inventario no encontrado para variante: ${variantId}`);
+    const rows = await this.prisma.$executeRaw`
+      UPDATE inventory_items i
+      SET    quantity_available = i.quantity_available + ${quantity},
+             quantity_reserved  = GREATEST(0, i.quantity_reserved - ${quantity})
+      FROM   product_variants v
+      WHERE  i.variant_id = ${variantId}
+        AND  v.id = i.variant_id
+        AND  v.organization_id = ${organizationId}
+    `;
+    if (rows === 0) throw new Error(`Inventario no encontrado para variante: ${variantId}`);
 
-    const updated = await this.prisma.inventoryItem.update({
-      where: { id: inv.id },
-      data:  {
-        quantityAvailable: inv.quantityAvailable + quantity,
-        quantityReserved:  Math.max(0, inv.quantityReserved - quantity),
-      },
-    });
-    return updated as InventoryRecord;
+    const current = await this.findByVariant(organizationId, variantId);
+    if (!current) throw new Error(`Inventario no encontrado para variante: ${variantId}`);
+    return current;
   }
 
   async setAvailable(
@@ -80,7 +80,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       where: { id: inv.id },
       data:  { quantityAvailable: quantity },
     });
-    return updated as InventoryRecord;
+    return updated;
   }
 
   async findManyByVariants(
@@ -93,6 +93,6 @@ export class PrismaInventoryRepository implements IInventoryRepository {
         variant:   { organizationId },
       },
     });
-    return records as InventoryRecord[];
+    return records;
   }
 }

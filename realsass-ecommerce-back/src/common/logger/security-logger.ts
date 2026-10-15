@@ -36,7 +36,7 @@ export interface SuspiciousRequestEvent extends SecurityEventBase {
   reason: string;
 }
 
-type SecurityEvent =
+export type SecurityEvent =
   | TenantAccessDeniedEvent
   | RateLimitHitEvent
   | SuspiciousRequestEvent;

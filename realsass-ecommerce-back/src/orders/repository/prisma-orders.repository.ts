@@ -76,7 +76,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
         customerId:      input.customerId,
         subtotalCents:   input.subtotalCents,
         shippingCents:   input.shippingCents,
-        status:          'PENDING_PAYMENT' as $Enums.OrderStatus,
+        status:          'PENDING_PAYMENT',
         totalCents:      input.totalCents,
         currency:        input.currency,
         shippingAddress: (input.shippingAddress ?? null) as Prisma.InputJsonValue,

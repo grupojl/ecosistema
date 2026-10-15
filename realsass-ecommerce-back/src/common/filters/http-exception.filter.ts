@@ -38,10 +38,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
+    // En producción un 5xx no expone su mensaje (puede traer SQL, rutas o detalles de Prisma): queda en el log.
+    const hide = status >= 500 && process.env['NODE_ENV'] === 'production';
+
     response.status(status).json({
       success:    false,
       statusCode: status,
-      message,
+      message:    hide ? 'Error interno del servidor' : message,
       ...(errors && { errors }),
       timestamp: new Date().toISOString(),
       path:      request.url,

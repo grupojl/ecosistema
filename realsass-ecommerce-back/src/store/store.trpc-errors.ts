@@ -6,7 +6,7 @@
  * "la tienda no existe" (404 → desindexar) de "sass-back caído"
  * (503 → Google reintenta y conserva la indexación).
  */
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { HttpException } from '@nestjs/common';
 import { TRPCError } from '@trpc/server';
 
 export function rethrowAsTrpcStoreError(err: unknown): never {
@@ -14,10 +14,10 @@ export function rethrowAsTrpcStoreError(err: unknown): never {
 
   if (err instanceof HttpException) {
     const status = err.getStatus();
-    if (status === HttpStatus.NOT_FOUND) {
+    if (status === 404) {
       throw new TRPCError({ code: 'NOT_FOUND', message: err.message, cause: err });
     }
-    if (status === HttpStatus.SERVICE_UNAVAILABLE) {
+    if (status === 503) {
       throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: err.message, cause: err });
     }
   }

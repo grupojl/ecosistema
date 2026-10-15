@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node10",
+    "module": "node16",
+    "moduleResolution": "node16",
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -16,18 +16,19 @@
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "strictPropertyInitialization": false,
+    "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ],
       "@/trpc": [
-        "src/trpc/index.ts"
+        "./src/trpc/index.ts"
       ],
       "@/trpc/trpc": [
-        "src/trpc/trpc.ts"
+        "./src/trpc/trpc.ts"
       ],
       "@/types/tenant-context": [
         "../packages/auth-server/src/types/tenant-context.ts"
@@ -81,24 +82,21 @@
         "../packages/trpc/dist/server/context.d.ts"
       ],
       "@/domain/product.entity": [
-        "src/catalog/domain/product.entity.ts"
+        "./src/catalog/domain/product.entity.ts"
       ],
       "@/domain/order.errors": [
-        "src/orders/domain/order.errors.ts"
+        "./src/orders/domain/order.errors.ts"
       ],
       "@/errors/insufficient-stock.error": [
-        "src/inventory/errors/insufficient-stock.error.ts"
+        "./src/inventory/errors/insufficient-stock.error.ts"
       ]
     },
     "types": [
       "node"
     ],
     "typeRoots": [
-      "../node_modules/@types",
       "./node_modules/@types"
-    ],
-    "baseUrl": "./",
-    "ignoreDeprecations": "6.0"
+    ]
   },
   "extends": "../tsconfig.base.json",
   "exclude": [
@@ -106,6 +104,7 @@
     "dist",
     "**/*.spec.ts",
     "**/*.e2e-spec.ts",
+    "**/*.int-spec.ts",
     "test/**",
     "../realsass-sass-back/src/**/*"
   ]

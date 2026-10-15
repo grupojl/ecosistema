@@ -22,6 +22,8 @@ import type { OrdersService }              from '@/orders/orders.service';
 import type { CustomersService }           from '@/customers/customers.service';
 import type { CartService }                from '@/cart/cart.service';
 import type { StoreService }               from '@/store/store.service';
+import type { CustomerSessionService }     from '@/customers/customer-session.service';
+import type { StorefrontGate }             from '@/trpc/routers/customer.router';
 
 export interface EcommerceAppRouterDeps {
   catalogService:   CatalogService;
@@ -30,6 +32,8 @@ export interface EcommerceAppRouterDeps {
   customersService: CustomersService;
   cartService:      CartService;
   storeService:     StoreService;
+  customerSessions: CustomerSessionService;
+  storefrontGate:   StorefrontGate;
 }
 
 export function createEcommerceAppRouter(deps: EcommerceAppRouterDeps) {
@@ -43,6 +47,8 @@ export function createEcommerceAppRouter(deps: EcommerceAppRouterDeps) {
       deps.cartService,
       deps.catalogService,
       deps.storeService,
+      deps.customerSessions,
+      deps.storefrontGate,
     ),
   });
 }

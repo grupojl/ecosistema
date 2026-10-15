@@ -1,45 +1,61 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { parseAllowedOrigins, requireEnv, trustProxyHops } from '@real/auth-server';
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // ── Falla cerrado: sin su configuración de seguridad el servicio NO levanta ──
+  // (antes arrancaba "abierto": sin ALLOWED_ORIGINS reflejaba cualquier Origin con credenciales).
+  const allowedOrigins = parseAllowedOrigins();
+  // Misma clave que sass-back; admite varias separadas por coma ("nueva,vieja") para rotar sin caída.
+  requireEnv('INTERNAL_API_KEY', { minLength: process.env['NODE_ENV'] === 'production' ? 32 : 1 });
+  // Secreto con el que se firma la sesión del cliente del storefront (ver CustomerSessionService).
+  requireEnv('CUSTOMER_SESSION_SECRET', { minLength: 32 });
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('Bootstrap');
+
+  // Detrás de Railway el cliente real llega en X-Forwarded-For: sin esto el rate limit ve una sola IP.
+  app.set('trust proxy', trustProxyHops());
 
   app.setGlobalPrefix('api/v1');
   // ADR-004: la sesión del dashboard llega en la cookie HttpOnly __session; sin esto req.cookies queda vacío.
   app.use(cookieParser());
 
   // ── Seguridad: Helmet ─────────────────────────────────────────────────────
-  // crossOriginResourcePolicy: cross-origin permite que el storefront (origen
-  // distinto) cargue recursos sin bloqueo adicional de CORP.
+  // Es una API: no sirve HTML, así que la CSP es la más estricta posible.
+  // crossOriginResourcePolicy: cross-origin permite que el storefront (origen distinto) consuma la API.
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc:     ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri:        ["'none'"],
+          formAction:     ["'none'"],
+        },
+      },
     }),
   );
 
   // ── Seguridad: CORS ───────────────────────────────────────────────────────
-  // ecommerce-back sirve al storefront público — si no hay origenes explícitos
-  // se refleja el Origin del request (origin: true). Distinto a real-back donde
-  // el wildcard + credentials es inaceptable porque maneja tokens de identidad.
-  const rawOrigins = process.env['ALLOWED_ORIGINS'] ?? '';
-  const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
-
+  // Lista explícita de orígenes (ALLOWED_ORIGINS). Un storefront con dominio propio se agrega acá.
+  // La sesión del cliente viaja en la cookie HttpOnly store_session y la del dashboard en __session (ADR-004).
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id', 'x-visitor-country', 'x-trpc-source'],
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-  );
+  // Validación: Zod (input() de tRPC). No hay un ValidationPipe global: ningún DTO usa class-validator (ADR-024).
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
@@ -48,7 +64,7 @@ async function bootstrap(): Promise<void> {
 
   logger.log(`🛍️  real-ecommerce-back en http://0.0.0.0:${port}/api/v1`);
   logger.log(`🔥 Firebase Auth SSO activo (rutas @Public() lo saltan)`);
-  logger.log(`🛡️  Helmet + ThrottlerGuard (30 req/min) activos`);
+  logger.log(`🛡️  Helmet + CORS cerrado + rate limit en REST (30/min) y en /trpc activos`);
 }
 
-bootstrap();
+void bootstrap();

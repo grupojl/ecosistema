@@ -26,11 +26,18 @@ import { z }                                from 'zod';
 import { TRPCError }                        from '@trpc/server';
 import { router, publicProcedure, customerProcedure } from '@/trpc';
 import type { CustomersService }            from '@/customers/customers.service';
+import { CUSTOMER_SESSION_COOKIE, type CustomerSessionService } from '@/customers/customer-session.service';
 import type { OrdersService }               from '@/orders/orders.service';
 import type { CartService }                 from '@/cart/cart.service';
 import type { CatalogService }              from '@/catalog/catalog.service';
 import type { StoreService }                from '@/store/store.service';
 import { rethrowAsTrpcStoreError }          from '@/store/store.trpc-errors';
+import { runInTenant }                      from '@/prisma/tenant-context';
+
+/** Decide si una tienda puede recibir clientes nuevos (existe y está abierta). Lo implementa OrganizationsClientService. */
+export interface StorefrontGate {
+  assertStorefrontOpen(organizationId: string): Promise<void>;
+}
 
 export function createCustomerRouter(
   customersService: CustomersService,
@@ -38,6 +45,8 @@ export function createCustomerRouter(
   cartService:      CartService,
   catalogService:   CatalogService,
   storeService:     StoreService,
+  customerSessions: CustomerSessionService,
+  storefrontGate:   StorefrontGate,
 ) {
   return router({
 
@@ -45,27 +54,44 @@ export function createCustomerRouter(
 
     /**
      * customer.identify — @Public
-     * Dado un email, devuelve el customerId de la org.
-     * Si el cliente no existe, lo crea.
-     * Opcionalmente adopta un carrito anónimo al cliente.
+     * Abre la sesión del cliente: el servidor firma un token y lo entrega en una cookie HttpOnly
+     * (store_session). El token NO viaja en el body: el JavaScript del front nunca lo ve.
+     *
+     *  - Sin sesión previa: crea un invitado nuevo. Nunca busca por email ni devuelve una cuenta
+     *    existente: saber el email de alguien no da acceso a su cuenta.
+     *  - Con una sesión válida de la misma tienda: la continúa y completa los datos de contacto.
+     *
+     * Rate limit estricto (ver trpc.module): crea filas, así que es el endpoint más abusable.
      */
     identify: publicProcedure
       .input(z.object({
         organizationId: z.string().uuid(),
-        email:          z.string().email(),
-        displayName:    z.string().optional(),
-        phone:          z.string().optional(),
-        cartId:         z.string().optional(),
+        email:          z.string().email().max(254).optional(),
+        displayName:    z.string().max(120).optional(),
+        phone:          z.string().max(40).optional(),
       }))
-      .mutation(({ input }) =>
-        customersService.identify(
-          input.organizationId,
-          input.email,
-          input.displayName,
-          input.phone,
-          input.cartId,
-        ),
+      .mutation(({ ctx, input }) =>
+        // ADR-027: la base solo deja ver/escribir filas de ESTA tienda durante todo el handler.
+        runInTenant(input.organizationId, async () => {
+          // identify CREA filas: solo para tiendas que existen y están abiertas (no para UUID inventados).
+          await storefrontGate.assertStorefrontOpen(input.organizationId);
+          const { token, ...session } = await customersService.identify(
+            input.organizationId,
+            ctx.customerId && ctx.customerOrganizationId
+              ? { customerId: ctx.customerId, organizationId: ctx.customerOrganizationId }
+              : null,
+            { email: input.email, displayName: input.displayName, phone: input.phone },
+          );
+          ctx.res.cookie(CUSTOMER_SESSION_COOKIE, token, customerSessions.cookieOptions());
+          return session; // { customerId, isNew, expiresAt } — sin el token
+        }),
       ),
+
+    /** customer.logout — @Public. Borra la cookie de sesión del navegador. */
+    logout: publicProcedure.mutation(({ ctx }) => {
+      ctx.res.clearCookie(CUSTOMER_SESSION_COOKIE, customerSessions.clearCookieOptions());
+      return { ok: true as const };
+    }),
 
     /**
      * customer.resolveStore — @Public
@@ -87,7 +113,7 @@ export function createCustomerRouter(
         category:       z.string().optional(),
       }))
       .query(({ input }) =>
-        catalogService.listProductsPublic(input.organizationId, input.category),
+        runInTenant(input.organizationId, () => catalogService.listProductsPublic(input.organizationId, input.category)),
       ),
 
     /**
@@ -100,16 +126,18 @@ export function createCustomerRouter(
         organizationId: z.string().uuid(),
         handle:         z.string().min(1),
       }))
-      .query(async ({ input }) => {
-        const product = await catalogService.getProductPublic(
-          input.organizationId,
-          input.handle,
-        );
-        if (!product) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: `Product '${input.handle}' not found` });
-        }
-        return product;
-      }),
+      .query(({ input }) =>
+        runInTenant(input.organizationId, async () => {
+          const product = await catalogService.getProductPublic(
+            input.organizationId,
+            input.handle,
+          );
+          if (!product) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: `Product '${input.handle}' not found` });
+          }
+          return product;
+        }),
+      ),
 
     // ── Autenticados (customerProcedure) ──────────────────────────────────
 
@@ -118,15 +146,27 @@ export function createCustomerRouter(
      */
     me: customerProcedure
       .query(({ ctx }) =>
-        customersService.findById(ctx.organizationId!, ctx.customerId!),
+        customersService.findById(ctx.organizationId, ctx.customerId),
       ),
+
+    /**
+     * customer.deleteAccount — GDPR/LGPD. Anonimiza la cuenta de la SESIÓN y la cierra.
+     * Antes era público y recibía customerId/organizationId por input: con un id cualquiera se anonimizaba
+     * la cuenta de otra persona. Ahora el id sale solo de la cookie firmada (customerProcedure).
+     */
+    deleteAccount: customerProcedure
+      .mutation(async ({ ctx }) => {
+        const { anonymizedAt } = await customersService.deleteAccount(ctx.organizationId, ctx.customerId);
+        ctx.res.clearCookie(CUSTOMER_SESSION_COOKIE, customerSessions.clearCookieOptions());
+        return { ok: true as const, anonymizedAt: anonymizedAt.toISOString() };
+      }),
 
     /**
      * customer.orders — historial de órdenes del cliente
      */
     orders: customerProcedure
       .query(async ({ ctx }) => {
-        const all = await ordersService.listOrders(ctx.organizationId!);
+        const all = await ordersService.listOrders(ctx.organizationId);
         return all.filter(o => o.customerId === ctx.customerId);
       }),
 
@@ -136,7 +176,7 @@ export function createCustomerRouter(
     orderDetail: customerProcedure
       .input(z.object({ orderId: z.string().uuid() }))
       .query(async ({ ctx, input }) => {
-        const order = await ordersService.getOrder(ctx.organizationId!, input.orderId);
+        const order = await ordersService.getOrder(ctx.organizationId, input.orderId);
         if (!order || order.customerId !== ctx.customerId) {
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
@@ -150,20 +190,21 @@ export function createCustomerRouter(
       get: customerProcedure
         .input(z.object({ cartId: z.string() }))
         .query(({ ctx, input }) =>
-          cartService.getCart(ctx.organizationId!, input.cartId),
+          cartService.getOwnedCart(ctx.organizationId, input.cartId, ctx.customerId),
         ),
 
       addItem: customerProcedure
         .input(z.object({
           variantId: z.string().uuid(),
           quantity:  z.number().int().positive(),
-          sessionId: z.string(),
+          /** @deprecated ignorado: el carrito se ata al customerId de la sesión firmada. */
+          sessionId: z.string().optional(),
           cartId:    z.string().optional(),
         }))
         .mutation(({ ctx, input }) =>
           cartService.addItem(
-            ctx.organizationId!,
-            input.sessionId,
+            ctx.organizationId,
+            ctx.customerId,
             input.variantId,
             input.quantity,
             input.cartId,
@@ -175,9 +216,10 @@ export function createCustomerRouter(
           cartId:    z.string(),
           variantId: z.string().uuid(),
         }))
-        .mutation(({ ctx, input }) =>
-          cartService.removeItem(ctx.organizationId!, input.cartId, input.variantId),
-        ),
+        .mutation(async ({ ctx, input }) => {
+          await cartService.getOwnedCart(ctx.organizationId, input.cartId, ctx.customerId);
+          return cartService.removeItem(ctx.organizationId, input.cartId, input.variantId);
+        }),
     }),
 
     /**
@@ -194,19 +236,21 @@ export function createCustomerRouter(
           postalCode: z.string(),
           country:    z.string(),
         }),
-        shippingCents:       z.number().int().nonnegative().optional(),
         visitorCountryCode:  z.string().length(2).toUpperCase().optional(), // ADR-014
         locale:              z.string().min(2).max(10).optional(), // ADR-016 — idioma de la sesión, para el invoice
       }))
-      .mutation(({ ctx, input }) =>
-        ordersService.checkout({organizationId: ctx.organizationId!,
+      .mutation(async ({ ctx, input }) => {
+        // Solo se puede pagar el carrito propio (mismo NOT_FOUND si no existe o es de otro cliente).
+        await cartService.getOwnedCart(ctx.organizationId, input.cartId, ctx.customerId);
+        return ordersService.checkout({
+          organizationId:  ctx.organizationId,
           cartId:          input.cartId,
-          customerId:      ctx.customerId!,
+          customerId:      ctx.customerId,
           shippingAddress: input.shippingAddress,
-          shippingCents:   input.shippingCents,
+          visitorCountryCode: input.visitorCountryCode, // ADR-014
           locale:          input.locale,
-        }),
-      ),
+        });
+      }),
   });
 }
 
