@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Una corrida por rama: si llega un push nuevo, cancela la anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Valores dummy: solo para que `next build` / `prisma generate` no fallen por env faltante.
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dummy
+  NEXT_PUBLIC_REAL_BACK_URL: http://localhost:3020
+  NEXT_PUBLIC_SASS_BACK_URL: http://localhost:3020
+  NEXT_PUBLIC_API_URL: http://localhost:3020/api/v1
+  NEXT_PUBLIC_ECOMMERCE_API_URL: http://localhost:3025/api/v1
+  NEXT_PUBLIC_SASS_FRONT_URL: http://localhost:3021
+  NEXT_PUBLIC_DASHBOARD_FRONT_URL: http://localhost:3022
+  NEXT_PUBLIC_FIREBASE_API_KEY: ci-dummy
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-project
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci.appspot.com
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
+  NEXT_PUBLIC_FIREBASE_APP_ID: 1:000000000000:web:ci
+  SITE_URL: http://localhost:3023
+
+jobs:
+  # Mismo orden que el norte (ADR-019): prisma generate -> @real/trpc build -> lint -> typecheck -> build.
+  # Equivale a correr `pnpm check` en local.
+  quality:
+    name: lint + typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4   # versión leída de "packageManager" en package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  # Tests unitarios (jest en los backs y en @real/auth-server, vitest en el storefront).
+  # Los backs fallan si la cobertura baja de su umbral (jest.config.js): los umbrales solo suben (ADR-024).
+  tests:
+    name: tests + cobertura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+      - run: pnpm test:ci
+
+  # Integración contra Postgres real (ADR-024): aislamiento entre tenants y stock bajo concurrencia.
+  # Aplica las migraciones de verdad (`migrate deploy`) y verifica que no haya deriva contra schema.prisma.
+  integration:
+    name: integración (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Administrador: crea el esquema (migraciones) y limpia entre tests. NO se le aplican las políticas RLS.
+      SASS_DB: postgresql://test:test@localhost:5432/sass_test
+      ECOMMERCE_DB: postgresql://test:test@localhost:5432/ecommerce_test
+      # Rol de aplicación eco_app (ADR-027): sin SUPERUSER ni BYPASSRLS, el que usa el servicio y los specs de RLS.
+      SASS_APP_DB: postgresql://eco_app:app@localhost:5432/sass_test
+      ECOMMERCE_APP_DB: postgresql://eco_app:app@localhost:5432/ecommerce_test
+      # Obligatoria en el CI: los tests de Redis no pueden saltearse en silencio (test/integration-env.js).
+      TEST_REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+      - name: Crear bases de prueba y el rol de aplicación (ADR-027)
+        run: |
+          PGPASSWORD=test psql -h localhost -U test -d postgres -c "create database sass_test" -c "create database ecommerce_test"
+          for db in sass_test ecommerce_test; do
+            PGPASSWORD=test psql -h localhost -U test -d $db -v app_password="'app'" -f realsass-sass-back/prisma/rls/app-role.sql
+          done
+      - name: Migraciones y deriva (sass-back)
+        working-directory: realsass-sass-back
+        env:
+          DATABASE_URL: ${{ env.SASS_DB }}
+        run: |
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+      - name: Migraciones y deriva (ecommerce-back)
+        working-directory: realsass-ecommerce-back
+        env:
+          DATABASE_URL: ${{ env.ECOMMERCE_DB }}
+        run: |
+          pnpm exec prisma migrate deploy
+          pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+      - name: Tests de integración (sass-back)
+        working-directory: realsass-sass-back
+        env:
+          TEST_DATABASE_URL: ${{ env.SASS_DB }}
+          TEST_APP_DATABASE_URL: ${{ env.SASS_APP_DB }}
+        run: pnpm test:int
+      - name: Tests de integración (ecommerce-back)
+        working-directory: realsass-ecommerce-back
+        env:
+          TEST_DATABASE_URL: ${{ env.ECOMMERCE_DB }}
+          TEST_APP_DATABASE_URL: ${{ env.ECOMMERCE_APP_DB }}
+        run: pnpm test:int
+
+  # Cadena de suministro (ADR-018): vulnerabilidades high/critical bloquean el merge.
+  dependencies:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit:deps
+
+  # Reglas de arquitectura, seguridad y dependencias (scripts/audit): ADR-022 y ADR-023.
+  # Incluye security-smoke.cjs, que ejecuta las primitivas de seguridad contra el código real
+  # (necesita las dependencias instaladas). Es bloqueante: las reglas se verifican solas.
+  audits:
+    name: auditorías (arquitectura, seguridad, dependencias)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: bash scripts/audit/run.sh --ci

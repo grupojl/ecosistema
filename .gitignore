@@ -23,6 +23,19 @@ url,env.txt
 # Cliente Prisma: se regenera con `prisma generate` (pnpm contracts / build). Nunca se versiona.
 **/src/generated/
 
+# Variables locales del Makefile (la plantilla versionada es .env.make.example)
+.env.make
+
 # Respaldos locales
 *.bak
 *.bak2
+
+# Parches y respaldos (git ya es el backup)
+*.orig
+*.rej
+*.patch
+*PATCH.md
+
+# Stack Docker local: secretos generados y logs de build
+scripts/docker/.stack.env
+scripts/docker/.logs/

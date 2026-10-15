@@ -1,0 +1,7 @@
+# Mutaciones tRPC que pueden llamarse SIN sesión (S10). Agregar una es una decisión de seguridad: dejá el motivo.
+# Formato: <back>:<router>.<procedure>
+
+# Abre la sesión de un invitado en una tienda ABIERTA; entrega la cookie firmada. Rate limit estricto (ADR-023).
+realsass-ecommerce-back:customer.identify
+# Borra la cookie de sesión del navegador. No toca datos.
+realsass-ecommerce-back:customer.logout

@@ -3,17 +3,27 @@
   "private": true,
   "version": "0.0.0",
   "description": "Ecosistema Real — pnpm workspaces",
+  "packageManager": "pnpm@10.11.1",
   "scripts": {
-    "contracts":      "pnpm --filter realsass-sass-back exec prisma generate && pnpm --filter realsass-ecommerce-back exec prisma generate && pnpm --filter @real/trpc build",
-    "build":          "pnpm --filter \"./packages/*\" build && pnpm --recursive --filter \"./realsass-*\" --filter \"./real-*\" build",
+    "contracts": "pnpm --filter realsass-sass-back exec prisma generate && pnpm --filter realsass-ecommerce-back exec prisma generate && pnpm --filter @real/trpc build",
+    "build": "pnpm --filter \"./packages/*\" build && pnpm --recursive --filter \"./realsass-*\" --filter \"./real-*\" build",
     "build:packages": "pnpm --filter \"./packages/*\" build",
-    "dev":            "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front dev",
-    "lint":           "pnpm --recursive lint",
-    "typecheck":      "pnpm --recursive typecheck",
-    "test":           "pnpm --recursive test"
+    "dev": "pnpm --parallel --filter realsass-sass-back --filter realsass-ecommerce-back --filter realsass-sass-front --filter realsass-dashboard-front --filter real-ecommerce-front --filter realsass-docs-front dev",
+    "lint": "pnpm --recursive --if-present lint",
+    "lint:fix": "pnpm --recursive --if-present lint:fix",
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "test": "pnpm --recursive --if-present test",
+    "audit:deps": "pnpm audit --audit-level=high",
+    "audit:repo": "bash scripts/audit/run.sh --ci",
+    "check": "pnpm contracts && pnpm lint && pnpm typecheck && pnpm test:ci && pnpm build",
+    "test:cov": "pnpm --recursive --if-present test:cov",
+    "test:ci": "pnpm test:cov && pnpm --filter real-ecommerce-front test && pnpm test:scripts",
+    "setup:hooks": "git config core.hooksPath .githooks",
+    "test:int": "pnpm --filter realsass-sass-back test:int && pnpm --filter realsass-ecommerce-back test:int",
+    "test:scripts": "node --test \"scripts/hooks/*.test.cjs\""
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
   },
   "devDependencies": {

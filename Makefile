@@ -8,12 +8,20 @@ ifneq (,$(wildcard .env.make))
 endif
 
 .PHONY: \
+	env-init \
 	1 2 3 4 5 \
 	r \
 	x \
 	g \
 	git-empty \
 	dev install help
+
+# -----------------------------------------------------------------
+# Primera vez: crea .env.make (local, NO versionado) a partir de la plantilla
+# -----------------------------------------------------------------
+env-init:
+	@if [ -f .env.make ]; then echo ".env.make ya existe — no se toca"; \
+	else cp .env.make.example .env.make && echo "Creado .env.make desde .env.make.example — completalo con tus valores"; fi
 
 # -----------------------------------------------------------------
 # PROYECTOS — cd al directorio y levanta
@@ -72,12 +80,12 @@ r:
 	@echo "=== Listo ==="
 
 # -----------------------------------------------------------------
-# a — ejecuta bash a.sh (el script audit en la raíz)
+# a — auditorías del monorepo (scripts/audit/*.sh)
+#     make a              → corre todas
+#     make a A=seguridad  → corre una sola
 # -----------------------------------------------------------------
 a:
-	@[ -f a.sh ] || (echo "[✗] No existe a.sh en la raíz"; exit 1)
-	@echo "=== Ejecutando a.sh ==="
-	@bash a.sh ecosistema
+	@bash scripts/audit/run.sh $(A)
 
 # -----------------------------------------------------------------
 # X — ejecuta bash x.sh (el script activo en la raíz)

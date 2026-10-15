@@ -1,0 +1,8 @@
+#!/bin/sh
+# Pre-commit del monorepo (activar con: pnpm setup:hooks). Ver scripts/hooks/check-staged.cjs.
+node scripts/hooks/check-staged.cjs || exit 1
+
+# Si gitleaks está instalado, revisa también el diff completo con sus reglas.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --config .gitleaks.toml || exit 1
+fi

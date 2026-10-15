@@ -1,0 +1,13 @@
+title = "Ecosistema Real"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Archivos de ejemplo y placeholders (sin secretos reales)"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.local\.example$''',
+  '''\.env\.make\.example$''',
+  '''pnpm-lock\.yaml$''',
+]

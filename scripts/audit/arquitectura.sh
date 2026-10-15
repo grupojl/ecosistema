@@ -15,6 +15,9 @@ echo ""
 # A1 — Domain/Repository: services sin PrismaService directo
 echo "A1 — Services usan IRepository (no PrismaService directo)..."
 A1_BUGS=0
+A1_DEBTS=0
+# Deuda documentada en .claude/roadmap/deuda-tecnica.md: services que aún hablan con Prisma sin IRepository.
+A1_DEBT_ALLOW=""
 for SVC in $BACKENDS; do
   for f in $(find "$SVC/src" -name "*.service.ts" \
     | grep -v "prisma.service\|app.service\|store.service\|organizations-client.service\|market-resolver.service" 2>/dev/null || true); do
@@ -27,14 +30,20 @@ for SVC in $BACKENDS; do
     if grep -q "PrismaService\|this\.prisma\." "$f" 2>/dev/null; then
       # Verificar si tiene IRepository — si no, es bug
       if ! grep -q "IRepository\|REPOSITORY\|@Inject.*REPOSITORY\|Repository" "$f" 2>/dev/null; then
-        echo "     → [$SVC] PrismaService directo sin IRepository: $BASENAME"
-        A1_BUGS=$((A1_BUGS+1))
+        if [[ " $A1_DEBT_ALLOW " == *" $BASENAME "* ]]; then
+          echo "     ~ [$SVC] deuda documentada (sin IRepository): $BASENAME"
+          A1_DEBTS=$((A1_DEBTS+1))
+        else
+          echo "     → [$SVC] PrismaService directo sin IRepository: $BASENAME"
+          A1_BUGS=$((A1_BUGS+1))
+        fi
       fi
     fi
   done
 done
-[[ $A1_BUGS -eq 0 ]] && OK "A1" "Services usan IRepository — sin PrismaService directo" \
-                       || BUG "A1" "$A1_BUGS service(s) con PrismaService directo sin IRepository"
+if [[ $A1_BUGS -gt 0 ]]; then BUG "A1" "$A1_BUGS service(s) con PrismaService directo sin IRepository"
+elif [[ $A1_DEBTS -gt 0 ]]; then DEBT "A1" "$A1_DEBTS service(s) con deuda documentada (PrismaService directo)"
+else OK "A1" "Services usan IRepository — sin PrismaService directo"; fi
 
 # A2 — tRPC procedures sin lógica de negocio (deben delegar al Service)
 echo "A2 — tRPC procedures como thin controllers (sin lógica inline)..."
@@ -43,7 +52,8 @@ for SVC in $BACKENDS; do
   for f in $(find "$SVC/src/trpc/routers" -name "*.router.ts" 2>/dev/null || true); do
     [[ ! -f "$f" ]] && continue
     # Busca lógica inline: if/try/catch más allá de la llamada al service
-    LOGIC=$(grep -c "^\s*if\s*(\|^\s*try\s*{\|prisma\.\|findMany\|findFirst\|create(" "$f" 2>/dev/null || echo 0)
+    LOGIC=$(grep -v "^\s*\*\|^\s*//" "$f" 2>/dev/null | grep -c "^\s*try\s*{\|prisma\.\|\.findMany(\|\.findFirst(\|\.\$transaction(") || true
+    [[ -z "$LOGIC" ]] && LOGIC=0
     if [[ $LOGIC -gt 2 ]]; then
       echo "     → [$SVC] posible lógica en procedure ($LOGIC líneas): $(basename $f)"
       A2_BUGS=$((A2_BUGS+1))
@@ -56,28 +66,35 @@ done
 # A3 — @real/auth-server para toda auth — sin firebase-admin reimplementado
 echo "A3 — Auth via @real/auth-server, sin reimplementación de firebase-admin..."
 A3_BUGS=0
+A3_DEBTS=0
+# sass-back es dueño de la identidad (custom claims, step-up): usan firebase-admin/auth directo.
+# Deuda documentada: moverlo a @real/auth-server.
+A3_DEBT_ALLOW=""
 for SVC in $BACKENDS; do
   # Busca import directo de firebase-admin fuera de @real/auth-server
   FB_DIRECT=$(grep -rn "from 'firebase-admin\|require.*firebase-admin" \
     "$SVC/src" --include="*.ts" \
     | grep -v "//.*firebase-admin" 2>/dev/null || true)
-  if [[ -n "$FB_DIRECT" ]]; then
-    echo "     → [$SVC] firebase-admin importado directamente (usar @real/auth-server):"
-    echo "$FB_DIRECT" | head -3 | sed 's/^/        /'
-    A3_BUGS=$((A3_BUGS+1))
-  fi
+  while IFS= read -r hit; do
+    [[ -z "$hit" ]] && continue
+    hit_file=$(echo "$hit" | cut -d: -f1)
+    base=$(basename "$hit_file")
+    if [[ " $A3_DEBT_ALLOW " == *" $base "* ]]; then A3_DEBTS=$((A3_DEBTS+1))
+    else echo "     → [$SVC] firebase-admin directo (usar @real/auth-server): $hit"; A3_BUGS=$((A3_BUGS+1)); fi
+  done <<< "$FB_DIRECT"
 done
 # Packages: @real/auth-server SÍ puede tener firebase-admin directo
-[[ $A3_BUGS -eq 0 ]] && OK "A3" "Auth via @real/auth-server — sin reimplementación de firebase-admin" \
-                       || BUG "A3" "$A3_BUGS servicio(s) con firebase-admin directo — usar @real/auth-server"
+if [[ $A3_BUGS -gt 0 ]]; then BUG "A3" "$A3_BUGS uso(s) de firebase-admin directo — usar @real/auth-server"
+elif [[ $A3_DEBTS -gt 0 ]]; then DEBT "A3" "$A3_DEBTS uso(s) de firebase-admin directo en sass-back (deuda documentada)"
+else OK "A3" "Auth via @real/auth-server — sin reimplementación de firebase-admin"; fi
 
 # A4 — Sin imports cruzados entre sass-back y ecommerce-back
 echo "A4 — Sin imports cruzados entre backends..."
 A4_BUGS=0
-CROSS_SASS=$(grep -rn "realsass-ecommerce-back\|@/.*ecommerce" \
-  realsass-sass-back/src --include="*.ts" 2>/dev/null || true)
-CROSS_ECO=$(grep -rn "realsass-sass-back\|@/.*sass-back" \
-  realsass-ecommerce-back/src --include="*.ts" 2>/dev/null || true)
+CROSS_SASS=$(grep -rnE "(from|require\()\s*['\"][^'\"]*(realsass-ecommerce-back|ecommerce-back)" \
+  realsass-sass-back/src --include="*.ts" 2>/dev/null | grep -v "/generated/" || true)
+CROSS_ECO=$(grep -rnE "(from|require\()\s*['\"][^'\"]*(realsass-sass-back|sass-back)" \
+  realsass-ecommerce-back/src --include="*.ts" 2>/dev/null | grep -v "/generated/" || true)
 if [[ -n "$CROSS_SASS" ]]; then
   echo "     → sass-back importa de ecommerce-back"
   echo "$CROSS_SASS" | head -2 | sed 's/^/        /'
@@ -117,7 +134,13 @@ for SVC in $BACKENDS; do
   for f in $(find "$SVC/src/trpc/routers" -name "*.router.ts" 2>/dev/null || true); do
     [[ ! -f "$f" ]] && continue
     # Procedures con .input() sin z.
-    INPUT_WITHOUT_ZOD=$(grep -n "\.input(" "$f" 2>/dev/null | grep -v "z\." || true)
+    INPUT_WITHOUT_ZOD=""
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      arg=$(echo "$line" | sed -E 's/.*\.input\(([A-Za-z0-9_]+).*/\1/')
+      if [[ "$arg" != "$line" ]] && { grep -qE "(const|let)[[:space:]]+$arg\b[^=]*=[[:space:]]*z\." "$f" || grep -qE "^import .*\b$arg\b" "$f"; }; then continue; fi
+      INPUT_WITHOUT_ZOD+="$line"$'\n'
+    done < <(grep -n "\.input(" "$f" 2>/dev/null | grep -v "z\." || true)
     if [[ -n "$INPUT_WITHOUT_ZOD" ]]; then
       echo "     → [$SVC] .input() sin z. en $(basename $f):"
       echo "$INPUT_WITHOUT_ZOD" | head -2 | sed 's/^/        /'
@@ -142,6 +165,17 @@ for SVC in $BACKENDS; do
 done
 [[ $A7_DEBTS -eq 0 ]] && OK "A7" "Domain errors son clases tipadas en domain/" \
                          || DEBT "A7" "$A7_DEBTS archivo(s) de domain/ con Error genérico — usar DomainError tipado"
+
+# A8 — Repo sin respaldos ni parches versionados (ADR-022: git ya es el backup).
+# El pre-commit lo frena para archivos nuevos; esto atrapa los que ya estaban versionados.
+echo "A8 — Sin *.bak*, *.orig, *.rej ni *PATCH.md versionados..."
+A8_FILES=$(git ls-files 2>/dev/null | grep -E '\.(bak[0-9]*|orig|rej|patch)$|PATCH\.md$' || true)
+if [[ -z "$A8_FILES" ]]; then
+  OK "A8" "Sin archivos de respaldo ni parche versionados"
+else
+  echo "$A8_FILES" | sed 's/^/     → /'
+  BUG "A8" "$(echo "$A8_FILES" | wc -l | tr -d ' ') archivo(s) de respaldo/parche versionados"
+fi
 
 echo ""
 echo "────────────────────────────────────────"

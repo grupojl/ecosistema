@@ -23,15 +23,17 @@ header() {
   echo -e "${CYAN}${BOLD}══════════════════════════════════════════════════${RESET}"
 }
 
+export GREP_EX="--include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.next --exclude-dir=generated --exclude-dir=coverage --exclude-dir=.git --exclude=*.d.ts"
+
 run_check() {
   local id="$1" desc="$2"; shift 2
   header "${id} · ${desc}"
   local output
-  output=$(bash -c "$*" 2>/dev/null || true)
+  output=$(bash -c "$*" 2>/dev/null|| true)
   if [[ -z "$output" ]]; then
     echo -e "${GREEN}✓ Sin hallazgos${RESET}"
   else
-    local count; count=$(echo "$output" | wc -l | tr -d ' ')
+    local count; count=$(echo "$output"| wc -l| tr -d ' ')
     echo -e "${RED}✗ ${count} hallazgo(s):${RESET}"
     echo "$output"
     TOTAL_FINDINGS=$((TOTAL_FINDINGS + count))
@@ -43,7 +45,7 @@ run_check_present() {
   local id="$1" desc="$2"; shift 2
   header "${id} · ${desc}"
   local output
-  output=$(bash -c "$*" 2>/dev/null || true)
+  output=$(bash -c "$*" 2>/dev/null|| true)
   if [[ -n "$output" ]]; then
     echo -e "${GREEN}✓ Presente:${RESET} $output"
   else
@@ -57,11 +59,11 @@ run_info() {
   local id="$1" desc="$2"; shift 2
   header "${id} · ${desc}"
   local output
-  output=$(bash -c "$*" 2>/dev/null || true)
+  output=$(bash -c "$*" 2>/dev/null|| true)
   if [[ -z "$output" ]]; then
     echo -e "${GREEN}✓ Sin deuda en esta categoría${RESET}"
   else
-    local count; count=$(echo "$output" | wc -l | tr -d ' ')
+    local count; count=$(echo "$output"| wc -l| tr -d ' ')
     echo -e "${YELLOW}⚠ ${count} ítem(s) de deuda documentada:${RESET}"
     echo "$output"
   fi
@@ -70,33 +72,24 @@ run_info() {
 # ── Checks de calidad ─────────────────────────────────────────────────────────
 
 run_check "B1" "as any sin @real/ — bugs reales" \
-  'grep -rn " as any" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" | grep -v ".next" | grep -v "dist" | grep -v "build" \
-  | grep -v "@real/" | grep -v "@ecosistema-ms/" || true'
+  'grep -rn $GREP_EX " as any" | grep -v "@real/" | grep -v "@ecosistema-ms/" || true'
 
 run_check "B1b" "parámetros tipados como any — excluye JSDoc" \
-  'grep -rn ": any\b\|: any," --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" | grep -v "dist" \
-  | grep -v ":[0-9]*:[[:space:]]*\*" \
-  | grep -v ":[0-9]*:[[:space:]]*//" || true'
+  'grep -rn $GREP_EX ": any\b\|: any," \
+    | grep -v ":[0-9]*:[[:space:]]*\*" \
+    | grep -v ":[0-9]*:[[:space:]]*//" || true'
 
-run_check "B2" "as unknown as sin @real/" \
-  'grep -rn " as unknown as" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" | grep -v "dist" \
-  | grep -v "@real/" | grep -v "@ecosistema-ms/" || true'
+run_check "B2" "as unknown as sin @real/ (en tests es normal: dobles parciales)" \
+  'grep -rn $GREP_EX --exclude="*.spec.ts" --exclude="*-spec.ts" " as unknown as" | grep -v "@real/" | grep -v "@ecosistema-ms/" || true'
 
 run_check "B3" "@ts-ignore prohibido" \
-  'grep -rn "@ts-ignore" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" || true'
+  'grep -rn $GREP_EX "@ts-ignore" || true'
 
 run_check "B4" "@ts-expect-error sin texto explicativo" \
-  'grep -rn "@ts-expect-error" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" || true'
+  'grep -rn $GREP_EX "@ts-expect-error" || true'
 
 run_check "B5" "class-validator prohibido — usar Zod" \
-  'grep -rn "from '\''class-validator'\''\|from \"class-validator\"\|@IsString\b\|@IsEmail\b\|@IsEnum\b\|@IsOptional\b\|@IsNotEmpty\b" \
-  --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" || true'
+  'grep -rn $GREP_EX "from '"'"'class-validator'"'"'\|from \"class-validator\"\|@IsString\b\|@IsEmail\b\|@IsEnum\b\|@IsOptional\b\|@IsNotEmpty\b" || true'
 
 run_check_present "B6" "strictNullChecks activo en tsconfig" \
   'grep -E "strictNullChecks|\"strict\"" tsconfig.base.json'
@@ -104,24 +97,20 @@ run_check_present "B6" "strictNullChecks activo en tsconfig" \
 # ── Deuda documentada ─────────────────────────────────────────────────────────
 
 run_info "D1" "as any CON @real/ — casts documentados pendientes" \
-  'grep -rn " as any" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" | grep -v ".next" | grep -v "dist" | grep -v "build" \
-  | grep "@real/" || true'
+  'grep -rn $GREP_EX " as any" \| grep -v ".next"| grep -v "dist"| grep -v "build" \
+ | grep "@real/"|| true'
 
 run_info "D2" "as unknown as CON @real/" \
-  'grep -rn " as unknown as" --include="*.ts" --include="*.tsx" \
-  | grep -v "node_modules" | grep -v "dist" \
-  | grep "@real/" || true'
+  'grep -rn $GREP_EX " as unknown as" \ \
+ | grep "@real/"|| true'
 
 run_info "D3" "JSONB en repositories — necesitan Zod" \
-  'grep -rn "@real/jsonb-cast" --include="*.ts" \
-  | grep -v "node_modules" | grep -v "spec.ts" \
-  | grep "repository/" || true'
+  'grep -rn $GREP_EX "@real/jsonb-cast" --include="*.ts" \| grep -v "spec.ts" \
+ | grep "repository/"|| true'
 
 run_info "D4" "JSONB fuera de repositories — tipado flojo" \
-  'grep -rn "@real/jsonb-cast" --include="*.ts" \
-  | grep -v "node_modules" | grep -v "spec.ts" \
-  | grep -v "repository/" || true'
+  'grep -rn $GREP_EX "@real/jsonb-cast" --include="*.ts" \| grep -v "spec.ts" \
+ | grep -v "repository/"|| true'
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo ""

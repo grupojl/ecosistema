@@ -72,6 +72,7 @@ C3=$(grep -rn "localStorage.*token\|localStorage.*session\|localStorage.*auth\|s
 # FIX v3: excluir archivos que son lógica de PLATAFORMA (no de tenant):
 #   - prisma-organizations.repository.ts → gestiona la tabla Organization en sí
 #   - internal-organizations.service.ts  → endpoint de plataforma para ecommerce-back
+#   - prisma-internal-organizations.repository.ts → su repositorio (cross-tenant por diseño, InternalApiKeyGuard)
 #   - prisma-affiliate.repository.ts     → programa de afiliados es global
 #   - store.service.ts                   → resuelve la store pública por slug (sin org scope)
 echo "C4 — organizationId en queries Prisma de negocio..."
@@ -89,6 +90,7 @@ for SVC in $BACKENDS; do
       # Lógica de plataforma — organizationId no aplica por diseño
       prisma-organizations.repository.ts) continue ;;
       internal-organizations.service.ts)  continue ;;
+      prisma-internal-organizations.repository.ts) continue ;;
       prisma-affiliate.repository.ts)     continue ;;
       store.service.ts)                   continue ;;
       organizations-client.service.ts)    continue ;;
@@ -111,7 +113,7 @@ echo "C5 — Sin secretos hardcodeados..."
 C5=$(grep -rn \
   "FIREBASE_API_KEY\s*=\s*['\"][A-Za-z0-9]\|DATABASE_URL\s*=\s*['\"]postgres\|SECRET\s*=\s*['\"][A-Za-z0-9]" \
   $BACKENDS packages \
-  --include="*.ts" \
+  --include="*.ts" --exclude="*.spec.ts" --exclude="*-spec.ts" \
   | grep -v "process\.env\|config\.\|getOrThrow\|\.env\|// \|process\.env\[" \
   2>/dev/null || true)
 [[ -z "$C5" ]] && OK "C5" "Sin secretos hardcodeados en código" \
@@ -162,6 +164,134 @@ else
     DEBT "C8" "@Public() en $COUNT ruta(s) no esperadas — verificar"
     echo "$PUBLIC_USES" | head -5 | sed 's/^/       /'
   fi
+fi
+
+# ── ADR-023 — norte de seguridad ────────────────────────────────────────────
+# "Nada que el cliente pueda fabricar es una credencial · todo falla cerrado · todo secreto es rotable"
+SRC_EXCL="--include=*.ts --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=generated --exclude=*.spec.ts"
+
+# S1 — La identidad del cliente sale de una sesión firmada, no de un id que mande el cliente
+echo "S1 — Sin identidad del cliente tomada de un header sin firma..."
+S1=$(grep -rnE $SRC_EXCL "headers\[['\"]x-customer-(id|token)['\"]\]|get\('x-customer-(id|token)'\)" realsass-ecommerce-back/src 2>/dev/null || true)
+[[ -z "$S1" ]] && OK "S1" "El customerId sale de la cookie HttpOnly firmada, no de un header que arma el cliente" \
+               || { BUG "S1" "se lee x-customer-id como credencial:"; echo "$S1" | head -3 | sed 's/^/        /'; }
+
+# S2 — CORS cerrado: nunca reflejar el Origin ni usar comodín con credenciales
+echo "S2 — CORS sin 'origin: true' ni comodín..."
+S2=$(grep -rnE "origin:\s*(true|'\*'|\"\*\")" $SRC_EXCL realsass-sass-back/src realsass-ecommerce-back/src 2>/dev/null || true)
+[[ -z "$S2" ]] && OK "S2" "CORS con lista explícita (parseAllowedOrigins), sin reflejar el Origin" \
+               || { BUG "S2" "CORS abierto:"; echo "$S2" | head -3 | sed 's/^/        /'; }
+
+# S3 — Claves de servicio: comparación en tiempo constante y nunca una clave vacía
+echo "S3 — Claves de servicio con matchesAnyKey/firstKey (sin !== ni ?? '')..."
+S3=$(grep -rnE "(apiKey|key|provided)\s*[!=]==?\s*(validKey|expected)|INTERNAL_API_KEY'\]\s*\?\?\s*''" $SRC_EXCL realsass-sass-back/src realsass-ecommerce-back/src packages/auth-server/src 2>/dev/null || true)
+[[ -z "$S3" ]] && OK "S3" "Comparación en tiempo constante y sin fallback a clave vacía" \
+               || { BUG "S3" "comparación insegura o clave vacía:"; echo "$S3" | head -3 | sed 's/^/        /'; }
+
+# S4 — /trpc con rate limit (los guards de Nest no cubren los middlewares de Express)
+echo "S4 — Rate limit en el middleware tRPC de ambos backs..."
+S4_BAD=0
+for SVC in $BACKENDS; do
+  grep -q "createRateLimitMiddleware" "$SVC/src/trpc/trpc.module.ts" 2>/dev/null || { echo "     → $SVC: /trpc sin rate limit"; S4_BAD=$((S4_BAD+1)); }
+done
+[[ $S4_BAD -eq 0 ]] && OK "S4" "/trpc con rate limit por IP y por usuario en ambos backs" || BUG "S4" "$S4_BAD back(s) con /trpc sin rate limit"
+
+# S5 — Todo servicio falla cerrado al arrancar (env obligatorio) y confía en el proxy bien configurado
+echo "S5 — main.ts exige su configuración de seguridad y define trust proxy..."
+S5_BAD=0
+for SVC in $BACKENDS; do
+  for needle in "parseAllowedOrigins" "requireEnv('INTERNAL_API_KEY'" "trustProxyHops"; do
+    grep -q "$needle" "$SVC/src/main.ts" 2>/dev/null || { echo "     → $SVC/src/main.ts no usa $needle"; S5_BAD=$((S5_BAD+1)); }
+  done
+done
+grep -q "requireEnv('CUSTOMER_SESSION_SECRET'" realsass-ecommerce-back/src/main.ts 2>/dev/null || { echo "     → ecommerce-back no exige CUSTOMER_SESSION_SECRET"; S5_BAD=$((S5_BAD+1)); }
+[[ $S5_BAD -eq 0 ]] && OK "S5" "Los backs no arrancan sin ALLOWED_ORIGINS, INTERNAL_API_KEY ni CUSTOMER_SESSION_SECRET" || BUG "S5" "$S5_BAD requisito(s) de arranque sin verificar"
+
+# S6 — Toda llamada entre servicios tiene timeout
+echo "S6 — fetch entre servicios con timeout..."
+S6_BAD=0
+for f in $(grep -rlE "\bfetch\(" $SRC_EXCL realsass-sass-back/src realsass-ecommerce-back/src packages/auth-server/src 2>/dev/null || true); do
+  grep -qE "AbortSignal\.timeout|AbortController" "$f" || { echo "     → sin timeout: $f"; S6_BAD=$((S6_BAD+1)); }
+done
+[[ $S6_BAD -eq 0 ]] && OK "S6" "Toda llamada fetch entre servicios tiene timeout" || BUG "S6" "$S6_BAD archivo(s) con fetch sin timeout"
+
+# S7 — Los invariantes de seguridad están cubiertos por tests (se ejecutan en el CI: job "tests")
+echo "S7 — Tests de los invariantes de seguridad presentes..."
+S7_BAD=0
+for spec in \
+  packages/auth-server/src/security/__tests__/keys.spec.ts \
+  packages/auth-server/src/security/__tests__/require-env.spec.ts \
+  packages/auth-server/src/http/__tests__/circuit-breaker.spec.ts \
+  packages/auth-server/src/http/__tests__/rate-limit.spec.ts \
+  packages/auth-server/src/guards/tenant.guard.spec.ts \
+  packages/auth-server/src/guards/roles.guard.spec.ts \
+  packages/auth-server/src/guards/firebase-auth.guard.spec.ts \
+  realsass-ecommerce-back/src/customers/customer-session.service.spec.ts \
+  realsass-ecommerce-back/src/trpc/__tests__/storefront-session.integration.spec.ts \
+  realsass-ecommerce-back/src/trpc/__tests__/trpc-mount.integration.spec.ts \
+  realsass-ecommerce-back/src/organizations-client/organizations-client.service.spec.ts \
+  realsass-sass-back/src/common/guards/api-key.guard.spec.ts \
+  realsass-sass-back/src/common/security/assert-public-url.spec.ts \
+  realsass-sass-back/src/config-webhooks/webhook-delivery.processor.spec.ts \
+  realsass-sass-back/src/config-secrets/crypto.service.spec.ts \
+  realsass-sass-back/src/prisma/tenant-context.spec.ts \
+  realsass-ecommerce-back/src/prisma/tenant-context.spec.ts \
+  realsass-sass-back/src/__tests__/integration/rls.int-spec.ts \
+  realsass-ecommerce-back/src/__tests__/integration/rls.int-spec.ts \
+  realsass-sass-back/src/markets/__tests__/markets.integration.spec.ts; do
+  [[ -f "$spec" ]] || { echo "     → falta el test: $spec"; S7_BAD=$((S7_BAD+1)); }
+done
+[[ $S7_BAD -eq 0 ]] && OK "S7" "Sesión firmada, claves, rate limit, breaker, guards, SSRF y firma de webhooks tienen tests" \
+                    || BUG "S7" "$S7_BAD test(s) de seguridad ausentes"
+
+# ── ADR-027 — aislamiento por fila en la base (Row Level Security) ───────────
+
+# S8 — runAsSystem() es la única puerta que ve todas las organizaciones: solo desde archivos autorizados
+echo "S8 — runAsSystem() solo desde archivos autorizados (ADR-027)..."
+S8_ALLOWED="src/prisma/tenant-context.ts src/config-webhooks/webhook-delivery.processor.ts"
+S8_BAD=0
+for SVC in $BACKENDS; do
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    rel="${f#"$SVC"/}"
+    case " $S8_ALLOWED " in *" $rel "*) continue ;; esac
+    echo "     → [$SVC] runAsSystem() fuera de la lista: $rel"
+    S8_BAD=$((S8_BAD+1))
+  done < <(grep -rln "runAsSystem(" "$SVC/src" --include="*.ts" 2>/dev/null \
+            | grep -v "\.spec\.ts$\|\.int-spec\.ts$\|/generated/" || true)
+done
+[[ $S8_BAD -eq 0 ]] && OK "S8" "runAsSystem() solo en archivos autorizados ($S8_ALLOWED)" \
+                    || BUG "S8" "$S8_BAD uso(s) de runAsSystem() fuera de la lista: ver ADR-027 antes de ampliarla"
+
+# S9 — El código que fija el tenant en la sesión es idéntico en ambos backs y el PrismaService lo usa
+echo "S9 — tenant-context / tenant-aware-pool idénticos y en uso..."
+S9_BAD=0
+for f in tenant-context.ts tenant-aware-pool.ts; do
+  if ! cmp -s "realsass-sass-back/src/prisma/$f" "realsass-ecommerce-back/src/prisma/$f"; then
+    echo "     → $f difiere entre sass-back y ecommerce-back (es código de seguridad: tiene que ser idéntico)"
+    S9_BAD=$((S9_BAD+1))
+  fi
+done
+for SVC in $BACKENDS; do
+  grep -q "new TenantAwarePool(" "$SVC/src/prisma/prisma.service.ts" \
+    || { echo "     → [$SVC] PrismaService no usa TenantAwarePool: RLS no recibe el tenant"; S9_BAD=$((S9_BAD+1)); }
+  grep -q "assertRlsEffective" "$SVC/src/prisma/prisma.service.ts" \
+    || { echo "     → [$SVC] PrismaService no verifica el rol de la base al arrancar"; S9_BAD=$((S9_BAD+1)); }
+  grep -q "withTenantScope" "$SVC/src/trpc/trpc.ts" \
+    || { echo "     → [$SVC] trpc.ts no abre el alcance de tenant en los procedures autenticados"; S9_BAD=$((S9_BAD+1)); }
+  ls "$SVC"/prisma/migrations/*row_level_security*/migration.sql >/dev/null 2>&1 \
+    || { echo "     → [$SVC] falta la migración de Row Level Security"; S9_BAD=$((S9_BAD+1)); }
+done
+[[ $S9_BAD -eq 0 ]] && OK "S9" "RLS cableado en ambos backs: pool, alcance en tRPC, chequeo de rol y migración" \
+                    || BUG "S9" "$S9_BAD problema(s) en el cableado de Row Level Security"
+
+# S10 — Toda mutación tRPC sin sesión está en una lista explícita (un publicProcedure.mutation es una decisión)
+echo "S10 — Mutaciones tRPC públicas solo las de la lista..."
+if S10_OUT=$(node scripts/audit/public-mutations.cjs 2>&1); then
+  OK "S10" "Las mutaciones sin sesión son solo las de scripts/audit/public-mutations.allowlist"
+else
+  echo "$S10_OUT"
+  BUG "S10" "mutación(es) pública(s) fuera de la lista (¿falta tenantProcedure/ownerProcedure?)"
 fi
 
 echo ""

@@ -99,14 +99,15 @@ else
   BUG "F4" "pnpm-lock.yaml ausente o vacío — correr pnpm install"
 fi
 
-# F5 — @nestjs-modules/ioredis declarado en ecommerce-back (phantom dep ADR-018)
-echo "F5 — @nestjs-modules/ioredis declarado en ecommerce-back..."
-ECOM_PKG="realsass-ecommerce-back/package.json"
-if [[ -f "$ECOM_PKG" ]] && grep -q "nestjs-modules/ioredis" "$ECOM_PKG"; then
-  OK "F5" "@nestjs-modules/ioredis declarado en ecommerce-back — phantom dep resuelta"
+# F5 — Dependencias fantasma: todo import externo declarado en el package.json del workspace (ADR-018)
+echo "F5 — Dependencias fantasma..."
+if PHANTOM=$(node scripts/audit/phantom-deps.cjs 2>&1); then
+  OK "F5" "Sin dependencias fantasma en ningún workspace"
 else
-  BUG "F5" "realsass-ecommerce-back usa @nestjs-modules/ioredis (market-resolver.service.ts) pero no lo declara — phantom dep (ADR-018)"
+  BUG "F5" "dependencias fantasma (ADR-018):"
+  echo "$PHANTOM"
 fi
+
 
 # F6 — Entries del catalog sin consumidor conocido (deuda informativa)
 echo "F6 — Entries del catalog sin consumidor (deuda)..."

@@ -23,6 +23,11 @@ for SVC in $BACKENDS; do
     case "$BASENAME" in
       *.types.ts|index.ts) continue ;;
     esac
+    # Un archivo que solo declara tipos/interfaces no tiene nada que ejecutar: un spec sería un stub vacío
+    # (se borraron 10 con it.todo el 2026-10-15). Se exige spec solo si exporta código ejecutable.
+    if ! grep -qE '^export (default )?(async )?(function|class|abstract class|const|enum)\b' "$domain_file"; then
+      continue
+    fi
     if [[ ! -f "$SPEC" ]]; then
       echo "     → [$SVC] sin spec para domain/: $BASENAME"
       E1_BUGS=$((E1_BUGS+1))
