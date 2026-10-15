@@ -9,7 +9,7 @@
 | **Línea base** | 2026-10-15 · rama `feat/seguridad-por-capa-rls` · commit `e974fc2` |
 | **Quién puntuó** | Claude (Sonnet 5.5), a partir de lo ejecutado en la sesión. **No hubo revisión externa ni pentest.** |
 | **Escala** | 1–10. 10 = la garantía no depende de que alguien se acuerde y un test o una auditoría falla si se rompe. |
-| **Promedio** | **7,6 / 10** |
+| **Promedio** | **7,7 / 10** |
 | **Veredicto** | Listo para un **staging cerrado** (usuarios de confianza, sin pagos reales). **No** para producción abierta. |
 
 ## Resumen
@@ -21,7 +21,7 @@
 | 3 | Seguridad de aplicación | **8,5** | CSP con nonces; revisión externa |
 | 4 | Calidad y tests | **8,5** | E2E en navegador; más cobertura en los fronts |
 | 5 | Integridad de datos y concurrencia | **9** | Backups y prueba de restauración |
-| 6 | Entrega y despliegue | **6,5** | Correr el CI en GitHub; desplegar a staging |
+| 6 | Entrega y despliegue | **7** | Correr el CI en GitHub; desplegar a staging |
 | 7 | Operación y observabilidad | **5** | Alertas, backups, runbook probado, OTEL |
 | 8 | Frontend, SEO e i18n | **7** | E2E de login/checkout; quitar stubs y mocks |
 | 9 | Cadena de suministro | **9** | Rotación de secretos probada en un entorno real |
@@ -51,14 +51,13 @@ Los pilares técnicos (1–5 y 9) están entre 8,5 y 9. El promedio lo arrastran
 - RLS forzado y default-deny en ecommerce-back (12 tablas, las hijas heredan) y en sass-back fase 1 (secretos, webhooks + log, cuotas, mercados). ADR-027.
 - `rls.int-spec` en cada back, **contra Postgres 16 real y con el rol `eco_app`** (sin `SUPERUSER` ni `BYPASSRLS`): sin alcance no se ve nada, un `findMany` sin `where` solo devuelve lo propio, no se lee/inserta/actualiza/borra/mueve una fila ajena, 200 consultas intercaladas de dos organizaciones no se cruzan.
 - **Mutación:** con el rol administrador (que saltea RLS) fallan 12 de 14 → los tests sí prueban la base.
-- `ecommerce-back` en contenedor, en producción, como `eco_app`: arranca, migra con el dueño, 12 tablas con RLS forzado; con un superusuario **se niega a arrancar**.
+- **Ambos backs en contenedor, en producción, como `eco_app`** (Postgres 16 y Redis 7 en Docker): arrancan, migran con el dueño (`MIGRATION_DATABASE_URL`), health `ok` con db y redis arriba, sin el aviso de RLS; ecommerce-back con 12 tablas con RLS forzado y sass-back con 5. Con un superusuario **ninguno de los dos arranca**.
 - Auditorías S8 (`runAsSystem`), S9 (cableado idéntico en ambos backs), C4 (`organizationId` en las consultas).
 
 **Falta**
 - **Fase 2 en sass-back:** collaborators, invitations, users, organizations, affiliate_data y las tablas con filas globales (`organizationId NULL`). Se consultan antes de conocer la organización; hacerlas a ciegas rompería el login.
 - **No probado en Railway** (rol `eco_app`, `MIGRATION_DATABASE_URL`).
 - **No se midió la latencia** del `set_config` por conexión.
-- `sass-back` en contenedor: la prueba quedó pendiente (el rebuild de la imagen falló por un corte de Docker; se relanzó).
 
 ## 3. Seguridad de aplicación — 8,5
 
@@ -111,14 +110,14 @@ Los pilares técnicos (1–5 y 9) están entre 8,5 y 9. El promedio lo arrastran
 **Qué es 10:** lo que está en `main` se despliega solo, y el CI lo exige.
 
 **Evidencia**
-- `docker build` de los 5 servicios con exit 0; `ecommerce-back` **arrancó en un contenedor real** (health `ok`, db y redis arriba).
+- `docker build` de los 5 servicios con exit 0; **los dos backs arrancaron en contenedores reales** (health `ok`, db y redis arriba) y, en el servicio real, `markets.resolve` sin clave de servicio y `markets.create` sin sesión responden 401.
 - `ci.yml` unificado (calidad, tests, integración con Postgres + Redis y rol `eco_app`, `pnpm audit`, auditorías) + escaneo de secretos.
 - 7 commits ordenados en `feat/seguridad-por-capa-rls`; árbol limpio.
 
 **Falta**
 - **El CI nunca corrió en GitHub** y no hay branch protection.
 - **Nada desplegado en Railway.**
-- `sass-back` en contenedor (pendiente, ver pilar 2); `docker build` de los 3 fronts hecho pero no arrancados.
+- Los 3 fronts construyen pero no se arrancaron en contenedor.
 - Las imágenes se reconstruyen sin caché de pnpm (restricción de Railway).
 
 ## 7. Operación y observabilidad — 5
@@ -157,7 +156,7 @@ Los pilares técnicos (1–5 y 9) están entre 8,5 y 9. El promedio lo arrastran
 
 ## Camino a cada nivel
 
-**Staging cerrado** (casi listo): arrancar `sass-back` en contenedor → push a una rama y correr el CI → desplegar en Railway con el rol `eco_app` y comprobar que no aparece el aviso de RLS → definir backups.
+**Staging cerrado** (casi listo): push a una rama y correr el CI → desplegar en Railway con el rol `eco_app` y comprobar que no aparece el aviso de RLS → definir backups.
 
 **Producción abierta** (todavía no): RLS fase 2 · revisión de seguridad externa · CSP con nonces · alertas y runbook probado · pagos con idempotencia y webhook firmado (si van a cobrar) · E2E de login y checkout.
 
@@ -172,3 +171,4 @@ Los pilares técnicos (1–5 y 9) están entre 8,5 y 9. El promedio lo arrastran
 | Fecha | Commit | Promedio | Cambios |
 |---|---|:-:|---|
 | 2026-10-15 | `e974fc2` | 7,6 | Línea base inicial. |
+| 2026-10-15 | `7997d68` | 7,7 | Pilar 6: 6,5 → 7. Los dos backs arrancan en contenedor como `eco_app` y se niegan a arrancar con un superusuario. |
