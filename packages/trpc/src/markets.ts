@@ -11,6 +11,8 @@ export type FulfillmentConfig = {
   contactEmail?: string;
   notes?:        string;
   priority:      number;
+  /** Tarifa plana de envío en centavos; el servidor la aplica en el checkout. */
+  shippingCents?: number;
 };
 
 export type MarketDTO = {

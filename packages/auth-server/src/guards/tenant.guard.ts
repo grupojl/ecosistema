@@ -1,6 +1,6 @@
 import {
   CanActivate, ExecutionContext, ForbiddenException,
-  Inject, Injectable, Logger, UnauthorizedException,
+  Inject, Injectable, Logger, ServiceUnavailableException, UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector }     from '@nestjs/core';
 import { CACHE_PORT }    from '@/ports/cache.port';
@@ -10,7 +10,13 @@ import type {
   TenantContext, CurrentUserPayload, OrganizationAccessResult,
 } from '@/types/tenant-context';
 
+import { CircuitBreaker, CircuitOpenError } from '../http/circuit-breaker';
+
 const CACHE_TTL = 90;
+// Si sass-back está lento o caído, este guard corre en TODAS las rutas con tenant: sin timeout ni
+// breaker un solo servicio degradado agota las conexiones de todos los demás.
+const ACCESS_TIMEOUT_MS = 3_000;
+const accessBreaker = new CircuitBreaker('sass-back/organization-access', { failureThreshold: 5, resetMs: 15_000 });
 
 /**
  * TenantGuard — resuelve TenantContext para ecommerce-back.
@@ -67,18 +73,29 @@ export class TenantGuard implements CanActivate {
 
     let result: OrganizationAccessResult;
     try {
-      const res = await fetch(`${sassBackUrl}/api/v1/auth/organization-access`, {
-        headers: {
-          'Authorization':     `Bearer ${token}`,
-          'x-organization-id': organizationId,
-        },
+      // Dentro del breaker solo se LANZA ante una falla del servicio (red / 5xx). Un 403 es una respuesta
+      // válida ("ese usuario no tiene acceso"): si contara como falla, bastarían 5 pedidos a una organización
+      // ajena para abrir el circuito y dejar sin servicio a TODOS los usuarios.
+      const outcome = await accessBreaker.run(async () => {
+        const res = await fetch(`${sassBackUrl}/api/v1/auth/organization-access`, {
+          headers: {
+            'Authorization':     `Bearer ${token}`,
+            'x-organization-id': organizationId,
+          },
+          signal: AbortSignal.timeout(ACCESS_TIMEOUT_MS),
+        });
+        if (res.status >= 500) throw new Error(`organization-access respondió ${res.status}`);
+        return res.ok
+          ? { granted: true as const, body: await res.json() as OrganizationAccessResult }
+          : { granted: false as const };
       });
-      if (!res.ok) throw new ForbiddenException('Sin acceso a esta organizacion');
-      result = await res.json() as OrganizationAccessResult;
+      if (!outcome.granted) throw new ForbiddenException('Sin acceso a esta organizacion');
+      result = outcome.body;
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
+      if (error instanceof CircuitOpenError) throw new ServiceUnavailableException('Servicio de identidad no disponible temporalmente');
       this.logger.error(`Error en organization-access: ${(error as Error).message}`);
-      throw new ForbiddenException('Error al verificar permisos');
+      throw new ServiceUnavailableException('No se pudo verificar permisos');
     }
 
     if (!result.canAccess || !result.role || !result.userId) {

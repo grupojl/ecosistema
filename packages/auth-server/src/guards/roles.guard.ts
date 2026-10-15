@@ -26,7 +26,9 @@ export class RolesGuard implements CanActivate {
     }
 
     const userLevel = HIERARCHY[tenant.role] ?? 0;
-    const minLevel  = Math.min(...required.map(r => HIERARCHY[r] ?? 0));
+    // Falla cerrado: un rol REQUERIDO que no existe (typo en @Roles('SUPERADMN')) vale +∞ y no lo cumple nadie.
+    // Antes valía 0 y dejaba pasar a cualquier usuario del tenant.
+    const minLevel  = Math.min(...required.map(r => HIERARCHY[r] ?? Number.POSITIVE_INFINITY));
 
     if (userLevel < minLevel) {
       throw new ForbiddenException(

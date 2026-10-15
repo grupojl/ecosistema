@@ -48,12 +48,18 @@ function writeTypesConfig(back, outDir) {
   );
   const cfgPath = join(dist, '.tmp', `tsconfig.${back.key}.json`);
   mkdirSync(dirname(cfgPath), { recursive: true });
+  // Los backs ya no declaran baseUrl (deprecado en TS 6): sus `paths` son relativos al tsconfig del back. Este
+  // tsconfig temporal vive en otra carpeta, así que se pasan a ABSOLUTOS (TS los admite) y tampoco usa baseUrl.
+  const pathsBase = parsed?.options.pathsBasePath ? String(parsed.options.pathsBasePath) : back.dir;
+  const absolutePaths = Object.fromEntries(
+    Object.entries(parsed?.options.paths ?? {}).map(([key, targets]) => [key, targets.map((t) => posix(resolve(pathsBase, t)))]),
+  );
   writeFileSync(cfgPath, JSON.stringify({
     extends: join(back.dir, 'tsconfig.json'),
     compilerOptions: {
       noEmit: false, emitDeclarationOnly: true, declaration: true, sourceMap: false,
-      incremental: false, rootDir: root, outDir, baseUrl: back.dir,
-      paths: { ...(parsed?.options.paths ?? {}), '@real/auth-server': ['../packages/auth-server/src/index.ts'] },
+      incremental: false, rootDir: root, outDir,
+      paths: { ...absolutePaths, '@real/auth-server': [posix(join(root, 'packages/auth-server/src/index.ts'))] },
     },
     include: [],
     exclude: [],

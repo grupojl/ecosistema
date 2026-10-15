@@ -12,7 +12,7 @@ export type { CachePort }       from '@/ports/cache.port';
 export { MemoryCacheAdapter }   from '@/ports/memory-cache.adapter';
 
 // Firebase
-export { FirebaseModule }       from '@/firebase/firebase.module';
+export { FirebaseModule, getFirebaseAdmin } from '@/firebase/firebase.module';
 
 // Guards
 export { FirebaseAuthGuard }    from '@/guards/firebase-auth.guard';
@@ -38,3 +38,7 @@ export type {
 export { SessionService, AuthSessionController, SESSION_COOKIE_NAME, SESSION_COOKIE_MAX_AGE_MS } from '@/session';
 export type { SessionCookieOptions, VerifiedSession } from '@/session';
 export { ZodExceptionFilter } from '@/filters/zod-exception.filter';
+
+// Seguridad — claves rotables, comparación en tiempo constante, env obligatorio (falla cerrado),
+// circuit breaker entre servicios y rate limit del middleware tRPC
+export * from './security';
