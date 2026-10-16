@@ -74,7 +74,7 @@ describe('OrdersService.checkout', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  it('crea la orden y marca el carrito COMPLETED en el camino feliz', async () => {
+  it('crea la orden y marca el carrito CONVERTED en el camino feliz', async () => {
     mockPrisma.cart.findFirst.mockResolvedValue({
       id: 'cart-1',
       status: 'ACTIVE',
@@ -102,7 +102,7 @@ describe('OrdersService.checkout', () => {
     );
     expect(mockPrisma.cart.update).toHaveBeenCalledWith({
       where: { id: 'cart-1' },
-      data:  { status: 'COMPLETED' },
+      data:  { status: 'CONVERTED' },
     });
     expect(result).toEqual({ id: 'order-1', totalCents: 2000 });
   });

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos mínimos de la ventana principal. Aplica SOLO al contenido local (la pantalla de conexión). El panel remoto NO está en `remote.urls`, por lo tanto NO tiene acceso a ningún comando de la app: el login y la navegación los maneja Rust, no el JavaScript de la página (ADR-023).",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

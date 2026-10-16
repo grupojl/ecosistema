@@ -61,9 +61,17 @@ export class MarketsService {
     return market.toDTO()
   }
 
-  async update(id: string, data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig }): Promise<MarketDTO> {
+  /** Con `organizationId`, un mercado de otra organización se trata como inexistente (no se revela que existe). */
+  private async findOwned(id: string, organizationId?: string) {
     const market = await this.repo.findById(id)
-    if (!market) throw new TRPCError({ code: 'NOT_FOUND', message: `Market id=${id} not found` })
+    if (!market || (organizationId !== undefined && market.organizationId !== organizationId)) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: `Market id=${id} not found` })
+    }
+    return market
+  }
+
+  async update(id: string, data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig }, organizationId?: string): Promise<MarketDTO> {
+    const market = await this.findOwned(id, organizationId)
 
     // Invariante: el Market default no puede desactivarse
     if (market.isDefault && data.isActive === false) {
@@ -76,16 +84,14 @@ export class MarketsService {
     return updated.toDTO()
   }
 
-  async setDefault(id: string): Promise<MarketDTO> {
-    const market = await this.repo.findById(id)
-    if (!market) throw new TRPCError({ code: 'NOT_FOUND', message: `Market id=${id} not found` })
+  async setDefault(id: string, organizationId?: string): Promise<MarketDTO> {
+    const market = await this.findOwned(id, organizationId)
     const updated = await this.repo.setDefault(id, market.organizationId)
     return updated.toDTO()
   }
 
-  async delete(id: string): Promise<void> {
-    const market = await this.repo.findById(id)
-    if (!market) throw new TRPCError({ code: 'NOT_FOUND', message: `Market id=${id} not found` })
+  async delete(id: string, organizationId?: string): Promise<void> {
+    const market = await this.findOwned(id, organizationId)
     if (market.isDefault) {
       throw new TRPCError({
         code:    'BAD_REQUEST',

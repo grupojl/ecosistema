@@ -10,12 +10,14 @@ Namespaces (ver `src/trpc/app-router.ts`):
 - `configThemes.*`
 - `configWebhooks.*`
 - `configAudit.*`
+- `sessions.*` ✅ (ADR-020, `contracts/user-sessions.md`) — `authProcedure`, sin organización
 - `configSecrets.*`
 - `auth.*` ✅ COMPLETO — `src/trpc/routers/auth.router.ts`
   - `auth.me`            → perfil completo (authProcedure query)
   - `auth.sync`          → upsert + claims tras login (authProcedure mutation)
   - `auth.refreshClaims` → reemite claims al cambiar de org (authProcedure mutation)
   - `auth.selectRole`    → selecciona org/rol activo (authProcedure mutation)
+  - `auth.ping`          → ¿sesión viva? sin DB (authProcedure query) — sesión en vivo entre fronts
 
 Procedures base (`src/trpc/trpc.ts`):
 - `publicProcedure`  — sin auth
@@ -29,7 +31,7 @@ Namespaces (ver `src/trpc/app-router.ts`):
 - `adminCatalog.*`   — requiere OWNER/COLLABORATOR
 - `adminInventory.*` — requiere OWNER/COLLABORATOR
 - `adminOrders.*`    — requiere OWNER/COLLABORATOR
-- `customer.*`       — cliente del storefront (sin Firebase)
+- `customer.*`       — cliente del storefront: catálogo público + `customerProcedure` con sesión de Firebase (Bearer, email verificado) y `x-organization-id` (ADR-021). No existe `customer.identify`.
 
 Procedures (`src/trpc/trpc.ts`):
 - `publicProcedure`

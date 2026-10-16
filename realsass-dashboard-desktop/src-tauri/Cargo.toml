@@ -1,0 +1,38 @@
+[package]
+name = "welver-dashboard-desktop"
+version = "0.1.0"
+description = "Cascarón de escritorio (Tauri v2) del dashboard de Welver — ADR-023, opción A"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[features]
+# Auto-actualización firmada. NO está en el build por defecto: necesita claves de firma y un endpoint (ver README → "Auto-actualización").
+updater = ["dep:tauri-plugin-updater", "dep:tauri-plugin-dialog"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Abrir el navegador del sistema (login y enlaces externos)
+tauri-plugin-opener = "2"
+# Una sola instancia: abrir la app de nuevo enfoca la ventana existente
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+# Enlaces welver://… (abren la app y navegan a una ruta del panel)
+tauri-plugin-deep-link = "2"
+# Recuerda tamaño y posición de la ventana
+tauri-plugin-window-state = "2"
+# Auto-actualización y el diálogo de confirmación (solo con --features updater)
+tauri-plugin-updater = { version = "2", optional = true }
+tauri-plugin-dialog = { version = "2", optional = true }
+# Escapar el texto que se inyecta como JavaScript en la ventana
+serde_json = "1"
+
+[profile.release]
+# Binario más chico; el cascarón no tiene lógica pesada
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

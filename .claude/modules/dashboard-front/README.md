@@ -19,13 +19,13 @@ dueño si prefiere hacer el trabajo operativo desde acá.
 
 | Sección | Ruta | Qué hace |
 |---|---|---|
-| Tienda — Productos | `/dashboard/tienda/productos` | CRUD de productos del catálogo |
-| Tienda — Pedidos | `/dashboard/tienda/pedidos` | Ver y gestionar órdenes |
-| Tienda — Preview | `/dashboard/tienda/preview` | Previsualizar la tienda pública |
-| Configuración | `/dashboard/configuracion` | Flags, temas, webhooks (igual que sass-front) |
-| Chat IA | `/dashboard/chat` | Conversaciones con el asistente de IA |
-| Campañas | `/dashboard/campanas` | (Placeholder — módulo pendiente) |
-| Pagos | `/dashboard/pagos` | (Placeholder — depende de pagos-back) |
+| Tienda — Productos | `/tienda/productos` | CRUD de productos del catálogo |
+| Tienda — Pedidos | `/tienda/pedidos` | Ver y gestionar órdenes |
+| Tienda — Preview | `/tienda/preview` | Previsualizar la tienda pública |
+| Configuración | `/configuracion` | Flags, temas, webhooks (igual que sass-front) |
+| Chat IA | `/chat` | Conversaciones con el asistente de IA |
+| Campañas | `/campanas` | (Placeholder — módulo pendiente) |
+| Pagos | `/pagos` | (Placeholder — depende de pagos-back) |
 | Login | `/login` | Inicio de sesión con Google |
 | SSO | `/auth/sso` | Recibe el token del dueño y autautentica al colaborador |
 

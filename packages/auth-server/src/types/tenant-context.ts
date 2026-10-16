@@ -17,6 +17,8 @@ export interface CurrentUserPayload {
   readonly email:       string;
   readonly displayName: string | null;
   readonly avatarUrl:   string | null;
+  /** Firebase verificó el email (Google/Apple sí; email+contraseña solo tras confirmarlo). Los clientes del storefront lo exigen. */
+  readonly emailVerified?: boolean;
 }
 
 export interface OrganizationAccessResult {

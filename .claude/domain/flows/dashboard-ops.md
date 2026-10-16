@@ -18,16 +18,16 @@ pedidos, stock, configuración, métricas, campañas, chat IA.
 | Pantalla | Ruta | Servicio |
 |---------|------|---------|
 | Home | `/dashboard` | dashboard-front → sass-back |
-| Pedidos | `/dashboard/tienda/pedidos` | dashboard-front → ecommerce-back |
-| Productos | `/dashboard/tienda/productos` | dashboard-front → ecommerce-back |
-| Pagos | `/dashboard/pagos` | dashboard-front → sass-back |
-| Campañas | `/dashboard/campanas` | dashboard-front → sass-back |
-| Chat IA | `/dashboard/chat` | dashboard-front → chatia (servicio externo) |
-| Flags | `/dashboard/configuracion/flags` | dashboard-front → sass-back |
-| Quotas | `/dashboard/configuracion/quotas` | dashboard-front → sass-back |
-| Tema | `/dashboard/configuracion/tema` | dashboard-front → sass-back |
-| Webhooks | `/dashboard/configuracion/webhooks` | dashboard-front → sass-back |
-| Zonas de envío | `/dashboard/zonas` | dashboard-front → ecommerce-back |
+| Pedidos | `/tienda/pedidos` | dashboard-front → ecommerce-back |
+| Productos | `/tienda/productos` | dashboard-front → ecommerce-back |
+| Pagos | `/pagos` | dashboard-front → sass-back |
+| Campañas | `/campanas` | dashboard-front → sass-back |
+| Chat IA | `/chat` | dashboard-front → chatia (servicio externo) |
+| Flags | `/configuracion/flags` | dashboard-front → sass-back |
+| Quotas | `/configuracion/quotas` | dashboard-front → sass-back |
+| Tema | `/configuracion/tema` | dashboard-front → sass-back |
+| Webhooks | `/configuracion/webhooks` | dashboard-front → sass-back |
+| Zonas de envío | `/zonas` | dashboard-front → ecommerce-back |
 
 ---
 

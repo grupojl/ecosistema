@@ -43,6 +43,11 @@ export class OrdersService {
     return this.ordersRepository.findByCart(organizationId, '');
   }
 
+  /** Historial del cliente. (listOrders sin sesión buscaba cartId '' y devolvía siempre vacío.) */
+  async listByCustomer(organizationId: string, customerId: string) {
+    return this.ordersRepository.findByCustomer(organizationId, customerId);
+  }
+
   async getOrder(organizationId: string, orderId: string) {
     return this.ordersRepository.findById(organizationId, orderId);
   }
@@ -74,7 +79,7 @@ export class OrdersService {
 
     return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const cart = await tx.cart.findFirst({
-        where:   { id: cartId, organizationId, status: 'ACTIVE' },
+        where:   { id: cartId, organizationId, customerId, status: 'ACTIVE' }, // solo el dueño paga SU carrito
         include: {
           items: {
             include: { variant: { include: { inventory: true } } },
@@ -106,7 +111,7 @@ export class OrdersService {
           organizationId,
           customerId,
           cartId,
-          subtotalCents:   total,
+          subtotalCents:   itemsTotal,
           status:          'PENDING_PAYMENT',
           totalCents:      total,
           currency:        cart.items[0]?.variant.currency ?? 'ARS',

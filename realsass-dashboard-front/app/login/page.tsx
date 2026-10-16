@@ -1,23 +1,40 @@
 'use client';
 
-import { useState }     from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter }    from 'next/navigation';
 import { Loader2 }      from 'lucide-react';
 import { Button }       from '@real/ui';
 import { Logo }         from '@/components/logo';
 import { toast }        from 'sonner';
 import { useAuth }      from '@/features/auth/context/auth-context';
+import { getDesktopBridge, loopbackStartUrl, safeNextPath, type DesktopBridge } from '@/lib/desktop';
 
 export default function LoginPage() {
   const router              = useRouter();
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle, isAuthenticated, isLoading, authError } = useAuth();
   const [loading, setLoading] = useState(false);
+  // App de escritorio (ADR-023): el popup de Google no es confiable en un webview → se inicia sesión en el navegador del sistema.
+  const [desktop, setDesktop] = useState<DesktopBridge | null>(null);
+  useEffect(() => { setDesktop(getDesktopBridge()); }, []);
+
+  // El AuthProvider hace sync + cookie + perfil (y elige la organización) tras el login de Firebase;
+  // recién cuando termina queda autenticado y se entra al dashboard.
+  useEffect(() => {
+    // `next` permite volver a la página que pidió el login (p. ej. la puente de escritorio); solo rutas internas.
+    if (isAuthenticated) router.replace(safeNextPath(new URLSearchParams(window.location.search).get('next')));
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (authError) {
+      toast.error(authError);
+      setLoading(false);
+    }
+  }, [authError]);
 
   const handleGoogle = async () => {
     setLoading(true);
     try {
       await loginWithGoogle();
-      router.replace('/dashboard');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al iniciar sesión');
       setLoading(false);
@@ -37,10 +54,23 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {desktop ? (
+          <div className="space-y-3">
+            <Button
+              className="w-full h-11 text-base font-medium"
+              onClick={() => { window.location.href = loopbackStartUrl(desktop.loginPort); }}
+            >
+              Continuar en el navegador
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Se abrirá tu navegador para iniciar sesión de forma segura.
+            </p>
+          </div>
+        ) : (
         <Button
           className="w-full h-11 text-base font-medium gap-3"
           onClick={handleGoogle}
-          disabled={loading}
+          disabled={loading || isLoading}
         >
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -54,6 +84,7 @@ export default function LoginPage() {
           )}
           {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
         </Button>
+        )}
       </div>
     </main>
   );

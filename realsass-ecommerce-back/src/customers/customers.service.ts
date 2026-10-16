@@ -29,49 +29,40 @@ export class CustomersService {
     private readonly customersRepository: ICustomersRepository,
   ) {}
 
+  /**
+   * Identifica al cliente por email: un cliente por (organización, email). Lo crea si no existe.
+   *
+   * Ya NO es un procedure público (ADR-021): lo llama el contexto tRPC con el email verificado por Firebase.
+   */
   async identify(
     organizationId: string,
-    sessionId:      string,
-    email?:         string,
+    email:          string,
     name?:          string,
     phone?:         string,
     cartId?:        string,
   ): Promise<IdentifyCustomerOutput> {
-    // Validar email si viene
-    if (email) {
-      try {
-        assertValidEmail(email);
-      } catch (err) {
-        throw new UnprocessableEntityException(
-          err instanceof InvalidEmailError ? err.message : "Email inválido",
-        );
-      }
+    const normalized = email.trim().toLowerCase();
+    try {
+      assertValidEmail(normalized);
+    } catch (err) {
+      throw new UnprocessableEntityException(
+        err instanceof InvalidEmailError ? err.message : "Email inválido",
+      );
     }
 
-    // identifyBySession hace upsert — crea si no existe, retorna si existe
-    const customer = await this.customersRepository.identifyBySession(
+    const { customer, created } = await this.customersRepository.upsertByEmail(
       organizationId,
-      sessionId,
+      normalized,
+      {
+        ...(name?.trim()  && { displayName: name.trim() }),
+        ...(phone?.trim() && { phone: phone.trim() }),
+      },
     );
-
-    const isNew = !customer.email && !email;
-
-    // Actualizar datos si vinieron
-    if (email || name || phone) {
-      await this.customersRepository.update(organizationId, customer.id, {
-        ...(email && { email }),
-        ...(name  && { name }),
-        ...(phone && { phone }),
-      });
-    }
 
     // cartId se maneja en CartService — aquí solo identificamos al customer
     void cartId;
 
-    return {
-      customerId: customer.id,
-      isNew,
-    };
+    return { customerId: customer.id, isNew: created };
   }
 
   async findById(organizationId: string, customerId: string) {

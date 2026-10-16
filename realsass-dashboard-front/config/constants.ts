@@ -1,6 +1,7 @@
 // config/constants.ts
 
-export const REAL_BACK_URL     = process.env.NEXT_PUBLIC_REAL_BACK_URL     ?? '';
+// NEXT_PUBLIC_SASS_BACK_URL manda; NEXT_PUBLIC_REAL_BACK_URL queda como respaldo (el Dockerfile aún solo define esa).
+export const REAL_BACK_URL     = process.env.NEXT_PUBLIC_SASS_BACK_URL ?? process.env.NEXT_PUBLIC_REAL_BACK_URL ?? '';
 export const ECOMMERCE_API_URL = process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? '';
 
 // ─── TanStack Query keys ──────────────────────────────────────────────────────

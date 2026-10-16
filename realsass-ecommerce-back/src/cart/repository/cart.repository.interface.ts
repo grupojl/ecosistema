@@ -35,7 +35,9 @@ export interface CartRecord {
   id:             string;
   organizationId: string;
   sessionId:      string;
-  status:         "ACTIVE" | "COMPLETED" | "ABANDONED";
+  /** Dueño del carrito (cliente de Firebase, ADR-021). null = carrito anónimo anterior a ADR-021. */
+  customerId:     string | null;
+  status:         "ACTIVE" | "CONVERTED" | "ABANDONED";
   createdAt:      Date;
   updatedAt:      Date;
   items:          CartItemRecord[];
@@ -64,7 +66,11 @@ export interface ICartRepository {
   create(
     organizationId: string,
     sessionId:      string,
+    customerId?:    string,
   ): Promise<CartRecord>;
+
+  /** Asigna dueño a un carrito sin dueño. */
+  assignCustomer(cartId: string, customerId: string): Promise<void>;
 
   /**
    * Agrega o incrementa un ítem en el carrito.
@@ -85,7 +91,7 @@ export interface ICartRepository {
   ): Promise<CartRecord>;
 
   /**
-   * Marca el carrito como COMPLETED (checkout exitoso).
+   * Marca el carrito como CONVERTED en pedido (checkout exitoso).
    */
   complete(cartId: string): Promise<void>;
 }

@@ -45,6 +45,8 @@ import { ConfigAuditModule }        from '@/config-audit/config-audit.module';
 import { ConfigSecretsModule }      from '@/config-secrets/config-secrets.module';
 import { MarketsService }             from '@/markets/markets.service';
 import { MarketsModule }               from '@/markets/markets.module';
+import { SessionsService }             from '@/sessions/sessions.service';
+import { SessionsModule }              from '@/sessions/sessions.module';
 
 @Injectable()
 export class TrpcService {
@@ -62,6 +64,7 @@ export class TrpcService {
     private readonly templates:     ConfigTemplatesService,
     private readonly affiliates:    AffiliatesService,
     private readonly markets:       MarketsService,
+    private readonly sessions:      SessionsService,
   ) {}
 
   get handler() {
@@ -79,6 +82,7 @@ export class TrpcService {
       marketsService:     this.markets,
       templatesService:   this.templates,
       affiliatesService:  this.affiliates,
+      sessionsService:    this.sessions,
     });
 
     return createExpressMiddleware({
@@ -92,6 +96,8 @@ export class TrpcService {
       // sass-back resuelve desde Prisma — el token no se necesita.
       getOrganizationAccess: (_token, uid, orgId) =>
         this.users.getOrganizationAccess(uid, orgId),
+      // ADR-020: sesión cerrada desde la lista de dispositivos.
+      isSessionRevoked: (sid, uid) => this.sessions.isRevoked(sid, uid),
     });
   }
 }
@@ -111,6 +117,7 @@ export class TrpcService {
     ConfigTemplatesModule,
     AffiliatesModule,
     MarketsModule,
+    SessionsModule,
   ],
   providers: [TrpcService],
 })

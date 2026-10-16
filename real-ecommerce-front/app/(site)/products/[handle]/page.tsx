@@ -4,5 +4,5 @@
 import { redirect } from 'next/navigation'
 
 export default async function ProductLegacyPage() {
-  redirect('/tienda')
+  redirect('/')
 }

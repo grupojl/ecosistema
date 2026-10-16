@@ -84,9 +84,24 @@ Cookie __session: vida corta (máx. 14 días, límite de Firebase) pero RENOVABL
   · Mientras el usuario entre al menos una vez cada 90 días, nunca ve un login.
   · Pasados 90 días sin uso → se pide login (tope por inactividad).
   · Mientras la cookie se recrea, NINGUNA consulta autenticada se dispara (evita los 401 de arranque).
+Sesión compartida entre fronts (2026-10-16): la cookie __session es la fuente de verdad. El usuario de
+  Firebase vive por origen; si falta pero la cookie es válida (login hecho en otro front), el front se
+  autentica con auth.me por cookie. Sin refresh proactivo en ese caso: vence a los 14 días.
+  Producción: los fronts deben compartir dominio raíz (COOKIE_DOMAIN).
+  Arranque rápido (2026-10-16): al cargar una página el perfil sale de la cookie en 1 request (`auth.me`); la
+  cadena de Firebase (sync → token → cookie → me) corre en segundo plano y renueva la cookie sin bloquear ni
+  cerrar la sesión si falla. En el servidor, `/profile` prefetchea `auth.me` con la cookie usando la MISMA
+  queryKey que tRPC React (`[['auth','me'],{ type: 'query' }]`); con otra key el prefetch no se usa.
+  Renovación de la cookie acotada (2026-10-16): `POST /auth/session` tiene límite de 10/min por IP, y recargar con F5 ejecutaba
+  toda la cadena cada vez → 429 y "preparando la sesión". Ahora la cookie se recrea como máximo cada 30 min por origen
+  (`sessionRefreshDue` en localStorage); en una recarga dentro de esa ventana alcanza con `auth.me` por cookie. Si el POST
+  falla (429) pero hay una cookie válida previa, la sesión sigue lista. El botón "Dashboard" espera hasta 8 s a la sesión.
+  En vivo: cerrar sesión en un front cierra en todos y abrirla en uno abre en los demás (auth.ping al volver a
+  la pestaña y cada 30 s; BroadcastChannel entre pestañas del mismo origen). Ver contracts/user-sessions.md.
 Revocación:
   · "Cerrar sesión en todos los dispositivos" → revokeRefreshTokens (ya existe en el back).
-  · Lista de dispositivos/sesiones activas (🔲 pantalla).
+  · Lista de dispositivos/sesiones activas ✅ modal "Dispositivos" (dashboard y /profile) — ADR-020,
+    `contracts/user-sessions.md`: lista, cerrar una o las demás. 🔲 mail de dispositivo nuevo (F3).
 Acciones sensibles (reautenticación con StepUpGuard, ya existe en el back):
   · crear/rotar/revocar secretos · alta/baja de webhooks · quitar colaboradores
   · cambiar el slug · eliminar la organización · cambiar plan o datos de facturación
@@ -440,7 +455,7 @@ Al construir la pantalla de claves se encontró que la capa de datos sensibles *
 | 🟡 | Alta de usuario: implementada, pero **no en una única transacción** (usuario → organización → market) | D1, D2 |
 | 🟡 | `organizations.create` + selector hechos; falta el tope **por plan** | D3 |
 | P1 | Renovación deslizante de la cookie y tope de 90 días de inactividad | D5 |
-| P1 | Lista de sesiones/dispositivos y "cerrar sesión en todos" | D5 |
+| 🟡 | Sesiones/dispositivos: lista (F1) y revocar por sesión (F2) hechas; falta el mail de dispositivo nuevo (F3) — ADR-020 | D5 |
 | P1 | Reautenticación (`StepUpGuard`) en acciones sensibles listadas en el Paso 1 | D5 |
 | P1 | Permisos por módulo + roles predefinidos + "Acceso total" (D6) | Paso 5 |
 | P1 | Ampliar `AppError` (`QUOTA`, `RATE_LIMIT`, `EXPIRED`, `SUSPENDED`) y un handler global de tRPC | §4 |

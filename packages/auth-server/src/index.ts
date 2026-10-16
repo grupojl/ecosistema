@@ -35,6 +35,6 @@ export type {
 } from '@/middleware/create-trpc-auth-middleware';
 
 // Session — Capa auth cookies HttpOnly (ADR-004)
-export { SessionService, AuthSessionController, SESSION_COOKIE_NAME, SESSION_COOKIE_MAX_AGE_MS } from '@/session';
+export { SessionService, AuthSessionController, SESSION_COOKIE_NAME, SESSION_COOKIE_MAX_AGE_MS, SESSION_ID_COOKIE_NAME } from '@/session';
 export type { SessionCookieOptions, VerifiedSession } from '@/session';
 export { ZodExceptionFilter } from '@/filters/zod-exception.filter';

@@ -32,7 +32,7 @@
   → stubs con pricing hardcodeado → bloqueados hasta APIs de courier
 
 ### Componentes de storefront con tipos correctos (post-limpieza)
-- [ ] Las páginas `/tienda/[slug]/` tienen JSX inline — cuando el design system
+- [ ] Las páginas `/[slug]/` tienen JSX inline — cuando el design system
   del storefront esté definido, extraer componentes con tipos de `EcommerceAppRouter`
   → `StoreProduct`, `StoreCategory` desde `lib/trpc/types.ts`
   → nunca desde `@/types/product` ni datos hardcodeados

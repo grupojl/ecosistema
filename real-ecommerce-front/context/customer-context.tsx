@@ -2,7 +2,7 @@
  * context/customer-context.tsx
  *
  * Estado del cliente logueado en el storefront.
- * customerId se obtiene llamando a customer.identify (tRPC publicProcedure).
+ * LEGADO (rutas sin tienda): el login real de los clientes está en components/commerce (ADR-021).
  * Se persiste en localStorage para que el carrito sobreviva a recargas.
  *
  * ADR-005 + ADR-006: 0 fetch REST de negocio en el storefront.
@@ -17,7 +17,6 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { createStoreCaller } from '@/lib/trpc/server';
 
 // ─── Shape del contexto ────────────────────────────────────────────────────
 
@@ -94,33 +93,4 @@ export function useCustomerContext(): CustomerContextValue {
   const ctx = useContext(CustomerContext);
   if (!ctx) throw new Error('useCustomerContext debe usarse dentro de <CustomerProvider>');
   return ctx;
-}
-
-// ─── identifyCustomer — tRPC publicProcedure ───────────────────────────────
-//
-// Reemplaza el fetch REST a POST /ecommerce/public/:orgId/customers/identify
-// El procedure customer.identify es @Public() en ecommerce-back —
-// no requiere Firebase ni customerId previo.
-//
-// Se llama desde componentes de checkout al capturar el email del cliente.
-// El customerId resultante se persiste en CustomerContext (localStorage).
-
-export async function identifyCustomer(
-  organizationId: string,
-  email:          string,
-  displayName?:   string,
-  phone?:         string,
-  cartId?:        string,
-): Promise<string> {
-  const caller = createStoreCaller(organizationId);
-
-  const result = await caller.customer.identify.mutate({
-    organizationId,
-    email,
-    displayName,
-    phone,
-    cartId: cartId ?? undefined,
-  });
-
-  return result.customerId;
 }

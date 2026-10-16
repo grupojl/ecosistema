@@ -71,6 +71,27 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
     return (await this.prisma.organization.count({ where: { slug } })) > 0;
   }
 
+  async listPublicStores(limit: number): Promise<Array<{ slug: string; countryCode: string; updatedAt: Date }>> {
+    const rows = await this.prisma.organization.findMany({
+      where:   { storeStatus: 'ACTIVE', slug: { not: null } },
+      select:  { slug: true, countryCode: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+      take:    limit,
+    });
+    return rows.flatMap((r) => (r.slug ? [{ slug: r.slug, countryCode: r.countryCode, updatedAt: r.updatedAt }] : []));
+  }
+
+  async findPublicById(id: string): Promise<StoreInfo | null> {
+    const row = await this.prisma.organization.findUnique({
+      where:  { id },
+      select: {
+        id: true, slug: true, name: true, description: true,
+        logoUrl: true, website: true, countryCode: true, storeStatus: true,
+      },
+    });
+    return row ? toPublicStoreInfo(row) : null;
+  }
+
   async findBySlug(slug: string): Promise<StoreInfo | null> {
     const row = await this.prisma.organization.findUnique({
       where:  { slug },

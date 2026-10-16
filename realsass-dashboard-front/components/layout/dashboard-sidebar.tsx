@@ -7,8 +7,9 @@ import {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
   Palette, ToggleLeft, Webhook, ChartColumnBig,
-  LogOut, ChevronDown,
+  LogOut, ChevronDown, MonitorSmartphone,
 } from 'lucide-react';
+import { ConnectedDevicesDialog } from '@/components/devices-dialog-connected';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useActiveOrganization } from '@/features/auth/hooks/use-active-organization';
 import { siteConfig } from '@/config/site';
@@ -30,16 +31,17 @@ export function DashboardSidebar() {
   const { organization }                     = useActiveOrganization();
   const organizationSlug                     = organization?.slug ?? null;
   const [menuOpen, setMenuOpen]              = useState(false);
+  const [devicesOpen, setDevicesOpen]        = useState(false);
 
   const isActive = (href: string) =>
-    href === '/dashboard'
-      ? pathname === '/dashboard'
+    href === '/'
+      ? pathname === '/'
       : pathname.startsWith(href);
 
   const resolveHref = (href: string) => {
     if (href === '__storefront__') {
       if (!organizationSlug || !STORE_FRONT_URL) return '#';
-      return `${STORE_FRONT_URL}/tienda/${organizationSlug}`;
+      return `${STORE_FRONT_URL}/${organizationSlug}`;
     }
     return href;
   };
@@ -132,7 +134,7 @@ export function DashboardSidebar() {
             <div className="mt-1 rounded-md border border-border bg-popover shadow-md overflow-hidden">
               {organizationSlug && STORE_FRONT_URL && (
                 <a
-                  href={`${STORE_FRONT_URL}/tienda/${organizationSlug}`}
+                  href={`${STORE_FRONT_URL}/${organizationSlug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
@@ -142,6 +144,13 @@ export function DashboardSidebar() {
                 </a>
               )}
               <button
+                onClick={() => { setMenuOpen(false); setDevicesOpen(true); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
+              >
+                <MonitorSmartphone className="h-4 w-4" />
+                Dispositivos
+              </button>
+              <button
                 onClick={logout}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors"
               >
@@ -150,6 +159,7 @@ export function DashboardSidebar() {
               </button>
             </div>
           )}
+          <ConnectedDevicesDialog open={devicesOpen} onOpenChange={setDevicesOpen} />
         </div>
       )}
     </aside>

@@ -22,21 +22,38 @@ export class PrismaCustomersRepository implements ICustomersRepository {
     };
   }
 
-  async identifyBySession(
+  async upsertByEmail(
     organizationId: string,
-    sessionId:      string,
-  ): Promise<CustomerRecord> {
-    // StoreCustomer no tiene sessionId — buscar por un guest existente
-    // o crear uno nuevo. La sesion se maneja en el contexto del request.
-    const existing = await this.prisma.storeCustomer.findFirst({
-      where: { organizationId, isGuest: true },
-    });
-    if (existing) return this.toEntity(existing);
+    email:          string,
+    patch:          { displayName?: string; phone?: string },
+  ): Promise<{ customer: CustomerRecord; created: boolean }> {
+    // Antes devolvía el PRIMER invitado de la organización sin mirar quién preguntaba: todos los visitantes
+    // compartían el mismo customerId (y por lo tanto carrito, perfil y pedidos). Ahora es uno por email.
+    const where = { organizationId_email: { organizationId, email } };
+    const existing = await this.prisma.storeCustomer.findUnique({ where });
+
+    if (existing) {
+      const needsUpdate =
+        (patch.displayName !== undefined && patch.displayName !== existing.displayName) ||
+        (patch.phone !== undefined && patch.phone !== existing.phone) ||
+        existing.isGuest;
+      if (!needsUpdate) return { customer: this.toEntity(existing), created: false };
+
+      const updated = await this.prisma.storeCustomer.update({
+        where,
+        data: {
+          isGuest: false,
+          ...(patch.displayName !== undefined && { displayName: patch.displayName }),
+          ...(patch.phone !== undefined && { phone: patch.phone }),
+        },
+      });
+      return { customer: this.toEntity(updated), created: false };
+    }
 
     const created = await this.prisma.storeCustomer.create({
-      data: { organizationId, email: `guest_${sessionId}@guest.local`, isGuest: true },
+      data: { organizationId, email, isGuest: false, displayName: patch.displayName ?? null, phone: patch.phone ?? null },
     });
-    return this.toEntity(created);
+    return { customer: this.toEntity(created), created: true };
   }
 
   async findById(organizationId: string, customerId: string): Promise<CustomerRecord | null> {

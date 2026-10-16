@@ -86,6 +86,32 @@ export class OrganizationsClientService {
     }
   }
 
+  // ── Sesiones cerradas desde "Dispositivos" (ADR-020 / DT-SES-05) ─────────────────────────────────────────────
+  private readonly sessionChecks = new Map<string, { revoked: boolean; at: number }>();
+
+  /**
+   * ¿La sesión `sid` fue cerrada? Cache de 30 s (una consulta por sesión cada 30 s, no por request).
+   * Fail-open: si el sass-back no responde se acepta (la cookie de Firebase ya se verificó), igual que en el sass-back.
+   */
+  async isSessionRevoked(sessionId: string, firebaseUid: string): Promise<boolean> {
+    const hit = this.sessionChecks.get(sessionId);
+    if (hit && Date.now() - hit.at < 30_000) return hit.revoked;
+
+    try {
+      const res = await fetch(
+        `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/internal/sessions/${encodeURIComponent(sessionId)}/revoked?uid=${encodeURIComponent(firebaseUid)}`,
+        { headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
+      );
+      if (!res.ok) return false;
+      const { revoked } = (await res.json()) as { revoked?: boolean };
+      if (this.sessionChecks.size >= 10_000) this.sessionChecks.clear();
+      this.sessionChecks.set(sessionId, { revoked: revoked === true, at: Date.now() });
+      return revoked === true;
+    } catch {
+      return false;
+    }
+  }
+
   // ── Markets resolution (MKT-E-01) — ADR-014 ─────────────────────────────────
   async resolveMarket(
     organizationId: string,

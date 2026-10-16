@@ -11,6 +11,8 @@ import { createConfigSecretsRouter }       from '@/trpc/routers/config-secrets.r
 import { createConfigTemplatesRouter }     from '@/trpc/routers/config-templates.router';
 import { createAffiliatesRouter }          from '@/trpc/routers/affiliates.router';
 import { createMarketsRouter }            from '@/trpc/routers/markets.router';
+import { createSessionsRouter }           from '@/trpc/routers/sessions.router';
+import type { SessionsService }           from '@/sessions/sessions.service';
 
 import type { UsersService }               from '@/users/users.service';
 import type { AuthService }                from '@/auth/auth.service';
@@ -40,6 +42,7 @@ export interface AppRouterDeps {
   templatesService:   ConfigTemplatesService;
   affiliatesService:  AffiliatesService;
   marketsService:     MarketsService;
+  sessionsService:    SessionsService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
@@ -56,6 +59,7 @@ export function createAppRouter(deps: AppRouterDeps) {
     configTemplates: createConfigTemplatesRouter(deps.templatesService),
     affiliates:      createAffiliatesRouter(deps.affiliatesService),
     markets:         createMarketsRouter(deps.marketsService),
+    sessions:        createSessionsRouter(deps.sessionsService),
   });
 }
 

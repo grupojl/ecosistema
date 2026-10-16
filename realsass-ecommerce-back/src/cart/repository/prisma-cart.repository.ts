@@ -47,12 +47,17 @@ export class PrismaCartRepository implements ICartRepository {
     return cart as CartRecord | null;
   }
 
+  async assignCustomer(cartId: string, customerId: string): Promise<void> {
+    await this.prisma.cart.update({ where: { id: cartId }, data: { customerId } });
+  }
+
   async create(
     organizationId: string,
     sessionId:      string,
+    customerId?:    string,
   ): Promise<CartRecord> {
     const cart = await this.prisma.cart.create({
-      data:    { organizationId, sessionId, status: "ACTIVE" },
+      data:    { organizationId, sessionId, status: "ACTIVE", ...(customerId ? { customerId } : {}) },
       include: CART_WITH_ITEMS,
     });
     return cart as CartRecord;

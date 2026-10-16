@@ -12,7 +12,12 @@ export interface CustomerRecord {
 }
 
 export interface ICustomersRepository {
-  identifyBySession(organizationId: string, sessionId: string): Promise<CustomerRecord>;
+  /** Un cliente por (organización, email). `created` indica si se acaba de crear. */
+  upsertByEmail(
+    organizationId: string,
+    email:          string,
+    patch:          { displayName?: string; phone?: string },
+  ): Promise<{ customer: CustomerRecord; created: boolean }>;
   findById(organizationId: string, customerId: string): Promise<CustomerRecord | null>;
   findBySessionId(organizationId: string, sessionId: string): Promise<CustomerRecord | null>;
   update(

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { escapeXml, buildSitemapXml, SITEMAP_MAX_URLS, type SitemapEntry } from '@/lib/seo/sitemap'
+import { escapeXml, buildSitemapXml, SITEMAP_MAX_URLS, type SitemapEntry, buildSitemapIndexXml } from '@/lib/seo/sitemap'
 
 describe('escapeXml', () => {
   it('escapa los 5 caracteres especiales de XML', () => {
@@ -21,13 +21,13 @@ describe('buildSitemapXml', () => {
   it('incluye loc, lastmod y los alternates hreflang de cada entrada', () => {
     const entries: SitemapEntry[] = [
       {
-        loc: 'https://tienda.com/es/tienda/x',
+        loc: 'https://tienda.com/es/x',
         lastmod: new Date('2026-09-20T00:00:00.000Z'),
-        alternates: [{ hreflang: 'es', href: 'https://tienda.com/es/tienda/x' }],
+        alternates: [{ hreflang: 'es', href: 'https://tienda.com/es/x' }],
       },
     ]
     const xml = buildSitemapXml(entries)
-    expect(xml).toContain('<loc>https://tienda.com/es/tienda/x</loc>')
+    expect(xml).toContain('<loc>https://tienda.com/es/x</loc>')
     expect(xml).toContain('<lastmod>2026-09-20T00:00:00.000Z</lastmod>')
     expect(xml).toContain('hreflang="es"')
   })
@@ -51,5 +51,36 @@ describe('buildSitemapXml', () => {
     const xml = buildSitemapXml(many)
     const count = (xml.match(/<url>/g) ?? []).length
     expect(count).toBe(SITEMAP_MAX_URLS)
+  })
+})
+
+describe('buildSitemapIndexXml (índice /sitemaps que anuncia robots.txt)', () => {
+  it('un <sitemap> por tienda con loc y lastmod', () => {
+    const xml = buildSitemapIndexXml([
+      { loc: 'https://tienda.com/sitemaps/mi-marca', lastmod: new Date('2026-10-01T00:00:00.000Z') },
+      { loc: 'https://tienda.com/sitemaps/otra' },
+    ])
+    expect(xml).toContain('<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    expect((xml.match(/<sitemap>/g) || []).length).toBe(2)
+    expect(xml).toContain('<loc>https://tienda.com/sitemaps/mi-marca</loc>')
+    expect(xml).toContain('<lastmod>2026-10-01T00:00:00.000Z</lastmod>')
+  })
+
+  it('escapa caracteres especiales en la URL', () => {
+    expect(buildSitemapIndexXml([{ loc: 'https://tienda.com/s?a=1&b=2' }])).toContain('<loc>https://tienda.com/s?a=1&amp;b=2</loc>')
+  })
+
+  it('lastmod inválido o 1970 se omite (señal falsa para Google)', () => {
+    expect(buildSitemapIndexXml([{ loc: 'https://t.com/a', lastmod: new Date(NaN) }])).not.toContain('lastmod')
+    expect(buildSitemapIndexXml([{ loc: 'https://t.com/a', lastmod: new Date(0) }])).not.toContain('lastmod')
+  })
+
+  it('sin tiendas es un índice válido y vacío', () => {
+    expect(buildSitemapIndexXml([])).toContain('</sitemapindex>')
+  })
+
+  it('respeta el tope de 50.000 entradas', () => {
+    const many = Array.from({ length: 50_005 }, (_, i) => ({ loc: 'https://t.com/' + i }))
+    expect((buildSitemapIndexXml(many).match(/<sitemap>/g) || []).length).toBe(50_000)
   })
 })

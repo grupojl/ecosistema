@@ -94,8 +94,8 @@
       "node"
     ],
     "typeRoots": [
-      "../node_modules/@types",
-      "./node_modules/@types"
+      "./node_modules/@types",
+      "../node_modules/@types"
     ],
     "baseUrl": "./",
     "ignoreDeprecations": "6.0"

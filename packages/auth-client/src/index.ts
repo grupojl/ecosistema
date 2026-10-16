@@ -24,6 +24,10 @@ export {
 
 // React
 export { AuthProvider, useAuth } from './react/auth-provider';
+export { useSessionWatch, notifySessionChange } from './react/use-session-watch';
+export { pingSession }           from './http/ping-session';
+export { sessionRefreshDue, markSessionRefreshed, clearSessionRefreshed } from './http/session-refresh';
+export type { PingResult }       from './http/ping-session';
 
 // Re-exports de firebase/auth necesarios para auth-context.tsx
 export { onAuthStateChanged, type User } from 'firebase/auth';

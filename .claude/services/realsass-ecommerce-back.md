@@ -28,7 +28,7 @@ REST solo para `GET /health` (Railway) y futuros webhooks externos.
 
 No tiene tabla `Organization` propia. Resuelve tenant así:
 - Admin (dashboard): `FirebaseAuthGuard` + `TenantGuard` (token Firebase + `x-organization-id`)
-- Customer (storefront): `CustomerGuard` (`x-customer-id` + `x-organization-id`, sin Firebase)
+- Customer (storefront): `customerProcedure` — Bearer de Firebase con email verificado + `x-organization-id`; el customerId se deriva (ADR-021, `customers/resolve-customer.ts`)
 
 ## Routers tRPC (EcommerceAppRouter)
 

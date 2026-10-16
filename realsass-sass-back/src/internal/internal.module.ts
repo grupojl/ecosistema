@@ -2,6 +2,8 @@ import { MarketsInternalController } from '@/internal/markets.internal.controlle
 import { MarketsModule }             from '@/markets/markets.module';
 import { UsersModule }               from '@/users/users.module';
 import { InternalAccessController }  from '@/internal/internal-access.controller';
+import { InternalSessionsController } from '@/internal/internal-sessions.controller';
+import { SessionsModule }            from '@/sessions/sessions.module';
 // realsass-sass-back/src/internal/internal.module.ts
 //
 // Módulo REST para endpoints /internal/* consumidos por superadmin.
@@ -14,8 +16,8 @@ import { InternalOrganizationsController } from '@/internal/internal-organizatio
 import { InternalOrganizationsService }    from '@/internal/internal-organizations.service';
 
 @Module({
-  imports:     [MarketsModule, UsersModule],
-  controllers: [InternalOrganizationsController, MarketsInternalController, InternalAccessController],
+  imports:     [MarketsModule, UsersModule, SessionsModule],
+  controllers: [InternalOrganizationsController, MarketsInternalController, InternalAccessController, InternalSessionsController],
   providers:   [InternalApiKeyGuard, InternalOrganizationsService],
 })
 export class InternalModule {}

@@ -21,7 +21,8 @@ import { createExpressMiddleware }    from '@trpc/server/adapters/express';
 import { createTrpcAuthMiddleware }   from '@real/auth-server';
 
 import { createEcommerceAppRouter }   from '@/trpc/app-router';
-import { createTrpcContext }          from '@/trpc/trpc';
+import { makeTrpcContext }            from '@/trpc/trpc';
+import { resolveCustomerFromUser }    from '@/customers/resolve-customer';
 
 import { CatalogService }             from '@/catalog/catalog.service';
 import { InventoryService }           from '@/inventory/inventory.service';
@@ -63,7 +64,12 @@ export class TrpcService {
 
     return createExpressMiddleware({
       router,
-      createContext: createTrpcContext,
+      createContext: makeTrpcContext((req, organizationId) =>
+        resolveCustomerFromUser(req.user, organizationId, (org, email, name) =>
+          this.customers.identify(org, email, name),
+          (org) => this.store.organizationIsEnabled(org),
+        ),
+      ),
     });
   }
 
@@ -71,6 +77,8 @@ export class TrpcService {
     return createTrpcAuthMiddleware({
       getOrganizationAccess: (token, uid, orgId) =>
         this.orgsClient.getAccess(token, uid, orgId),
+      // ADR-020: una sesión cerrada desde "Dispositivos" también deja de valer acá.
+      isSessionRevoked: (sid, uid) => this.orgsClient.isSessionRevoked(sid, uid),
     });
   }
 }

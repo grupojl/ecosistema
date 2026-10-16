@@ -58,6 +58,14 @@ export function createAuthRouter(
       }),
 
     /**
+     * auth.ping — ¿la sesión sigue viva? Lo consultan los fronts al volver a la pestaña y cada ~30 s
+     * para reflejar al instante un login/logout hecho en otro front del ecosistema (ADR-020).
+     * Sin acceso a DB: el middleware ya verificó la cookie y que su `__sid` no esté revocado.
+     */
+    ping: authProcedure
+      .query(({ ctx }) => ({ ok: true as const, uid: ctx.uid })),
+
+    /**
      * auth.refreshClaims — reemite custom claims Firebase (ADR-003).
      * El front debe llamar getIdToken(true) después para obtener el token fresco.
      * Llamado cuando el usuario cambia de org activa.

@@ -37,7 +37,8 @@ export default async function ProfilePage() {
   if (sessionCookie) {
     const caller = createSassServerCaller(sessionCookie);
     await queryClient.prefetchQuery({
-      queryKey: ['auth', 'me'],
+      // Misma key que usa tRPC React en el cliente ([path, { type }]); con otra key el prefetch no se aprovecha.
+      queryKey: [['auth', 'me'], { type: 'query' }],
       queryFn:  () => caller.auth.me.query(),
     }).catch(() => {
       // Prefetch falla silenciosamente — el Client Component fetcha en mount

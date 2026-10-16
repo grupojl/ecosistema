@@ -49,9 +49,13 @@ export interface ProductView {
   updatedAt:     Date;
 }
 
+/**
+ * Unidades vendibles. `quantityAvailable` YA es lo vendible: el back, al reservar, lo baja y sube `quantityReserved`
+ * (que es lo retenido por pedidos pendientes). Restar lo reservado otra vez lo descontaba dos veces.
+ */
 export function availableUnits(inventory: VariantLike['inventory']): number {
   if (!inventory) return 0;
-  return Math.max(0, inventory.quantityAvailable - inventory.quantityReserved);
+  return Math.max(0, inventory.quantityAvailable);
 }
 
 function toDate(value: Date | string): Date {

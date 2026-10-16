@@ -35,7 +35,7 @@ export function __resetSiteUrlCacheForTests(): void {
   cachedSiteUrl = undefined;
 }
 
-/** "/tienda/x" + es → "/es/tienda/x". El path SIEMPRE empieza con "/tienda". */
+/** "/mi-marca" + es → "/es/mi-marca". El path es el de la tienda SIN idioma: "/{slug}/…". */
 export function localizedPath(locale: Locale, path: string): string {
   return `/${locale}${path}`;
 }
@@ -45,7 +45,7 @@ export function absoluteUrl(site: URL, path: string): string {
 }
 
 export interface AlternatesInput {
-  /** Path sin idioma, ej "/tienda/mi-marca/productos". Puede incluir "?page=2". */
+  /** Path sin idioma, ej "/mi-marca/productos". Puede incluir "?page=2". */
   path:             string;
   currentLocale:    Locale;
   indexableLocales: readonly Locale[];

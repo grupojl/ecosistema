@@ -29,6 +29,11 @@ cuando alguien hace logout.
 - El front de colaboradores (dashboard-front) — para el SSO
 - El back de ecommerce (ecommerce-back) — para verificar si un dueño tiene acceso
 
+## Sesiones y dispositivos
+
+Lista de dispositivos y cierre por sesión (✅) y aviso de dispositivo nuevo (🔲): ver
+`modules/sass-back/user-sessions.md` (ADR-020). `POST /auth/session` también emite la cookie `__sid`.
+
 ## Estado actual
 
 ✅ Funcionando. Cookies HttpOnly implementadas (más seguro que tokens visibles).

@@ -1,4 +1,4 @@
-# Sección: Configuración (/dashboard/configuracion)
+# Sección: Configuración (/configuracion)
 
 ## ¿Qué hace en palabras simples?
 

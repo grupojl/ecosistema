@@ -1,4 +1,4 @@
-# Sección: Chat IA (/dashboard/chat)
+# Sección: Chat IA (/chat)
 
 ## ¿Qué hace en palabras simples?
 
@@ -22,5 +22,5 @@ migrará igual que todos los demás.
 ## Estado actual
 
 ⚠️ Funcional pero con deuda técnica: fetch manual en lib/chat-ia-client.ts.
-La página de prueba (/dashboard/chat/prueba) está aislada a propósito — es
+La página de prueba (/chat/prueba) está aislada a propósito — es
 código de testing, no de producción.

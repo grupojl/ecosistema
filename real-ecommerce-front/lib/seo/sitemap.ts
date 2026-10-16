@@ -25,6 +25,29 @@ export function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
+export interface SitemapIndexEntry {
+  loc:      string;
+  lastmod?: Date;
+}
+
+/** Índice de sitemaps (sitemaps.org): un <sitemap> por tienda. Mismo tope de 50.000 por archivo. */
+export function buildSitemapIndexXml(entries: readonly SitemapIndexEntry[]): string {
+  const items = entries.slice(0, SITEMAP_MAX_URLS).map((entry) => {
+    const lines = [`    <loc>${escapeXml(entry.loc)}</loc>`];
+    if (entry.lastmod && !Number.isNaN(entry.lastmod.getTime()) && entry.lastmod.getTime() > 0) {
+      lines.push(`    <lastmod>${entry.lastmod.toISOString()}</lastmod>`);
+    }
+    return `  <sitemap>\n${lines.join('\n')}\n  </sitemap>`;
+  });
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ...items,
+    '</sitemapindex>',
+  ].join('\n');
+}
+
 export function buildSitemapXml(entries: readonly SitemapEntry[]): string {
   const urls = entries.slice(0, SITEMAP_MAX_URLS).map((entry) => {
     const lines = [`    <loc>${escapeXml(entry.loc)}</loc>`];

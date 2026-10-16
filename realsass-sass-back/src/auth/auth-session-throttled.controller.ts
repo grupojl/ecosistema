@@ -20,6 +20,7 @@ import {
   Post,
   Delete,
   Body,
+  Req,
   Res,
   HttpCode,
   HttpStatus,
@@ -27,17 +28,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Throttle }                                    from '@nestjs/throttler';
-import type { Response }                               from 'express';
-import { SessionService, SESSION_COOKIE_NAME }         from '@real/auth-server';
+import type { Request, Response }                        from 'express';
+import { SessionService, SESSION_COOKIE_NAME, SESSION_ID_COOKIE_NAME } from '@real/auth-server';
 import { Public, CurrentUser }                         from '@real/auth-server';
 import type { CurrentUserPayload }                     from '@real/auth-server';
 import { SecurityLogger }                              from '@/common/logger/security-logger';
+import { SessionsService }                             from '@/sessions/sessions.service';
 
 @Controller('auth')
 export class AuthSessionThrottledController {
   private readonly logger = new Logger(AuthSessionThrottledController.name);
 
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService:  SessionService,
+    private readonly sessionsService: SessionsService,
+  ) {}
 
   /**
    * POST /auth/session
@@ -50,6 +55,7 @@ export class AuthSessionThrottledController {
   @Throttle({ auth: { limit: 10, ttl: 60_000 } })
   async createSession(
     @Body('idToken') idToken: string,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ ok: boolean }> {
     if (!idToken) {
@@ -67,6 +73,8 @@ export class AuthSessionThrottledController {
       this.sessionService.getCookieOptions(),
     );
 
+    await this.registerDevice(sessionCookie, req, res);
+
     return { ok: true };
   }
 
@@ -81,6 +89,9 @@ export class AuthSessionThrottledController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ ok: boolean }> {
     await this.sessionService.revokeSession(user.uid);
+    // Firebase revoca los refresh tokens de todos los dispositivos: las filas quedan igual.
+    await this.sessionsService.revokeAll(user.uid).catch((err) =>
+      this.logger.warn(`revokeAll falló: ${String(err)}`));
 
     SecurityLogger.sessionRevoked(this.logger, {
       uid:    user.uid,
@@ -92,7 +103,27 @@ export class AuthSessionThrottledController {
       '',
       this.sessionService.getClearCookieOptions(),
     );
+    res.cookie(SESSION_ID_COOKIE_NAME, '', this.sessionService.getClearCookieOptions());
 
     return { ok: true };
+  }
+
+  /**
+   * ADR-020: registra o renueva la sesión del dispositivo y emite `__sid`.
+   * Es best-effort: si falla, el login igual funciona (la sesión no aparece en la lista).
+   */
+  private async registerDevice(sessionCookie: string, req: Request, res: Response): Promise<void> {
+    try {
+      const { uid } = await this.sessionService.verifySessionCookie(sessionCookie);
+      const current  = (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_ID_COOKIE_NAME];
+      const sid      = await this.sessionsService.register(uid, {
+        userAgent:     req.headers['user-agent'],
+        ip:            req.ip,
+        countryHeader: req.headers['cf-ipcountry'] as string | undefined,
+      }, current);
+      if (sid) res.cookie(SESSION_ID_COOKIE_NAME, sid, this.sessionService.getCookieOptions());
+    } catch (err) {
+      this.logger.warn(`No se pudo registrar la sesión del dispositivo: ${String(err)}`);
+    }
   }
 }

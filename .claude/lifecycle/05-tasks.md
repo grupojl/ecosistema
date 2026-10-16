@@ -50,8 +50,8 @@ En orden de ejecución dentro de cada fase.
 - [x] **[E12-02]** Health check 3 estados (ok/degraded/down) en ambos backs — LATENCY_WARN_MS=200
 - [x] **[E11-05]** ISR en real-ecommerce-front — revalidate=3600 layout + revalidate=1800 productos
 - [x] **[S4-D]**  HydrationBoundary con server caller real en 4 páginas:
-  - dashboard-front/app/dashboard/tienda/productos/page.tsx ✅
-  - dashboard-front/app/dashboard/tienda/pedidos/page.tsx ✅
+  - dashboard-front/app/tienda/productos/page.tsx ✅
+  - dashboard-front/app/tienda/pedidos/page.tsx ✅
   - sass-front/app/profile/page.tsx ✅
   - ecommerce-front — ISR (revalidate) aplicado ✅
 - [x] **[E11-04]** Optimistic updates en TanStack Query (useUpdateProduct, useDeleteProduct)

@@ -44,33 +44,33 @@ describe('getSiteUrl — fail-soft (ADR-016 D4)', () => {
 
 describe('localizedPath / absoluteUrl', () => {
   it('antepone el locale al path', () => {
-    expect(localizedPath('pt', '/tienda/mi-marca')).toBe('/pt/tienda/mi-marca')
+    expect(localizedPath('pt', '/mi-marca')).toBe('/pt/mi-marca')
   })
 
   it('arma una URL absoluta contra el origin del sitio', () => {
     const site = new URL('https://tienda.com')
-    expect(absoluteUrl(site, '/es/tienda/x')).toBe('https://tienda.com/es/tienda/x')
+    expect(absoluteUrl(site, '/es/x')).toBe('https://tienda.com/es/x')
   })
 })
 
 describe('buildAlternates', () => {
   it('sin SITE_URL configurado → undefined (no canonical roto)', () => {
     delete process.env['SITE_URL']
-    expect(buildAlternates({ path: '/tienda/x', currentLocale: 'es', indexableLocales: ['es'] })).toBeUndefined()
+    expect(buildAlternates({ path: '/x', currentLocale: 'es', indexableLocales: ['es'] })).toBeUndefined()
   })
 
   it('canonical es SIEMPRE self-referencial al locale actual', () => {
     process.env['SITE_URL'] = 'https://tienda.com'
-    const alt = buildAlternates({ path: '/tienda/x', currentLocale: 'pt', indexableLocales: ['es', 'pt'] })
-    expect(alt?.canonical).toBe('https://tienda.com/pt/tienda/x')
+    const alt = buildAlternates({ path: '/x', currentLocale: 'pt', indexableLocales: ['es', 'pt'] })
+    expect(alt?.canonical).toBe('https://tienda.com/pt/x')
   })
 
   it('hreflang cubre solo los idiomas indexables + x-default', () => {
     process.env['SITE_URL'] = 'https://tienda.com'
-    const alt = buildAlternates({ path: '/tienda/x', currentLocale: 'es', indexableLocales: ['es'] })
+    const alt = buildAlternates({ path: '/x', currentLocale: 'es', indexableLocales: ['es'] })
     const languages = alt?.languages as Record<string, string>
-    expect(languages['es']).toBe('https://tienda.com/es/tienda/x')
-    expect(languages['x-default']).toBe('https://tienda.com/tienda/x')
+    expect(languages['es']).toBe('https://tienda.com/es/x')
+    expect(languages['x-default']).toBe('https://tienda.com/x')
     expect(languages['pt']).toBeUndefined() // pt no es indexable para esta tienda
   })
 })

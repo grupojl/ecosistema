@@ -18,7 +18,7 @@ import { getErrorMessage }       from '@/lib/errors'
 export default function InvitePage() {
   const params   = useParams<{ token: string }>()
   const router   = useRouter()
-  const { firebaseUser, loading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   const token = params.token
 
@@ -70,7 +70,7 @@ export default function InvitePage() {
           )}
         </div>
 
-        {!firebaseUser ? (
+        {!isAuthenticated ? (
           <div className="rounded-xl border p-4 space-y-3 text-center">
             <ShieldCheck className="h-6 w-6 text-muted-foreground mx-auto" />
             <p className="text-sm text-muted-foreground">

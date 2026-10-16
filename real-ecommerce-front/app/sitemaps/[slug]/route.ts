@@ -46,21 +46,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const entries: SitemapEntry[] = [
     {
-      loc: absoluteUrl(site, localizedPath(indexable[0], `/tienda/${slug}`)),
-      alternates: alternatesFor(site, indexable, `/tienda/${slug}`),
+      loc: absoluteUrl(site, localizedPath(indexable[0], `/${slug}`)),
+      alternates: alternatesFor(site, indexable, `/${slug}`),
     },
     {
-      loc: absoluteUrl(site, localizedPath(indexable[0], `/tienda/${slug}/productos`)),
-      alternates: alternatesFor(site, indexable, `/tienda/${slug}/productos`),
+      loc: absoluteUrl(site, localizedPath(indexable[0], `/${slug}/productos`)),
+      alternates: alternatesFor(site, indexable, `/${slug}/productos`),
     },
     ...categories.map((c) => ({
-      loc:        absoluteUrl(site, localizedPath(indexable[0], `/tienda/${slug}/categoria/${c.handle}`)),
-      alternates: alternatesFor(site, indexable, `/tienda/${slug}/categoria/${c.handle}`),
+      loc:        absoluteUrl(site, localizedPath(indexable[0], `/${slug}/categoria/${c.handle}`)),
+      alternates: alternatesFor(site, indexable, `/${slug}/categoria/${c.handle}`),
     })),
     ...products.map((p) => ({
-      loc:        absoluteUrl(site, localizedPath(indexable[0], `/tienda/${slug}/productos/${p.handle}`)),
+      loc:        absoluteUrl(site, localizedPath(indexable[0], `/${slug}/productos/${p.handle}`)),
       lastmod:    p.updatedAt,
-      alternates: alternatesFor(site, indexable, `/tienda/${slug}/productos/${p.handle}`),
+      alternates: alternatesFor(site, indexable, `/${slug}/productos/${p.handle}`),
     })),
   ]
 

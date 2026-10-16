@@ -10,17 +10,21 @@ const baseProduct: ProductLike = {
   category: { id: 'c1', name: 'Calzado', handle: 'calzado' },
   variants: [
     { id: 'v1', title: '40', priceCents: 15000, currency: 'ARS', inventory: { quantityAvailable: 10, quantityReserved: 3 } },
-    { id: 'v2', title: '41', priceCents: 16000, currency: 'ARS', inventory: { quantityAvailable: 2, quantityReserved: 2 } },
+    { id: 'v2', title: '41', priceCents: 16000, currency: 'ARS', inventory: { quantityAvailable: 0, quantityReserved: 2 } },
   ],
 }
 
 describe('availableUnits', () => {
-  it('resta reservado de disponible', () => {
-    expect(availableUnits({ quantityAvailable: 10, quantityReserved: 3 })).toBe(7)
+  it('available ya es lo vendible: lo reservado NO se resta otra vez', () => {
+    expect(availableUnits({ quantityAvailable: 7, quantityReserved: 3 })).toBe(7)
+  })
+
+  it('todo reservado y nada vendible → 0', () => {
+    expect(availableUnits({ quantityAvailable: 0, quantityReserved: 5 })).toBe(0)
   })
 
   it('nunca da negativo aunque el dato esté corrupto', () => {
-    expect(availableUnits({ quantityAvailable: 1, quantityReserved: 5 })).toBe(0)
+    expect(availableUnits({ quantityAvailable: -2, quantityReserved: 0 })).toBe(0)
   })
 
   it('sin inventario → 0', () => {
@@ -38,7 +42,7 @@ describe('toProductView', () => {
 
   it('inStock es true si al menos una variante tiene unidades disponibles', () => {
     expect(toProductView(baseProduct).inStock).toBe(true)
-    expect(toProductView(baseProduct).variants[1].available).toBe(false) // v2: 2-2=0
+    expect(toProductView(baseProduct).variants[1].available).toBe(false) // v2: 0 vendibles (todo está reservado)
   })
 
   it('mezclar monedas entre variantes no contamina el rango de precio', () => {

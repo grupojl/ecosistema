@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "REEMPLAZAR_CON_LA_CLAVE_PUBLICA_DE_cargo_tauri_signer_generate",
+      "endpoints": [
+        "https://github.com/grupojl/ecosistema/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

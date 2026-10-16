@@ -3,6 +3,8 @@ import { getFirebaseAdmin }                          from '@/firebase/firebase.m
 
 export const SESSION_COOKIE_NAME = '__session' as const;
 export const SESSION_COOKIE_MAX_AGE_MS = 60 * 60 * 24 * 14 * 1000;
+/** ADR-020: id de la sesión/dispositivo. Mismas opciones y dominio que `__session`. */
+export const SESSION_ID_COOKIE_NAME = '__sid' as const;
 
 export interface SessionCookieOptions {
   httpOnly: boolean;

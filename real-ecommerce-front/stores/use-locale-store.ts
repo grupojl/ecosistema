@@ -1,7 +1,7 @@
 /**
  * stores/use-locale-store.ts — real-ecommerce-front
  *
- * Recuerda el último idioma que el visitante navegó en /[locale]/tienda/...
+ * Recuerda el último idioma que el visitante navegó en /[locale]/...
  * para que checkout() (que hoy vive fuera de las rutas con idioma, en
  * app/(site)/checkout) pueda mandarlo al backend sin depender de la URL.
  *

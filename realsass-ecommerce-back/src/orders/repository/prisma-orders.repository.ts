@@ -32,6 +32,15 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     return order as OrderRecord | null;
   }
 
+  async findByCustomer(organizationId: string, customerId: string): Promise<OrderRecord[]> {
+    const orders = await this.prisma.order.findMany({
+      where:   { organizationId, customerId },
+      include: ORDER_WITH_ITEMS,
+      orderBy: { createdAt: "desc" },
+    });
+    return orders as OrderRecord[];
+  }
+
   async findByCart(organizationId: string, cartId: string): Promise<OrderRecord[]> {
     const orders = await this.prisma.order.findMany({
       where:   { organizationId, cartId },

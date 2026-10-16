@@ -45,7 +45,7 @@ export default function SsoPage() {
         });
 
         // 3. Navegar al dashboard — AuthProvider hace el sync automáticamente
-        router.replace('/dashboard');
+        router.replace('/');
       } catch (err) {
         console.error('[sso] Error:', err);
         setError('No se pudo completar la autenticación. Intentá de nuevo.');

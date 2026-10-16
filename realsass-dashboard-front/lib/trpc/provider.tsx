@@ -13,10 +13,10 @@ import { getActiveOrganizationId } from '@real/auth-client';
 import { trpc, makeTrpcClient } from '@/lib/trpc/client';
 import { ecommerceTrpc, makeEcommerceTrpcClient } from '@/lib/trpc/ecommerce-client';
 
-const sassTrpcUrl = () =>
-  process.env.NEXT_PUBLIC_REAL_BACK_URL
-    ? `${process.env.NEXT_PUBLIC_REAL_BACK_URL}/api/v1/trpc`
-    : '/api/v1/trpc';
+const sassTrpcUrl = () => {
+  const base = process.env.NEXT_PUBLIC_SASS_BACK_URL ?? process.env.NEXT_PUBLIC_REAL_BACK_URL;
+  return base ? `${base.replace(/\/+$/, '').replace(/\/api\/v1$/, '')}/api/v1/trpc` : '/api/v1/trpc';
+};
 
 const ecommerceTrpcUrl = () => {
   const base = process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? process.env.NEXT_PUBLIC_ECOMMERCE_BACK_URL;

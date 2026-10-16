@@ -78,6 +78,7 @@ Next.js 15 App Router · React 19 · TypeScript strict · TailwindCSS · shadcn/
 **Comunicación:**
 tRPC (interno) · gRPC (cuando aplique, futuro) · REST (solo APIs públicas externas)
 
+**Desktop (planificado, ADR-023):** Tauri v2 — cascarón fino sobre el dashboard desplegado (opción A)
 **Observabilidad:** OpenTelemetry · Prometheus · Grafana (S4)
 **Testing:** Jest · Supertest · Vitest · React Testing Library · Playwright (S4)
 **Seguridad:** Firebase Auth + Session Cookies HttpOnly · RBAC · Helmet · Rate limiting
@@ -173,17 +174,41 @@ Ver ADR-014 y los checklists MKT-01..09 en `.claude/modules/sass-back/markets.md
 ### Reglas no negociables
 
 ```
-URL        /{es|pt|en}/tienda/{slug}/...     idioma en la URL, país en el Market
+URL        /{es|pt|en}/{slug}/...     idioma en la URL, país en el Market
 Idioma     cookie > Accept-Language > país (no bots) > es
-Redirect   solo /tienda/... sin idioma, 307. Una URL con idioma NUNCA redirige
+Redirect   solo /{slug}/... sin idioma (y el prefijo viejo /tienda/), 307. Una URL con idioma NUNCA redirige
 Indexa     solo el idioma primario de la tienda (countryCode) hasta Fase 2
 Errores    NOT_FOUND → 404 · cualquier otra falla → 5xx (Google conserva el índice)
 ```
 
-Ver `architecture/10-seo-i18n-norte.md`, `decisions/ADR-016-seo-i18n-global.md`
+Ver `architecture/10-seo-i18n-norte.md`, `decisions/ADR-016-seo-i18n-global.md` (estructura de URL enmendada por `ADR-022-urls-limpias.md`)
 y `contracts/seo-i18n.md`. Esto completa el pendiente "Idioma por Market" de ADR-014.
 
 <!-- ADR-018 -->
+---
+
+## UI/UX adaptable — desktop, tablet y mobile (ADR-024)
+
+### El norte
+
+**Shopify Polaris** (admin multi-tenant adaptable) · **Apple HIG** (lo táctil manda) · **Material 3** (clases de tamaño)
+
+*Una sola interfaz que se adapta al dispositivo, no tres interfaces distintas.*
+
+### Reglas no negociables
+
+```
+Tamaños    compact <600 · medium 600–839 · expanded ≥840; puntos de corte únicos en @real/ui
+Navegación barra inferior (compact) · riel (medium) · barra lateral (expanded); mismas rutas
+Táctil     objetivos ≥44 px; nada esencial depende de hover
+Tokens     color/espaciado/radios/tipografía/motion solo desde @real/ui; sin valores hardcodeados
+Calidad    contraste AA, foco visible, reduced-motion, sin user-scalable=no; Core Web Vitals en el storefront
+Estados    toda vista con datos define cargando, vacío, error y sin permisos
+Prioridad  storefront (celular) primero; dashboard y sass-front después; Tauri hereda el dashboard
+```
+
+Ver `architecture/12-ui-norte.md`, `decisions/ADR-024-ui-ux-adaptable.md` y `domain/ui.md` (sistema de diseño actual).
+
 ---
 
 ## Dependencias — política única (ADR-018)

@@ -24,7 +24,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { getFirebaseAdmin }                      from '@/firebase/firebase.module';
-import { SESSION_COOKIE_NAME }                   from '@/session/session.service';
+import { SESSION_COOKIE_NAME, SESSION_ID_COOKIE_NAME } from '@/session/session.service';
 import type {
   CurrentUserPayload,
   TenantContext,
@@ -50,6 +50,14 @@ export interface TrpcAuthMiddlewareOptions {
     firebaseUid:    string,
     organizationId: string,
   ) => Promise<OrganizationAccessResult>;
+
+  /**
+   * ADR-020 (opcional): ¿la sesión `sid` fue cerrada desde la lista de dispositivos?
+   * Solo se consulta cuando la request llega por cookie y trae `__sid`. Debe ser barata
+   * (cache, sin query por request). Sin esta opción, o sin `__sid` (cookies anteriores
+   * a ADR-020), la sesión se acepta hasta que venza.
+   */
+  isSessionRevoked?: (sessionId: string, firebaseUid: string) => Promise<boolean>;
 }
 
 export interface TrpcAuthMiddlewareResult {
@@ -77,7 +85,7 @@ declare global {
 export function createTrpcAuthMiddleware(
   options: TrpcAuthMiddlewareOptions,
 ): TrpcAuthMiddlewareResult {
-  const { getOrganizationAccess } = options;
+  const { getOrganizationAccess, isSessionRevoked } = options;
 
   // ── Middleware 1: Firebase Auth ─────────────────────────────────────────────
   const firebaseAuth = async (
@@ -102,6 +110,11 @@ export function createTrpcAuthMiddleware(
         ? await getFirebaseAdmin().verifyIdToken(bearer)
         : await getFirebaseAdmin().verifySessionCookie(sessionCookie as string, true);
 
+      if (!bearer && isSessionRevoked) {
+        const sid = (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_ID_COOKIE_NAME];
+        if (sid && await isSessionRevoked(sid, decoded.uid)) return next(); // sin req.user → UNAUTHORIZED
+      }
+
       // Solo hay token raw para reenviar entre backs cuando llegó por Bearer.
       if (bearer) req.firebaseToken = bearer;
       req.user = {
@@ -109,6 +122,7 @@ export function createTrpcAuthMiddleware(
         email:       decoded.email        ?? '',
         displayName: decoded.name         ?? null,
         avatarUrl:   decoded.picture      ?? null,
+        emailVerified: decoded.email_verified === true,
       } satisfies CurrentUserPayload;
     } catch {
       // Token inválido — enforceAuth rechazará. No cortamos el flujo.

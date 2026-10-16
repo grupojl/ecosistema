@@ -45,6 +45,26 @@ WARN: archivos .bak acumulados (limpiar con find . -name '*.bak' -delete)
 
 ---
 
+## Sesión 2026-10-16 — Norte de sesiones y dispositivos
+
+Decisión: ADR-020 (modelo GitHub). Contrato `contracts/user-sessions.md`. **F1 y F2 implementadas**:
+modelo + migración, `sessions.*`, cookie `__sid`, modal en dashboard-front y sass-front (`/profile`).
+F3 (mail) pendiente. Además: la sesión se refleja en vivo entre fronts (logout en uno → cierra en todos; login en uno → los demás entran
+solos). Sesión compartida entre fronts (login en dashboard → sass-front sin volver a
+loguearse) por cookie. Detalle en `roadmap/deuda-tecnica.md` (DT-SES-*).
+También: login del dashboard espera al sync del `AuthProvider` y el layout ya no usa `<script>`.
+
+**Desktop (2026-10-16):** decidida la opción A de Tauri (cascarón sobre el dashboard desplegado) — ver `decisions/ADR-023-dashboard-desktop-tauri.md` y `services/realsass-dashboard-desktop.md`. F0 y F1 **escritos pero sin compilar** (`realsass-dashboard-desktop/`, más `/desktop-login` y el botón de `/login` en el dashboard). Segunda tanda: deep link, auto-actualización (feature `updater`), pipeline de release en GitHub Actions e ícono desde el logo del dashboard. Todo **sin compilar ni ejecutar**. Pendiente: probarlo (en una máquina con Rust o con el workflow en la nube) y comprar certificados para la firma de código (ver su README).
+
+**Cierre de deuda (2026-10-16):** `pnpm test` corre en ambos backs (sass-back 18/18, ecommerce-back 13/13); se cerró la vulnerabilidad de Markets (operaciones públicas), el carrito tiene dueño, la organización del cliente se valida, el stock usa un solo modelo y cerrar una sesión desde "Dispositivos" corta también el ecommerce-back. Diferido a propósito: Docker, despliegue en Railway (WEL-01..03) y pago en línea. Detalle en `roadmap/deuda-tecnica.md`.
+
+**Dev local:** `pnpm dev` (raíz) ejecuta `scripts/dev.mjs`: contratos si faltan → backs (:3020, :3025) esperando su puerto →
+fronts (:3021, :3022, :3023) de a uno. Si un puerto ya está en uso se asume que ese servicio ya corre. Ctrl+C cierra lo que
+levantó. `pnpm dev:parallel` es el modo anterior (todo a la vez). Si Turbopack falla con `0xc0000142` (PostCSS) es presión de
+recursos de Windows: reiniciar solo ese front.
+
+---
+
 ## Sesión 2026-10-08 — Contratos desde `dist` + dashboard-front
 
 Decisión: ADR-019. Detalle de pendientes en `roadmap/deuda-tecnica.md` (DT-CONTRATO-*, DT-DASH-*).

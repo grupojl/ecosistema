@@ -17,9 +17,9 @@ Mobile o desktop. Cualquier país e idioma.
 
 | Pantalla | Ruta | Servicio |
 |---------|------|---------|
-| Home tienda | `[locale]/tienda/[slug]` | ecommerce-front → ecommerce-back |
-| Categoría | `[locale]/tienda/[slug]/categoria/[cat]` | ecommerce-front → ecommerce-back |
-| Producto | `[locale]/tienda/[slug]/productos/[handle]` | ecommerce-front → ecommerce-back |
+| Home tienda | `[locale]/[slug]` | ecommerce-front → ecommerce-back |
+| Categoría | `[locale]/[slug]/categoria/[cat]` | ecommerce-front → ecommerce-back |
+| Producto | `[locale]/[slug]/productos/[handle]` | ecommerce-front → ecommerce-back |
 | Checkout | `/checkout` | ecommerce-front → ecommerce-back |
 | Tracking | `/tracking` | ecommerce-front → ecommerce-back |
 

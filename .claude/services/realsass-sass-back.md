@@ -31,6 +31,11 @@ Internamente, organizations/ es el ejemplo más limpio de la arquitectura.
 `src/trpc/routers/`: auth, collaborators, config-audit, config-flags,
 config-quotas, config-secrets, config-themes, config-webhooks, organizations
 
+## Sesiones y dispositivos (ADR-020) — F1+F2 ✅
+
+Modelo `UserSession` + router `sessions.*` (`src/sessions/`, `sessions.router.ts`) + cookie `__sid`
+emitida en `POST /auth/session`. Requiere aplicar la migración `20261016120000_user_sessions`. Detalle: `modules/sass-back/user-sessions.md`.
+
 ## Deuda consciente
 
 - `collaborators.service.ts` mantiene PrismaService para tx de invitación

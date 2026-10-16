@@ -67,6 +67,7 @@
     "vaul": "catalog:",
     "zod": "catalog:",
     "zustand": "catalog:",
+    "@real/auth-client": "workspace:*",
     "@real/ui": "workspace:*",
     "@real/trpc": "workspace:*"
   },

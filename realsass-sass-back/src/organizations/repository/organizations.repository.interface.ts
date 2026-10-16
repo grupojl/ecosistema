@@ -12,6 +12,9 @@ export interface IOrganizationsRepository {
   slugExists(slug: string): Promise<boolean>;
   resolveUserId(firebaseUid: string): Promise<string | null>;
   findBySlug(slug: string): Promise<StoreInfo | null>;
+  findPublicById(id: string): Promise<StoreInfo | null>;
+  /** Tiendas ACTIVAS para el sitemap: solo slug, país y fecha. Nunca datos del dueño. */
+  listPublicStores(limit: number): Promise<Array<{ slug: string; countryCode: string; updatedAt: Date }>>;
   create(input: CreateOrganizationInput, tx?: Prisma.TransactionClient): Promise<Organization>;
   update(id: string, input: UpdateOrganizationInput): Promise<Organization>;
 }

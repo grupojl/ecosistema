@@ -18,9 +18,10 @@ import { ClaimsService }                                from '@/auth/claims.serv
 import { UsersModule }                                  from '@/users/users.module';
 import { AffiliatesModule }                             from '@/affiliate/affiliate.module';
 import { OrganizationsModule }                          from '@/organizations/organizations.module';
+import { SessionsModule }                               from '@/sessions/sessions.module';
 
 @Module({
-  imports:     [UsersModule, AffiliatesModule, OrganizationsModule],
+  imports:     [UsersModule, AffiliatesModule, OrganizationsModule, SessionsModule],
   providers:   [AuthService, ClaimsService, SessionService],
   controllers: [AuthController, AuthSessionThrottledController],
   exports:     [AuthService, ClaimsService, SessionService],

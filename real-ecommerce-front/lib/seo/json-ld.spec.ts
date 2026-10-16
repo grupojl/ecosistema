@@ -16,7 +16,7 @@ const product: ProductLike = {
 
 describe('storeJsonLd', () => {
   it('genera un OnlineStore con los campos básicos', () => {
-    const ld = storeJsonLd({ name: 'Mi Marca', url: '/es/tienda/mi-marca', description: 'desc', logoUrl: null, website: null })
+    const ld = storeJsonLd({ name: 'Mi Marca', url: '/es/mi-marca', description: 'desc', logoUrl: null, website: null })
     expect(ld['@type']).toBe('OnlineStore')
     expect(ld.name).toBe('Mi Marca')
   })
@@ -25,7 +25,7 @@ describe('storeJsonLd', () => {
 describe('productJsonLd', () => {
   it('un único precio → Offer simple', () => {
     const view = toProductView(product)
-    const ld = productJsonLd({ product: view, url: '/es/tienda/x/productos/y', storeName: 'Mi Marca', inLanguage: 'es' })
+    const ld = productJsonLd({ product: view, url: '/es/x/productos/y', storeName: 'Mi Marca', inLanguage: 'es' })
     expect((ld.offers as JsonLdObject)['@type']).toBe('Offer')
     expect((ld.offers as JsonLdObject).price).toBe('150.00')
     expect((ld.offers as JsonLdObject).availability).toContain('InStock')
@@ -65,8 +65,8 @@ describe('productJsonLd', () => {
 describe('breadcrumbJsonLd', () => {
   it('arma un BreadcrumbList con posiciones 1-based', () => {
     const ld = breadcrumbJsonLd([
-      { name: 'Inicio', url: '/es/tienda/x' },
-      { name: 'Calzado', url: '/es/tienda/x/categoria/calzado' },
+      { name: 'Inicio', url: '/es/x' },
+      { name: 'Calzado', url: '/es/x/categoria/calzado' },
     ])
     const items = ld.itemListElement as JsonLdObject[]
     expect(items[0].position).toBe(1)

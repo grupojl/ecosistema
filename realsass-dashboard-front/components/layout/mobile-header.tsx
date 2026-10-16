@@ -22,7 +22,7 @@ export function MobileHeader() {
   const [open, setOpen] = useState(false);
 
   const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === href : pathname.startsWith(href);
+    href === '/' ? pathname === href : pathname.startsWith(href);
 
   return (
     <>

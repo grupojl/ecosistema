@@ -1,5 +1,9 @@
 # realsass-dashboard-front
 
+## URLs (ADR-022)
+
+El panel vive en la raíz: `/` es el inicio, `/tienda/productos`, `/tienda/pedidos`, `/configuracion/…`, `/chat`, etc. (carpeta `app/(panel)`, un grupo de rutas que no aparece en la URL). `/dashboard/**` redirige con 308 a `/**`. En desarrollo: `pnpm dev:webpack` si Turbopack falla en Windows.
+
 ## Rol
 
 Dashboard de colaboradores (COLLABORATOR). Gestión operativa del negocio:
@@ -7,15 +11,15 @@ tienda, pedidos, chat IA, configuración.
 
 ## Le corresponde
 
-- `/dashboard/tienda` — productos, pedidos, preview de tienda
-- `/dashboard/configuracion` — flags, quotas, tema, webhooks (mismo dominio
+- `/tienda` — productos, pedidos, preview de tienda
+- `/configuracion` — flags, quotas, tema, webhooks (mismo dominio
   que sass-front pero desde la vista de colaborador)
-- `/dashboard/chat` — conversaciones y proyectos IA (`chat-ia-back`, todavía
+- `/chat` — conversaciones y proyectos IA (`chat-ia-back`, todavía
   sin router tRPC propio)
-- `/dashboard/campanas`, `/dashboard/pagos` — placeholders, dominios
+- `/campanas`, `/pagos` — placeholders, dominios
   pendientes de servicio propio
-- `/dashboard/zonas` — redirect legacy (dominio real-estate descontinuado,
-  categorías ahora se gestionan desde `/dashboard/tienda/productos`)
+- `/zonas` — redirect legacy (dominio real-estate descontinuado,
+  categorías ahora se gestionan desde `/tienda/productos`)
 
 ## Conecta con
 
@@ -45,6 +49,29 @@ usan `inferRouterInputs/Outputs`). `next.config.mjs` **no** ignora errores de ti
 - Pedidos: filtro por estado (en el cliente) y detalle en `components/dashboard/order-sheet.tsx`
   (`adminOrders.get`), solo lectura.
 
+## Dos clientes tRPC, dos contextos
+
+`lib/trpc/provider.tsx` anida `trpc.Provider` (sass-back) y `ecommerceTrpc.Provider` (ecommerce-back). En tRPC v11
+todos los `createTRPCReact` comparten el mismo `TRPCContext` por defecto: el provider interno pisaba al externo
+y las consultas `trpc.*` iban al ecommerce-back (404 "No procedure found"). `ecommerceTrpc` se crea con
+`{ context: createContext(null) }`. **Todo cliente tRPC React nuevo en un front con más de un back necesita su
+propio contexto.**
+
+## Dispositivos (ADR-020) ✅
+
+Menú de usuario del sidebar → "Dispositivos" abre un modal (`DevicesDialog` de `@real/ui`, conectado en
+`components/devices-dialog-connected.tsx`): lista (`sessions.list`), marca "Este dispositivo", "Cerrar"
+por sesión y "Cerrar las demás". Solo consulta con el modal abierto.
+
+## Turbopack: `0xc0000142` al compilar `globals.css` (Windows)
+
+Síntoma: `An unexpected Turbopack error occurred`. El log de pánico (`%TEMP%\next-panic-*.log`) dice `Failed to write app endpoint ... globals.css ... evaluate_webpack_loader ... node process exited before we could connect to it with exit code: 0xc0000142`: Turbopack no logra lanzar el proceso hijo de PostCSS. Es del entorno (no del código: la config de PostCSS es idéntica en los 3 fronts). Alternativa: `pnpm dev:webpack` (`next dev -p 3022 --webpack`), que procesa el CSS dentro del mismo proceso.
+
+## Cache-Control de `/_next/static`
+
+`next.config.mjs` fuerza `public, max-age=31536000, immutable` **solo en producción** (los archivos llevan hash). En dev no: ahí el navegador se
+quedaba con JavaScript viejo por un año y Next avisaba "Custom Cache-Control headers ... can break Next.js development behavior".
+
 ## Bug/deuda conocida
 
 - `features/chat`: coexisten `hooks.ts` y `hooks/`, `types.ts` y `types/`, con shapes distintos
@@ -54,7 +81,7 @@ usan `inferRouterInputs/Outputs`). `next.config.mjs` **no** ignora errores de ti
 - `features/config-*/services/*.service.ts` son REST legacy sin uso (los hooks usan tRPC) — borrar.
 - Eliminados el 2026-10-08: `features/store/api.ts` y los componentes iPhone/Mac de `components/dashboard/`.
 
-`app/dashboard/chat/prueba/page.tsx` está deliberadamente aislado de
+`app/chat/prueba/page.tsx` está deliberadamente aislado de
 `features/chat/hooks` y `chat-ia-client.ts` para testing manual — no depende
 de contratos internos que puedan cambiar. Es código de prueba, no de producto.
 

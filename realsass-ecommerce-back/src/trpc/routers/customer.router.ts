@@ -5,10 +5,10 @@
  *
  * Dos tipos de procedure:
  *   publicProcedure    → sin auth (identify, resolveStore, catálogo público)
- *   customerProcedure  → requiere x-customer-id + x-organization-id
+ *   customerProcedure  → requiere sesión de Firebase (Bearer, email verificado) + x-organization-id (ADR-021).
+ *                        El customerId se DERIVA del token; ya no existe customer.identify ni el header x-customer-id.
  *
  * Procedures públicos (sin auth):
- *   customer.identify        → email → customerId (bootstrap del cliente)
  *   customer.resolveStore    → slug → StoreInfo (bootstrap de la tienda)
  *   customer.getProducts     → catálogo público con filtros opcionales
  *   customer.getProduct      → detalle de producto por handle
@@ -44,30 +44,6 @@ export function createCustomerRouter(
     // ── Bootstrap público (sin auth) ───────────────────────────────────────
 
     /**
-     * customer.identify — @Public
-     * Dado un email, devuelve el customerId de la org.
-     * Si el cliente no existe, lo crea.
-     * Opcionalmente adopta un carrito anónimo al cliente.
-     */
-    identify: publicProcedure
-      .input(z.object({
-        organizationId: z.string().uuid(),
-        email:          z.string().email(),
-        displayName:    z.string().optional(),
-        phone:          z.string().optional(),
-        cartId:         z.string().optional(),
-      }))
-      .mutation(({ input }) =>
-        customersService.identify(
-          input.organizationId,
-          input.email,
-          input.displayName,
-          input.phone,
-          input.cartId,
-        ),
-      ),
-
-    /**
      * customer.resolveStore — @Public
      * Dado un slug de URL, devuelve el StoreInfo (organizationId, nombre, logo, etc.)
      * Este es el bootstrap de la tienda — se llama UNA vez en el layout del storefront.
@@ -81,6 +57,13 @@ export function createCustomerRouter(
      * Lista de productos publicados de una org con filtros opcionales.
      * Equivalente a GET /ecommerce/public/:orgId/catalog
      */
+    /**
+     * customer.listStores — @Public
+     * Tiendas activas (slug, país, fecha) para el índice de sitemaps del storefront. Datos ya públicos.
+     */
+    listStores: publicProcedure
+      .query(() => storeService.listStores()),
+
     getProducts: publicProcedure
       .input(z.object({
         organizationId: z.string().uuid(),
@@ -125,10 +108,9 @@ export function createCustomerRouter(
      * customer.orders — historial de órdenes del cliente
      */
     orders: customerProcedure
-      .query(async ({ ctx }) => {
-        const all = await ordersService.listOrders(ctx.organizationId!);
-        return all.filter(o => o.customerId === ctx.customerId);
-      }),
+      .query(({ ctx }) =>
+        ordersService.listByCustomer(ctx.organizationId!, ctx.customerId!),
+      ),
 
     /**
      * customer.orderDetail — detalle de una orden
@@ -150,7 +132,7 @@ export function createCustomerRouter(
       get: customerProcedure
         .input(z.object({ cartId: z.string() }))
         .query(({ ctx, input }) =>
-          cartService.getCart(ctx.organizationId!, input.cartId),
+          cartService.getCart(ctx.organizationId!, input.cartId, ctx.customerId!),
         ),
 
       addItem: customerProcedure
@@ -167,6 +149,7 @@ export function createCustomerRouter(
             input.variantId,
             input.quantity,
             input.cartId,
+            ctx.customerId!,
           ),
         ),
 
@@ -176,7 +159,7 @@ export function createCustomerRouter(
           variantId: z.string().uuid(),
         }))
         .mutation(({ ctx, input }) =>
-          cartService.removeItem(ctx.organizationId!, input.cartId, input.variantId),
+          cartService.removeItem(ctx.organizationId!, input.cartId, input.variantId, ctx.customerId!),
         ),
     }),
 

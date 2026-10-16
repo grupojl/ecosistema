@@ -52,6 +52,8 @@ export interface CreateOrderInput {
 export interface IOrdersRepository {
   findById(organizationId: string, orderId: string): Promise<OrderRecord | null>;
   findByCart(organizationId: string, cartId: string): Promise<OrderRecord[]>;
+  /** Pedidos de un cliente, del más nuevo al más viejo. */
+  findByCustomer(organizationId: string, customerId: string): Promise<OrderRecord[]>;
   listByOrg(
     organizationId: string,
     filters?: { status?: OrderStatus; page?: number; limit?: number },

@@ -4,11 +4,11 @@
 
 | Path | Indexable | Comportamiento |
 |------|-----------|----------------|
-| `/{locale}/tienda/{slug}` | Si `locale` es primario de la tienda | 200 · `OnlineStore` JSON-LD |
-| `/{locale}/tienda/{slug}/productos?page=N` | Ídem | 200 · N fuera de rango → **404** (no soft-404) |
-| `/{locale}/tienda/{slug}/productos/{handle}` | Ídem | 200 · `Product` + `BreadcrumbList` |
-| `/{locale}/tienda/{slug}/categoria/{handle}` | Ídem | 200 · `BreadcrumbList` |
-| `/tienda/{slug}/...` | No (x-default) | **307** → `/{negociado}/tienda/{slug}/...` |
+| `/{locale}/{slug}` | Si `locale` es primario de la tienda | 200 · `OnlineStore` JSON-LD |
+| `/{locale}/{slug}/productos?page=N` | Ídem | 200 · N fuera de rango → **404** (no soft-404) |
+| `/{locale}/{slug}/productos/{handle}` | Ídem | 200 · `Product` + `BreadcrumbList` |
+| `/{locale}/{slug}/categoria/{handle}` | Ídem | 200 · `BreadcrumbList` |
+| `/{slug}/...` | No (x-default) | **307** → `/{negociado}/{slug}/...` |
 | `/sitemaps/{slug}` | — | `application/xml` · solo URLs indexables |
 | `/robots.txt` | — | Disallow `/checkout`, `/tracking`, `/api/` |
 

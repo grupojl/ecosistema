@@ -17,10 +17,10 @@ El tenant que completó el onboarding y quiere su storefront público funcionand
 | Pantalla | Ruta | Servicio |
 |---------|------|---------|
 | Dashboard home | `/dashboard` | dashboard-front → sass-back |
-| Tema | `/dashboard/configuracion/tema` | dashboard-front → sass-back (config-themes) |
-| Productos | `/dashboard/tienda/productos` | dashboard-front → ecommerce-back (catalog) |
-| Preview | `/dashboard/tienda/preview` | dashboard-front → ecommerce-front |
-| Storefront público | `[locale]/tienda/[slug]` | ecommerce-front → ecommerce-back |
+| Tema | `/configuracion/tema` | dashboard-front → sass-back (config-themes) |
+| Productos | `/tienda/productos` | dashboard-front → ecommerce-back (catalog) |
+| Preview | `/tienda/preview` | dashboard-front → ecommerce-front |
+| Storefront público | `[locale]/[slug]` | ecommerce-front → ecommerce-back |
 
 ---
 

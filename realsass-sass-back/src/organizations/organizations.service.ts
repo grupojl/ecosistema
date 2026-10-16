@@ -102,6 +102,16 @@ export class OrganizationsService {
     return this.repo.findBySlug(slug);
   }
 
+  /** Tiendas activas para el sitemap del storefront (SEO). Tope de 5.000 por consulta. */
+  async listPublicStores(limit = 5000) {
+    return this.repo.listPublicStores(Math.min(Math.max(limit, 1), 5000));
+  }
+
+  /** Igual que findBySlugPublic pero por id: ecommerce-back valida con esto la organización de un cliente (ADR-021). */
+  async findByIdPublic(id: string): Promise<StoreInfo | null> {
+    return this.repo.findPublicById(id);
+  }
+
   /** Alias para TenantGuard de sass-back (verifica ownership) */
   async getOrganizationWithOwner(organizationId: string, firebaseUid: string) {
     const all = await this.repo.listByFirebaseUid(firebaseUid);

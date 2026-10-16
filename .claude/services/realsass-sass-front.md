@@ -38,3 +38,20 @@ Todos los componentes UI se importan desde `@real/ui`.
 - Login: syncUser → getIdToken(true) → POST /auth/session → cookie __session
 - Refresh proactivo cada 55 min — renueva también la session cookie
 - Logout: DELETE /auth/session (revoca server-side) → signOut Firebase
+
+## Sesión compartida con el dashboard
+
+`context/auth-context.tsx`: sin `firebaseUser` en este origen consulta `auth.me` por cookie; si responde, la
+sesión queda abierta (`isAuthenticated`). `useSessionWatch` revalida con `auth.ping` (foco, 30 s, otras
+pestañas) para reflejar logins/logouts hechos en otros fronts. Los componentes usan `isAuthenticated`, no `firebaseUser`.
+
+## Arranque rápido de sesión
+
+`context/auth-context.tsx` pide `auth.me` por cookie apenas monta (perfil + `sessionReady` en 1 request) y deja la
+cadena de Firebase en segundo plano. `/profile` muestra skeleton mientras no hay datos (antes pintaba "Usuario").
+`app/profile/page.tsx` prefetchea con la key real de tRPC: `[['auth','me'],{ type: 'query' }]`.
+
+## Dispositivos (ADR-020) ✅
+
+`/profile`: botón "Dispositivos" junto a "Cerrar sesión" abre el modal `DevicesDialog` de `@real/ui`
+(`components/devices-dialog-connected.tsx`): lista, "Cerrar" por sesión y "Cerrar las demás".

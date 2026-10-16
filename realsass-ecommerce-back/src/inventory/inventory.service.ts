@@ -40,6 +40,8 @@ export class InventoryService {
   }
 
   // ── reserveWithinTransaction ───────────────────────────────────────────────
+  // Modelo de stock: `quantity_available` es lo VENDIBLE ahora; `quantity_reserved` es lo retenido por pedidos pendientes.
+  // Reservar baja available y sube reserved. (Antes el WHERE exigía available − reserved ≥ n: descontaba lo reservado dos veces.)
   // Recibe PrismaTransactionClient — el cliente tipado con todos los modelos
   // que @prisma/adapter-pg provee dentro de $transaction. Corre en la misma
   // transacción que la orden para garantizar atomicidad.
@@ -55,13 +57,13 @@ export class InventoryService {
       SET    quantity_available = quantity_available - ${quantity},
              quantity_reserved  = quantity_reserved  + ${quantity}
       WHERE  variant_id = ${variantId}
-        AND (quantity_available - quantity_reserved) >= ${quantity}
+        AND quantity_available >= ${quantity}
     `;
 
     if (rowsAffected === 0) {
       const current = await tx.inventoryItem.findFirst({ where: { variantId } });
       const available = current
-        ? (current.quantityAvailable - current.quantityReserved)
+        ? current.quantityAvailable
         : 0;
       throw new InsufficientStockError(sku, quantity, available);
     }

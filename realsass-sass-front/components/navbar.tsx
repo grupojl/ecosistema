@@ -25,14 +25,14 @@ const navLinks = [
 export function Navbar() {
   const [loginOpen, setLoginOpen]       = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { firebaseUser, profile, logout } = useAuth()
+  const { firebaseUser, isAuthenticated, profile, logout } = useAuth()
   const router = useRouter()
 
   const initials = profile?.user.email
     ? profile.user.email.slice(0, 2).toUpperCase()
     : firebaseUser?.email?.slice(0, 2).toUpperCase() ?? 'U'
 
-  const photoURL = firebaseUser?.photoURL ?? undefined
+  const photoURL = firebaseUser?.photoURL ?? profile?.user.photoUrl ?? undefined
 
   return (
     <>
@@ -76,7 +76,7 @@ export function Navbar() {
             </button>
 
             {/* Avatar / Login trigger */}
-            {firebaseUser ? (
+            {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -84,7 +84,7 @@ export function Navbar() {
                     aria-label="Menú de usuario"
                   >
                     <Avatar className="size-9 border-2 border-primary/20">
-                      {photoURL && <AvatarImage src={photoURL} alt="Avatar" />}
+                      {photoURL && <AvatarImage src={photoURL} alt="Avatar" referrerPolicy="no-referrer" />}
                       <AvatarFallback className="bg-primary/10 font-medium text-primary">
                         {initials}
                       </AvatarFallback>
@@ -94,7 +94,7 @@ export function Navbar() {
                 <DropdownMenuContent align="end" className="w-48">
                   <div className="px-2 py-1.5">
                     <p className="text-xs text-muted-foreground truncate">
-                      {profile?.user.email ?? firebaseUser.email}
+                      {profile?.user.email ?? firebaseUser?.email}
                     </p>
                   </div>
                   <DropdownMenuSeparator />

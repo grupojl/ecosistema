@@ -11,12 +11,12 @@
  *   edit-org      — editar nombre/descripción/logo de la org
  *   collaborators — gestión de colaboradores (delegado a CollaboratorsSection)
  */
-import { useState }          from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter }         from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, Users, Check, Loader2, LogOut, ArrowRight,
-  Copy, AlertCircle, ChevronLeft, Star, Settings, Link as LinkIcon,
+  Copy, AlertCircle, ChevronLeft, Star, Settings, Link as LinkIcon, MonitorSmartphone,
 } from 'lucide-react'
 import {
   Button, Input, Badge, Skeleton, Avatar, AvatarFallback, AvatarImage,
@@ -26,6 +26,7 @@ import { useMe, useSelectRole, useRefreshClaims } from '@/hooks/use-auth-trpc'
 import { trpc }                    from '@/lib/trpc/client'
 import { CollaboratorsSection }    from '@/components/collaborators-section'
 import { OrganizationSwitcher }    from '@/components/organization-switcher'
+import { ConnectedDevicesDialog }  from '@/components/devices-dialog-connected'
 import { useDashboardSSO }         from '@/hooks/use-dashboard-sso'
 import { getErrorMessage }         from '@/lib/errors'
 
@@ -139,13 +140,18 @@ function OrgForm({ onBack }: { onBack: () => void }) {
 
 function Overview({ onView }: { onView: (v: View) => void }) {
   const router = useRouter()
-  const { logout, activeOrganizationId } = useAuth()
+  const { logout, activeOrganizationId, loading: authLoading, busy: authBusy } = useAuth()
   const { data: me, isLoading, error } = useMe()
   const { state: ssoState, ssoError, openDashboard: triggerSSO } = useDashboardSSO()
   const ssoLoading = ssoState === 'loading'
   const [copied, setCopied]  = useState(false)
+  const [devicesOpen, setDevicesOpen] = useState(false)
+  // `window` no existe en el render del servidor (el perfil llega prefetcheado): el origen se resuelve al montar.
+  const [origin, setOrigin] = useState<string | null>(null)
+  useEffect(() => { setOrigin(window.location.origin) }, [])
 
-  if (isLoading) return <ProfileSkeleton />
+  // La consulta espera a la sesión (sessionReady): mientras tanto no hay datos, pero tampoco es un perfil vacío.
+  if (isLoading || (!me && (authLoading || authBusy))) return <ProfileSkeleton />
   if (error) return (
     <div className="flex items-center gap-2 text-destructive p-4 rounded-xl border border-destructive/20">
       <AlertCircle className="h-4 w-4 shrink-0" />
@@ -161,7 +167,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
   const user           = profile?.user
 
   const referralCode   = user?.referralCode
-  const referralLink   = referralCode ? `${window.location.origin}/?ref=${referralCode}` : null
+  const referralLink   = referralCode && origin ? `${origin}/?ref=${referralCode}` : null
 
   const handleCopyReferral = () => {
     if (!referralLink) return
@@ -176,16 +182,20 @@ function Overview({ onView }: { onView: (v: View) => void }) {
       {/* Avatar + info usuario */}
       <div className="flex items-center gap-3 p-4 rounded-xl border">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={user?.photoUrl ?? undefined} />
+          <AvatarImage src={user?.photoUrl ?? undefined} referrerPolicy="no-referrer" />
           <AvatarFallback>{(user?.displayName ?? 'U')[0].toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="font-medium truncate">{user?.displayName ?? 'Usuario'}</p>
           <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={logout}>
+        <Button variant="ghost" size="icon" onClick={() => setDevicesOpen(true)} title="Dispositivos" aria-label="Dispositivos">
+          <MonitorSmartphone className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={logout} title="Cerrar sesión" aria-label="Cerrar sesión">
           <LogOut className="h-4 w-4" />
         </Button>
+        <ConnectedDevicesDialog open={devicesOpen} onOpenChange={setDevicesOpen} />
       </div>
 
       <OrganizationSwitcher />

@@ -12,6 +12,8 @@ const dmSerif = DM_Serif_Display({ weight: '400', subsets: ['latin'], variable: 
 export const metadata: Metadata = {
   title: 'Propiedad - The Real Estate Platform for Modern Agencies',
   description: 'Propiedad is the all-in-one SaaS platform that helps real estate agencies manage listings, close deals faster, and grow their business.',
+  // Privado por defecto (/profile, /settings, /invite, /auth…). Solo la landing (app/page.tsx) se declara indexable.
+  robots: { index: false, follow: false },
 }
 
 export const viewport: Viewport = {

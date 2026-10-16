@@ -4,7 +4,7 @@
  * Header raíz del storefront — aparece en todas las rutas via app/layout.tsx.
  *
  * Sin slug ni organizationId en este nivel (layout raíz), por eso no cargamos
- * categorías aquí. Las categorías van en /tienda/[slug]/layout.tsx.
+ * categorías aquí. Las categorías van en /[slug]/layout.tsx.
  *
  * ADR-008 + S4-A: sin imports de @/lib/ecommerce (shim eliminado en Fase 1).
  */

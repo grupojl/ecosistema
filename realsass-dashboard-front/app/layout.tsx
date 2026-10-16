@@ -4,6 +4,7 @@ import { Inter }         from 'next/font/google'
 import { Toaster }       from 'sonner'
 import { QueryProvider } from '@/providers/query-provider'
 import { AuthProvider }  from '@/features/auth/context/auth-context'
+import { SwCleanup }     from '@/components/sw-cleanup'
 import './globals.css'
 
 const inter = Inter({
@@ -12,8 +13,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Stock Apple',
-  description: 'Manejo de Stock de Productos Apple',
+  title: { default: 'Welver Dashboard', template: '%s · Welver Dashboard' },
+  description: 'Panel de gestión de tu negocio: catálogo, stock, órdenes y colaboradores.',
+  // App privada: ninguna página debe indexarse (ni /login). robots.txt lo refuerza.
+  robots: { index: false, follow: false, nocache: true },
   icons: {
     icon: '/logo.svg',
     apple: '/logo.svg',
@@ -27,22 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="dark">
-      <head>
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for (let registration of registrations) {
-                  registration.unregister();
-                }
-              });
-            }
-          `
-        }} />
-      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        <SwCleanup />
         <QueryProvider>
-          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_REAL_BACK_URL!}>
+          <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_SASS_BACK_URL ?? process.env.NEXT_PUBLIC_REAL_BACK_URL ?? ''}>
             <TrpcProvider>{children}</TrpcProvider>
             <Toaster
               theme="dark"

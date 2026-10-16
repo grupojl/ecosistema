@@ -1,0 +1,96 @@
+name: Desktop — build y release (Tauri)
+
+# Compila el instalador de realsass-dashboard-desktop (ADR-023) en la nube.
+#   · A mano (workflow_dispatch): genera el instalador como artefacto descargable — sirve para PROBAR SIN INSTALAR RUST localmente.
+#   · Con un tag `desktop-v*`: además crea un release en borrador con los instaladores (y, si hay claves, el latest.json del updater).
+#
+# Variables / secretos del repo (Settings → Secrets and variables → Actions):
+#   vars.DASHBOARD_URL                       URL pública del panel que cargará la app (o se pasa al lanzar a mano)
+#   secrets.TAURI_SIGNING_PRIVATE_KEY        (opcional) clave privada de `cargo tauri signer generate` → activa la auto-actualización
+#   secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD (opcional) su contraseña
+# La firma de código del instalador (Authenticode / notarización de Apple) NO está activada: necesita certificados comprados
+# (ver realsass-dashboard-desktop/README.md → "Firma de código").
+
+on:
+  workflow_dispatch:
+    inputs:
+      dashboard_url:
+        description: 'URL del panel que cargará la app (ej. https://panel.tu-dominio.com)'
+        required: true
+        type: string
+  push:
+    tags: ['desktop-v*']
+
+permissions:
+  contents: write   # crear el release
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest   # para macOS/Linux agregar entradas a una matriz (ver README)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: realsass-dashboard-desktop/src-tauri -> target
+
+      - name: Instalar el CLI de Tauri
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Resolver DASHBOARD_URL
+        id: url
+        shell: bash
+        env:
+          FROM_INPUT: ${{ inputs.dashboard_url }}
+          FROM_VAR:   ${{ vars.DASHBOARD_URL }}
+        run: |
+          URL="${FROM_INPUT:-$FROM_VAR}"
+          if [ -z "$URL" ]; then echo "::error::Falta DASHBOARD_URL (input o variable del repo)"; exit 1; fi
+          echo "value=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: ¿Hay claves de firma del updater?
+        id: keys
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then echo "updater=true" >> "$GITHUB_OUTPUT"; else echo "updater=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Tests de la lógica pura (Rust)
+        working-directory: realsass-dashboard-desktop/src-tauri
+        run: cargo test
+
+      - name: Build + release (con updater si hay claves)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DASHBOARD_URL: ${{ steps.url.outputs.value }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: realsass-dashboard-desktop
+          tauriScript: cargo tauri
+          args: ${{ steps.keys.outputs.updater == 'true' && '--features updater --config src-tauri/tauri.updater.conf.json' || '' }}
+          # Solo se crea release cuando se empuja un tag; a mano solo se generan los artefactos.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('Welver Dashboard {0}', github.ref_name) || '' }}
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: ${{ steps.keys.outputs.updater == 'true' }}
+
+      - name: Subir el instalador como artefacto (para descargar y probar)
+        uses: actions/upload-artifact@v4
+        with:
+          name: welver-dashboard-desktop-windows
+          path: |
+            realsass-dashboard-desktop/src-tauri/target/release/bundle/**/*.exe
+            realsass-dashboard-desktop/src-tauri/target/release/bundle/**/*.msi
+            realsass-dashboard-desktop/src-tauri/target/release/bundle/**/*.sig
+          if-no-files-found: error
+          retention-days: 14

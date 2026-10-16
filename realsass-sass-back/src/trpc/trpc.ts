@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
 import { HttpException } from '@nestjs/common';
+import { timingSafeEqual } from 'node:crypto';
 import { AppCodeError, type AppCode } from '@/trpc/app-code-error';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
@@ -141,8 +142,25 @@ const enforceOwner = t.middleware(({ ctx, next }) => {
   return next({ ctx: owner });
 });
 
+/**
+ * Llamadas servicio-a-servicio (p. ej. ecommerce-back → markets.resolve): exigen `x-internal-api-key` == INTERNAL_API_KEY.
+ * Si la variable no está configurada se RECHAZA todo (fail-closed), nunca se abre.
+ */
+const enforceInternal = t.middleware(({ ctx, next }) => {
+  const expected = process.env['INTERNAL_API_KEY'];
+  if (!expected) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'INTERNAL_API_KEY no configurada en el servidor' });
+  const given = ctx.req.headers['x-internal-api-key'];
+  const a = Buffer.from(typeof given === 'string' ? given : '');
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Clave interna inválida' });
+  return next();
+});
+
 export const router          = t.router;
+/** Para tests: llama a un router sin HTTP (en tRPC v11 sale de initTRPC, no de '@trpc/server'). */
+export const createCallerFactory = t.createCallerFactory;
 export const publicProcedure = t.procedure.use(mapNestErrors);
 export const authProcedure:   ProcedureWith<AuthedTrpcContext> = t.procedure.use(mapNestErrors).use(enforceAuth);
 export const tenantProcedure: ProcedureWith<TenantTrpcContext> = t.procedure.use(mapNestErrors).use(enforceTenant);
 export const ownerProcedure:  ProcedureWith<OwnerTrpcContext>  = t.procedure.use(mapNestErrors).use(enforceOwner);
+export const internalProcedure: ProcedureWith<TrpcContext>     = t.procedure.use(mapNestErrors).use(enforceInternal);

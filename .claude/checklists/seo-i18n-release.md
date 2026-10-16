@@ -29,26 +29,26 @@
 SITE=https://tu-storefront.com; SLUG=mi-marca
 
 # Negociación por navegador → 307 a /pt
-curl -sI -H 'Accept-Language: pt-BR,pt;q=0.9' "$SITE/tienda/$SLUG" | grep -iE '^(HTTP|location|x-locale-source|vary)'
+curl -sI -H 'Accept-Language: pt-BR,pt;q=0.9' "$SITE/$SLUG" | grep -iE '^(HTTP|location|x-locale-source|vary)'
 
 # Cookie explícita gana sobre Accept-Language → /en
-curl -sI -H 'Cookie: NEXT_LOCALE=en' -H 'Accept-Language: es' "$SITE/tienda/$SLUG" | grep -i location
+curl -sI -H 'Cookie: NEXT_LOCALE=en' -H 'Accept-Language: es' "$SITE/$SLUG" | grep -i location
 
 # Crawler: la URL con idioma NUNCA redirige → 200
-curl -sI -A 'Googlebot/2.1' "$SITE/pt/tienda/$SLUG" | head -1
+curl -sI -A 'Googlebot/2.1' "$SITE/pt/$SLUG" | head -1
 
 # Metadata: lang, canonical, hreflang, robots
-curl -s "$SITE/es/tienda/$SLUG" | grep -oE '<html lang="[a-z]+"|rel="canonical"[^>]*|hreflang="[^"]*"|name="robots"[^>]*'
+curl -s "$SITE/es/$SLUG" | grep -oE '<html lang="[a-z]+"|rel="canonical"[^>]*|hreflang="[^"]*"|name="robots"[^>]*'
 
 # JSON-LD presente y escapado
-curl -s "$SITE/es/tienda/$SLUG/productos/{handle}" | grep -c 'application/ld+json'
+curl -s "$SITE/es/$SLUG/productos/{handle}" | grep -c 'application/ld+json'
 
 # Sitemap y robots
 curl -s "$SITE/sitemaps/$SLUG" | head -20
 curl -s "$SITE/robots.txt"
 
 # Paginación fuera de rango → 404 real
-curl -sI "$SITE/es/tienda/$SLUG/productos?page=9999" | head -1
+curl -sI "$SITE/es/$SLUG/productos?page=9999" | head -1
 ```
 
 ## Search Console

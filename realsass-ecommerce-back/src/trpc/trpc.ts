@@ -41,8 +41,9 @@ export interface TrpcContext {
   organizationId: string | null;
   role:           'OWNER' | 'COLLABORATOR' | null;
   userId:         string | null;   // id interno (real-back), resuelto por TenantGuard
-  // Customer
+  // Customer (ADR-021): se deriva del token de Firebase verificado + x-organization-id; nunca de un header.
   customerId:     string | null;
+  resolveCustomerId: () => Promise<string | null>;
 }
 
 // Contextos de salida de cada middleware. Con nombre a propósito: si `next({ ctx: { ...ctx } })`
@@ -67,7 +68,16 @@ type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
   TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, false
 >;
 
-export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
+/** Resuelve (y crea, la primera vez) el cliente de una organización a partir del usuario verificado de la request. */
+export type CustomerResolver = (req: Request, organizationId: string | null) => Promise<string | null>;
+
+export const noCustomer: CustomerResolver = async () => null;
+
+export function makeTrpcContext(resolveCustomer: CustomerResolver) {
+  return (opts: CreateExpressContextOptions): TrpcContext => createTrpcContext(opts, resolveCustomer);
+}
+
+export function createTrpcContext({ req }: CreateExpressContextOptions, resolveCustomer: CustomerResolver = noCustomer): TrpcContext {
   const typedReq       = req as AuthenticatedRequest;
   const user           = typedReq.user   ?? null;
   const tenant         = typedReq.tenant ?? null;
@@ -82,8 +92,14 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
     organizationId,
     role:           (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
     userId:         tenant?.userId    ?? null,
-    customerId:     (req.headers['x-customer-id'] as string | undefined) ?? null,
+    customerId:     null,
+    resolveCustomerId: memoizeOnce(() => resolveCustomer(req, organizationId)),
   };
+}
+
+function memoizeOnce<T>(fn: () => Promise<T>): () => Promise<T> {
+  let cached: Promise<T> | undefined;
+  return () => (cached ??= fn());
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -123,11 +139,12 @@ const enforceOwnerOnly = t.middleware(({ ctx, next }) => {
   return next({ ctx: owner });
 });
 
-/** Cliente del storefront logueado (customerId en header) */
-const enforceCustomer = t.middleware(({ ctx, next }) => {
-  if (!ctx.customerId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Header x-customer-id requerido' });
+/** Cliente del storefront: sesión de Firebase verificada (email verificado) dentro de la organización del header (ADR-021). */
+const enforceCustomer = t.middleware(async ({ ctx, next }) => {
   if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
-  const customer: CustomerTrpcContext = { ...ctx, customerId: ctx.customerId, organizationId: ctx.organizationId };
+  const customerId = await ctx.resolveCustomerId();
+  if (!customerId) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Iniciá sesión con tu cuenta (email verificado) para continuar' });
+  const customer: CustomerTrpcContext = { ...ctx, customerId, organizationId: ctx.organizationId };
   return next({ ctx: customer });
 });
 

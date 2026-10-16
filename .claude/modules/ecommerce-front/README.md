@@ -19,13 +19,13 @@ la tienda, navegan los productos y compran.
 
 | Página | Ruta | Qué hace |
 |---|---|---|
-| Tienda principal | `/tienda/[slug]` | Landing de la tienda — featured, categorías |
-| Catálogo | `/tienda/[slug]/productos` | Grilla de productos con filtros |
-| Detalle de producto | `/tienda/[slug]/productos/[handle]` | Foto, descripción, variantes, agregar al carrito |
+| Tienda principal | `/[slug]` | Landing de la tienda — featured, categorías |
+| Catálogo | `/[slug]/productos` | Grilla de productos con filtros |
+| Detalle de producto | `/[slug]/productos/[handle]` | Foto, descripción, variantes, agregar al carrito |
 | Carrito | (drawer) | Resumen de lo seleccionado |
-| Checkout | `/tienda/[slug]/checkout` | Datos de envío y confirmación de compra |
-| Seguimiento | `/tienda/[slug]/tracking/[orderId]` | Estado del pedido |
-| Rutas legacy | `/categoria/[cat]`, `/products/[handle]` | Pendientes de migrar a `/tienda/[slug]/` |
+| Checkout | `/[slug]/checkout` | Datos de envío y confirmación de compra |
+| Seguimiento | `/[slug]/tracking/[orderId]` | Estado del pedido |
+| Rutas legacy | `/categoria/[cat]`, `/products/[handle]` | Pendientes de migrar a `/[slug]/` |
 
 ## Módulos que usa
 

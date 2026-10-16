@@ -6,11 +6,17 @@
  *
  * Auth: cookies HttpOnly (ADR-004) → credentials: 'include'.
  */
+import { createContext }     from 'react';
 import { createTRPCReact }  from '@trpc/react-query';
 import { httpBatchLink }    from '@trpc/client';
 import type { EcommerceAppRouter } from '@real/trpc';
 
-export const ecommerceTrpc = createTRPCReact<EcommerceAppRouter>();
+/**
+ * Contexto propio: en tRPC v11 todos los `createTRPCReact` comparten por defecto el mismo `TRPCContext`.
+ * Con dos providers anidados (sass + ecommerce) el interno pisaba al externo y TODAS las consultas
+ * `trpc.*` (sass-back) terminaban yendo al ecommerce-back (404 "No procedure found").
+ */
+export const ecommerceTrpc = createTRPCReact<EcommerceAppRouter>({ context: createContext<unknown>(null) });
 
 export function makeEcommerceTrpcClient(
   url:               string,

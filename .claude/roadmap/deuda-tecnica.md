@@ -1,6 +1,98 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-10-08
+Última actualización: 2026-10-16
+
+
+## ⏸ Diferido a propósito (decisión del 2026-10-16: se deja marcado, no se toca ahora)
+
+- [ ] **Docker (DT-DOCKER-01)**: ningún `docker build` real de los 3 fronts ni de los 2 backs. Hallazgos al revisar los Dockerfile, sin corregir:
+  - el `HEALTHCHECK` del **ecommerce-back** apunta a `http://localhost:3001/health`, pero la ruta real es `/api/v1/health` (hoy da 404) y el puerto está fijo;
+  - el `HEALTHCHECK` del **sass-back** usa el puerto 3000 y la app corre en 3020;
+  - **DT-ENV-04**: la imagen del ecommerce-back fija `PORT=3001` y local es `3025`.
+- [ ] **Despliegue en Railway (WEL-01 a WEL-03)**: migraciones de Prisma (el doc marca la migración como **bloqueante**), `INTERNAL_API_KEY` en ambos servicios y `prisma generate`. Nota: la migración `user_sessions` (ADR-020) ya se aplicó en la base de Railway; las demás siguen pendientes.
+- [ ] **Pago en línea**: no existe (depende de `pagos-back`). El checkout crea el pedido en `PENDING_PAYMENT` y el texto le avisa al cliente que la tienda coordina el cobro.
+
+## Cierre de deuda — 2026-10-16
+
+Resuelto en esta tanda (todo con tests; sass-back 18/18 suites, ecommerce-back 13/13, storefront 114 tests):
+
+- **Los tests de los backs corren** (DT-TEST-01, DT-ENT-01): una sola config de Jest por back (había dos que se pisaban), `tsconfig.spec.json` (TS5011), alias del `tsconfig` también en Jest, stub de `jose` (ESM), `typeRoots` corregido. Se borraron 8 specs que no probaban nada (plantillas de "should be defined" y controladores que ya no existen); `organization-access.spec` se reescribió contra la implementación actual; las demás specs rotas se arreglaron.
+- **Seguridad de Markets (nuevo, alta)**: todas las operaciones de `markets.*` eran `publicProcedure`; cualquiera, sin sesión, podía crear, cambiar o borrar mercados de cualquier tienda (el `organizationId` es público). Ahora: `list` miembro, `create/update/setDefault/delete` solo el dueño y solo sobre su organización (otra → FORBIDDEN/NOT_FOUND), `resolve` solo servicio-a-servicio con `INTERNAL_API_KEY` (fail-closed, comparación en tiempo constante).
+- **Carrito con dueño** (DT-STORE-SEC-2): el carrito guarda su `customerId`; `get/addItem/removeItem/checkout` solo funcionan para su dueño (404 para otro) y `addItem` ya no acepta cualquier `cartId`.
+- **Organización validada** (DT-STORE-SEC-3): `GET /organizations/public/by-id/:id` en el sass-back; el ecommerce-back no crea clientes en organizaciones inexistentes o sin ecommerce (caché 60 s; una caída del sass-back da 503, no "no existe").
+- **Stock** (DT-STORE-INV): un solo modelo, `available` = vendible y `reserved` = retenido; el SQL del checkout ya no resta lo reservado dos veces y el front tampoco.
+- **Sesión cerrada también en el ecommerce-back** (DT-SES-05): `GET /internal/sessions/:sid/revoked` (servicio-a-servicio) + chequeo con caché de 30 s y fail-open.
+- **Entorno**: `.env.local.example` duplicados borrados (DT-ENV-05); el dashboard usa `SASS_BACK_URL` primero (DT-ENV-01); el storefront toma la organización de la tienda que se está viendo (DT-ENV-03, rutas `/tienda/{slug}`).
+- **Entradas viejas verificadas en el código y cerradas**: DT-SEO-01 a 07.
+
+## URLs limpias — ADR-022 (2026-10-16)
+
+- [x] Panel en la raíz (`/dashboard/**` → `/**`, 308) y tiendas en `/{locale}/{slug}` (`/{locale}/tienda/{slug}` → 308; `/{slug}` y `/tienda/{slug}` sin idioma → 307 al idioma negociado).
+- [ ] DT-URL-1: reservar los nombres de rutas fijas del storefront (`checkout`, `tracking`, `sitemaps`…) como slugs inválidos si algún día se permiten slugs a medida; hoy los slugs llevan sufijo numérico.
+- [ ] DT-URL-2: evaluar subdominio por tienda (`{slug}.dominio.com`) como evolución; exige DNS comodín y resolver la tienda por host.
+
+## Desktop — Tauri, opción A (ADR-023, 2026-10-16) — planificado, nada implementado
+
+- [x] DT-DESK-0: F0 **escrito** (`realsass-dashboard-desktop/`: ventana a `DASHBOARD_URL`, capabilities mínimas, CSP, íconos provisorios, navegación restringida).
+- [ ] DT-DESK-0b: **compilar y probar F0 + F1 en una máquina con Rust** (checklist en `realsass-dashboard-desktop/README.md`); ajustar versiones/firmas de Tauri 2.x si hace falta. Nada de Rust se compiló todavía.
+- [x] DT-DESK-1: F1 **escrito**: login por el navegador del sistema + loopback + página puente `/desktop-login` + botón en `/login` (la parte web compila; la parte Rust no se compiló).
+- [x] DT-DESK-2: F2 **escrito**: instancia única, estado de ventana, deep link `welver://open?path=…` y auto-actualización firmada (feature `updater`, con confirmación). Sin compilar.
+- [ ] DT-DESK-2b: activar el updater: generar claves (`cargo tauri signer generate`), pegar la clave pública en `tauri.updater.conf.json` y cargar `TAURI_SIGNING_PRIVATE_KEY` en los secretos del repo.
+- [x] DT-DESK-8: pipeline de release escrito (`.github/workflows/desktop-release.yml`); **sin ejecutar**. Permite probar el instalador sin Rust local.
+- [ ] DT-DESK-3: endurecer el login por loopback (PKCE / código de un solo uso en vez de token directo).
+- [ ] DT-DESK-4: firma de código (Authenticode / notarización de Apple): **requiere certificados comprados**. Y `cargo audit`/`cargo deny` en CI (ADR-018).
+- [x] DT-DESK-9: notificaciones nativas — **decidido no implementar todavía** (sin IPC remoto y sin productor de notificaciones en el panel).
+- [ ] DT-DESK-5: decidir si hace falta funcionar sin conexión (reabriría la opción B: bundle estático).
+- [ ] DT-DESK-6: la parte web del login de escritorio (`lib/desktop.ts`, `/desktop-login`) no tiene tests automáticos: el dashboard no tiene runner de pruebas.
+- [x] DT-DESK-7: ícono generado desde el logo del dashboard (PNG/ICO/ICNS).
+- [ ] DT-DESK-10: **el logo del dashboard es el logo de Apple** (marca registrada): no distribuir públicamente; reemplazar por el logo propio y regenerar con `cargo tauri icon`.
+
+## Sigue abierto (sin decisión o sin tiempo, ver cada línea)
+
+- **DT-SES-04** mail de dispositivo nuevo: necesita elegir un proveedor de mail (checklist R4 de ADR-018) y un dueño.
+- **DT-SES-09** unificar el `AuthContext` de `sass-front` con el `AuthProvider` compartido: refactor grande de auth sin pruebas en navegador; no se hizo a ciegas.
+- **DT-CI-02 / DT-CI-01** workflows duplicados y lint de los fronts: no se pueden probar sin GitHub Actions; se dejan para cuando se pueda correr el CI.
+
+---
+
+## Sesiones y dispositivos — ADR-020 (2026-10-16)
+
+- [x] DT-SES-01: F1 registro + `sessions.list` + modal · F2 revocar por sesión / las demás
+- [x] DT-SES-02: purga de `UserSession` vencidas (cada 24 h, dentro del sass-back)
+- [x] DT-SES-03: modal en `realsass-sass-front` (`/profile`) y en dashboard-front
+- [ ] DT-SES-04: F3 mail de dispositivo nuevo — necesita proveedor de mail (checklist R4 de ADR-018) y dueño
+- [x] DT-SES-05: `realsass-ecommerce-back` no chequea `__sid`: una sesión cerrada sigue válida contra ese back
+- [ ] DT-SES-06: tests de integración del flujo (`POST /auth/session` → `__sid` → revoke → 401); hoy hay unit tests
+- [x] DT-SES-07: sesión compartida entre fronts — `@real/auth-client` (AuthProvider) y `sass-front/context/auth-context.tsx` autentican por cookie si no hay usuario de Firebase en el origen
+- [x] DT-SES-10: sesión en vivo entre fronts (`auth.ping` + `useSessionWatch`); límite: entre orígenes distintos se ve al volver a la pestaña o en ≤30 s
+- [ ] DT-SES-11: cada pestaña visible hace un `auth.ping` cada 30 s al sass-back; si la carga molesta, subir el intervalo o pasar a SSE
+- [x] DT-DASH-CTX: dashboard-front — las consultas `trpc.*` (sass-back) iban al ecommerce-back por compartir `TRPCContext`; `ecommerceTrpc` ahora tiene contexto propio. Faltan tests que lo detecten (render con ambos providers)
+- [x] DT-AUTH-PERF: arranque lento de `/profile` — perfil por cookie primero, sync en segundo plano, prefetch SSR con la queryKey correcta, skeleton en vez de usuario por defecto
+- [ ] DT-AUTH-PERF-2: el prefetch SSR solo existe en `/profile`; replicarlo en las demás páginas autenticadas, y evaluar `auth.sync` solo cuando haga falta (hoy corre en cada carga)
+- [x] DT-AUTH-F5: muchos F5 en `/profile` agotaban el límite de `POST /auth/session` (10/min) y dejaban `sessionReady=false`; cookie recreada como máximo cada 30 min, tolerancia a 429, botón Dashboard espera la sesión, avatar con `referrerPolicy=no-referrer` (Google devuelve 429 al hotlink con Referer)
+- [ ] DT-AUTH-F5-2: `auth.sync` y `/auth/session` siguen siendo las únicas llamadas con límite; evaluar subir el límite `auth` en dev o exentar el refresh con sesión válida
+- [x] DT-STORE-429: el storefront dejaba de cargar tras ~10 vistas/min: `GET /organizations/public/by-slug/:slug` (sass-back) caía en el limitador `auth` (10/min, pensado para login) y en el global (30/min), y todo el tráfico del storefront sale de una IP. Ahora esa ruta salta el limitador `auth` y permite 600/min; `StoreService.resolveBySlug` (ecommerce-back) cachea 60 s, comparte consultas simultáneas y ante una falla del sass-back sirve la última copia buena hasta 10 min (un 404 nunca se tapa)
+- [ ] DT-STORE-1: el `ThrottlerGuard` global aplica TODOS los limitadores con nombre a cada ruta REST; revisar el resto de rutas back-to-back (`/internal/*`, `/health`) por el mismo problema
+- [x] DT-STORE-2: carrito en la UI del storefront (la bolsa vive en el avatar del navbar). Lo que sigue pendiente es el **pago en línea** → ver "Diferido a propósito".
+- [x] DT-STORE-UI: diseño de la tienda por organización alineado con la home base (cabecera, hero por producto, pie con enlaces reales)
+- [ ] DT-STORE-UI-2: probar las secciones hero con productos reales (la tienda de prueba tiene 0); los productos no tienen imágenes
+- [ ] DT-STORE-UI-3: la home genérica `(site)` y `ShoppingBagModal` siguen con textos en inglés y datos de ejemplo; `Header` renderiza el modal sin respetar `isOpen`
+- [x] DT-STORE-COMMERCE: cuenta del cliente, bolsa, agregar al carrito, checkout y pedidos en el storefront
+- [x] DT-STORE-BUG-IDENTIFY: `customer.identify` devolvía el PRIMER invitado de la organización a cualquier visitante (todos compartían carrito y pedidos) y el router pasaba los argumentos desplazados; ahora es un cliente por (organización, email)
+- [x] DT-STORE-BUG-ORDERS: `customer.orders` buscaba `cartId: ''` y devolvía siempre []; ahora `findByCustomer`
+- [x] DT-STORE-BUG-CORS: el preflight rechazaba `x-customer-id`; `subtotalCents` incluía el envío
+- [x] DT-STORE-SEC-1: identidad del cliente verificada con Firebase (ADR-021); `customer.identify` y el header `x-customer-id` eliminados
+- [x] DT-STORE-SEC-3: el `x-organization-id` de un cliente no se valida contra el sass-back (un UUID inexistente crea un cliente huérfano); falta validar organización/ecosistema
+- [ ] DT-STORE-AUTH-1: solo Google; Apple/Facebook requieren configurar proveedores. Sin SSO entre fronts (cada origen guarda su token)
+- [x] DT-STORE-SEC-2: `cart.get`/`checkout` no comprueban que el carrito sea del cliente (basta el UUID del carrito); `addItem` no guarda el `customerId` en el carrito
+- [x] DT-STORE-INV: `reserveWithinTransaction` resta de `quantity_available` Y suma a `quantity_reserved`, mientras la disponibilidad se calcula como available − reserved: el stock se descuenta dos veces
+- [ ] DT-STORE-ERR: el ecommerce-back no traduce las excepciones de Nest a códigos tRPC (todo es INTERNAL_SERVER_ERROR); el front reconoce "no encontrado" por el texto
+- [x] DT-STORE-TEST: fallan 2 specs previas del ecommerce-back (`orders.service.spec` espera COMPLETED y el código usa CONVERTED; `markets-checkout.integration.spec` importa una ruta inexistente); `unitPriceCentsSnapshot` del carrito queda en 0
+- [ ] DT-STORE-UI-4: la UI de cuenta/bolsa/checkout nunca se abrió en un navegador (verificada por tipos, tests y el flujo contra el back); falta una pasada manual y la aserción de precio en la página de producto falló sin investigar
+- [ ] DT-SES-08: en sesión solo-cookie no hay refresh a los 55 min (vence a los 14 días, sin tope de 90 de inactividad); el step-up abre Google (popup) e inicia sesión en ese origen; la organización activa no se comparte entre fronts (dashboard: sessionStorage, sass-front: localStorage)
+- [ ] DT-SES-09: `sass-front` tiene su propio `AuthContext` duplicando al `AuthProvider` de `@real/auth-client` — unificar
+- [x] DT-ENT-01: `realsass-sass-back` jest.config.js + tsconfig desalineados (TS5011, `typeRoots` apunta a un
+      `node_modules/@types` raíz inexistente): `pnpm test` y `@real/trpc build` fallan en una instalación limpia
 
 ---
 
@@ -91,20 +183,20 @@ emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verific
 
 ### Pendiente — variables de entorno
 
-- [ ] [DT-ENV-01] dashboard: el back de sass se llama `NEXT_PUBLIC_REAL_BACK_URL` en layout/provider/constants y
+- [x] [DT-ENV-01] dashboard: el back de sass se llama `NEXT_PUBLIC_REAL_BACK_URL` en layout/provider/constants y
   `NEXT_PUBLIC_SASS_BACK_URL` en `api-client`/`providers`. Hoy hay que definir ambas. Unificar en `SASS_BACK_URL`.
 - [x] [DT-ENV-02] **Cerrado**: sass-back no arrancaba (`Worker requires a connection`) porque se había perdido el
   `BullModule.forRoot`; restaurado en `AppModule` leyendo `REDIS_URL` (`src/redis/bull-connection.ts`).
   Sigue haciendo falta un Redis real para los webhooks: no se probó contra uno.
-- [ ] [DT-ENV-03] storefront: `x-organization-id` del navegador sale de una variable fija; no sirve para varias
+- [x] [DT-ENV-03] storefront: `x-organization-id` del navegador sale de una variable fija; no sirve para varias
   tiendas en un mismo despliegue. Resolver la organización por slug (ya la entrega `customer.resolveStore`).
 - [ ] [DT-ENV-04] ecommerce-back: la imagen usa `PORT=3001` y local `3005`; alinear.
-- [ ] [DT-ENV-05] `realsass-dashboard-front/.env.local.example` y `realsass-sass-front/.env.local.example` quedaron
+- [x] [DT-ENV-05] `realsass-dashboard-front/.env.local.example` y `realsass-sass-front/.env.local.example` quedaron
   duplicados y desactualizados (mencionan servicios inexistentes y `/api/v1` en las URLs): borrarlos.
 
 ### Pendiente — P0
 
-- [ ] **[DT-TEST-01] Los tests de los backs no se pueden ejecutar** (verificado 2026-10-08): `pnpm test` falla porque cada back
+- [x] **[DT-TEST-01] Los tests de los backs no se pueden ejecutar** (verificado 2026-10-08): `pnpm test` falla porque cada back
   tiene `jest.config.js` **y** la clave `jest` en `package.json` ("Multiple configurations found"); con
   `--config jest.config.js` las 16 suites (8 por back) fallan sin correr un solo test por TS5011 (TypeScript 6 exige
   `rootDir` en ts-jest). Es previo a la sesión del ADR-019. Prerrequisito de S4-E (tests de backend).
@@ -263,17 +355,39 @@ Trigger: antes de onboardear al primer colaborador externo.
 ## SEO + idioma (ADR-016) — detectado 2026-09-22
 
 ### Bloqueantes (prerequisito del SEO)
-- [ ] DT-SEO-01: sass-back `createForUserWithDefaultMarket` fuera de la clase
-- [ ] DT-SEO-02: `findBySlug` sin `storeStatus` en el select → toda tienda en 404
-- [ ] DT-SEO-03: storefront invoca procedures tRPC sin `.query()` → `resolveStore` siempre falla
-- [ ] DT-SEO-04: páginas del storefront contra shape inexistente (`p.slug`, `p.priceCents`, `p.imageUrls`)
-- [ ] DT-SEO-05: `catch {}` → `null` en data fetching → caída de backend = 404 masivo
-- [ ] DT-SEO-06: `lib/store/index.ts` re-exporta `./types` inexistente
+- [x] DT-SEO-01: sass-back `createForUserWithDefaultMarket` fuera de la clase
+- [x] DT-SEO-02: `findBySlug` sin `storeStatus` en el select → toda tienda en 404
+- [x] DT-SEO-03: storefront invoca procedures tRPC sin `.query()` → `resolveStore` siempre falla
+- [x] DT-SEO-04: páginas del storefront contra shape inexistente (`p.slug`, `p.priceCents`, `p.imageUrls`)
+- [x] DT-SEO-05: `catch {}` → `null` en data fetching → caída de backend = 404 masivo
+- [x] DT-SEO-06: `lib/store/index.ts` re-exporta `./types` inexistente
 
 ### Deuda consciente
-- [ ] DT-SEO-07: quitar `ignoreBuildErrors: true` de `real-ecommerce-front/next.config.mjs`
+- [x] DT-SEO-07: quitar `ignoreBuildErrors: true` de `real-ecommerce-front/next.config.mjs`
 - [ ] DT-SEO-08: `images.unoptimized: true` → LCP alto
 - [ ] DT-SEO-09: modelo `Product` sin imágenes → rich results incompletos
 - [ ] DT-SEO-10: ruta legacy `/categoria/[categoria]` con 307 en vez de 308
 - [ ] DT-SEO-11: organizaciones sin Market default → `resolveMarket` lanza NOT_FOUND
 - [ ] DT-SEO-12: repomix no incluye `middleware.ts`, `lib/**/*.tsx`, `store/**`
+
+## SEO de los 3 fronts — 2026-10-16
+
+Auditoría medida contra `architecture/10-seo-i18n-norte.md` y corregida (tsc limpio, vitest 125, ecommerce-back 13/13 suites, verificado en vivo):
+
+- [x] Storefront: `robots.txt` anunciaba `/sitemaps` que daba 404 → índice de sitemaps (`customer.listStores` ← `GET /organizations/public/stores`, caché 10 min, 503 ante caída; nunca índice vacío).
+- [x] Storefront: 404 de tienda traducido (5 idiomas), descripciones propias en `/productos` y categorías, un solo `<h1>` por página, imagen Open Graph generada (`opengraph-image.tsx`) y Twitter `summary_large_image`.
+- [x] Dashboard: `noindex` global + `robots.txt` `Disallow: /`; título "Stock Apple" (resto de otro proyecto) corregido.
+- [x] sass-front: privado por defecto (`noindex`); solo la landing es indexable (canonical, OG, Twitter), `robots.txt` y `sitemap.xml`.
+- [ ] DT-SEO-11: la landing de sass-front **sigue siendo la plantilla inmobiliaria "Propiedad"** (texto en inglés, `lang="en"`). Los metadatos coinciden con lo que muestra; falta decidir/escribir el contenido real de Welver y recién ahí ajustar título, descripción e idioma.
+- [ ] DT-SEO-12: definir `NEXT_PUBLIC_SITE_URL` en sass-front en producción (sin ella el canonical es relativo y el sitemap queda vacío).
+- [ ] DT-SEO-09 (ya existente): imágenes de producto; el JSON-LD y OG de producto no tienen foto hasta entonces.
+
+## UI/UX adaptable — 2026-10-17 (ADR-024)
+
+Norte definido en `architecture/12-ui-norte.md`. **Aún no se auditó ningún front contra él**: lo siguiente son deudas conocidas o por verificar.
+
+- [ ] DT-UI-01: mapear las clases 600/840 al tema de Tailwind y exponerlas desde `@real/ui` (hoy cada front usa los cortes por defecto 640/768/1024).
+- [ ] DT-UI-02: `realsass-sass-front` tiene `viewport` con `maximumScale: 1` y `userScalable: false` (bloquea el zoom). Revisar también los otros dos fronts.
+- [ ] DT-UI-03: **auditar los 3 fronts** contra los 6 pilares (storefront primero): navegación por tamaño, objetivos táctiles ≥44 px, dependencia de hover, estados cargando/vacío/error/sin permisos, valores hardcodeados.
+- [ ] DT-UI-04: Core Web Vitals del storefront: medir LCP/INP/CLS (hoy sin medición) y fijar umbral en CI.
+- [ ] DT-UI-05: accesibilidad: pasar axe/Lighthouse sobre las pantallas principales (contraste AA, foco, `prefers-reduced-motion`).

@@ -1,4 +1,4 @@
-# Sección: Tienda (/dashboard/tienda)
+# Sección: Tienda (/tienda)
 
 ## ¿Qué hace en palabras simples?
 
@@ -8,16 +8,16 @@ llegaron y puede previsualizar cómo se ve la tienda para los clientes.
 
 ## Subsecciones
 
-### Productos (/dashboard/tienda/productos)
+### Productos (/tienda/productos)
 Lista completa del catálogo. Se pueden crear productos nuevos con sus variantes
 (talle, color, precio), editarlos, publicarlos o archivarlos.
 
-### Pedidos (/dashboard/tienda/pedidos)
+### Pedidos (/tienda/pedidos)
 Lista de todas las órdenes recibidas. Muestra el estado de cada pedido,
 los datos del cliente y los productos comprados. El colaborador puede
 ver el detalle de cada pedido.
 
-### Preview (/dashboard/tienda/preview)
+### Preview (/tienda/preview)
 Vista previa de la tienda tal como la ven los clientes. Permite verificar
 que los cambios de productos y temas se ven bien antes de que los clientes
 los vean.

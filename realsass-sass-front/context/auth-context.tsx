@@ -13,6 +13,14 @@
  *   5. auth.me (tRPC) → perfil completo
  *   6. Timer de refresh proactivo a los 55 min
  *
+ * Sesión compartida entre fronts: la cookie __session es la fuente de verdad (ADR-004). El usuario de
+ * Firebase vive por origen y no se comparte: si el login se hizo en otro front (p. ej. el dashboard) no
+ * hay `firebaseUser` acá, pero la cookie sigue válida → se autentica con auth.me por cookie
+ * (`isAuthenticated`, sin refresh proactivo: la cookie vence a los 14 días).
+ *
+ * Tiempo real entre fronts: useSessionWatch revalida (auth.ping) al volver a la pestaña y cada ~30 s;
+ * si otro front cerró la sesión este se desloguea, y si la abrió este entra solo.
+ *
  * Flujo de logout:
  *   1. DELETE /auth/session (REST) → revoca cookie HttpOnly
  *   2. Firebase signOut
@@ -22,7 +30,7 @@ import {
   useState, useCallback, useRef, type ReactNode,
 } from 'react'
 import { useRouter }                        from 'next/navigation'
-import { getFirebaseAuth, onAuthStateChanged, signOut, setActiveOrganizationId, reauthenticate as firebaseReauthenticate, type User } from '@real/auth-client'
+import { getFirebaseAuth, onAuthStateChanged, signOut, signInWithGoogle, setActiveOrganizationId, pingSession, useSessionWatch, notifySessionChange, sessionRefreshDue, markSessionRefreshed, clearSessionRefreshed, reauthenticate as firebaseReauthenticate, type User } from '@real/auth-client'
 import { AppError }                         from '@/lib/errors'
 
 // ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
@@ -93,13 +101,15 @@ async function trpcSyncUser(token: string, affiliateCode?: string): Promise<void
   }
 }
 
-async function trpcGetMe(token: string): Promise<UserProfile | null> {
+/** Con `token` va como Bearer; sin token autentica la cookie HttpOnly (sesión iniciada en otro front). */
+async function trpcGetMe(token: string | null): Promise<UserProfile | null> {
   try {
     const url = `${getSassBackUrl()}/api/v1/trpc/auth.me`
     const res = await fetch(url, {
       credentials: 'include',
-      headers:     { 'Authorization': `Bearer ${token}` },
+      headers:     token ? { 'Authorization': `Bearer ${token}` } : {},
     })
+    if (!res.ok) return null
     // Sin transformer en el router: el resultado viene en result.data (antes se leía .json y daba siempre null)
     const json = await res.json()
     return (json?.result?.data as UserProfile | undefined) ?? null
@@ -112,6 +122,8 @@ async function trpcGetMe(token: string): Promise<UserProfile | null> {
 
 interface AuthContextValue {
   firebaseUser:   User | null
+  /** Hay sesión: usuario de Firebase en este origen o cookie válida creada en otro front. */
+  isAuthenticated: boolean
   profile:        UserProfile | null
   loading:        boolean
   busy:           boolean
@@ -181,13 +193,16 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [])
 
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const profileRef       = useRef<UserProfile | null>(null)
+  const syncingRef       = useRef(false) // login/sync en curso: no revalidar encima
+  profileRef.current     = profile
 
   const scheduleTokenRefresh = useCallback((user: User) => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const freshToken = await user.getIdToken(true)
-        await createSessionCookie(freshToken)
+        if (await createSessionCookie(freshToken)) markSessionRefreshed()
       } catch { /* si falla el refresh el próximo request recibe 401 */ }
     }, 55 * 60 * 1000)
   }, [])
@@ -195,6 +210,19 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   const syncAndLoad = useCallback(async (user: User) => {
     setBusy(true)
     try {
+      // Recarga (F5) con la cookie renovada hace poco: 1 request en vez de toda la cadena. POST /auth/session
+      // tiene un límite de 10/min y varios F5 seguidos daban 429 → "preparando la sesión".
+      if (!sessionRefreshDue()) {
+        const viaCookie = await trpcGetMe(null)
+        if (viaCookie) {
+          setProfile(viaCookie)
+          applyActiveOrg(resolveActiveOrg(viaCookie))
+          setSessionReady(true)
+          scheduleTokenRefresh(user)
+          return
+        }
+      }
+
       const token = await user.getIdToken()
       await trpcSyncUser(token, refCode)
 
@@ -203,6 +231,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
 
       // REST — bootstrap del sistema de auth (ADR-004)
       const cookieOk = await createSessionCookie(freshToken)
+      if (cookieOk) markSessionRefreshed()
 
       const me = await trpcGetMe(freshToken)
       if (me) {
@@ -210,7 +239,8 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
         applyActiveOrg(resolveActiveOrg(me))
       }
       // Las consultas tRPC autenticadas arrancan recién ahora (cookie confirmada + org activa lista).
-      setSessionReady(cookieOk)
+      // Lista si hay una cookie válida: la recién creada o, si falló (p. ej. 429), una anterior.
+      setSessionReady(cookieOk || !!(await trpcGetMe(null)))
 
       scheduleTokenRefresh(user)
     } catch (err) {
@@ -223,23 +253,80 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [refCode, scheduleTokenRefresh, applyActiveOrg])
 
   useEffect(() => {
+    let cancelled = false
     const unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
+      syncingRef.current = true
+      try {
       setFirebaseUser(user)
       if (user) {
         await syncAndLoad(user)
+        notifySessionChange() // otras pestañas de este origen
       } else {
-        setProfile(null)
-        setSessionReady(false)
-        applyActiveOrg(null)
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+        // Sin usuario de Firebase en este origen: ¿hay una sesión por cookie de otro front?
+        if (!profileRef.current) setLoading(true)
+        const me = await trpcGetMe(null)
+        if (cancelled) return
+        if (me) {
+          setProfile(me)
+          applyActiveOrg(resolveActiveOrg(me))
+          setSessionReady(true)
+        } else {
+          setProfile(null)
+          setSessionReady(false)
+          applyActiveOrg(null)
+        }
       }
       setLoading(false)
+      } finally {
+        syncingRef.current = false
+      }
     })
     return () => {
+      cancelled = true
       unsubscribe()
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
     }
   }, [syncAndLoad, applyActiveOrg])
+
+  /** auth.ping: refleja un login/logout hecho en otro front. Un corte de red no desloguea a nadie. */
+  const revalidate = useCallback(async () => {
+    if (syncingRef.current) return
+    const status = await pingSession(getSassBackUrl())
+    if (syncingRef.current || status === 'unknown') return
+
+    if (status === 'closed' && profileRef.current) {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current)
+      setProfile(null)
+      setSessionReady(false)
+      applyActiveOrg(null)
+      clearSessionRefreshed()
+      await signOut().catch(() => undefined) // el usuario de Firebase de este origen también
+    } else if (status === 'open' && !profileRef.current) {
+      const me = await trpcGetMe(null)
+      if (me && !syncingRef.current && !profileRef.current) {
+        setProfile(me)
+        applyActiveOrg(resolveActiveOrg(me))
+        setSessionReady(true)
+      }
+    }
+  }, [applyActiveOrg])
+
+  useSessionWatch(revalidate)
+
+  // Arranque rápido: la cookie ya es una sesión válida. El perfil se pide de una (1 request) sin esperar a que
+  // Firebase inicialice y encadene sync → token → cookie → me; esa renovación sigue en segundo plano.
+  useEffect(() => {
+    let cancelled = false
+    void trpcGetMe(null).then((me) => {
+      if (cancelled || !me || profileRef.current) return
+      setProfile(me)
+      applyActiveOrg(resolveActiveOrg(me))
+      setSessionReady(true)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [applyActiveOrg])
 
   const switchOrganization = useCallback((organizationId: string) => {
     // D4: cambiar de organización NO reemite la cookie; solo cambia el header de los próximos requests.
@@ -247,19 +334,21 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [applyActiveOrg])
 
   const reauthenticate = useCallback(async () => {
-    if (!firebaseUser) throw new AppError('Tu sesión terminó. Ingresá de nuevo.', 'AUTH')
-    await firebaseReauthenticate()
-    const fresh = await firebaseUser.getIdToken(true) // trae el auth_time nuevo
+    // Sesión por cookie de otro front: no hay usuario de Firebase acá → se confirma con Google (inicia sesión en este origen).
+    const confirmed = firebaseUser ?? await signInWithGoogle()
+    if (firebaseUser) await firebaseReauthenticate()
+    const fresh = await confirmed.getIdToken(true) // trae el auth_time nuevo
     if (!(await createSessionCookie(fresh))) {
       throw new AppError('No pudimos renovar tu sesión segura. Intentá de nuevo.', 'UNKNOWN')
     }
+    markSessionRefreshed()
   }, [firebaseUser])
 
   const refreshProfile = useCallback(async () => {
-    if (!firebaseUser) return
+    if (!firebaseUser && !profile) return
     setBusy(true)
     try {
-      const token = await firebaseUser.getIdToken()
+      const token = firebaseUser ? await firebaseUser.getIdToken() : null
       const me    = await trpcGetMe(token)
       if (me) {
         setProfile(me)
@@ -270,7 +359,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     } finally {
       setBusy(false)
     }
-  }, [firebaseUser, activeOrganizationId, applyActiveOrg])
+  }, [firebaseUser, profile, activeOrganizationId, applyActiveOrg])
 
   const logout = useCallback(async () => {
     setBusy(true)
@@ -280,6 +369,8 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       setProfile(null)
       setSessionReady(false)
       applyActiveOrg(null)
+      clearSessionRefreshed()
+      notifySessionChange()
       router.push('/')
     } finally {
       setBusy(false)
@@ -287,7 +378,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
   }, [router, applyActiveOrg])
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, profile, loading, busy, sessionReady, activeOrganizationId, switchOrganization, reauthenticate, refreshProfile, logout }}>
+    <AuthContext.Provider value={{ firebaseUser, isAuthenticated: !!firebaseUser || !!profile, profile, loading, busy, sessionReady, activeOrganizationId, switchOrganization, reauthenticate, refreshProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )

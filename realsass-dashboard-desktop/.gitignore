@@ -1,0 +1,4 @@
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+# Cargo.lock SÍ se commitea (es una aplicación): se genera en la primera compilación

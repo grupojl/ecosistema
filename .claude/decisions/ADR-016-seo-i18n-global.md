@@ -2,6 +2,7 @@
 
 **Fecha:** 2026-09-22
 **Estado:** Aceptado
+**Enmendado por:** ADR-022 — la estructura de URL pasó de `/{locale}/tienda/{slug}/…` a `/{locale}/{slug}/…`; el resto de las reglas sigue vigente.
 **Autores:** Equipo GrupoJL
 **Relacionado:** ADR-014 (Markets), ADR-005 (tRPC), ADR-007 (sin `any`), ADR-013 (storeStatus)
 

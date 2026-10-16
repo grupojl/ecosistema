@@ -27,15 +27,26 @@ export class CartService {
     private readonly activity:        ActivityService,
   ) {}
 
-  async getOrCreateCart(organizationId: string, sessionId: string) {
+  async getOrCreateCart(organizationId: string, sessionId: string, customerId?: string) {
     const existing = await this.cartRepository.findActiveBySession(organizationId, sessionId);
-    if (existing) return existing;
-    return this.cartRepository.create(organizationId, sessionId);
+    if (existing && (!customerId || !existing.customerId || existing.customerId === customerId)) return existing;
+    return this.cartRepository.create(organizationId, sessionId, customerId);
   }
 
-  async getCart(organizationId: string, cartId: string) {
+  /**
+   * Un carrito con dueño solo lo ve su dueño. Se responde "no encontrado" (no "prohibido") para no revelar que existe.
+   * Antes bastaba conocer el UUID de un carrito para leerlo, modificarlo o pagarlo.
+   */
+  private assertOwner(cart: { id: string; customerId: string | null }, customerId?: string): void {
+    if (customerId && cart.customerId && cart.customerId !== customerId) {
+      throw new NotFoundException(`Carrito ${cart.id} no encontrado`);
+    }
+  }
+
+  async getCart(organizationId: string, cartId: string, customerId?: string) {
     const cart = await this.cartRepository.findById(organizationId, cartId);
     if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
+    this.assertOwner(cart, customerId);
     return cart;
   }
 
@@ -45,15 +56,23 @@ export class CartService {
     variantId:       string,
     quantity:        number,
     cartId?:         string,
+    customerId?:     string,
   ) {
     try {
       assertValidQuantity(quantity);
     } catch (err) {
       throw new UnprocessableEntityException(err instanceof Error ? err.message : String(err));
     }
-    const resolvedCartId = cartId
-      ?? (await this.cartRepository.findActiveBySession(organizationId, sessionId))?.id
-      ?? (await this.cartRepository.create(organizationId, sessionId)).id;
+
+    let resolvedCartId: string;
+    if (cartId) {
+      // Antes se usaba el cartId sin comprobar que existiera ni de quién era (ni de qué organización).
+      const cart = await this.getCart(organizationId, cartId, customerId);
+      if (customerId && !cart.customerId) await this.cartRepository.assignCustomer(cart.id, customerId);
+      resolvedCartId = cart.id;
+    } else {
+      resolvedCartId = (await this.getOrCreateCart(organizationId, sessionId, customerId)).id;
+    }
     return this.cartRepository.upsertItem(resolvedCartId, variantId, quantity);
   }
 
@@ -61,9 +80,9 @@ export class CartService {
     organizationId: string,
     cartId:          string,
     variantId:       string,
+    customerId?:     string,
   ) {
-    const cart = await this.cartRepository.findById(organizationId, cartId);
-    if (!cart) throw new NotFoundException(`Carrito ${cartId} no encontrado`);
+    const cart = await this.getCart(organizationId, cartId, customerId);
 
     const exists = cart.items.some(i => i.variantId === variantId);
     if (!exists) {

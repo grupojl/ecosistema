@@ -49,8 +49,29 @@ model User {
   organizations  Organization[]
   affiliateData  AffiliateData?
   collaborations Collaborator[]
+  sessions       UserSession[]
 
   @@map("users")
+}
+
+// ADR-020 — una fila por login de navegador (cookie __sid), no por request.
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceType String
+  browser    String?
+  os         String?
+  ipPrefix   String?
+  country    String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("user_sessions")
 }
 
 model Organization {

@@ -10,6 +10,14 @@
  *   4. auth.me     (tRPC, Bearer)  → perfil: organizaciones propias + colaboraciones
  *   5. recién ahora `user` queda definido: las pantallas autenticadas (tRPC por cookie) ya pueden consultar
  *
+ * Sesión compartida entre fronts: la cookie __session es la fuente de verdad (ADR-004). El usuario de
+ * Firebase vive por origen (IndexedDB) y NO se comparte entre fronts. Si Firebase no tiene usuario pero
+ * la cookie sigue válida (login hecho en otro front del ecosistema), se autentica con auth.me por cookie:
+ * sin pasar por Google y sin refresh proactivo (la cookie vence a los 14 días; ahí se pide login).
+ *
+ * Tiempo real entre fronts: useSessionWatch revalida (auth.ping) al volver a la pestaña y cada ~30 s.
+ * Si otro front cerró la sesión, este se desloguea; si otro front la abrió, este entra solo.
+ *
  * La organización activa viaja en el header x-organization-id; cambiarla no reemite la cookie.
  */
 import {
@@ -22,6 +30,9 @@ import {
 } from '../firebase/firebase';
 import { setActiveOrganizationId } from '../http/api-fetch';
 import { AppError }                from '../errors/app-error';
+import { pingSession }             from '../http/ping-session';
+import { sessionRefreshDue, markSessionRefreshed, clearSessionRefreshed } from '../http/session-refresh';
+import { useSessionWatch, notifySessionChange } from './use-session-watch';
 import type { Organization, Tenant, UserProfile } from '../types/index';
 
 interface AuthContextValue {
@@ -112,13 +123,17 @@ function toUserProfile(me: MeResponse): UserProfile {
 
 // ── Llamadas al back ──────────────────────────────────────────────────────────
 
-async function trpcCall<T>(url: string, token: string, init: RequestInit = {}): Promise<T> {
+/** Con `token` va como Bearer; sin token autentica la cookie HttpOnly (credentials: include). */
+async function trpcCall<T>(url: string, token: string | null, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
       credentials: 'include',
       ...init,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
   } catch {
     throw new AppError('NETWORK', 'Sin conexión con el servidor.');
@@ -153,6 +168,9 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const refreshTimer              = useRef<ReturnType<typeof setTimeout> | null>(null);
   const orgIdRef                  = useRef<string | null>(null);
+  const userRef                   = useRef<UserProfile | null>(null);
+  const syncingRef                = useRef(false); // login/sync en curso: no revalidar encima
+  userRef.current                 = user;
 
   const applyOrg = useCallback((id: string | null) => {
     orgIdRef.current = id;
@@ -181,20 +199,46 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
         const auth = getFirebaseAuth();
         if (auth.currentUser) {
           const fresh = await auth.currentUser.getIdToken(true);
-          await createSessionCookie(base, fresh);
+          if (await createSessionCookie(base, fresh)) markSessionRefreshed();
           scheduleRefresh();
         }
       } catch { /* el usuario cerró sesión */ }
     }, 55 * 60 * 1_000);
   }, [base]);
 
-  const loadProfile = useCallback(async (): Promise<UserProfile> => {
-    const token = await getIdToken(true);
+  const fetchMe = useCallback(async (token: string | null): Promise<UserProfile> => {
     const me = await trpcCall<MeResponse>(`${base}/api/v1/trpc/auth.me`, token);
     return toUserProfile(me);
   }, [base]);
 
+  const loadProfile = useCallback(async (): Promise<UserProfile> => {
+    // Sin usuario de Firebase en este origen, el perfil se pide con la cookie compartida.
+    const token = getFirebaseAuth().currentUser ? await getIdToken(true) : null;
+    return fetchMe(token);
+  }, [fetchMe]);
+
+  /** Sesión iniciada en otro front: perfil por cookie. null si no hay cookie válida. */
+  const loadProfileFromCookie = useCallback(async (): Promise<UserProfile | null> => {
+    try {
+      return await fetchMe(null); // SOLO cookie: nunca Bearer, así confirma que la cookie vale
+    } catch {
+      return null; // 401 (sin sesión), red caída o back no disponible: se muestra el login
+    }
+  }, [fetchMe]);
+
   const syncAndLoad = useCallback(async (fbUser: FirebaseUser) => {
+    // Recarga (F5) con la cookie renovada hace poco: 1 request en vez de toda la cadena (y sin tocar el límite
+    // de 10/min de POST /auth/session).
+    if (!sessionRefreshDue()) {
+      const viaCookie = await loadProfileFromCookie();
+      if (viaCookie) {
+        applyOrg(pickOrg(viaCookie));
+        setUser(viaCookie);
+        scheduleRefresh();
+        return;
+      }
+    }
+
     // 1) alta/actualización + organización por defecto + claims
     const token = await fbUser.getIdToken();
     await trpcCall<{ ok: boolean }>(`${base}/api/v1/trpc/auth.sync`, token, {
@@ -203,7 +247,10 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
 
     // 2) cookie de sesión, con el token ya con claims
     const fresh = await fbUser.getIdToken(true);
-    if (!(await createSessionCookie(base, fresh))) {
+    if (await createSessionCookie(base, fresh)) {
+      markSessionRefreshed();
+    } else if (!(await loadProfileFromCookie())) {
+      // Falló (p. ej. 429 por el límite) y además no hay una cookie válida previa.
       throw new AppError('SERVER', 'No pudimos iniciar tu sesión segura. Intentá de nuevo.');
     }
 
@@ -212,38 +259,93 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
     applyOrg(pickOrg(profile));
     setUser(profile);
     scheduleRefresh();
-  }, [base, loadProfile, applyOrg, pickOrg, scheduleRefresh]);
+  }, [base, loadProfile, loadProfileFromCookie, applyOrg, pickOrg, scheduleRefresh]);
 
   useEffect(() => {
     const auth        = getFirebaseAuth();
+    let   cancelled   = false;
     const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      syncingRef.current = true;
+      try {
       if (!fbUser) {
-        setUser(null);
-        applyOrg(null);
+        if (refreshTimer.current) clearTimeout(refreshTimer.current);
+        if (!userRef.current) setIsLoading(true); // evita mandar a /login mientras se consulta la cookie (sin parpadeo si ya hay sesión)
+        const profile = await loadProfileFromCookie();
+        if (cancelled) return;
+        if (profile) {
+          applyOrg(pickOrg(profile));
+          setUser(profile);
+        } else {
+          setUser(null);
+          applyOrg(null);
+        }
         setIsLoading(false);
         return;
       }
       setAuthError(null);
-      setIsLoading(true); // evita que el layout lo mande a /login mientras se prepara la sesión
+      if (!userRef.current) setIsLoading(true); // evita mandar a /login mientras se prepara la sesión (la cookie ya la puede haber abierto)
       try {
         await syncAndLoad(fbUser);
+        notifySessionChange(); // otras pestañas de este origen
       } catch (error) {
-        setUser(null);
         if (error instanceof AppError && error.code === 'AUTH') {
+          setUser(null);
           await signOut();
-        } else {
+        } else if (!userRef.current) {
+          // Si la cookie ya abrió la sesión, un fallo del sync en segundo plano no la cierra.
+          setUser(null);
           setAuthError(error instanceof Error ? error.message : 'No pudimos iniciar sesión.');
         }
       } finally {
         setIsLoading(false);
       }
+      } finally {
+        syncingRef.current = false;
+      }
     });
 
     return () => {
+      cancelled = true;
       unsubscribe();
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
     };
-  }, [syncAndLoad, applyOrg]);
+  }, [syncAndLoad, loadProfileFromCookie, applyOrg, pickOrg]);
+
+  /** auth.ping: refleja un login/logout hecho en otro front. Un corte de red no desloguea a nadie. */
+  const revalidate = useCallback(async () => {
+    if (syncingRef.current) return;
+    const status = await pingSession(sassBackUrl);
+    if (syncingRef.current || status === 'unknown') return;
+
+    if (status === 'closed' && userRef.current) {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      setUser(null);
+      applyOrg(null);
+      clearSessionRefreshed();
+      await signOut().catch(() => undefined); // el usuario de Firebase de este origen también
+    } else if (status === 'open' && !userRef.current) {
+      const profile = await loadProfileFromCookie();
+      if (profile && !syncingRef.current && !userRef.current) {
+        applyOrg(pickOrg(profile));
+        setUser(profile);
+      }
+    }
+  }, [sassBackUrl, applyOrg, pickOrg, loadProfileFromCookie]);
+
+  useSessionWatch(revalidate);
+
+  // Arranque rápido: con cookie válida el perfil sale en 1 request, sin esperar la cadena sync → token → cookie → me
+  // de Firebase (que sigue en segundo plano y renueva la cookie).
+  useEffect(() => {
+    let cancelled = false;
+    void loadProfileFromCookie().then((profile) => {
+      if (cancelled || !profile || userRef.current) return;
+      applyOrg(pickOrg(profile));
+      setUser(profile);
+      setIsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [loadProfileFromCookie, applyOrg, pickOrg]);
 
   const setOrganizationId = useCallback((id: string) => applyOrg(id), [applyOrg]);
 
@@ -255,8 +357,10 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
       await fetch(`${base}/auth/session`, { method: 'DELETE', credentials: 'include' });
     } catch { /* si el back no responde, igual se cierra la sesión local */ }
     await signOut();
+    clearSessionRefreshed();
     applyOrg(null);
     setUser(null);
+    notifySessionChange();
   }, [base, applyOrg]);
 
   const refreshUser = useCallback(async () => {

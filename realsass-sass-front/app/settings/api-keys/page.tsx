@@ -25,11 +25,11 @@ function ApiKeysSkeleton() {
  */
 export default function ApiKeysPage() {
   const router = useRouter()
-  const { firebaseUser, profile, loading } = useAuth()
+  const { isAuthenticated, profile, loading } = useAuth()
 
   useEffect(() => {
-    if (!loading && !firebaseUser) router.push('/')
-  }, [loading, firebaseUser, router])
+    if (!loading && !isAuthenticated) router.push('/')
+  }, [loading, isAuthenticated, router])
 
   if (loading || !profile) return <ApiKeysSkeleton />
 
