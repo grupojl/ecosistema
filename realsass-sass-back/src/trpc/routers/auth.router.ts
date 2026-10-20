@@ -21,13 +21,15 @@
  *   organization-access es consumido por ecommerce-back vía HTTP, no por un front.
  */
 import { z }                   from 'zod';
-import { router, authProcedure } from '@/trpc';
+import { router, authProcedure, publicProcedure } from '@/trpc';
 import type { UsersService }   from '@/users/users.service';
 import type { AuthService }    from '@/auth/auth.service';
+import type { DesktopLoginService } from '@/auth/desktop-login.service';
 
 export function createAuthRouter(
   usersService: UsersService,
   authService:  AuthService,
+  desktopLogin: DesktopLoginService,
 ) {
   return router({
 
@@ -85,6 +87,25 @@ export function createAuthRouter(
       .mutation(async ({ ctx }) => {
         return authService.generateCustomTokenForUid(ctx.uid);
       }),
+
+    /**
+     * auth.issueDesktopLoginCode — paso 2 del login de la app de escritorio (DT-DESK-3): con sesión, canjea el `challenge` PKCE
+     * por un CÓDIGO de un solo uso (60 s). Por el loopback viaja el código, no un token.
+     */
+    issueDesktopLoginCode: authProcedure
+      .input(z.object({ challenge: z.string().regex(/^[a-f0-9]{64}$/) }))
+      .mutation(({ ctx, input }) => desktopLogin.issue(ctx.uid!, input.challenge)),
+
+    /**
+     * auth.redeemDesktopLogin — paso 3: el webview de la app (aún sin sesión) canjea código + verifier por el custom token.
+     * Es público a propósito: la prueba es el código aleatorio de 256 bits (un uso) más el verifier que solo conoce la app.
+     */
+    redeemDesktopLogin: publicProcedure
+      .input(z.object({
+        code:     z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),
+        verifier: z.string().regex(/^[a-f0-9]{64}$/),
+      }))
+      .mutation(({ input }) => desktopLogin.redeem(input.code, input.verifier)),
 
     /**
      * auth.selectRole — selecciona el rol/organización activa del usuario.

@@ -5,8 +5,10 @@
 //   · deja navegar solo al panel (lo demás se abre en el navegador del sistema);
 //   · abre rutas del panel desde enlaces welver://open?path=/…  (deep link);
 //   · con `--features updater`, busca versiones nuevas firmadas y pregunta antes de instalar;
-//   · inicia sesión por el navegador del sistema (RFC 8252) con un servidor de loopback efímero en 127.0.0.1, y navega a
-//     `/auth/sso?token=…` (la ruta del panel que ya existía) con el custom token que le devuelve la página puente.
+//   · inicia sesión por el navegador del sistema (RFC 8252) con un servidor de loopback efímero en 127.0.0.1 y PKCE (RFC 7636):
+//     la app genera un `verifier` secreto y manda al navegador solo su `challenge`; el navegador vuelve con un CÓDIGO de un solo uso
+//     (no con un token) y la app navega a `/auth/desktop?code=…&verifier=…`, donde el panel canjea el código. Sin el verifier, un código
+//     robado del loopback no sirve.
 //
 // El panel remoto NO tiene acceso a IPC (ver capabilities/default.json): solo conoce el puerto de loopback, que se le inyecta
 // como `window.__WELVER_DESKTOP__`.
@@ -14,14 +16,13 @@
 // ⚠ Este archivo se escribió sin poder compilarlo (sin Rust en la máquina de desarrollo). La primera compilación real es F0.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use sha2::{Digest, Sha256};
 use std::{
-    collections::hash_map::RandomState,
-    hash::{BuildHasher, Hasher},
     io::{Read, Write},
     net::{TcpListener, TcpStream, ToSocketAddrs},
     sync::{Arc, Mutex},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
@@ -42,28 +43,45 @@ fn dashboard_url() -> String {
         .to_string()
 }
 
-/// `state` del login en curso. Se consume al usarse (un solo uso).
-type PendingState = Arc<Mutex<Option<String>>>;
+/// Tiempo máximo para completar el login en el navegador; pasado esto el intento se descarta.
+const LOGIN_TTL: Duration = Duration::from_secs(300);
+
+/// Login en curso: el `state` (anti-CSRF) y el `verifier` PKCE, que NUNCA sale de la app hacia el navegador.
+struct PendingLogin {
+    state: String,
+    verifier: String,
+    created: Instant,
+}
+
+/// Se consume al usarse (un solo uso).
+type PendingState = Arc<Mutex<Option<PendingLogin>>>;
 
 /// Destino de un deep link recibido ANTES de que el panel esté cargado; `connect` lo usa como primera página.
 type PendingPath = Arc<Mutex<Option<String>>>;
 
 // ─── Lógica pura (con tests abajo) ───────────────────────────────────────────
 
-/// Valor aleatorio de 256 bits en hex para el `state`. Usa solo la std (las claves de `RandomState` salen del SO).
-/// Endurecer con un CSPRNG/PKCE es DT-DESK-3.
-fn random_token() -> String {
-    let mut out = String::with_capacity(64);
-    for i in 0..4u64 {
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u64(i);
-        hasher.write_u32(std::process::id());
-        if let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-            hasher.write_u128(d.as_nanos());
-        }
-        out.push_str(&format!("{:016x}", hasher.finish()));
-    }
-    out
+/// Valor aleatorio de 256 bits en hex (para el `state` y el `verifier`). Sale del generador criptográfico del sistema operativo;
+/// si el SO no lo entrega, no hay login (`None`) en vez de caer en algo predecible.
+fn random_token() -> Option<String> {
+    let mut bytes = [0u8; 32];
+    getrandom::getrandom(&mut bytes).ok()?;
+    Some(hex(&bytes))
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// PKCE: `challenge = hex(SHA-256(verifier))`. El navegador solo ve el challenge; el verifier se revela al panel recién cuando
+/// vuelve el código, y el back comprueba que coincidan.
+fn challenge_of(verifier: &str) -> String {
+    hex(&Sha256::digest(verifier.as_bytes()))
+}
+
+/// ¿El intento de login sigue vigente?
+fn is_fresh(created: Instant, now: Instant) -> bool {
+    now.saturating_duration_since(created) <= LOGIN_TTL
 }
 
 struct Request {
@@ -106,11 +124,9 @@ fn query_param<'a>(query: &'a str, key: &str) -> Option<&'a str> {
     })
 }
 
-/// Un custom token de Firebase es un JWT: solo `[A-Za-z0-9._-]`. Rechazar lo demás evita inyectar nada en la URL.
-fn is_valid_token(token: &str) -> bool {
-    !token.is_empty()
-        && token.len() <= 4096
-        && token.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+/// El código de un solo uso que emite el back es base64url (`[A-Za-z0-9_-]`). Rechazar lo demás evita inyectar nada en la URL.
+fn is_valid_code(code: &str) -> bool {
+    (32..=128).contains(&code.len()) && code.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
 fn is_valid_state(state: &str) -> bool {
@@ -242,12 +258,20 @@ fn handle(mut stream: TcpStream, port: u16, app: &AppHandle, pending: &PendingSt
 
 /// El panel (dentro de la app) navega acá; abrimos el navegador del sistema en la página puente.
 fn start_login(stream: &mut TcpStream, port: u16, app: &AppHandle, pending: &PendingState) {
-    let state = random_token();
+    let (Some(state), Some(verifier)) = (random_token(), random_token()) else {
+        respond(
+            stream,
+            "500 Internal Server Error",
+            &html_page("No se pudo iniciar", "<p>El sistema no entregó aleatoriedad segura.<br>Reiniciá la aplicación e intentá de nuevo.</p>"),
+        );
+        return;
+    };
+    let challenge = challenge_of(&verifier);
     if let Ok(mut guard) = pending.lock() {
-        *guard = Some(state.clone());
+        *guard = Some(PendingLogin { state: state.clone(), verifier, created: Instant::now() });
     }
     let panel = dashboard_url();
-    let bridge = format!("{panel}/desktop-login?port={port}&state={state}");
+    let bridge = format!("{panel}/desktop-login?port={port}&state={state}&challenge={challenge}");
 
     match app.opener().open_url(bridge, None::<&str>) {
         Ok(_) => respond(
@@ -272,25 +296,29 @@ fn start_login(stream: &mut TcpStream, port: u16, app: &AppHandle, pending: &Pen
     }
 }
 
-/// El navegador del sistema vuelve acá con el token. Se verifica el `state` (un solo uso) y se navega al SSO del panel.
+/// El navegador del sistema vuelve acá con un CÓDIGO de un solo uso (no un token). Se verifica el `state` y la vigencia (un solo uso)
+/// y se navega a la página del panel que canjea el código con el `verifier`, que solo esta app conoce.
 fn finish_login(stream: &mut TcpStream, query: &str, app: &AppHandle, pending: &PendingState) {
-    let token = query_param(query, "token").unwrap_or("");
+    let code = query_param(query, "code").unwrap_or("");
     let state = query_param(query, "state").unwrap_or("");
-    let expected = pending.lock().ok().and_then(|mut guard| guard.take());
+    let login = pending.lock().ok().and_then(|mut guard| guard.take());
 
-    let valid = is_valid_state(state) && is_valid_token(token) && expected.as_deref() == Some(state);
-    if !valid {
+    let verifier = match login {
+        Some(l) if is_fresh(l.created, Instant::now()) && is_valid_state(state) && is_valid_code(code) && l.state == state => Some(l.verifier),
+        _ => None,
+    };
+    let Some(verifier) = verifier else {
         respond(
             stream,
             "400 Bad Request",
             &html_page("No se pudo verificar", "<p>No pudimos verificar el inicio de sesión.<br>Volvé a la aplicación e intentá de nuevo.</p>"),
         );
         return;
-    }
+    };
 
     respond(stream, "200 OK", &html_page("Listo", "<p>Listo. Volvé a la aplicación: ya podés cerrar esta pestaña.</p>"));
     if let Some(window) = app.get_webview_window("main") {
-        location_replace(&window, &format!("{}/auth/sso?token={token}", dashboard_url()));
+        location_replace(&window, &format!("{}/auth/desktop?code={code}&verifier={verifier}", dashboard_url()));
         let _ = window.set_focus();
     }
 }
@@ -511,8 +539,8 @@ mod tests {
 
     #[test]
     fn random_token_es_hex_de_64_y_distinto_cada_vez() {
-        let a = random_token();
-        let b = random_token();
+        let a = random_token().unwrap();
+        let b = random_token().unwrap();
         assert_eq!(a.len(), 64);
         assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
         assert_ne!(a, b);
@@ -520,9 +548,25 @@ mod tests {
     }
 
     #[test]
+    fn challenge_es_el_sha256_del_verifier() {
+        // Vector conocido de SHA-256("abc")
+        assert_eq!(challenge_of("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        assert_ne!(challenge_of("abc"), challenge_of("abd"));
+        assert_eq!(challenge_of("abc").len(), 64);
+    }
+
+    #[test]
+    fn el_intento_de_login_vence() {
+        let t0 = Instant::now();
+        assert!(is_fresh(t0, t0));
+        assert!(is_fresh(t0, t0 + Duration::from_secs(299)));
+        assert!(!is_fresh(t0, t0 + LOGIN_TTL + Duration::from_secs(1)));
+    }
+
+    #[test]
     fn parse_request_lee_path_y_host() {
-        let req = parse_request("GET /callback?state=x&token=y HTTP/1.1\r\nHost: 127.0.0.1:5000\r\nAccept: */*\r\n\r\n").unwrap();
-        assert_eq!(req.target, "/callback?state=x&token=y");
+        let req = parse_request("GET /callback?state=x&code=y HTTP/1.1\r\nHost: 127.0.0.1:5000\r\nAccept: */*\r\n\r\n").unwrap();
+        assert_eq!(req.target, "/callback?state=x&code=y");
         assert_eq!(req.host.as_deref(), Some("127.0.0.1:5000"));
     }
 
@@ -534,23 +578,25 @@ mod tests {
 
     #[test]
     fn query_param_encuentra_cada_clave() {
-        let (path, query) = split_path_query("/callback?state=abc&token=def.ghi");
+        let (path, query) = split_path_query("/callback?state=abc&code=def_ghi");
         assert_eq!(path, "/callback");
         assert_eq!(query_param(query, "state"), Some("abc"));
-        assert_eq!(query_param(query, "token"), Some("def.ghi"));
+        assert_eq!(query_param(query, "code"), Some("def_ghi"));
         assert_eq!(query_param(query, "otro"), None);
         assert_eq!(split_path_query("/start"), ("/start", ""));
     }
 
     #[test]
-    fn token_solo_acepta_caracteres_de_jwt() {
-        assert!(is_valid_token("eyJhbGciOiJSUzI1NiJ9.eyJ1aWQiOiJ4In0.c2lnLW5hdHVyZV8x"));
-        assert!(!is_valid_token(""));
-        assert!(!is_valid_token("abc def"));
-        assert!(!is_valid_token("abc&state=x"));
-        assert!(!is_valid_token("abc%20def"));
-        assert!(!is_valid_token("</script>"));
-        assert!(!is_valid_token(&"a".repeat(5000)));
+    fn codigo_solo_acepta_base64url_de_largo_razonable() {
+        assert!(is_valid_code(&"a".repeat(43)));
+        assert!(is_valid_code("AbC-_123AbC-_123AbC-_123AbC-_123AbC-_123"));
+        assert!(!is_valid_code(""));
+        assert!(!is_valid_code("corto"));
+        assert!(!is_valid_code(&"a".repeat(129)));
+        assert!(!is_valid_code(&format!("{}&state=x", "a".repeat(40))));
+        assert!(!is_valid_code(&format!("{}%20", "a".repeat(40))));
+        assert!(!is_valid_code(&format!("{}.", "a".repeat(40))));
+        assert!(!is_valid_code("</script></script></script></script>"));
     }
 
     #[test]

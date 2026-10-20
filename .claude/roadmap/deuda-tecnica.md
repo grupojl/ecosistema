@@ -1,6 +1,6 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-10-16
+Última actualización: 2026-10-20
 
 
 ## ⏸ Diferido a propósito (decisión del 2026-10-16: se deja marcado, no se toca ahora)
@@ -34,18 +34,31 @@ Resuelto en esta tanda (todo con tests; sass-back 18/18 suites, ecommerce-back 1
 ## Desktop — Tauri, opción A (ADR-023, 2026-10-16) — planificado, nada implementado
 
 - [x] DT-DESK-0: F0 **escrito** (`realsass-dashboard-desktop/`: ventana a `DASHBOARD_URL`, capabilities mínimas, CSP, íconos provisorios, navegación restringida).
-- [ ] DT-DESK-0b: **compilar y probar F0 + F1 en una máquina con Rust** (checklist en `realsass-dashboard-desktop/README.md`); ajustar versiones/firmas de Tauri 2.x si hace falta. Nada de Rust se compiló todavía.
+- [ ] DT-DESK-0b: **compilar y probar F0 + F1 en una máquina con Rust** (checklist en `realsass-dashboard-desktop/README.md`). Sigue sin hacerse: esta máquina no tiene Rust ni las Build Tools de C++. Ahora también cubre el login con PKCE (DT-DESK-3). Alternativa sin Rust local: correr `ci-desktop.yml` / `desktop-release.yml` en GitHub (nunca se ejecutaron).
 - [x] DT-DESK-1: F1 **escrito**: login por el navegador del sistema + loopback + página puente `/desktop-login` + botón en `/login` (la parte web compila; la parte Rust no se compiló).
 - [x] DT-DESK-2: F2 **escrito**: instancia única, estado de ventana, deep link `welver://open?path=…` y auto-actualización firmada (feature `updater`, con confirmación). Sin compilar.
 - [ ] DT-DESK-2b: activar el updater: generar claves (`cargo tauri signer generate`), pegar la clave pública en `tauri.updater.conf.json` y cargar `TAURI_SIGNING_PRIVATE_KEY` en los secretos del repo.
 - [x] DT-DESK-8: pipeline de release escrito (`.github/workflows/desktop-release.yml`); **sin ejecutar**. Permite probar el instalador sin Rust local.
-- [ ] DT-DESK-3: endurecer el login por loopback (PKCE / código de un solo uso en vez de token directo).
-- [ ] DT-DESK-4: firma de código (Authenticode / notarización de Apple): **requiere certificados comprados**. Y `cargo audit`/`cargo deny` en CI (ADR-018).
+- [x] DT-DESK-3 (2026-10-20): login endurecido con **PKCE + código de un solo uso**: por el loopback ya no viaja un token sino un código (60 s, un uso, Redis con GETDEL) y el `verifier` no sale de la app. **Verificado:** back (`auth.issueDesktopLoginCode` / `redeemDesktopLogin`, 7 tests incl. "código robado sin verifier no sirve"), web (`/desktop-login`, `/auth/desktop`, `lib/desktop.ts`) y typecheck de los tres repos. **No verificado:** el cambio en Rust (`main.rs`: CSPRNG con `getrandom`, SHA-256, vigencia de 5 min; tests escritos) — se compila con DT-DESK-0b.
+- [ ] DT-DESK-4: **mitad hecha.** Escrito, sin ejecutar: `deny.toml`, `cargo audit` + `cargo deny` + `clippy` en `ci-desktop.yml` y en `desktop-release.yml` (la primera corrida puede pedir ajustar licencias). **Sigue abierto:** firma de código (Authenticode / notarización de Apple), que **requiere certificados comprados**.
 - [x] DT-DESK-9: notificaciones nativas — **decidido no implementar todavía** (sin IPC remoto y sin productor de notificaciones en el panel).
 - [ ] DT-DESK-5: decidir si hace falta funcionar sin conexión (reabriría la opción B: bundle estático).
-- [ ] DT-DESK-6: la parte web del login de escritorio (`lib/desktop.ts`, `/desktop-login`) no tiene tests automáticos: el dashboard no tiene runner de pruebas.
+- [x] DT-DESK-11 (2026-10-20): **versión mínima soportada y "rollback" por bloqueo.** El updater de Tauri solo sube de versión, así que el rollback real es avanzar a una corregida: `DESKTOP_MIN_VERSION` y `DESKTOP_BLOCKED_VERSIONS` (sass-back, `desktop.policy`) hacen que el panel dentro de la app (`DesktopGuard`) pida actualizar a quien tenga una versión baja o rota. Verificado: 5 tests de back, 9 de la lógica de versiones en web, typecheck. Runbook en el README del desktop. Límite: lo aplica el panel, no el Rust.
+- [ ] DT-DESK-12: **parcial.** Hecho: tests del protocolo en back (canje, código robado sin verifier, un solo uso, vencimiento) y en web, y un vector SHA-256 compartido con los tests de Rust para detectar desfases entre lenguajes. **Falta** el e2e real (app compilada → navegador → loopback → panel, y deep link): necesita el Rust compilado (DT-DESK-0b) y un runner de UI.
+- [ ] DT-DESK-13: **mitad hecha.** Hecho (verificado con tests): consentimiento al primer arranque, ping de versión + sistema operativo y errores del panel, solo si se aceptó (`desktop.telemetry`, contadores por versión/día en Redis, con límite por IP y sin datos personales). **Falta:** crashes nativos del Rust (panics) y un lugar donde ver las métricas (hoy son contadores en Redis y líneas de log).
+- [x] DT-DESK-6 (2026-10-20): la parte web del login de escritorio tiene tests: vitest en `realsass-dashboard-front` (`pnpm test`, 10 tests de `lib/desktop.ts`: puerto, state, challenge/verifier/código, URLs de loopback, redirect abierto, puente). Corre en `ci-desktop.yml`.
 - [x] DT-DESK-7: ícono generado desde el logo del dashboard (PNG/ICO/ICNS).
 - [ ] DT-DESK-10: **el logo del dashboard es el logo de Apple** (marca registrada): no distribuir públicamente; reemplazar por el logo propio y regenerar con `cargo tauri icon`.
+
+## WhatsApp por organización — ADR-025 (2026-10-20) — planificado, nada implementado
+
+- [x] DT-WA-01: sección "WhatsApp" en `realsass-sass-front` (`/profile/config`), **armada el 2026-10-20**: SDK + Embedded Signup, step-up, estados de vista, tipos inferidos del contrato. Typecheck en verde; **sin probar en navegador ni contra Meta**.
+- [x] DT-WA-02: canal elegido = **B** (tRPC `whatsapp.*` en sass-back → HTTP interno a chatia). Implementado: `realsass-sass-back/src/whatsapp/`, `trpc/routers/whatsapp.router.ts` (+6 tests), `CHATIA_BACK_URL`.
+- [x] DT-WA-05: chatia (ecosistema-ms): endpoints internos, desconexión, estado de la organización, webhook único de plataforma (`/webhooks/whatsapp`) y rechazo de cuentas inactivas. 621 tests en verde. **Sin commitear en ese repo.**
+- [ ] DT-WA-06: **crear/configurar la app de Meta** (Tech Provider, App Review, `config_id`, webhook, dominios del SDK) y cargar las variables: `checklists/meta-whatsapp-app.md`. Lo hace una persona con acceso al negocio; bloquea la prueba real.
+- [ ] DT-WA-07: prueba de punta a punta con un número real (checklist, paso 5), e2e automático del flujo y tests del router `whatsapp` y de la sección del front (el front no tiene runner).
+- [ ] DT-WA-03: migrar `lib/chat-ia-client.ts` (fetch manual del dashboard) a tRPC; ya no depende de esta feature.
+- [ ] DT-WA-04: decisiones de producto abiertas: ¿varios números por organización?, plan ante suspensión de la app compartida, normalización de más países y plantillas de mensaje (ecosistema-ms).
 
 ## Sigue abierto (sin decisión o sin tiempo, ver cada línea)
 

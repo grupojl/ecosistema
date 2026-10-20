@@ -319,8 +319,8 @@ function DeliveryLogsSheet({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-muted-foreground">{formatDate(log.createdAt)}</span>
-                  {!log.success && log.responseBody && (
-                    <span className="text-[10px] text-destructive truncate max-w-[200px]">{log.responseBody}</span>
+                  {!log.success && log.error && (
+                    <span className="text-[10px] text-destructive truncate max-w-[200px]">{log.error}</span>
                   )}
                 </div>
               </div>

@@ -20,6 +20,7 @@ import { createTrpcContext }        from '@/trpc/trpc';
 
 import { UsersService }             from '@/users/users.service';
 import { AuthService }              from '@/auth/auth.service';
+import { DesktopLoginService }     from '@/auth/desktop-login.service';
 import { OrganizationsService }     from '@/organizations/organizations.service';
 import { CollaboratorsService }     from '@/collaborators/collaborators.service';
 import { ConfigFlagsService }       from '@/config-flags/config-flags.service';
@@ -47,12 +48,17 @@ import { MarketsService }             from '@/markets/markets.service';
 import { MarketsModule }               from '@/markets/markets.module';
 import { SessionsService }             from '@/sessions/sessions.service';
 import { SessionsModule }              from '@/sessions/sessions.module';
+import { WhatsappService }             from '@/whatsapp/whatsapp.service';
+import { WhatsappModule }              from '@/whatsapp/whatsapp.module';
+import { DesktopService }              from '@/desktop/desktop.service';
+import { DesktopModule }               from '@/desktop/desktop.module';
 
 @Injectable()
 export class TrpcService {
   constructor(
     private readonly users:         UsersService,
     private readonly auth:          AuthService,
+    private readonly desktopLogin:  DesktopLoginService,
     private readonly orgs:          OrganizationsService,
     private readonly collaborators: CollaboratorsService,
     private readonly flags:         ConfigFlagsService,
@@ -65,12 +71,15 @@ export class TrpcService {
     private readonly affiliates:    AffiliatesService,
     private readonly markets:       MarketsService,
     private readonly sessions:      SessionsService,
+    private readonly whatsapp:      WhatsappService,
+    private readonly desktop:       DesktopService,
   ) {}
 
   get handler() {
     const router = createAppRouter({
       usersService:         this.users,
       authService:          this.auth,
+      desktopLoginService:  this.desktopLogin,
       orgsService:          this.orgs,
       collaboratorsService: this.collaborators,
       flagsService:         this.flags,
@@ -83,6 +92,8 @@ export class TrpcService {
       templatesService:   this.templates,
       affiliatesService:  this.affiliates,
       sessionsService:    this.sessions,
+      whatsappService:    this.whatsapp,
+      desktopService:     this.desktop,
     });
 
     return createExpressMiddleware({
@@ -118,6 +129,8 @@ export class TrpcService {
     AffiliatesModule,
     MarketsModule,
     SessionsModule,
+    WhatsappModule,
+    DesktopModule,
   ],
   providers: [TrpcService],
 })

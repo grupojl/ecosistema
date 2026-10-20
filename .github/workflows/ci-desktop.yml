@@ -1,0 +1,62 @@
+name: CI — realsass-dashboard-desktop
+
+# Verifica el cascarón de escritorio (Tauri) en cada PR que lo toque: tests de Rust, auditoría de dependencias (ADR-018)
+# y la parte web del login de escritorio del dashboard. No genera instaladores (eso lo hace desktop-release.yml).
+
+on:
+  pull_request:
+    paths:
+      - 'realsass-dashboard-desktop/**'
+      - 'realsass-dashboard-front/lib/desktop.ts'
+      - 'realsass-dashboard-front/lib/desktop.test.ts'
+      - '.github/workflows/ci-desktop.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'realsass-dashboard-desktop/**'
+      - '.github/workflows/ci-desktop.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: realsass-dashboard-desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: realsass-dashboard-desktop/src-tauri -> target
+      - name: Tests
+        run: cargo test
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Auditoría de dependencias (cargo audit + cargo deny)
+        run: |
+          cargo install cargo-audit cargo-deny --locked
+          cargo audit
+          cargo deny check
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tests de la parte web del login de escritorio
+        run: pnpm --filter realsass-dashboard-front test

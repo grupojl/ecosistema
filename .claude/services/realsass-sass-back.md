@@ -47,3 +47,9 @@ emitida en `POST /auth/session`. Requiere aplicar la migración `20261016120000_
 
 `Organization.slug` y `Organization.enabledProducts` tienen comentario
 `// ← AGREGAR` — verificar migraciones aplicadas en todos los entornos.
+
+## WhatsApp (ADR-025, 2026-10-20)
+
+Router tRPC `whatsapp.{status,connect,disconnect}` (`src/trpc/routers/whatsapp.router.ts`, solo OWNER; conectar/desconectar con step-up) y
+`src/whatsapp/whatsapp.service.ts`, que reenvía a chatia-backend (ecosistema-ms) por HTTP interno con `x-internal-api-key`.
+Variables: `CHATIA_BACK_URL` y `INTERNAL_API_KEY` (mismo valor que en chatia). Sin ellas responde 503. Contrato: `contracts/whatsapp-channel.md`.

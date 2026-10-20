@@ -32,6 +32,7 @@ import {
 import { useRouter }                        from 'next/navigation'
 import { getFirebaseAuth, onAuthStateChanged, signOut, signInWithGoogle, setActiveOrganizationId, pingSession, useSessionWatch, notifySessionChange, sessionRefreshDue, markSessionRefreshed, clearSessionRefreshed, reauthenticate as firebaseReauthenticate, type User } from '@real/auth-client'
 import { AppError }                         from '@/lib/errors'
+import { clearAuthHint, initialsOf, writeAuthHint } from '@/lib/auth-hint'
 
 // ─── Tipos locales (sin lib/types.ts) ────────────────────────────────────────
 
@@ -327,6 +328,19 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
     })
     return () => { cancelled = true }
   }, [applyActiveOrg])
+
+  // Pista para pintar el avatar en el primer cuadro de la próxima visita (ver lib/auth-hint.ts). Se descarta apenas se
+  // confirma que no hay sesión, para que un logout o una sesión vencida no dejen un avatar fantasma.
+  useEffect(() => {
+    if (profile) {
+      writeAuthHint(window.localStorage, {
+        initials: initialsOf(profile.user.email),
+        photoUrl: firebaseUser?.photoURL ?? profile.user.photoUrl ?? null,
+      })
+    } else if (!loading && !firebaseUser) {
+      clearAuthHint(window.localStorage)
+    }
+  }, [profile, firebaseUser, loading])
 
   const switchOrganization = useCallback((organizationId: string) => {
     // D4: cambiar de organización NO reemite la cookie; solo cambia el header de los próximos requests.

@@ -67,6 +67,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(...keys);
   }
 
+  /** Contador atómico con vencimiento (se fija al crearlo). Sin Redis devuelve 0: la telemetría simplemente no cuenta. */
+  async incr(key: string, ttlSeconds: number): Promise<number> {
+    if (!this.client) return 0;
+    const n = await this.client.incr(key);
+    if (n === 1) await this.client.expire(key, ttlSeconds);
+    return n;
+  }
+
+  /** Lee y borra en un solo paso (GETDEL, Redis ≥ 6.2): para valores de un solo uso. */
+  async getDel(key: string): Promise<string | null> {
+    return this.client?.getdel(key) ?? null;
+  }
+
   async keys(pattern: string): Promise<string[]> {
     if (!this.client) return [];
     return this.client.keys(pattern);

@@ -19,6 +19,10 @@ Esta es la única excepción documentada al principio tRPC-exclusivo del ecosist
 `chat-ia-back` todavía no tiene router tRPC. Cuando lo tenga, este módulo
 migrará igual que todos los demás.
 
+## WhatsApp (ADR-025)
+
+La conexión del WhatsApp de la organización **no se hace acá**: por ahora se autoriza en el panel del dueño (`realsass-sass-front`, `/profile/config`). Este dashboard no tiene esa pantalla. Ver `decisions/ADR-025-whatsapp-embedded-signup-sass-front.md`.
+
 ## Estado actual
 
 ⚠️ Funcional pero con deuda técnica: fetch manual en lib/chat-ia-client.ts.

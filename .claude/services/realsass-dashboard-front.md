@@ -35,6 +35,10 @@ tienda, pedidos, chat IA, configuración.
   **excepción explícita**: ese back todavía no tiene router tRPC. El archivo
   tiene TODO explícito para eliminarse cuando lo tenga.
 
+## WhatsApp (ADR-025)
+
+La conexión del WhatsApp de la organización **no se hace acá**: por ahora se autoriza en el panel del dueño (`realsass-sass-front`, `/profile/config`). Este dashboard no tiene esa pantalla. Ver `decisions/ADR-025-whatsapp-embedded-signup-sass-front.md`.
+
 ## Contrato (ADR-019)
 
 Todos los tipos de dominio salen de `@real/trpc` (`features/config/types.ts`, `features/store/types.ts`

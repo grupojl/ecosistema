@@ -29,3 +29,10 @@ Configuración de notificaciones automáticas a sistemas externos. Por ejemplo:
 
 ✅ Migrado a TanStack Query. Carga los datos desde los procedures tRPC de
 config-flags, config-quotas, config-themes y config-webhooks.
+
+### WhatsApp (ADR-025) — implementado, sin probar con Meta
+Sección al final de `/profile/config` (`components/config/whatsapp-section.tsx`, lógica en `features/whatsapp/`). El dueño autoriza
+el WhatsApp de su negocio con Embedded Signup de Meta (SDK de Facebook), ve el número y el estado, y puede desconectar. Habla con
+sass-back por tRPC (`whatsapp.status/connect/disconnect`, tipos inferidos de `@real/trpc`); conectar y desconectar piden step-up.
+Al back solo viaja el `code` y los ids de la cuenta; tokens y App Secret nunca llegan al navegador. Variables públicas:
+`NEXT_PUBLIC_META_APP_ID`, `NEXT_PUBLIC_META_CONFIG_ID`, `NEXT_PUBLIC_META_GRAPH_VERSION`. Typecheck en verde. Contrato: `contracts/whatsapp-channel.md`.

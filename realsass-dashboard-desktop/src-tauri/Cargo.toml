@@ -23,6 +23,10 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-deep-link = "2"
 # Recuerda tamaño y posición de la ventana
 tauri-plugin-window-state = "2"
+# Login por el navegador con PKCE (ADR-025 de DT-DESK-3): aleatoriedad criptográfica del SO y SHA-256 del verifier.
+# Ya vienen como dependencias transitivas de Tauri; se declaran acá porque se importan directamente (ADR-018).
+getrandom = "0.2"
+sha2 = "0.10"
 # Auto-actualización y el diálogo de confirmación (solo con --features updater)
 tauri-plugin-updater = { version = "2", optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }

@@ -23,6 +23,7 @@ import {
 } from '@/hooks/use-config'
 import { WebhooksSection } from '@/components/config/webhooks-section'
 import { SecretsSection }  from '@/components/config/secrets-section'
+import { WhatsappSection } from '@/components/config/whatsapp-section'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,9 @@ export default function ConfigPage() {
       {/* Webhooks y claves sensibles: piden confirmar la identidad al crear, rotar o borrar */}
       <WebhooksSection />
       <SecretsSection />
+
+      {/* WhatsApp de la organización (ADR-025): Embedded Signup de Meta */}
+      <WhatsappSection />
     </div>
   )
 }

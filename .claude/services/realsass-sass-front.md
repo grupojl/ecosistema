@@ -55,3 +55,9 @@ cadena de Firebase en segundo plano. `/profile` muestra skeleton mientras no hay
 
 `/profile`: botón "Dispositivos" junto a "Cerrar sesión" abre el modal `DevicesDialog` de `@real/ui`
 (`components/devices-dialog-connected.tsx`): lista, "Cerrar" por sesión y "Cerrar las demás".
+
+## WhatsApp por organización (ADR-025, 2026-10-20) — implementado, sin probar con Meta
+
+`/profile/config` incluye la sección "WhatsApp" (Embedded Signup de Meta): es **acá** donde se autoriza el WhatsApp de la organización,
+no en el dashboard de colaboradores. Usa tRPC `whatsapp.*` de sass-back (solo OWNER, step-up). Nuevas variables `NEXT_PUBLIC_META_*`
+(`.env.example` y Dockerfile, como Build Variables). Ver `contracts/whatsapp-channel.md` y `checklists/meta-whatsapp-app.md`.

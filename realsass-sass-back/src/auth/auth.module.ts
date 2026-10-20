@@ -15,6 +15,7 @@ import { AuthSessionThrottledController }               from '@/auth/auth-sessio
 import { AuthService }                                  from '@/auth/auth.service';
 import { AuthController }                               from '@/auth/auth.controller';
 import { ClaimsService }                                from '@/auth/claims.service';
+import { DesktopLoginService }                      from '@/auth/desktop-login.service';
 import { UsersModule }                                  from '@/users/users.module';
 import { AffiliatesModule }                             from '@/affiliate/affiliate.module';
 import { OrganizationsModule }                          from '@/organizations/organizations.module';
@@ -22,8 +23,8 @@ import { SessionsModule }                               from '@/sessions/session
 
 @Module({
   imports:     [UsersModule, AffiliatesModule, OrganizationsModule, SessionsModule],
-  providers:   [AuthService, ClaimsService, SessionService],
+  providers:   [AuthService, ClaimsService, SessionService, DesktopLoginService],
   controllers: [AuthController, AuthSessionThrottledController],
-  exports:     [AuthService, ClaimsService, SessionService],
+  exports:     [AuthService, ClaimsService, SessionService, DesktopLoginService],
 })
 export class AuthModule {}

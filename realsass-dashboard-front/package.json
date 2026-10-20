@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "catalog:",
@@ -71,6 +72,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "catalog:",
+    "vitest": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

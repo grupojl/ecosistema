@@ -13,6 +13,11 @@ import { createAffiliatesRouter }          from '@/trpc/routers/affiliates.route
 import { createMarketsRouter }            from '@/trpc/routers/markets.router';
 import { createSessionsRouter }           from '@/trpc/routers/sessions.router';
 import type { SessionsService }           from '@/sessions/sessions.service';
+import type { DesktopLoginService }       from '@/auth/desktop-login.service';
+import { createDesktopRouter }           from '@/trpc/routers/desktop.router';
+import type { DesktopService }            from '@/desktop/desktop.service';
+import { createWhatsappRouter }          from '@/trpc/routers/whatsapp.router';
+import type { WhatsappService }           from '@/whatsapp/whatsapp.service';
 
 import type { UsersService }               from '@/users/users.service';
 import type { AuthService }                from '@/auth/auth.service';
@@ -31,6 +36,7 @@ import type { MarketsService }            from '@/markets/markets.service';
 export interface AppRouterDeps {
   usersService:       UsersService;
   authService:        AuthService;
+  desktopLoginService: DesktopLoginService;
   orgsService:        OrganizationsService;
   collaboratorsService: CollaboratorsService;
   flagsService:       ConfigFlagsService;
@@ -43,11 +49,13 @@ export interface AppRouterDeps {
   affiliatesService:  AffiliatesService;
   marketsService:     MarketsService;
   sessionsService:    SessionsService;
+  whatsappService:    WhatsappService;
+  desktopService:     DesktopService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
-    auth:            createAuthRouter(deps.usersService, deps.authService),
+    auth:            createAuthRouter(deps.usersService, deps.authService, deps.desktopLoginService),
     organizations:   createOrganizationsRouter(deps.orgsService),
     collaborators:   createCollaboratorsRouter(deps.collaboratorsService),
     configFlags:     createConfigFlagsRouter(deps.flagsService),
@@ -60,6 +68,8 @@ export function createAppRouter(deps: AppRouterDeps) {
     affiliates:      createAffiliatesRouter(deps.affiliatesService),
     markets:         createMarketsRouter(deps.marketsService),
     sessions:        createSessionsRouter(deps.sessionsService),
+    whatsapp:        createWhatsappRouter(deps.whatsappService),
+    desktop:         createDesktopRouter(deps.desktopService),
   });
 }
 

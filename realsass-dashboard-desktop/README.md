@@ -10,9 +10,11 @@ la ventana carga el dashboard **desplegado** (`DASHBOARD_URL`); no hay lógica d
 
 - Muestra una pantalla de conexión y navega al panel apenas responde (reintenta cada 4 s si no hay red).
 - Solo deja navegar al panel; cualquier otro `http(s)` se abre en el navegador del sistema.
-- **Login:** el popup de Google no es confiable en un webview, así que el botón "Continuar en el navegador" abre el navegador del
-  sistema en `/desktop-login` (página nueva del dashboard). Esa página pide un custom token y vuelve a `http://127.0.0.1:{puerto}/callback`;
-  la app verifica el `state` y navega a `/auth/sso?token=…` (ruta que ya existía).
+- **Login (PKCE + código de un solo uso, DT-DESK-3):** el popup de Google no es confiable en un webview, así que el botón "Continuar en el
+  navegador" abre el navegador del sistema en `/desktop-login`. La app genera un `verifier` secreto y manda solo su `challenge`
+  (SHA-256); la página, ya con sesión, pide al back un **código** de un solo uso (60 s) y vuelve a `http://127.0.0.1:{puerto}/callback`.
+  La app verifica el `state` y la vigencia (5 min) y navega a `/auth/desktop?code=…&verifier=…`, donde el panel canjea el código por
+  el token. **Por el loopback nunca viaja un token**: un código robado no sirve sin el verifier.
 - Una sola instancia, y recuerda tamaño/posición de la ventana.
 - **Deep link** `welver://open?path=/tienda/pedidos` abre la app y navega a esa ruta del panel (solo rutas internas; nunca sale del panel).
 - **Auto-actualización firmada** (opcional, `--features updater`): pregunta antes de instalar.
@@ -59,10 +61,16 @@ Con un tag `desktop-v0.1.0` además se crea un release en borrador con los insta
    DASHBOARD_URL=https://panel.tu-dominio.com cargo tauri dev        # bash
    $env:DASHBOARD_URL="https://panel.tu-dominio.com"; cargo tauri dev  # PowerShell
    ```
-3. Tests de la lógica pura (parseo, validación del token, política de navegación):
+3. Tests de la lógica pura (parseo, PKCE, validación del código, política de navegación):
    ```
    cd src-tauri && cargo test
    ```
+
+## Calidad en CI
+
+`.github/workflows/ci-desktop.yml` (en cada PR que toque esta carpeta): `cargo test`, `cargo clippy -D warnings`, `cargo audit` y `cargo deny check`
+(política en `src-tauri/deny.toml`, ADR-018) y los tests de la parte web del login (`pnpm --filter realsass-dashboard-front test`).
+`desktop-release.yml` repite la auditoría antes de publicar. ⚠ Ninguno de estos workflows se ejecutó todavía.
 
 ## Checklist de prueba (F0 + F1)
 
@@ -71,7 +79,9 @@ Con un tag `desktop-v0.1.0` además se crea un release en borrador con los insta
 - [ ] Con el panel apagado, muestra "No se puede conectar… Reintentando" y se conecta cuando lo levantás.
 - [ ] Sin sesión, el panel redirige a `/login` y se ve **"Continuar en el navegador"** (no el botón de Google).
 - [ ] Ese botón abre el navegador del sistema; ahí iniciás sesión; la pestaña dice "Listo… ya podés cerrar esta pestaña".
-- [ ] La ventana de la app entra sola al panel, ya autenticada.
+- [ ] La ventana de la app entra sola al panel, ya autenticada (pasa por `/auth/desktop`; la URL no queda con el código ni el verifier).
+- [ ] Repetir el mismo enlace de callback una segunda vez NO inicia sesión (el `state` y el código son de un solo uso).
+- [ ] Dejar pasar más de 5 minutos entre abrir el navegador y completar el login: la app rechaza el regreso.
 - [ ] Abrir un enlace externo desde el panel lo abre en el navegador, no dentro de la app.
 - [ ] Abrir la app por segunda vez enfoca la ventana existente.
 - [ ] Cerrar y abrir la app recuerda tamaño y posición.
@@ -126,6 +136,21 @@ Genera el instalador en `src-tauri/target/release/bundle/`. Sin firma de código
 ```
 cargo tauri icon app-icon.png      # con tu PNG cuadrado de 1024×1024
 ```
+
+## Runbook de release y rollback
+
+**Publicar:** tag `desktop-vX.Y.Z` → `desktop-release.yml` (tests, auditoría, build, release en borrador). Revisar el borrador y publicarlo.
+
+**Una versión salió rota.** El updater de Tauri solo sube de versión: no se "vuelve atrás", se avanza a una corregida. Pasos:
+1. En sass-back cargar `DESKTOP_BLOCKED_VERSIONS=X.Y.Z` (la rota) y `DESKTOP_DOWNLOAD_URL`. Reiniciar el servicio.
+2. Quien tenga esa versión ve, al abrir el panel, el aviso "Esta versión tiene un problema" con el enlace de descarga (`DesktopGuard`).
+3. Corregir, publicar `desktop-vX.Y.(Z+1)` y, si hace falta forzar a todos, subir `DESKTOP_MIN_VERSION`.
+4. Quitar la versión de la lista cuando ya no queden instalaciones (la métrica por versión está en los contadores `desktop:ping:*` de Redis).
+
+**Versión mínima soportada:** `DESKTOP_MIN_VERSION=x.y.z`; por debajo, el panel pide actualizar. Sin la variable no se restringe a nadie.
+⚠ La política la aplica el panel dentro de la app: una versión vieja que ya no abre el panel (por ejemplo, con la URL cambiada) no puede avisarse así.
+
+**Telemetría:** solo con consentimiento (aviso al primer arranque, guardado en el equipo). Envía versión, sistema operativo y errores del panel; nunca datos de la persona ni del negocio. Código en `realsass-sass-back/src/desktop/` y `realsass-dashboard-front/components/desktop/`.
 
 ## Problemas conocidos / dónde mirar si falla
 

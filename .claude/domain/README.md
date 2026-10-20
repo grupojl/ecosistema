@@ -17,6 +17,9 @@ el dominio. Si hay contradicción entre el código y este archivo, el dominio ga
   vision.md                    ← qué es el producto, a quién va, qué problema resuelve
   brand.md                     ← nombre, personalidad, tono de comunicación
   ui.md                        ← sistema de diseño: colores, tipografía, tokens
+  region/
+    README.md                  ← modelo, estados de soporte, cómo agregar un país
+    america/ asia/ europa/     ← una carpeta por región, con un .md por país y un README de índice
   flows/
     README.md                  ← cómo leer los flujos
     owner-organizacion.md      ← flujo del dueño: login → org → config → dashboard → colaboradores
@@ -35,6 +38,7 @@ el dominio. Si hay contradicción entre el código y este archivo, el dominio ga
 | `vision.md` | Propósito, usuarios, mercado | 🔲 Por completar |
 | `brand.md` | Nombre, personalidad, tono | 🔲 Por completar |
 | `ui.md` | Tokens de diseño, fuentes, colores | 🔲 Por completar |
+| `region/` | América, Asia y Europa: un .md por país con qué soporta y qué le falta | 🟡 Estructura + 69 fichas (4 completas: AR, BR, CO, MX; el resto "a validar") |
 | `flows/owner-organizacion.md` | Flujo del dueño, errores y notificaciones | 🟡 Decisiones cerradas (D1-D6) |
 | `flows/mapa.md` | Diagrama global | 🟡 |
 | `flows/saas-onboarding.md` | Registro hasta org activa | 🔲 Por completar |

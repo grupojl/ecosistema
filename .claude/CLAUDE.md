@@ -211,6 +211,25 @@ Ver `architecture/12-ui-norte.md`, `decisions/ADR-024-ui-ux-adaptable.md` y `dom
 
 ---
 
+## WhatsApp por organización — Embedded Signup (ADR-025) — implementado, sin probar con Meta
+
+Cada organización conecta **su** WhatsApp desde el panel del dueño (`realsass-sass-front`, `/profile/config`); la plataforma usa una sola app de
+Meta (Tech Provider) y el cliente paga su propia WABA. Plataforma en ecosistema-ms (`ADR-024-whatsapp-tech-provider-embedded-signup.md`).
+Ruta: sass-front --tRPC--> sass-back (`whatsapp.*`, solo OWNER + step-up) --HTTP interno + `INTERNAL_API_KEY`--> chatia. Los secretos
+(`accessToken`, `appSecret`) nunca llegan al front. **Falta crear la app de Meta** (`checklists/meta-whatsapp-app.md`).
+Ver `decisions/ADR-025-whatsapp-embedded-signup-sass-front.md` y `contracts/whatsapp-channel.md`.
+
+---
+
+## Región — América, Asia y Europa (ADR-026)
+
+`domain/region/` es el **catálogo factual** del mundo en el que opera el producto: tres carpetas (`america`, `asia`, `europa`) con un `.md` por país (idioma, moneda,
+pagos, logística, teléfono, legal, UI) y un estado de soporte (🟢 operativo · 🟡 candidato · ⚪ sin evaluar · 🔴 restringido). Hoy: AR base;
+MX, CO y BR candidatos. **No reemplaza** a Market (ADR-014) ni a la i18n (ADR-016/017): los referencia. Un país nuevo es una ficha y una fila.
+Ver `domain/region/README.md` y `decisions/ADR-026-region-catalogo-de-paises.md`.
+
+---
+
 ## Dependencias — política única (ADR-018)
 
 ### El norte

@@ -66,6 +66,14 @@ jobs:
         working-directory: realsass-dashboard-desktop/src-tauri
         run: cargo test
 
+      # Nada se publica con dependencias vulnerables o con licencias fuera de política (ADR-018, norte de desktop pilar 1).
+      - name: Auditoría de dependencias (cargo audit + cargo deny)
+        working-directory: realsass-dashboard-desktop/src-tauri
+        run: |
+          cargo install cargo-audit cargo-deny --locked
+          cargo audit
+          cargo deny check
+
       - name: Build + release (con updater si hay claves)
         uses: tauri-apps/tauri-action@v0
         env:

@@ -5,6 +5,7 @@ import { Toaster }       from 'sonner'
 import { QueryProvider } from '@/providers/query-provider'
 import { AuthProvider }  from '@/features/auth/context/auth-context'
 import { SwCleanup }     from '@/components/sw-cleanup'
+import { DesktopGuard }  from '@/components/desktop/desktop-guard'
 import './globals.css'
 
 const inter = Inter({
@@ -34,7 +35,10 @@ export default function RootLayout({
         <SwCleanup />
         <QueryProvider>
           <AuthProvider sassBackUrl={process.env.NEXT_PUBLIC_SASS_BACK_URL ?? process.env.NEXT_PUBLIC_REAL_BACK_URL ?? ''}>
-            <TrpcProvider>{children}</TrpcProvider>
+            <TrpcProvider>
+              {children}
+              <DesktopGuard />
+            </TrpcProvider>
             <Toaster
               theme="dark"
               position="top-right"

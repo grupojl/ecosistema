@@ -3,26 +3,26 @@
 /**
  * Página puente del login de la app de escritorio (ADR-023, F1). Corre en el NAVEGADOR DEL SISTEMA, no en la app.
  *
- *   1. La app abre  /desktop-login?port=…&state=…  en el navegador.
+ *   1. La app abre  /desktop-login?port=…&state=…&challenge=…  en el navegador (PKCE: solo viaja el challenge).
  *   2. Si no hay sesión, manda a /login (y vuelve acá con ?next=).
- *   3. Con sesión, pide un custom token (auth.createDashboardSso) y vuelve a http://127.0.0.1:{port}/callback.
- *   4. La app verifica el `state`, navega su webview a /auth/sso?token=… (la ruta que ya existía) y listo.
+ *   3. Con sesión, pide un CÓDIGO de un solo uso (auth.issueDesktopLoginCode) y vuelve a http://127.0.0.1:{port}/callback.
+ *   4. La app verifica el `state`, navega su webview a /auth/desktop?code=…&verifier=… y ahí se canjea por el token.
  *
- * Puerto y state se validan antes de redirigir: solo se redirige a loopback.
+ * Puerto, state y challenge se validan antes de redirigir: solo se redirige a loopback, y nunca viaja un token.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, CircleAlert, CircleCheck } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/auth-context';
 import { trpc } from '@/lib/trpc/client';
-import { isValidState, loopbackCallbackUrl, parsePort } from '@/lib/desktop';
+import { isValidChallenge, isValidState, loopbackCallbackUrl, parsePort } from '@/lib/desktop';
 
 type Status = 'checking' | 'requesting' | 'done' | 'invalid' | 'error';
 
 export default function DesktopLoginPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
-  const createSso = trpc.auth.createDashboardSso.useMutation();
+  const issueCode = trpc.auth.issueDesktopLoginCode.useMutation();
   const [status, setStatus] = useState<Status>('checking');
   const started = useRef(false);
 
@@ -32,19 +32,20 @@ export default function DesktopLoginPage() {
     const params = new URLSearchParams(window.location.search);
     const port = parsePort(params.get('port'));
     const state = params.get('state');
-    if (port === null || !isValidState(state)) { setStatus('invalid'); return; }
+    const challenge = params.get('challenge');
+    if (port === null || !isValidState(state) || !isValidChallenge(challenge)) { setStatus('invalid'); return; }
 
     if (!isAuthenticated) {
       router.replace(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
-    started.current = true; // un solo token por visita
+    started.current = true; // un solo código por visita
     setStatus('requesting');
-    createSso.mutateAsync()
-      .then(({ customToken }) => {
+    issueCode.mutateAsync({ challenge })
+      .then(({ code }) => {
         setStatus('done');
-        window.location.href = loopbackCallbackUrl(port, state, customToken);
+        window.location.href = loopbackCallbackUrl(port, state, code);
       })
       .catch(() => setStatus('error'));
     // eslint-disable-next-line react-hooks/exhaustive-deps

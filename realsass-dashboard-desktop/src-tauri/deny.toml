@@ -1,0 +1,40 @@
+# cargo-deny — política de dependencias de Rust (ADR-018, pilar 1 de architecture/13-desktop-norte.md).
+# Corre en CI (.github/workflows/desktop-release.yml y ci-desktop.yml): `cargo deny check`.
+# ⚠ Escrito sin poder ejecutarlo (sin Rust en la máquina de desarrollo): la primera corrida puede pedir ajustar licencias o excepciones.
+
+[graph]
+all-features = false
+
+[advisories]
+# Vulnerabilidades conocidas (RustSec): falla el build.
+yanked = "deny"
+# Excepciones SOLO con motivo escrito y fecha de revisión. Hoy no hay ninguna.
+ignore = []
+
+[licenses]
+# Licencias permisivas aceptadas (las que usan Tauri y su árbol habitual).
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "Zlib",
+  "MPL-2.0",
+  "CC0-1.0",
+  "0BSD",
+  "BSL-1.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
