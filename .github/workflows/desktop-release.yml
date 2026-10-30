@@ -32,7 +32,7 @@ jobs:
   build:
     runs-on: windows-latest   # para macOS/Linux agregar entradas a una matriz (ver README)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
