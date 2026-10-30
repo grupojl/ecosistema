@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "catalog:",
@@ -67,6 +68,7 @@
     "zod": "catalog:",
     "zustand": "catalog:",
     "@real/auth-client": "workspace:*",
+    "@real/i18n": "workspace:*",
     "@real/ui": "workspace:*",
     "@real/trpc": "workspace:*"
   },
@@ -78,6 +80,7 @@
     "postcss": "catalog:",
     "tailwindcss": "catalog:",
     "tw-animate-css": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -18,4 +18,5 @@ jobs:
       - name: Contratos tRPC (ADR-019)
         run: pnpm contracts
       - run: pnpm --filter "@real/*" typecheck
+      - run: pnpm --filter "@real/*" test
       - run: pnpm --filter "@real/*" build

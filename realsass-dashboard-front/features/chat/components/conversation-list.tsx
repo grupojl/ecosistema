@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { MessageSquare, SlidersHorizontal, Search, CircleAlert } from 'lucide-react';
-import { Button } from '@real/ui';
+import { NativeSelect, Button, Badge, SectionHeader } from '@real/ui';
 import { Input } from '@real/ui';
 import { ScrollArea } from '@real/ui';
 import { Skeleton } from '@real/ui';
@@ -73,14 +73,9 @@ export function ConversationList({ conversaciones, isLoading = false, error = fa
       <div className="p-4 border-b border-border space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-sm">Conversaciones</h2>
+            <SectionHeader size="sm" title="Conversaciones" />
             {totalNoLeidos > 0 && (
-              <span
-                className="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full text-[10px] font-bold"
-                style={{ background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)' }}
-              >
-                {totalNoLeidos}
-              </span>
+              <Badge variant="warning" className="h-5 min-w-5 justify-center px-1 text-[10px]">{totalNoLeidos}</Badge>
             )}
           </div>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowFilters((v) => !v)}>
@@ -94,32 +89,30 @@ export function ConversationList({ conversaciones, isLoading = false, error = fa
             placeholder="Buscar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 pl-8 text-xs bg-secondary border-border"
+            className="h-8 pl-8 text-xs bg-muted border-border"
           />
         </div>
 
         {showFilters && (
           <div className="space-y-2">
-            <select
+            <NativeSelect
               value={filterCanal}
               onChange={(e) => setFilterCanal(e.target.value as Canal | '')}
-              className="w-full h-8 text-xs rounded-md bg-secondary border border-border text-foreground px-2"
             >
               <option value="">Todos los canales</option>
               {(Object.keys(CANAL_LABELS) as Canal[]).map((c) => (
                 <option key={c} value={c}>{CANAL_LABELS[c]}</option>
               ))}
-            </select>
-            <select
+            </NativeSelect>
+            <NativeSelect
               value={filterEtapa}
               onChange={(e) => setFilterEtapa(e.target.value as EtapaCliente | '')}
-              className="w-full h-8 text-xs rounded-md bg-secondary border border-border text-foreground px-2"
             >
               <option value="">Todas las etapas</option>
               {(Object.keys(ETAPA_CONFIG) as EtapaCliente[]).map((e) => (
                 <option key={e} value={e}>{ETAPA_CONFIG[e].label}</option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         )}
       </div>
@@ -142,18 +135,20 @@ export function ConversationList({ conversaciones, isLoading = false, error = fa
             const isSelected    = conv.id === selectedId;
             const ultimoMensaje = conv.ultimoMensaje;
             return (
-              <button
+              <Button
                 key={conv.id}
+                variant="ghost"
                 onClick={() => onSelect(conv.id)}
+                aria-current={isSelected ? 'true' : undefined}
                 className={cn(
-                  'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-border/50',
-                  isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
+                  'h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-none border-b border-border/50 px-4 py-3 text-left font-normal',
+                  isSelected && 'bg-muted',
                 )}
-              >
+                >
                 <div className="relative flex-shrink-0">
                   <Avatar nombre={conv.cliente.nombre} className="h-10 w-10 text-sm" />
                   {conv.oportunidadDetectada && (
-                    <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-amber-400 border-2 border-background" />
+                    <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-warning border-2 border-background" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
@@ -162,8 +157,7 @@ export function ConversationList({ conversaciones, isLoading = false, error = fa
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {conv.noLeidos > 0 && (
                         <span
-                          className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-bold"
-                          style={{ background: 'rgba(245,158,11,0.25)', color: '#fbbf24' }}
+                          className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[9px] font-bold bg-warning/20 text-warning-ink"
                         >
                           {conv.noLeidos}
                         </span>
@@ -183,7 +177,7 @@ export function ConversationList({ conversaciones, isLoading = false, error = fa
                     <p className="text-xs text-muted-foreground truncate">{ultimoMensaje.contenido}</p>
                   )}
                 </div>
-              </button>
+              </Button>
             );
           })
         )}

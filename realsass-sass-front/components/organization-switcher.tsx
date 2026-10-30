@@ -10,7 +10,7 @@
  */
 import { useState }                from 'react'
 import { Building2, Check, Loader2, Plus } from 'lucide-react'
-import { Button, Input }           from '@real/ui'
+import { Button, Input, Card } from '@real/ui'
 import { useAuth }                 from '@/context/auth-context'
 import { trpc }                    from '@/lib/trpc/client'
 import { getErrorMessage }         from '@/lib/errors'
@@ -58,7 +58,7 @@ export function OrganizationSwitcher() {
   if (orgs.length === 0) return null
 
   return (
-    <div className="rounded-xl border p-4 space-y-3">
+    <Card className="p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium flex items-center gap-2">
           <Building2 className="h-4 w-4 text-muted-foreground" /> Mis organizaciones
@@ -75,15 +75,16 @@ export function OrganizationSwitcher() {
           const active = o.id === activeOrganizationId
           return (
             <li key={o.id}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => handleSwitch(o.id)}
                 aria-current={active ? 'true' : undefined}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition hover:bg-accent"
+                className="w-full justify-between font-normal"
               >
                 <span className="truncate">{o.name ?? o.slug ?? 'Sin nombre'}</span>
                 {active && <Check className="h-4 w-4 shrink-0 text-primary" aria-label="Organización activa" />}
-              </button>
+              </Button>
             </li>
           )
         })}
@@ -111,6 +112,6 @@ export function OrganizationSwitcher() {
           </div>
         </form>
       )}
-    </div>
+    </Card>
   )
 }

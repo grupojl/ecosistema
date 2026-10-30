@@ -5,11 +5,13 @@ import { PrismaService }      from '@/prisma/prisma.service';
 import { InventoryService }   from '@/inventory/inventory.service';
 import { ActivityService }    from '@/activity/activity.service';
 import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
+import { OutboxService }         from '@/outbox/outbox.service';
 import { ORDERS_REPOSITORY }  from '@/orders/repository/orders.repository.interface';
 
 const mockPrisma = {
   cart:  { findFirst: jest.fn(), update: jest.fn() },
-  order: { create: jest.fn() },
+  order: { create: jest.fn(), findFirst: jest.fn() },
+  $queryRaw: jest.fn().mockResolvedValue([]),
   $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(mockPrisma)),
 };
 
@@ -42,6 +44,7 @@ describe('OrdersService.checkout', () => {
         { provide: InventoryService,           useValue: mockInventory },
         { provide: ActivityService,            useValue: mockActivity },
         { provide: OrganizationsClientService, useValue: mockOrgsClient },
+        { provide: OutboxService,              useValue: { enabled: false, enqueue: jest.fn() } },
       ],
     }).compile();
 
@@ -72,6 +75,41 @@ describe('OrdersService.checkout', () => {
         shippingAddress: {},
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+
+  it('bloquea la fila del carrito (FOR UPDATE) antes de leerlo', async () => {
+    mockPrisma.cart.findFirst.mockResolvedValue(null);
+    await expect(
+      service.checkout({ organizationId: 'org-1', cartId: 'cart-1', customerId: 'cust-1', shippingAddress: {} }),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(mockPrisma.cart.findFirst.mock.invocationCallOrder[0]!);
+  });
+
+  it('idempotente: un carrito ya CONVERTED devuelve la orden existente sin reservar stock ni crear otra', async () => {
+    mockPrisma.cart.findFirst.mockResolvedValue({ id: 'cart-1', status: 'CONVERTED', items: [] });
+    mockPrisma.order.findFirst.mockResolvedValue({ id: 'order-1', totalCents: 2000, items: [] });
+
+    const result = await service.checkout({
+      organizationId: 'org-1', cartId: 'cart-1', customerId: 'cust-1', shippingAddress: {},
+    });
+
+    expect(result).toEqual({ id: 'order-1', totalCents: 2000, items: [] });
+    expect(mockPrisma.order.findFirst).toHaveBeenCalledWith({
+      where:   { cartId: 'cart-1', organizationId: 'org-1', customerId: 'cust-1' },
+      include: { items: true },
+    });
+    expect(mockInventory.reserveWithinTransaction).not.toHaveBeenCalled();
+    expect(mockPrisma.order.create).not.toHaveBeenCalled();
+  });
+
+  it('un carrito ABANDONED no se puede pagar', async () => {
+    mockPrisma.cart.findFirst.mockResolvedValue({ id: 'cart-1', status: 'ABANDONED', items: [{ variantId: 'v1', quantity: 1 }] });
+    await expect(
+      service.checkout({ organizationId: 'org-1', cartId: 'cart-1', customerId: 'cust-1', shippingAddress: {} }),
+    ).rejects.toThrow(BadRequestException);
+    expect(mockInventory.reserveWithinTransaction).not.toHaveBeenCalled();
   });
 
   it('crea la orden y marca el carrito CONVERTED en el camino feliz', async () => {

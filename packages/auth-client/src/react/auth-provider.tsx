@@ -219,11 +219,17 @@ export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {
 
   /** Sesión iniciada en otro front: perfil por cookie. null si no hay cookie válida. */
   const loadProfileFromCookie = useCallback(async (): Promise<UserProfile | null> => {
-    try {
-      return await fetchMe(null); // SOLO cookie: nunca Bearer, así confirma que la cookie vale
-    } catch {
-      return null; // 401 (sin sesión), red caída o back no disponible: se muestra el login
+    // 401 = sin sesión (se muestra el login ya). Red caída / 5xx / back arrancando son transitorios: se reintenta
+    // antes de rendirse, o el login quedaba a la vista hasta el próximo auth.ping (~30 s) aunque la sesión fuera válida.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await fetchMe(null); // SOLO cookie: nunca Bearer, así confirma que la cookie vale
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'AUTH') return null;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+      }
     }
+    return null;
   }, [fetchMe]);
 
   const syncAndLoad = useCallback(async (fbUser: FirebaseUser) => {

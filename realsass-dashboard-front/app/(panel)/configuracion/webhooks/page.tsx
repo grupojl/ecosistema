@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Play, ChevronRight, AlertCircle,
   Check, X, Loader2, Clock, Webhook as WebhookIcon,
 } from 'lucide-react';
-import { Button } from '@real/ui';
+import { Checkbox, Alert, Button, Card } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';
 import {
@@ -19,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@real/ui';
 import { Skeleton } from '@real/ui';
-import { toast } from 'sonner';
+import { toast } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import {
   useWebhooks, useWebhookLogs, useCreateWebhook, useTestWebhook, useDeleteWebhook,
@@ -101,15 +101,12 @@ export default function WebhooksPage() {
 
   if (isLoading) return (
     <div className="space-y-3">
-      {[1,2].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
+      {[1,2].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
     </div>
   );
 
   if (error) return (
-    <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <AlertCircle className="h-4 w-4" />
-      Error al cargar webhooks.
-    </div>
+    <Alert variant="destructive">Error al cargar webhooks.</Alert>
   );
 
   return (
@@ -133,13 +130,13 @@ export default function WebhooksPage() {
       ) : (
         <div className="space-y-3">
           {webhooks.map((wh) => (
-            <div key={wh.id} className="rounded-xl border border-border bg-card p-4">
+            <Card key={wh.id} className="border-border p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm truncate text-foreground">{wh.url}</p>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {(wh.events as string[]).map(e => (
-                      <span key={e} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      <span key={e} className="text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border text-muted-foreground">
                         {e}
                       </span>
                     ))}
@@ -162,7 +159,7 @@ export default function WebhooksPage() {
                   </Button>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -180,17 +177,14 @@ export default function WebhooksPage() {
               <Input value={form.url}
                 onChange={(e) => setForm(p => ({ ...p, url: e.target.value }))}
                 placeholder="https://mi-servidor.com/webhook"
-                className="bg-secondary border-border font-mono text-sm" />
+                className="bg-muted border-border font-mono text-sm" />
             </div>
             <div className="space-y-2">
               <Label>Eventos *</Label>
               <div className="grid grid-cols-2 gap-2">
                 {WEBHOOK_EVENTS.map(({ key, label }) => (
-                  <label key={key} className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox"
-                      checked={form.events.includes(key)}
-                      onChange={() => toggleEvent(key)}
-                      className="size-4 rounded accent-primary" />
+                  <label key={key} className="flex min-h-11 cursor-pointer items-center gap-2">
+                    <Checkbox checked={form.events.includes(key)} onCheckedChange={() => toggleEvent(key)} />
                     <span className="text-sm text-foreground">{label}</span>
                   </label>
                 ))}
@@ -219,7 +213,7 @@ export default function WebhooksPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Secreto del webhook</DialogTitle>
-            <DialogDescription className="text-amber-600 font-medium">
+            <DialogDescription className="text-warning-ink font-medium">
               ⚠ Copiá este secreto ahora. No se va a volver a mostrar.
             </DialogDescription>
           </DialogHeader>
@@ -259,8 +253,7 @@ export default function WebhooksPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleDelete} variant="destructive">
                 {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Eliminar
               </AlertDialogAction>
@@ -303,18 +296,18 @@ function DeliveryLogsSheet({
             logs.map((log) => (
               <div key={log.id} className={cn(
                 'rounded-lg border px-3 py-2.5 space-y-1',
-                log.success ? 'border-green-500/20 bg-green-50/5' : 'border-destructive/20 bg-destructive/5',
+                log.success ? 'border-success/20 bg-success/5' : 'border-destructive/20 bg-destructive/5',
               )}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     {log.success
-                      ? <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      ? <Check className="h-3.5 w-3.5 text-success-ink shrink-0" />
                       : <X className="h-3.5 w-3.5 text-destructive shrink-0" />
                     }
                     <span className="font-mono text-xs text-muted-foreground">{log.event}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                    {log.statusCode && <span className={cn('font-mono', log.success ? 'text-green-600' : 'text-destructive')}>{log.statusCode}</span>}
+                    {log.statusCode && <span className={cn('font-mono', log.success ? 'text-success-ink' : 'text-destructive')}>{log.statusCode}</span>}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">

@@ -1,17 +1,20 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { ConfigCacheService }   from '@/config-cache/config-cache.service';
-import { ConfigAuditService }   from '@/config-audit/config-audit.service';
+import { ConfigCacheService } from '@/config-cache/config-cache.service';
+import { ConfigAuditService } from '@/config-audit/config-audit.service';
 import { QuotaExceededException } from '@/common/exceptions/quota-exceeded.exception';
-import { EventEmitter2 }        from '@nestjs/event-emitter';
-import { QUOTAS_REPOSITORY, type IQuotasRepository } from '@/config-quotas/repository/quotas.repository.interface';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  QUOTAS_REPOSITORY,
+  type IQuotasRepository,
+} from '@/config-quotas/repository/quotas.repository.interface';
 
 @Injectable()
 export class ConfigQuotasService {
   constructor(
     @Inject(QUOTAS_REPOSITORY)
-    private readonly repo:   IQuotasRepository,
-    private readonly cache:  ConfigCacheService,
-    private readonly audit:  ConfigAuditService,
+    private readonly repo: IQuotasRepository,
+    private readonly cache: ConfigCacheService,
+    private readonly audit: ConfigAuditService,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -23,7 +26,11 @@ export class ConfigQuotasService {
     const quota = await this.repo.findByResource(organizationId, resource);
     if (!quota) return; // sin quota configurada = sin límite
     if (quota.limit !== null && quota.currentUsage >= quota.limit) {
-      throw new QuotaExceededException(resource, quota.limit, quota.currentUsage);
+      throw new QuotaExceededException(
+        resource,
+        quota.limit,
+        quota.currentUsage,
+      );
     }
   }
 
@@ -32,13 +39,24 @@ export class ConfigQuotasService {
     await this.repo.increment(organizationId, resource, delta);
   }
 
-  async updateLimit(organizationId: string, userId: string, resource: string, limit: number) {
+  async updateLimit(
+    organizationId: string,
+    userId: string,
+    resource: string,
+    limit: number,
+  ) {
     const previous = await this.repo.findByResource(organizationId, resource);
-    const updated  = await this.repo.updateLimit(organizationId, resource, limit);
+    const updated = await this.repo.updateLimit(
+      organizationId,
+      resource,
+      limit,
+    );
 
     this.audit.log({
-      organizationId, userId,
-      configType: 'quota', configKey: resource,
+      organizationId,
+      userId,
+      configType: 'quota',
+      configKey: resource,
       action: 'update_limit',
       previousValue: previous ? String(previous.limit) : 'none',
       newValue: String(limit),

@@ -5,8 +5,8 @@ export class QuotaExceededException extends HttpException {
     super(
       {
         statusCode: HttpStatus.TOO_MANY_REQUESTS,
-        error:      'Quota Exceeded',
-        message:    `Límite de ${resource} alcanzado: ${current}/${limit}`,
+        error: 'Quota Exceeded',
+        message: `Límite de ${resource} alcanzado: ${current}/${limit}`,
         resource,
         limit,
         current,

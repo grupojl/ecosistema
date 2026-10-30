@@ -1,4 +1,5 @@
 'use client'
+import { Badge, Button, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Card } from '@real/ui'
 import { trpc } from '@/lib/trpc/client'
 import { useOrganizationId } from '@/hooks/use-organization-id'
 import { useAuth } from '@/context/auth-context'
@@ -34,52 +35,45 @@ export function MarketsManager() {
   if (isLoading) return <p className="text-muted-foreground text-sm">Cargando mercados...</p>
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50">
-          <tr>
-            <th className="text-left p-3 font-medium">País</th>
-            <th className="text-left p-3 font-medium">Estado</th>
-            <th className="text-left p-3 font-medium">Proveedor</th>
-            <th className="text-left p-3 font-medium">Default</th>
-          </tr>
-        </thead>
-        <tbody>
+    <Card className="overflow-hidden">
+      <Table stack>
+        <TableHeader>
+          <TableRow>
+            <TableHead>País</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead>Proveedor</TableHead>
+            <TableHead>Default</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {markets.map(market => (
-            <tr key={market.id} className="border-t hover:bg-muted/20">
-              <td className="p-3 font-medium">
+            <TableRow key={market.id}>
+              <TableCell data-label="País" className="font-medium">
                 {SUPPORTED_COUNTRIES[market.countryCode] ?? market.countryCode}
-              </td>
-              <td className="p-3">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  market.isActive
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {market.isActive ? 'Activo' : 'Inactivo'}
-                </span>
-              </td>
-              <td className="p-3 text-muted-foreground">
+              </TableCell>
+              <TableCell data-label="Estado">
+                <Badge variant={market.isActive ? "success" : "secondary"}>
+                  {market.isActive ? "Activo" : "Inactivo"}
+                </Badge>
+              </TableCell>
+              <TableCell data-label="Proveedor" className="text-muted-foreground">
                 {market.fulfillmentConfig?.provider ?? (
-                  <span className="text-amber-600 text-xs">⚠ Sin configurar</span>
+                  <Badge variant="warning">Sin configurar</Badge>
                 )}
-              </td>
-              <td className="p-3">
+              </TableCell>
+              <TableCell data-label="Default">
                 {market.isDefault ? (
                   <span className="text-xs text-muted-foreground">Default</span>
                 ) : (
-                  <button
-                    onClick={() => setDefault.mutate({ id: market.id })}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
+                  <Button variant="link" size="sm" onClick={() => setDefault.mutate({ id: market.id })}>
                     Hacer default
-                  </button>
+                  </Button>
                 )}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   )
 }

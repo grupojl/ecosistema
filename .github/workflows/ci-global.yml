@@ -21,3 +21,5 @@ jobs:
       - run: pnpm --filter "@real/trpc" typecheck
       - run: pnpm --filter "@real/auth-client" typecheck
       - run: pnpm --filter "@real/auth-server" typecheck
+      - name: Variables de entorno documentadas (todo lo que el código lee está en su .env.example)
+        run: node scripts/check-env.mjs

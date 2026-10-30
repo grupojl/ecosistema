@@ -13,8 +13,8 @@
  */
 import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { Public }                from '@real/auth-server';
-import { OrganizationsService }  from '@/organizations/organizations.service';
+import { Public } from '@real/auth-server';
+import { OrganizationsService } from '@/organizations/organizations.service';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -42,7 +42,8 @@ export class OrganizationsController {
   @Public()
   async getByIdPublic(@Param('id') id: string) {
     const store = await this.organizationsService.findByIdPublic(id);
-    if (!store) throw new NotFoundException(`Organization with id '${id}' not found`);
+    if (!store)
+      throw new NotFoundException(`Organization with id '${id}' not found`);
     return store;
   }
 
@@ -52,7 +53,8 @@ export class OrganizationsController {
   @Public()
   async getBySlugPublic(@Param('slug') slug: string) {
     const store = await this.organizationsService.findBySlugPublic(slug);
-    if (!store) throw new NotFoundException(`Organization with slug '${slug}' not found`);
+    if (!store)
+      throw new NotFoundException(`Organization with slug '${slug}' not found`);
     return store;
   }
 }

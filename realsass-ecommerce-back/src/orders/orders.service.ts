@@ -1,33 +1,38 @@
 // realsass-ecommerce-back/src/orders/orders.service.ts
-import { OrganizationsClientService }           from '@/organizations-client/organizations-client.service';
+import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
 import {
   BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
-} from "@nestjs/common";
-import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service";
-import { InventoryService }  from "@/inventory/inventory.service";
-import { ActivityService }   from "@/activity/activity.service";
+} from '@nestjs/common';
+import {
+  PrismaService,
+  type PrismaTransactionClient,
+} from '@/prisma/prisma.service';
+import { InventoryService } from '@/inventory/inventory.service';
+import { ActivityService } from '@/activity/activity.service';
 import {
   ORDERS_REPOSITORY,
   type IOrdersRepository,
-} from "@/orders/repository/orders.repository.interface";
+} from '@/orders/repository/orders.repository.interface';
 import {
   assertValidOrderTransition,
   type OrderStatus,
-} from "@/orders/domain/order.errors";
-import type { Prisma } from "@/generated/prisma";
+} from '@/orders/domain/order.errors';
+import type { Prisma } from '@/generated/prisma';
+import { OutboxService } from '@/outbox/outbox.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
-    private readonly prisma:           PrismaService,
+    private readonly prisma: PrismaService,
     @Inject(ORDERS_REPOSITORY)
     private readonly ordersRepository: IOrdersRepository,
-    private readonly inventory:        InventoryService,
-    private readonly activity:         ActivityService,
-    private readonly orgsClient:       OrganizationsClientService,
+    private readonly inventory: InventoryService,
+    private readonly activity: ActivityService,
+    private readonly orgsClient: OrganizationsClientService,
+    private readonly outbox: OutboxService,
   ) {}
 
   // ── Lecturas ───────────────────────────────────────────────────────────────
@@ -39,7 +44,8 @@ export class OrdersService {
   }
 
   async listOrders(organizationId: string, sessionId?: string) {
-    if (sessionId) return this.ordersRepository.findByCart(organizationId, sessionId);
+    if (sessionId)
+      return this.ordersRepository.findByCart(organizationId, sessionId);
     return this.ordersRepository.findByCart(organizationId, '');
   }
 
@@ -57,29 +63,46 @@ export class OrdersService {
   }
 
   async checkout(input: {
-    organizationId:      string;
-    sessionId?:          string;
-    cartId:              string;
-    customerId:          string;
-    shippingAddress:     Record<string, unknown>;
-    shippingCents?:      number;
+    organizationId: string;
+    sessionId?: string;
+    cartId: string;
+    customerId: string;
+    shippingAddress: Record<string, unknown>;
+    shippingCents?: number;
     visitorCountryCode?: string;
-    locale?:             string;
+    locale?: string;
   }) {
     const {
-      organizationId, cartId, customerId,
-      shippingAddress, shippingCents = 0,
+      organizationId,
+      cartId,
+      customerId,
+      shippingAddress,
+      shippingCents = 0,
     } = input;
 
     // Resolver market ANTES de la transacción (HTTP + Redis cache — ADR-014)
+    const visitorCountry =
+      input.visitorCountryCode && input.visitorCountryCode !== 'default'
+        ? input.visitorCountryCode.toUpperCase()
+        : null;
     const market = await this.orgsClient.resolveMarket(
       organizationId,
-      input.visitorCountryCode ?? 'default',
+      visitorCountry ?? 'default',
     );
 
     return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
+      // Idempotencia (ADR-029): se bloquea la fila del carrito hasta el final de la transacción. Dos checkouts
+      // simultáneos (doble clic, reintento de red) se serializan: el segundo espera y, al ver el carrito ya
+      // CONVERTED, devuelve la orden ya creada en vez de fallar por Order.cartId UNIQUE (que además revertía su reserva).
+      // Filtra por organización y dueño: el bloqueo no se puede usar para tocar carritos ajenos.
+      await tx.$queryRaw`
+        SELECT id FROM carts
+        WHERE  id = ${cartId} AND organization_id = ${organizationId} AND customer_id = ${customerId}
+        FOR UPDATE
+      `;
+
       const cart = await tx.cart.findFirst({
-        where:   { id: cartId, organizationId, customerId, status: 'ACTIVE' }, // solo el dueño paga SU carrito
+        where: { id: cartId, organizationId, customerId }, // solo el dueño paga SU carrito
         include: {
           items: {
             include: { variant: { include: { inventory: true } } },
@@ -87,7 +110,15 @@ export class OrdersService {
         },
       });
 
-      if (!cart || cart.items.length === 0) {
+      if (cart?.status === 'CONVERTED') {
+        const existing = await tx.order.findFirst({
+          where: { cartId, organizationId, customerId },
+          include: { items: true },
+        });
+        if (existing) return existing; // reintento del mismo checkout: misma orden, sin reservar stock otra vez
+      }
+
+      if (!cart || cart.status !== 'ACTIVE' || cart.items.length === 0) {
         throw new BadRequestException('Carrito vacío o no encontrado');
       }
 
@@ -111,16 +142,22 @@ export class OrdersService {
           organizationId,
           customerId,
           cartId,
-          subtotalCents:   itemsTotal,
-          status:          'PENDING_PAYMENT',
-          totalCents:      total,
-          currency:        cart.items[0]?.variant.currency ?? 'ARS',
+          subtotalCents: itemsTotal,
+          status: 'PENDING_PAYMENT',
+          totalCents: total,
+          currency: cart.items[0]?.variant.currency ?? 'ARS',
           shippingAddress: shippingAddress as Prisma.InputJsonValue,
-          locale:          input.locale ?? null,
+          locale: input.locale ?? null,
+          // Snapshot del Market (ADR-014): inmutable. Si el dueño cambia la config del Market después, esta orden no cambia.
+          // 'default' es el fallback cuando sass-back no responde: no es un Market real, no se referencia.
+          marketId: market.id === 'default' ? null : market.id,
+          visitorCountryCode: visitorCountry,
+          fulfillmentSnapshot:
+            market.fulfillmentConfig as Prisma.InputJsonValue,
           items: {
-            create: cart.items.map(i => ({
-              variantId:              i.variantId,
-              quantity:               i.quantity,
+            create: cart.items.map((i) => ({
+              variantId: i.variantId,
+              quantity: i.quantity,
               unitPriceCentsSnapshot: i.variant.priceCents,
             })),
           },
@@ -130,8 +167,28 @@ export class OrdersService {
 
       await tx.cart.update({
         where: { id: cartId },
-        data:  { status: 'CONVERTED' },
+        data: { status: 'CONVERTED' },
       });
+
+      // Outbox (ADR-029): el evento nace en la MISMA transacción que la orden; si ésta se revierte, el evento no existe.
+      // Sin datos personales: el consumidor consulta la orden por id.
+      if (this.outbox.enabled) {
+        await this.outbox.enqueue(tx, {
+          organizationId,
+          aggregateType: 'Order',
+          aggregateId: order.id,
+          type: 'order.created',
+          payload: {
+            orderId: order.id,
+            customerId,
+            totalCents: total,
+            currency: order.currency,
+            marketId: order.marketId ?? null,
+            visitorCountryCode: order.visitorCountryCode ?? null,
+            itemCount: order.items.length,
+          },
+        });
+      }
 
       return order;
     });
@@ -139,30 +196,32 @@ export class OrdersService {
 
   // ── Estado ─────────────────────────────────────────────────────────────────
 
-  async updateStatus(
-    organizationId: string,
-    orderId:        string,
-    to:             OrderStatus,
-  ) {
+  async updateStatus(organizationId: string, orderId: string, to: OrderStatus) {
     const order = await this.ordersRepository.findById(organizationId, orderId);
     if (!order) throw new NotFoundException(`Orden ${orderId} no encontrada`);
 
     try {
-      assertValidOrderTransition(order.status as OrderStatus, to);
+      assertValidOrderTransition(order.status, to);
     } catch (err) {
-      throw new BadRequestException(err instanceof Error ? err.message : String(err));
+      throw new BadRequestException(
+        err instanceof Error ? err.message : String(err),
+      );
     }
 
-    return this.ordersRepository.updateStatus(orderId, to);
+    return this.ordersRepository.updateStatus(organizationId, orderId, to);
   }
 
   async setPaymentIntent(
-    organizationId:  string,
-    orderId:         string,
+    organizationId: string,
+    orderId: string,
     paymentIntentId: string,
   ) {
     const order = await this.ordersRepository.findById(organizationId, orderId);
     if (!order) throw new NotFoundException(`Orden ${orderId} no encontrada`);
-    await this.ordersRepository.setPaymentIntent(orderId, paymentIntentId);
+    await this.ordersRepository.setPaymentIntent(
+      organizationId,
+      orderId,
+      paymentIntentId,
+    );
   }
 }

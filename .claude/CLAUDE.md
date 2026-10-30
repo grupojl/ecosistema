@@ -91,6 +91,7 @@ tRPC (interno) · gRPC (cuando aplique, futuro) · REST (solo APIs públicas ext
 | `@real/auth-server` | Guards, middleware, SessionService para los 2 backs |
 | `@real/trpc` | Contratos tRPC — SassAppRouter + EcommerceAppRouter |
 | `@real/ui` | 33 componentes shadcn — fuente única de UI |
+| `@real/i18n` | Idioma de los paneles: cookie, diccionario común, provider y selector (ADR-028) |
 
 ---
 
@@ -208,6 +209,12 @@ Prioridad  storefront (celular) primero; dashboard y sass-front después; Tauri 
 ```
 
 Ver `architecture/12-ui-norte.md`, `decisions/ADR-024-ui-ux-adaptable.md` y `domain/ui.md` (sistema de diseño actual).
+**Identidad de marca:** `domain/welver.html` es la referencia visual (tokens, tipografía, componentes). Los tokens y la piel viven en `packages/ui/src/styles/welver.css`, que importan los 4 fronts; no se definen colores propios por front.
+**Modales:** un solo primitivo (`Dialog`, `AlertDialog`, `Sheet` de `@real/ui`). Cada modal declara su tipo con `preset` (`form`, `selection`, `detail`, `filters`, `longForm`, `search`; las alertas son `AlertDialog`) y la presentación cambia sola por clase de tamaño (hoja inferior en compact, centrado, panel lateral, pantalla completa, superior). Los fronts no definen anchos ni animaciones propias de modal; el hook `useSizeClass()` expone la clase.
+**Navegación y botones:** la navegación de un panel es `AppShell` de `@real/ui` (barra inferior en compact, riel en medium, barra lateral colapsable en expanded, todo desde una sola lista de destinos); las páginas públicas usan la barra superior sticky de 56 px más una barra inferior de máx. 5 destinos en compact (`SiteHeader` + `SiteBrand` y `BottomTabBar`; `SectionIntro` para el encabezado de cada sección y `SiteFooter` para el pie, todos de `@real/ui`; `AuthPage` para accesos, `QuantityStepper` para cantidades y `Prose` para texto largo). **Ningún front arma UI propia: toda pantalla, botón, tarjeta, modal, barra o estado sale de `@real/ui`; si falta una pieza, se crea ahí primero.** Los puntos de corte `medium:` (600) y `expanded:` (840) ya existen como variantes de Tailwind. Todo botón es `Button` de `@real/ui` (también `asChild` sobre `Link`); no se arman botones a mano con clases.
+**Estructura de página (`@real/ui`):** toda página es `PageContainer` + `PageHeader` (un solo `<h1>`, título serif) con `SectionHeader` para sus secciones; la navegación entre subpáginas es `SectionTabs`; una cifra es `StatCard`; los 4 estados de toda vista son `LoadingState` (cargando), `EmptyState` vacío, error con reintento y sin permisos; un módulo futuro es `ComingSoon`; el arranque de sesión es `Spinner`.
+**Componentes de `@real/ui` a usar siempre:** `Field`/`FieldError` para campos con error, `NativeSelect` para listas cortas, `Table stack` + `data-label` en tablas (se vuelven tarjetas en compact), `Pagination`, `Breadcrumb` (3+ niveles), `Stepper` (flujos de 3–5 pasos), `EmptyState` (vacío, error, sin permisos), `Alert` (aviso en línea), `ActionMenu` (hoja en compact, popover desde medium), `SegmentedControl`, `Combobox` (más de ~7 opciones), `DateInput` (fecha nativa), `CommandPalette` + `useCommandShortcut` (Ctrl/⌘ K) y `LineChart`/`BarChart` (paleta por entidad, leyenda, tooltip con teclado y tabla gemela). No se arman a mano ni `<select>`, `<input>`, `<table>` ni bloques de error.
+**Tema:** solo existen los dos modos de Welver, claro y oscuro, con selección Sistema (default) · Claro · Oscuro guardada en `localStorage["theme"]` y aplicada como clase `dark` (`ThemeProvider` y `ThemeToggle` de `@real/ui`, también en el sitio de ayuda). Ningún front fuerza un modo ni define colores propios: se usan los tokens (`bg-primary`, `text-success-ink`, `var(--chart-1)`…), nunca `text-gray-*`, `bg-blue-*` ni hex/rgba sueltos. La excepción son los colores de marca de terceros (logos de Google, WhatsApp, etc.) y los temas por organización del storefront.
 
 ---
 
@@ -218,6 +225,15 @@ Meta (Tech Provider) y el cliente paga su propia WABA. Plataforma en ecosistema-
 Ruta: sass-front --tRPC--> sass-back (`whatsapp.*`, solo OWNER + step-up) --HTTP interno + `INTERNAL_API_KEY`--> chatia. Los secretos
 (`accessToken`, `appSecret`) nunca llegan al front. **Falta crear la app de Meta** (`checklists/meta-whatsapp-app.md`).
 Ver `decisions/ADR-025-whatsapp-embedded-signup-sass-front.md` y `contracts/whatsapp-channel.md`.
+
+---
+
+## Reportes de usuario (ADR-027) — implementado, migración sin aplicar
+
+Cualquier miembro de una organización puede informar un problema desde el producto. **Norte:** Sentry User Feedback (reporte atado al
+evento técnico) · Apple Feedback Assistant (consentimiento e ID de seguimiento) · Shopify (contexto de organización/módulo).
+sass-back es dueño del modelo `FeedbackReport`; el front usa tRPC `feedback.*`; superadmin lee y actualiza por `/internal/feedback*` (patrón ADR-013).
+Ver `architecture/13-reportes-norte.md`, `decisions/ADR-027-reportes-de-usuario.md` (incluye el plan por repo) y `contracts/user-feedback.md`.
 
 ---
 

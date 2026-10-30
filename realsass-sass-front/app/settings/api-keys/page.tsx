@@ -2,22 +2,9 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { KeyRound, Lock } from 'lucide-react'
+import { Button, EmptyState, LoadingState, PageContainer, PageHeader } from '@real/ui'
 import { useAuth } from '@/context/auth-context'
-
-// Skeleton para el estado de carga
-function ApiKeysSkeleton() {
-  return (
-    <div className="min-h-screen bg-background px-4 py-8 animate-pulse">
-      <div className="mx-auto max-w-2xl space-y-4">
-        <div className="h-7 w-48 rounded bg-muted" />
-        <div className="h-4 w-72 rounded bg-muted" />
-        {[1, 2].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-muted" />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /**
  * Página de API Keys — placeholder listo para cuando se integre
@@ -31,40 +18,37 @@ export default function ApiKeysPage() {
     if (!loading && !isAuthenticated) router.push('/')
   }, [loading, isAuthenticated, router])
 
-  if (loading || !profile) return <ApiKeysSkeleton />
+  if (loading || !profile) {
+    return (
+      <PageContainer size="sm">
+        <LoadingState rows={3} label="Cargando API Keys…" />
+      </PageContainer>
+    )
+  }
 
   // Dueño = tiene organización propia (los colaboradores solo tienen `collaborations`)
   if (!profile.organization) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="text-center">
-          <p className="text-muted-foreground">
-            Solo los owners pueden gestionar API Keys.
-          </p>
-          <button
-            onClick={() => router.push('/profile')}
-            className="mt-4 text-sm text-primary hover:underline"
-          >
-            Volver al perfil
-          </button>
-        </div>
-      </div>
+      <PageContainer size="sm" className="pt-16">
+        <EmptyState
+          kind="forbidden"
+          icon={<Lock className="size-5" />}
+          title="Solo los owners pueden gestionar API Keys"
+          description="Pedí acceso al propietario de la organización."
+          action={<Button variant="outline" size="sm" onClick={() => router.push('/profile')}>Volver al perfil</Button>}
+        />
+      </PageContainer>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="font-serif text-2xl text-foreground">API Keys</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Gestioná las claves de acceso para integraciones externas.
-        </p>
-        <div className="mt-6 rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Módulo de API Keys disponible en la próxima versión.
-          </p>
-        </div>
-      </div>
-    </div>
+    <PageContainer size="sm">
+      <PageHeader
+        icon={<KeyRound />}
+        title="API Keys"
+        description="Gestioná las claves de acceso para integraciones externas."
+      />
+      <EmptyState title="Disponible en la próxima versión" description="El módulo de API Keys llega pronto." />
+    </PageContainer>
   )
 }

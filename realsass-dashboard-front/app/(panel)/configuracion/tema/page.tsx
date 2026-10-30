@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Plus, Trash2, Loader2, CircleAlert, Star, Palette } from 'lucide-react';
-import { Button } from '@real/ui';
+import { NativeSelect, Alert, Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';
 import {
@@ -13,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@real/ui';
 import { Skeleton } from '@real/ui';
-import { toast } from 'sonner';
+import { toast } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useThemes, useCreateTheme, useActivateTheme, useDeleteTheme } from '@/features/config-themes/hooks';
 import type { ThemeConfig, CreateThemeInput } from '@/features/config/types';
@@ -64,7 +64,7 @@ function ThemePreview({ theme }: { theme: ThemePreviewData }) {
             title={c}
           />
         ))}
-        <span className="text-[10px] text-gray-500 ml-1">{font}</span>
+        <span className="text-[10px] text-muted-foreground ml-1">{font}</span>
       </div>
     </div>
   );
@@ -134,15 +134,12 @@ export default function TemaPage() {
 
   if (isLoading) return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1,2,3].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+      {[1,2,3].map(i => <Skeleton key={i} className="h-32 rounded-lg" />)}
     </div>
   );
 
   if (error) return (
-    <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <CircleAlert className="h-4 w-4" />
-      Error al cargar temas. Verificá que el config service esté disponible.
-    </div>
+    <Alert variant="destructive">Error al cargar temas. Verificá que el config service esté disponible.</Alert>
   );
 
   return (
@@ -160,7 +157,7 @@ export default function TemaPage() {
           <div
             key={theme.id}
             className={cn(
-              'rounded-xl border p-4 space-y-3 transition-colors',
+              'rounded-lg border p-4 space-y-3 transition-colors',
               theme.isActive
                 ? 'border-primary bg-primary/5'
                 : 'border-border bg-card hover:border-border/60',
@@ -170,7 +167,7 @@ export default function TemaPage() {
               <div>
                 <p className="font-medium text-sm flex items-center gap-1.5">
                   {theme.name}
-                  {theme.isActive && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />}
+                  {theme.isActive && <Star className="h-3 w-3 fill-warning text-warning-ink" />}
                 </p>
                 {theme.isSystemDefault && (
                   <span className="text-[10px] text-muted-foreground">Sistema</span>
@@ -215,7 +212,7 @@ export default function TemaPage() {
 
       {/* Modal crear tema */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent preset="longForm">
           <DialogHeader>
             <DialogTitle>Nuevo tema</DialogTitle>
             <DialogDescription>Personalizá los colores y la tipografía de tu organización.</DialogDescription>
@@ -225,7 +222,7 @@ export default function TemaPage() {
               <Label>Nombre *</Label>
               <Input value={form.name}
                 onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="ej: Mi marca" className="bg-secondary border-border" />
+                placeholder="ej: Mi marca" className="bg-muted border-border" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -235,7 +232,7 @@ export default function TemaPage() {
                     onChange={(e) => setForm(p => ({ ...p, primaryColor: e.target.value }))}
                     className="h-9 w-12 rounded border border-input cursor-pointer" />
                   <Input value={form.primaryColor ?? ''} onChange={(e) => setForm(p => ({ ...p, primaryColor: e.target.value }))}
-                    className="bg-secondary border-border font-mono text-xs" placeholder="#000000" />
+                    className="bg-muted border-border font-mono text-xs" placeholder="#000000" />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -245,7 +242,7 @@ export default function TemaPage() {
                     onChange={(e) => setForm(p => ({ ...p, secondaryColor: e.target.value }))}
                     className="h-9 w-12 rounded border border-input cursor-pointer" />
                   <Input value={form.secondaryColor ?? ''} onChange={(e) => setForm(p => ({ ...p, secondaryColor: e.target.value }))}
-                    className="bg-secondary border-border font-mono text-xs" placeholder="#ffffff" />
+                    className="bg-muted border-border font-mono text-xs" placeholder="#ffffff" />
                 </div>
               </div>
             </div>
@@ -256,31 +253,26 @@ export default function TemaPage() {
                   onChange={(e) => setForm(p => ({ ...p, accentColor: e.target.value }))}
                   className="h-9 w-12 rounded border border-input cursor-pointer" />
                 <Input value={form.accentColor ?? ''} onChange={(e) => setForm(p => ({ ...p, accentColor: e.target.value }))}
-                  className="bg-secondary border-border font-mono text-xs" placeholder="#666666" />
+                  className="bg-muted border-border font-mono text-xs" placeholder="#666666" />
               </div>
             </div>
             <div className="space-y-1.5">
               <Label>Tipografía</Label>
-              <select value={form.fontFamily ?? 'DM Sans'}
-                onChange={(e) => setForm(p => ({ ...p, fontFamily: e.target.value }))}
-                className="w-full h-9 rounded-md border border-input bg-secondary px-3 text-sm">
+              <NativeSelect value={form.fontFamily ?? 'DM Sans'}
+                onChange={(e) => setForm(p => ({ ...p, fontFamily: e.target.value }))}>
                 {FONT_OPTIONS.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <div className="space-y-1.5">
               <Label>Radio de bordes</Label>
               <div className="flex flex-wrap gap-2">
                 {RADIUS_OPTIONS.map(({ label, value }) => (
-                  <button key={value}
-                    onClick={() => setForm(p => ({ ...p, borderRadius: value }))}
-                    className={cn(
-                      'px-3 py-1.5 text-xs rounded-md border transition-colors',
-                      form.borderRadius === value
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-secondary border-border hover:border-primary/40',
-                    )}>
+                  <Button key={value} type="button" size="sm"
+                    variant={form.borderRadius === value ? 'default' : 'outline'}
+                    aria-pressed={form.borderRadius === value}
+                    onClick={() => setForm(p => ({ ...p, borderRadius: value }))}>
                     {label}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -288,7 +280,7 @@ export default function TemaPage() {
               <Label>URL del logo (opcional)</Label>
               <Input value={form.logoUrl ?? ''}
                 onChange={(e) => setForm(p => ({ ...p, logoUrl: e.target.value }))}
-                placeholder="https://..." className="bg-secondary border-border" />
+                placeholder="https://..." className="bg-muted border-border" />
             </div>
 
             {/* Preview en tiempo real */}
@@ -333,8 +325,7 @@ export default function TemaPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleDelete} variant="destructive">
                 {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Eliminar
               </AlertDialogAction>

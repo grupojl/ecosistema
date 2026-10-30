@@ -11,41 +11,39 @@ import { Logger } from '@nestjs/common';
 
 export interface SecurityEventBase {
   securityEvent: true;
-  service:       'realsass-ecommerce-back';
-  timestamp:     string;
+  service: 'realsass-ecommerce-back';
+  timestamp: string;
 }
 
 export interface TenantAccessDeniedEvent extends SecurityEventBase {
-  event:          'auth.tenant_denied';
-  uid:            string;
+  event: 'auth.tenant_denied';
+  uid: string;
   organizationId: string;
-  reason:         string;
+  reason: string;
 }
 
 export interface RateLimitHitEvent extends SecurityEventBase {
-  event:  'rate_limit.hit';
-  ip?:    string;
-  path:   string;
-  limit:  number;
+  event: 'rate_limit.hit';
+  ip?: string;
+  path: string;
+  limit: number;
 }
 
 export interface SuspiciousRequestEvent extends SecurityEventBase {
-  event:  'request.suspicious';
-  ip?:    string;
-  path:   string;
+  event: 'request.suspicious';
+  ip?: string;
+  path: string;
   reason: string;
 }
 
 type SecurityEvent =
-  | TenantAccessDeniedEvent
-  | RateLimitHitEvent
-  | SuspiciousRequestEvent;
+  TenantAccessDeniedEvent | RateLimitHitEvent | SuspiciousRequestEvent;
 
 function base(): SecurityEventBase {
   return {
     securityEvent: true,
-    service:       'realsass-ecommerce-back',
-    timestamp:     new Date().toISOString(),
+    service: 'realsass-ecommerce-back',
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -54,7 +52,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<TenantAccessDeniedEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: TenantAccessDeniedEvent = { ...base(), event: 'auth.tenant_denied', ...data };
+    const event: TenantAccessDeniedEvent = {
+      ...base(),
+      event: 'auth.tenant_denied',
+      ...data,
+    };
     logger.warn(event);
   }
 
@@ -62,7 +64,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<RateLimitHitEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: RateLimitHitEvent = { ...base(), event: 'rate_limit.hit', ...data };
+    const event: RateLimitHitEvent = {
+      ...base(),
+      event: 'rate_limit.hit',
+      ...data,
+    };
     logger.warn(event);
   }
 
@@ -70,7 +76,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<SuspiciousRequestEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: SuspiciousRequestEvent = { ...base(), event: 'request.suspicious', ...data };
+    const event: SuspiciousRequestEvent = {
+      ...base(),
+      event: 'request.suspicious',
+      ...data,
+    };
     logger.warn(event);
   }
 }

@@ -1,15 +1,14 @@
 // realsass-ecommerce-back/src/inventory/inventory.service.ts
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
-  Inject,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
-import { PrismaService, type PrismaTransactionClient } from "@/prisma/prisma.service";
-import { InsufficientStockError } from "@/inventory/errors/insufficient-stock.error";
+  PrismaService,
+  type PrismaTransactionClient,
+} from '@/prisma/prisma.service';
+import { InsufficientStockError } from '@/inventory/errors/insufficient-stock.error';
 import {
   INVENTORY_REPOSITORY,
   type IInventoryRepository,
-} from "@/inventory/repository/inventory.repository.interface";
+} from '@/inventory/repository/inventory.repository.interface';
 
 @Injectable()
 export class InventoryService {
@@ -20,23 +19,46 @@ export class InventoryService {
   ) {}
 
   async getStock(organizationId: string, variantId: string) {
-    const inv = await this.inventoryRepository.findByVariant(organizationId, variantId);
-    if (!inv) throw new NotFoundException(`Inventario no encontrado para variante ${variantId}`);
+    const inv = await this.inventoryRepository.findByVariant(
+      organizationId,
+      variantId,
+    );
+    if (!inv)
+      throw new NotFoundException(
+        `Inventario no encontrado para variante ${variantId}`,
+      );
     return inv;
   }
 
   async getBulkStock(organizationId: string, variantIds: string[]) {
-    return this.inventoryRepository.findManyByVariants(organizationId, variantIds);
+    return this.inventoryRepository.findManyByVariants(
+      organizationId,
+      variantIds,
+    );
   }
 
   async setStock(organizationId: string, variantId: string, quantity: number) {
-    const exists = await this.inventoryRepository.findByVariant(organizationId, variantId);
-    if (!exists) throw new NotFoundException(`Inventario no encontrado para variante ${variantId}`);
-    return this.inventoryRepository.setAvailable(organizationId, variantId, quantity);
+    const exists = await this.inventoryRepository.findByVariant(
+      organizationId,
+      variantId,
+    );
+    if (!exists)
+      throw new NotFoundException(
+        `Inventario no encontrado para variante ${variantId}`,
+      );
+    return this.inventoryRepository.setAvailable(
+      organizationId,
+      variantId,
+      quantity,
+    );
   }
 
   async release(organizationId: string, variantId: string, quantity: number) {
-    return this.inventoryRepository.release(organizationId, variantId, quantity);
+    return this.inventoryRepository.release(
+      organizationId,
+      variantId,
+      quantity,
+    );
   }
 
   // ── reserveWithinTransaction ───────────────────────────────────────────────
@@ -47,10 +69,10 @@ export class InventoryService {
   // transacción que la orden para garantizar atomicidad.
 
   async reserveWithinTransaction(
-    tx:        PrismaTransactionClient,
+    tx: PrismaTransactionClient,
     variantId: string,
-    sku:       string,
-    quantity:  number,
+    sku: string,
+    quantity: number,
   ): Promise<void> {
     const rowsAffected = await tx.$executeRaw`
       UPDATE inventory_items
@@ -61,10 +83,10 @@ export class InventoryService {
     `;
 
     if (rowsAffected === 0) {
-      const current = await tx.inventoryItem.findFirst({ where: { variantId } });
-      const available = current
-        ? current.quantityAvailable
-        : 0;
+      const current = await tx.inventoryItem.findFirst({
+        where: { variantId },
+      });
+      const available = current ? current.quantityAvailable : 0;
       throw new InsufficientStockError(sku, quantity, available);
     }
   }

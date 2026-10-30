@@ -2,7 +2,7 @@
 // app/(panel)/chat/page.tsx — lista de conversaciones del chat-ia-back
 import Link from 'next/link';
 import { MessageSquare, Bot, RefreshCw } from 'lucide-react';
-import { Badge } from '@real/ui';
+import { Badge, LoadingState, PageContainer, PageHeader, Card } from '@real/ui';
 import { Button } from '@real/ui';
 import { useConversaciones } from '@/features/chat/hooks';
 import type { ConversacionStatus } from '@/features/chat/types';
@@ -34,17 +34,13 @@ export default function ChatIAPage() {
   const { data: conversaciones, isLoading, refetch, isRefetching } = useConversaciones({ limit: 50 });
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Chat IA</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Conversaciones activas de todos los canales
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
+    <PageContainer size="xl">
+      <PageHeader
+        title="Chat IA"
+        description="Conversaciones activas de todos los canales"
+        actions={
+          <>
+            <Button
             variant="outline"
             size="sm"
             onClick={() => refetch()}
@@ -53,22 +49,12 @@ export default function ChatIAPage() {
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
-          <Link href="/chat/proyectos">
-            <Button variant="outline" size="sm">
-              <Bot className="mr-2 h-4 w-4" />
-              Proyectos IA
-            </Button>
-          </Link>
-        </div>
-      </div>
+            <Button asChild variant="outline" size="sm"><Link href="/chat/proyectos"><Bot className="mr-2 h-4 w-4" />Proyectos IA</Link></Button>
+          </>
+        }
+      />
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-          Cargando conversaciones...
-        </div>
-      )}
+      {isLoading && <LoadingState label="Cargando conversaciones…" />}
 
       {/* Empty */}
       {!isLoading && !conversaciones?.length && (
@@ -83,7 +69,7 @@ export default function ChatIAPage() {
 
       {/* Lista */}
       {conversaciones && conversaciones.length > 0 && (
-        <div className="divide-y rounded-lg border bg-card">
+        <Card className="divide-y">
           {conversaciones.map((conv) => {
             const status = statusOf(conv.status);
             const lastAt = conv.lastMessage?.createdAt ?? conv.updatedAt;
@@ -112,7 +98,7 @@ export default function ChatIAPage() {
             </div>
             );
           })}
-        </div>
+        </Card>
       )}
 
       {/* Total */}
@@ -121,6 +107,6 @@ export default function ChatIAPage() {
           {conversaciones.length} conversación{conversaciones.length !== 1 ? 'es' : ''} en total
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

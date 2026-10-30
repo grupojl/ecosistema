@@ -55,7 +55,7 @@ export function ClientePanel({ conversacion, onClose, onTomarOportunidad }: Clie
 
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Etapa actual</p>
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
               <TrendingUp className="h-4 w-4" style={{ color: etapaCfg.color }} />
               <span className="text-sm font-medium" style={{ color: etapaCfg.color }}>{etapaCfg.label}</span>
             </div>
@@ -66,7 +66,7 @@ export function ClientePanel({ conversacion, onClose, onTomarOportunidad }: Clie
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preferencias detectadas</p>
               <div className="flex flex-wrap gap-1.5">
                 {cliente.preferencias.map((p) => (
-                  <span key={p} className="px-2 py-0.5 rounded-md text-xs bg-secondary text-muted-foreground border border-border">{p}</span>
+                  <span key={p} className="px-2 py-0.5 rounded-md text-xs bg-muted text-muted-foreground border border-border">{p}</span>
                 ))}
               </div>
             </div>
@@ -81,12 +81,12 @@ export function ClientePanel({ conversacion, onClose, onTomarOportunidad }: Clie
             ) : (
               <div className="space-y-2">
                 {cliente.historialCompras.map((c, i) => (
-                  <div key={i} className="p-2.5 rounded-lg bg-secondary space-y-1">
+                  <div key={i} className="p-2.5 rounded-lg bg-muted space-y-1">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-xs font-medium leading-tight">{c.producto}</p>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">{c.fecha}</span>
                     </div>
-                    <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>${c.monto.toLocaleString('es-AR')}</p>
+                    <p className="text-xs font-semibold text-success-ink">${c.monto.toLocaleString('es-AR')}</p>
                   </div>
                 ))}
               </div>

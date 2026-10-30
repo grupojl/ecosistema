@@ -1,5 +1,8 @@
 import {
-  CanActivate, ExecutionContext, ForbiddenException, Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
 } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
@@ -19,12 +22,15 @@ export class StepUpGuard implements CanActivate {
   private readonly WINDOW_MS = 5 * 60 * 1_000; // 5 minutos
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const req   = ctx.switchToHttp().getRequest();
-    const token = (req.headers['authorization'] as string | undefined)?.split(' ')[1];
+    const req = ctx.switchToHttp().getRequest();
+    const token = (req.headers['authorization'] as string | undefined)?.split(
+      ' ',
+    )[1];
 
-    if (!token) throw new ForbiddenException('Token requerido para esta accion');
+    if (!token)
+      throw new ForbiddenException('Token requerido para esta accion');
 
-    const decoded  = await getAuth().verifyIdToken(token);
+    const decoded = await getAuth().verifyIdToken(token);
     const authTime = decoded.auth_time * 1_000;
 
     if (Date.now() - authTime > this.WINDOW_MS) {

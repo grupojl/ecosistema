@@ -1,6 +1,12 @@
 'use client';
 
+/**
+ * Selector de idioma. Es un `ActionMenu` de @real/ui: hoja de acciones con filas grandes en compact, popover desde medium.
+ * Cada idioma es una URL propia (SEO, ADR-016): al elegir se guarda la cookie y se navega a la misma página en ese idioma.
+ */
 import { usePathname } from 'next/navigation';
+import { Check, Globe } from 'lucide-react';
+import { ActionMenu, Button } from '@real/ui';
 import {
   LOCALES,
   LOCALE_COOKIE,
@@ -17,7 +23,6 @@ const LOCALE_NAMES: Readonly<Record<Locale, string>> = {
   de: 'Deutsch',
 };
 
-/** Reemplaza el primer segmento (/es/...) por el idioma destino. */
 export function swapLocaleInPath(pathname: string, target: Locale): string {
   const segments = pathname.split('/');
   if (isLocale(segments[1])) {
@@ -32,39 +37,29 @@ interface LocaleSwitcherProps {
   label:   string;
 }
 
-/**
- * La elección explícita se persiste en cookie → gana sobre Accept-Language
- * y país en futuras visitas (patrón Airbnb/Booking). Es un <a> real con
- * hrefLang: navegable sin JS y descubrible por crawlers.
- */
 export function LocaleSwitcher({ current, label }: LocaleSwitcherProps) {
   const pathname = usePathname() ?? '/';
 
-  function persistChoice(locale: Locale): void {
+  function choose(locale: Locale): void {
     document.cookie =
       `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+    window.location.assign(swapLocaleInPath(pathname, locale));
   }
 
   return (
-    <nav aria-label={label} className="flex gap-2 text-xs flex-wrap">
-      {LOCALES.map((locale) =>
-        locale === current ? (
-          <span key={locale} aria-current="true" className="font-semibold text-foreground">
-            {LOCALE_NAMES[locale]}
-          </span>
-        ) : (
-          <a
-            key={locale}
-            href={swapLocaleInPath(pathname, locale)}
-            hrefLang={locale}
-            lang={locale}
-            onClick={() => persistChoice(locale)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {LOCALE_NAMES[locale]}
-          </a>
-        ),
-      )}
-    </nav>
+    <ActionMenu
+      title={label}
+      items={LOCALES.map((locale) => ({
+        label: LOCALE_NAMES[locale],
+        icon: locale === current ? <Check /> : undefined,
+        disabled: locale === current,
+        onSelect: () => choose(locale),
+      }))}
+    >
+      <Button variant="ghost" size="sm" aria-label={`${label}: ${LOCALE_NAMES[current]}`}>
+        <Globe aria-hidden="true" />
+        <span className="uppercase">{current}</span>
+      </Button>
+    </ActionMenu>
   );
 }

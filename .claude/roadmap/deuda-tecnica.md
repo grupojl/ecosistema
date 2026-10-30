@@ -1,6 +1,6 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-10-20
+Última actualización: 2026-10-30
 
 
 ## ⏸ Diferido a propósito (decisión del 2026-10-16: se deja marcado, no se toca ahora)
@@ -59,6 +59,29 @@ Resuelto en esta tanda (todo con tests; sass-back 18/18 suites, ecommerce-back 1
 - [ ] DT-WA-07: prueba de punta a punta con un número real (checklist, paso 5), e2e automático del flujo y tests del router `whatsapp` y de la sección del front (el front no tiene runner).
 - [ ] DT-WA-03: migrar `lib/chat-ia-client.ts` (fetch manual del dashboard) a tRPC; ya no depende de esta feature.
 - [ ] DT-WA-04: decisiones de producto abiertas: ¿varios números por organización?, plan ante suspensión de la app compartida, normalización de más países y plantillas de mensaje (ecosistema-ms).
+
+## Robustez multi-tenant e idempotencia — ADR-029 (2026-10-30)
+
+- [x] DT-IDEM-1: checkout idempotente (bloqueo del carrito + reintento devuelve la orden existente). Tests de unidad en verde.
+- [ ] DT-IDEM-2: prueba del checkout concurrente contra Postgres real (el mock no ejercita `FOR UPDATE`).
+- [~] DT-TENANT-1: `prisma.forTenant()` **adoptado** en los repositorios del ecommerce-back (catálogo, carrito, inventario, clientes, órdenes) y `ActivityService`; el carrito, `orders.updateStatus/setPaymentIntent` y `customers.update` ya reciben `organizationId` (antes actualizaban solo por id). **Falta:** sass-back, y el SQL crudo / transacciones interactivas (checkout, `reserveWithinTransaction`), que filtran a mano.
+- [ ] DT-IDEM-3: tabla `IdempotencyKey` + webhooks de pago deduplicados + `Idempotency-Key` en cobros (con `pagos-back`).
+- [~] DT-EVT-1: Outbox implementado y **migración aplicada** (2026-10-30); escritura y relay apagados. Falta: activar `OUTBOX_ENABLED`/`OUTBOX_RELAY_ENABLED` y escribir un publisher real.
+- [~] DT-TENANT-2: `prisma/rls/enable-rls.sql` + `runAsTenant` listos y **sin aplicar**. Falta: rol de aplicación no superusuario, todas las queries bajo `runAsTenant`, prueba en staging.
+- [~] DT-OUTBOX-2: probados contra Postgres real (solo lectura): migración, `forTenant`, `set_config`, SQL del claim. **Falta:** relay con eventos reales, aislamiento entre ≥2 organizaciones con datos, y las políticas RLS en staging.
+
+## Tests — estado y pendientes (2026-10-30)
+
+Foto de `pnpm test` en cada workspace: **todo en verde, 0 fallos**. sass-back 30/30 suites (150 tests, 34 `todo`) · ecommerce-back 22 suites (198 tests, 8 saltados, 4 `todo`, 1 suite saltada) · storefront 156 · dashboard-front 19 · sass-front 16 · `@real/ui` 10 · `@real/auth-client` 28 · `@real/auth-server` 51 · `@real/i18n` 11 · `@real/trpc` sin tests. Todo corre con mocks. Pendiente para la próxima sesión:
+
+- [ ] DT-TEST-03: **tests contra infraestructura real** (Postgres, Redis; Firebase con emulador). Hoy nada ejercita el `FOR UPDATE` del checkout, RLS ni el aislamiento entre ≥2 organizaciones con datos. Cubre DT-IDEM-2 y DT-OUTBOX-2.
+- [ ] DT-TEST-04: **e2e (Playwright)** de login, sesión compartida entre fronts, checkout y cerrar sesión desde «Dispositivos». Incluye los tests de integración de sesión (DT-SES-06) y el smoke del storefront (DT-TEST-02).
+- [ ] DT-TEST-05: **fronts poco cubiertos**: dashboard-front tiene 1 archivo de test y sass-front 2; faltan tests de render de sus páginas (con ambos providers, ver DT-DASH-CTX). `@real/ui` tiene 33 componentes y 1 archivo de test.
+- [ ] DT-TEST-06: **medir la cobertura real** (el objetivo es 85% en paths críticos, S4-E) y fijar el umbral en CI; hoy no se mide.
+- [ ] DT-TEST-07: **revisar los `todo` y los tests saltados** (34 en sass-back; 4 `todo`, 8 saltados y 1 suite saltada en ecommerce-back) por si esconden algo importante; cerrarlos o borrarlos.
+- [ ] DT-TEST-08: **`@real/trpc` sin tests**: al menos un test de contrato que detecte un `dist` desfasado o un procedure con `any`.
+- [ ] DT-TEST-09: **el CI nunca corrió**: ninguno de estos tests se verificó fuera de la máquina local (ver DT-CI-01 y DT-CI-02).
+- [ ] DT-TEST-10: en la corrida del ecommerce-back apareció un stack trace de jest-circus en la salida; no se identificó qué test lo causa (el back terminó con 0 fallos, probablemente sea un error provocado a propósito). Revisarlo.
 
 ## Sigue abierto (sin decisión o sin tiempo, ver cada línea)
 

@@ -1,0 +1,286 @@
+/**
+ * welver.css — identidad Welver compartida por los frontends (fuente: .claude/domain/welver.html).
+ *
+ * Institucional, serena y cercana: verde profundo, papel cálido y un acento dorado escaso.
+ * Un solo archivo para tokens + mapeo a Tailwind v4 + la "piel" de la marca; cada front lo importa tras `tailwindcss`:
+ *
+ *   @import 'tailwindcss';
+ *   @import 'tw-animate-css';
+ *   @import '@real/ui/styles/welver.css';
+ *
+ * Todo token nuevo se agrega acá (ADR-024: tokens únicos en @real/ui) y debe pasar el panel de contraste de welver.html.
+ * Los nombres son los de shadcn (--background, --primary…) para que los componentes de @real/ui no cambien.
+ */
+@import './modal.css';   /* Modales adaptables (Dialog, AlertDialog, Sheet): presentaciones y movimiento */
+
+/* ===== Tokens — claro ===== */
+:root {
+  --background: hsl(42 30% 98%);       --foreground: hsl(156 32% 9%);
+  --card: hsl(0 0% 100%);              --card-foreground: hsl(155 30% 10%);
+  --popover: hsl(0 0% 100%);           --popover-foreground: hsl(156 32% 9%);
+  --primary: hsl(156 64% 19%);         --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(120 10% 94%);       --secondary-foreground: hsl(155 30% 18%);
+  --accent: hsl(150 30% 94%);          --accent-foreground: hsl(156 64% 17%);
+  --muted: hsl(100 12% 95%);           --muted-foreground: hsl(156 14% 36%);
+  /* border = decorativo · input = borde de control (>= 3:1, WCAG 1.4.11) */
+  --border: hsl(140 12% 87%);          --input: hsl(150 10% 48%);       --ring: hsl(156 64% 19%);
+  --destructive: hsl(0 78% 52%);       --destructive-foreground: hsl(0 0% 100%);
+  --success: hsl(152 62% 30%);         --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(38 95% 50%);          --warning-foreground: hsl(30 90% 12%);
+  /* "ink": variante del color semántico para TEXTO sobre fondos tintados (cumple AA) */
+  --success-ink: hsl(152 62% 24%);     --destructive-ink: hsl(0 70% 40%);   --warning-ink: hsl(32 90% 28%);
+  /* acento institucional (sello, filetes, eyebrow): escaso, AA sobre papel */
+  --gold: hsl(40 62% 33%);
+
+  --radius: 8px;   /* sm 5 · md 8 · lg 12 */
+
+  /* Gráficos: 8 series categóricas validadas por script (daltonismo y contraste). El color sigue a la entidad, no a la posición. */
+  --chart-1: #2a78d6; --chart-2: #eb6834; --chart-3: #1baf7a; --chart-4: #eda100;
+  --chart-5: #e87ba4; --chart-6: #008300; --chart-7: #6250d6; --chart-8: #e34948;
+
+  --sidebar: hsl(42 30% 98%);          --sidebar-foreground: hsl(156 32% 9%);
+  --sidebar-primary: hsl(156 64% 19%); --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(150 30% 94%);  --sidebar-accent-foreground: hsl(156 64% 17%);
+  --sidebar-border: hsl(140 12% 87%);  --sidebar-ring: hsl(156 64% 19%);
+
+  /* Motion: ease-out entra, ease-in sale, standard cambia estado, sheet es la curva de las hojas */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);   --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(.2, 0, 0, 1); --ease-sheet: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ===== Tokens — oscuro ===== */
+.dark {
+  --background: hsl(158 34% 6%);       --foreground: hsl(155 20% 96%);
+  --card: hsl(158 28% 9%);             --card-foreground: hsl(155 20% 96%);
+  --popover: hsl(155 28% 11%);         --popover-foreground: hsl(155 20% 96%);
+  --primary: hsl(152 48% 58%);         --primary-foreground: hsl(155 40% 8%);
+  --secondary: hsl(155 22% 16%);       --secondary-foreground: hsl(155 20% 92%);
+  --accent: hsl(156 28% 20%);          --accent-foreground: hsl(150 45% 85%);
+  --muted: hsl(155 22% 14%);           --muted-foreground: hsl(155 12% 66%);
+  --border: hsl(155 16% 19%);          --input: hsl(155 12% 52%);       --ring: hsl(152 48% 58%);
+  --destructive: hsl(0 72% 58%);       --destructive-foreground: hsl(0 0% 4%);
+  --success: hsl(152 55% 45%);         --success-foreground: hsl(155 40% 8%);
+  --warning: hsl(38 92% 56%);          --warning-foreground: hsl(30 90% 12%);
+  --success-ink: hsl(152 55% 55%);     --destructive-ink: hsl(0 85% 72%);   --warning-ink: hsl(38 92% 62%);
+  --gold: hsl(42 62% 62%);
+
+  --chart-1: #3987e5; --chart-2: #d95926; --chart-3: #199e70; --chart-4: #c98500;
+  --chart-5: #d55181; --chart-6: #008300; --chart-7: #9085e9; --chart-8: #e66767;
+
+  --sidebar: hsl(158 28% 9%);          --sidebar-foreground: hsl(155 20% 96%);
+  --sidebar-primary: hsl(152 48% 58%); --sidebar-primary-foreground: hsl(155 40% 8%);
+  --sidebar-accent: hsl(156 28% 20%);  --sidebar-accent-foreground: hsl(150 45% 85%);
+  --sidebar-border: hsl(155 16% 19%);  --sidebar-ring: hsl(152 48% 58%);
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* ===== Mapeo a Tailwind v4 ===== */
+/* Clases de tamaño del norte (ADR-024): compact < 600, medium >= 600, expanded >= 840. Se suman a los de Tailwind (DT-UI-01). */
+@theme {
+  --breakpoint-medium: 37.5rem;
+  --breakpoint-expanded: 52.5rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+  --font-display: var(--font-source-serif), 'Source Serif 4', Inter, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), 'Source Serif 4', Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success-ink: var(--success-ink);
+  --color-destructive-ink: var(--destructive-ink);
+  --color-warning-ink: var(--warning-ink);
+  --color-gold: var(--gold);
+  --color-primary-solid: var(--primary-solid);
+  --color-destructive-solid: var(--destructive-solid);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+}
+
+/* ===== Base ===== */
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground; line-height: 1.6; -webkit-text-size-adjust: 100%; }
+  ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+}
+
+/* ===== Identidad: solo piel, no toca la anatomía de los componentes ===== */
+
+/* Títulos con la serif institucional (clase `font-display`, o el h1 de página) */
+.font-display { font-family: var(--font-display); font-weight: 600; letter-spacing: -.012em; line-height: 1.15; text-wrap: balance; }
+h1.font-display { letter-spacing: -.02em; }
+
+/* Foco visible por defecto: anillo doble, claro sobre papel y sobre verde */
+:where(a, button, summary, [tabindex], input[type="checkbox"], input[type="radio"]):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Campos de texto, selects y áreas de texto llevan su propio foco (borde + línea de 1 px, ver input.tsx): sin contorno global encima. */
+[tabindex="-1"]:focus { outline: none; }
+
+/* Iconografía: Lucide con trazo fino y terminaciones cuadradas (grabado/sello oficial, no «app amable») */
+:where(svg.lucide) { stroke-width: 1.5; stroke-linecap: square; stroke-linejoin: miter; stroke-miterlimit: 6; }
+button svg.lucide, [data-slot="badge"] svg.lucide, [role="alert"] svg.lucide { stroke-width: 1.75; }
+
+/* Táctil primero (ADR-024): objetivos >= 44 px en compact y medium, y en cualquier dispositivo táctil.
+   iOS hace zoom en inputs < 16 px. Con puntero fino en escritorio se mantiene la densidad normal. */
+@media (max-width: 839px), (pointer: coarse) {
+  :where(button, [role="button"], [role="tab"], [role="menuitem"], select, input:not([type="checkbox"]):not([type="radio"]), textarea) { min-height: 44px; }
+}
+@media (max-width: 599px), (pointer: coarse) {
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 16px; }
+}
+
+/* Tarjetas: planas en reposo, una sombra mínima al pasar */
+[data-slot="card"] { box-shadow: none; transition: box-shadow .18s var(--ease-standard); }
+[data-slot="card"]:hover { box-shadow: 0 1px 2px hsl(156 30% 10% / .06); }
+
+/* ===== Botones Welver: sobrios, firmes y cálidos ===== */
+button[data-variant], a[data-variant] {
+  font-weight: 600; letter-spacing: .005em; border: 1px solid transparent;
+  transition: background-color .18s var(--ease-standard), border-color .18s var(--ease-standard), color .18s var(--ease-standard),
+              box-shadow .2s var(--ease-standard), transform .14s var(--ease-standard);
+}
+/* Foco de teclado: línea de 2 px DENTRO del botón (nada sobresale ni cambia de color según el contexto) */
+[data-variant]:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--ring); }
+[data-variant="default"]:focus-visible, [data-variant="destructive"]:focus-visible { box-shadow: inset 0 0 0 2px hsl(0 0% 100% / .85); }
+[data-variant]:disabled { opacity: .5; }
+
+/* Secondary: tinte verde pálido, texto verde profundo */
+[data-variant="secondary"] { background: var(--accent); color: var(--accent-foreground); border-color: color-mix(in srgb, var(--primary) 16%, transparent); }
+[data-variant="secondary"]:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 82%, var(--primary)); border-color: color-mix(in srgb, var(--primary) 32%, transparent); }
+
+/* Outline: filete verde, fondo papel; al pasar se tiñe */
+button[data-variant="outline"], a[data-variant="outline"] {
+  background: var(--card); color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 70%, transparent);   /* filete firme (>= 3:1) para que se lea como botón en claro y oscuro */
+  box-shadow: 0 1px 2px hsl(156 30% 10% / .10), inset 0 1px 0 hsl(0 0% 100% / .06);   /* relieve mínimo, como el resto de botones */
+}
+[data-variant="outline"]:hover:not(:disabled) { background: var(--accent); color: var(--accent-foreground); }
+
+/* Ghost: neutro, aparece al pasar */
+[data-variant="ghost"] { background: transparent; color: var(--foreground); }
+[data-variant="ghost"]:hover:not(:disabled) { background: var(--accent); color: var(--accent-foreground); }
+
+/* Link: subrayado fino con filete dorado */
+[data-variant="link"] { color: var(--primary); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: .3em;
+  text-decoration-color: color-mix(in srgb, var(--gold) 70%, transparent); height: auto; min-height: 0; padding-inline: 0; }
+[data-variant="link"]:hover { text-decoration-color: var(--gold); }
+
+/* Default y Destructive: degradado con brillo de esmalte arriba, sin sombra en reposo, destello diagonal al pasar */
+[data-variant="default"] { --b: var(--primary); }
+[data-variant="destructive"] { --b: var(--destructive); }
+[data-variant="default"], [data-variant="destructive"] {
+  position: relative; isolation: isolate; overflow: hidden; font-weight: 650; letter-spacing: .012em;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--b) 84%, white) 0%, var(--b) 46%, color-mix(in srgb, var(--b) 84%, black) 100%);
+  border-color: color-mix(in srgb, var(--b) 72%, black);
+  text-shadow: 0 1px 0 hsl(0 0% 0% / .16);
+}
+.dark [data-variant="default"], .dark [data-variant="destructive"] { text-shadow: none; }
+[data-variant="default"]::before, [data-variant="destructive"]::before {
+  content: ""; position: absolute; inset: 0 0 48% 0; z-index: -1; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(180deg, hsl(0 0% 100% / .17), hsl(0 0% 100% / .02));
+}
+.dark [data-variant="default"]::before, .dark [data-variant="destructive"]::before { background: linear-gradient(180deg, hsl(0 0% 100% / .22), hsl(0 0% 100% / .04)); }
+[data-variant="default"]::after, [data-variant="destructive"]::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, hsl(0 0% 100% / .26) 50%, transparent 62%);
+  transform: translateX(-120%); transition: transform .7s var(--ease-out);
+}
+[data-variant="default"]:hover:not(:disabled), [data-variant="destructive"]:hover:not(:disabled) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--b) 74%, white) 0%, color-mix(in srgb, var(--b) 94%, white) 46%, color-mix(in srgb, var(--b) 94%, black) 100%);
+  transform: translateY(-1px);
+}
+[data-variant="default"]:hover:not(:disabled)::after, [data-variant="destructive"]:hover:not(:disabled)::after,
+[data-variant="default"]:focus-visible::after, [data-variant="destructive"]:focus-visible::after { transform: translateX(120%); }
+[data-variant="default"]:active:not(:disabled), [data-variant="destructive"]:active:not(:disabled) { transform: none; }
+[data-variant="default"]:disabled, [data-variant="destructive"]:disabled { background: color-mix(in srgb, var(--b) 85%, var(--muted)); text-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ===== Skeleton: barrido de luz suave (con movimiento reducido queda fijo por la regla global) ===== */
+[data-slot="skeleton"]::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 6%, transparent), transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* ===== Tabla -> lista de tarjetas en compact (opt-in con <Table stack>) ===== */
+@media (max-width: 599px) {
+  table[data-stack] thead { display: none; }
+  table[data-stack], table[data-stack] tbody { display: block; }
+  table[data-stack] tbody tr { display: block; padding: .75rem 1rem; }
+  table[data-stack] td { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .25rem 0; }
+  table[data-stack] td[data-label]::before { content: attr(data-label); font-size: .75rem; color: var(--muted-foreground); }
+}
+
+/* Menús y listas: filas de >= 44 px cuando el puntero es táctil o la pantalla es compact/medium */
+@media (max-width: 839px), (pointer: coarse) {
+  :where([role="option"], [role="menuitemcheckbox"], [role="menuitemradio"]) { min-height: 44px; }
+}
+
+/* ===== Botones sólidos (claro y oscuro, una sola línea): relleno profundo, brillo suave de esmalte y texto blanco AA ===== */
+/* Rellenos sólidos de marca (botones y etiqueta «default»): mismo tono en claro y oscuro, texto blanco AA */
+:root { --primary-solid: hsl(152 50% 27%); --destructive-solid: hsl(0 64% 38%); }
+[data-variant="default"] { --b: var(--primary-solid); }
+[data-variant="destructive"] { --b: var(--destructive-solid); }
+[data-variant="default"], [data-variant="destructive"] { color: hsl(0 0% 100%); text-shadow: none; }
+[data-variant="default"]::before, [data-variant="destructive"]::before { background: linear-gradient(180deg, hsl(0 0% 100% / .22), hsl(0 0% 100% / .04)); }
+
+
+/* Foco devuelto por un modal/menú al cerrarse con Esc: sin aro hasta que la persona vuelva a interactuar (ver utils/focus.ts) */
+html[data-refocus] :focus-visible { outline: none !important; box-shadow: none !important; }
+
+/* Cursor: Tailwind v4 deja los botones con la flecha; todo lo que se puede pulsar muestra la mano */
+:where(button, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"], summary, select, a[href], label[for], input[type="checkbox"], input[type="radio"], input[type="range"], input[type="file"], input[type="submit"]):not(:disabled, [aria-disabled="true"]) { cursor: pointer; }
+:where(button, [role="button"], select, input):is(:disabled, [aria-disabled="true"]) { cursor: not-allowed; }
+
+/* Números: cifras tabulares en toda la interfaz (importes, cantidades, fechas, contadores, tablas, gráficos).
+   Alinean columnas y no «bailan» al cambiar de valor. Las cifras grandes siguen su jerarquía propia (título serif / principal sans). */
+html { font-variant-numeric: tabular-nums; }

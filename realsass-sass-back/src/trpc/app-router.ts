@@ -1,75 +1,86 @@
-import { router }                          from '@/trpc/trpc';
-import { createAuthRouter }                from '@/trpc/routers/auth.router';
-import { createOrganizationsRouter }       from '@/trpc/routers/organizations.router';
-import { createCollaboratorsRouter }       from '@/trpc/routers/collaborators.router';
-import { createConfigFlagsRouter }         from '@/trpc/routers/config-flags.router';
-import { createConfigQuotasRouter }        from '@/trpc/routers/config-quotas.router';
-import { createConfigThemesRouter }        from '@/trpc/routers/config-themes.router';
-import { createConfigWebhooksRouter }      from '@/trpc/routers/config-webhooks.router';
-import { createConfigAuditRouter }         from '@/trpc/routers/config-audit.router';
-import { createConfigSecretsRouter }       from '@/trpc/routers/config-secrets.router';
-import { createConfigTemplatesRouter }     from '@/trpc/routers/config-templates.router';
-import { createAffiliatesRouter }          from '@/trpc/routers/affiliates.router';
-import { createMarketsRouter }            from '@/trpc/routers/markets.router';
-import { createSessionsRouter }           from '@/trpc/routers/sessions.router';
-import type { SessionsService }           from '@/sessions/sessions.service';
-import type { DesktopLoginService }       from '@/auth/desktop-login.service';
-import { createDesktopRouter }           from '@/trpc/routers/desktop.router';
-import type { DesktopService }            from '@/desktop/desktop.service';
-import { createWhatsappRouter }          from '@/trpc/routers/whatsapp.router';
-import type { WhatsappService }           from '@/whatsapp/whatsapp.service';
+import { router } from '@/trpc/trpc';
+import { createAuthRouter } from '@/trpc/routers/auth.router';
+import { createOrganizationsRouter } from '@/trpc/routers/organizations.router';
+import { createCollaboratorsRouter } from '@/trpc/routers/collaborators.router';
+import { createConfigFlagsRouter } from '@/trpc/routers/config-flags.router';
+import { createConfigQuotasRouter } from '@/trpc/routers/config-quotas.router';
+import { createConfigThemesRouter } from '@/trpc/routers/config-themes.router';
+import { createConfigWebhooksRouter } from '@/trpc/routers/config-webhooks.router';
+import { createConfigAuditRouter } from '@/trpc/routers/config-audit.router';
+import { createConfigSecretsRouter } from '@/trpc/routers/config-secrets.router';
+import { createConfigTemplatesRouter } from '@/trpc/routers/config-templates.router';
+import { createAffiliatesRouter } from '@/trpc/routers/affiliates.router';
+import { createMarketsRouter } from '@/trpc/routers/markets.router';
+import { createSessionsRouter } from '@/trpc/routers/sessions.router';
+import type { SessionsService } from '@/sessions/sessions.service';
+import type { DesktopLoginService } from '@/auth/desktop-login.service';
+import { createDesktopRouter } from '@/trpc/routers/desktop.router';
+import type { DesktopService } from '@/desktop/desktop.service';
+import { createWhatsappRouter } from '@/trpc/routers/whatsapp.router';
+import type { WhatsappService } from '@/whatsapp/whatsapp.service';
+import { createFeedbackRouter } from '@/trpc/routers/feedback.router';
+import type { FeedbackService } from '@/feedback/feedback.service';
 
-import type { UsersService }               from '@/users/users.service';
-import type { AuthService }                from '@/auth/auth.service';
-import type { OrganizationsService }       from '@/organizations/organizations.service';
-import type { CollaboratorsService }       from '@/collaborators/collaborators.service';
-import type { ConfigFlagsService }         from '@/config-flags/config-flags.service';
-import type { ConfigQuotasService }        from '@/config-quotas/config-quotas.service';
-import type { ConfigThemesService }        from '@/config-themes/config-themes.service';
-import type { ConfigWebhooksService }      from '@/config-webhooks/config-webhooks.service';
-import type { ConfigAuditService }         from '@/config-audit/config-audit.service';
-import type { ConfigSecretsService }       from '@/config-secrets/config-secrets.service';
-import type { ConfigTemplatesService }     from '@/config-templates/config-templates.service';
-import type { AffiliatesService }          from '@/affiliate/affiliate.service';
-import type { MarketsService }            from '@/markets/markets.service';
+import type { UsersService } from '@/users/users.service';
+import type { AuthService } from '@/auth/auth.service';
+import type { OrganizationsService } from '@/organizations/organizations.service';
+import type { CollaboratorsService } from '@/collaborators/collaborators.service';
+import type { ConfigFlagsService } from '@/config-flags/config-flags.service';
+import type { ConfigQuotasService } from '@/config-quotas/config-quotas.service';
+import type { ConfigThemesService } from '@/config-themes/config-themes.service';
+import type { ConfigWebhooksService } from '@/config-webhooks/config-webhooks.service';
+import type { ConfigAuditService } from '@/config-audit/config-audit.service';
+import type { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
+import type { ConfigTemplatesService } from '@/config-templates/config-templates.service';
+import type { AffiliatesService } from '@/affiliate/affiliate.service';
+import type { MarketsService } from '@/markets/markets.service';
 
 export interface AppRouterDeps {
-  usersService:       UsersService;
-  authService:        AuthService;
+  usersService: UsersService;
+  authService: AuthService;
   desktopLoginService: DesktopLoginService;
-  orgsService:        OrganizationsService;
+  orgsService: OrganizationsService;
   collaboratorsService: CollaboratorsService;
-  flagsService:       ConfigFlagsService;
-  quotasService:      ConfigQuotasService;
-  themesService:      ConfigThemesService;
-  webhooksService:    ConfigWebhooksService;
-  auditService:       ConfigAuditService;
-  secretsService:     ConfigSecretsService;
-  templatesService:   ConfigTemplatesService;
-  affiliatesService:  AffiliatesService;
-  marketsService:     MarketsService;
-  sessionsService:    SessionsService;
-  whatsappService:    WhatsappService;
-  desktopService:     DesktopService;
+  flagsService: ConfigFlagsService;
+  quotasService: ConfigQuotasService;
+  themesService: ConfigThemesService;
+  webhooksService: ConfigWebhooksService;
+  auditService: ConfigAuditService;
+  secretsService: ConfigSecretsService;
+  templatesService: ConfigTemplatesService;
+  affiliatesService: AffiliatesService;
+  marketsService: MarketsService;
+  sessionsService: SessionsService;
+  whatsappService: WhatsappService;
+  feedbackService: FeedbackService;
+  desktopService: DesktopService;
 }
 
 export function createAppRouter(deps: AppRouterDeps) {
   return router({
-    auth:            createAuthRouter(deps.usersService, deps.authService, deps.desktopLoginService),
-    organizations:   createOrganizationsRouter(deps.orgsService),
-    collaborators:   createCollaboratorsRouter(deps.collaboratorsService),
-    configFlags:     createConfigFlagsRouter(deps.flagsService),
-    configQuotas:    createConfigQuotasRouter(deps.quotasService),
-    configThemes:    createConfigThemesRouter(deps.themesService, deps.orgsService),
-    configWebhooks:  createConfigWebhooksRouter(deps.webhooksService),
-    configAudit:     createConfigAuditRouter(deps.auditService),
-    configSecrets:   createConfigSecretsRouter(deps.secretsService),
+    auth: createAuthRouter(
+      deps.usersService,
+      deps.authService,
+      deps.desktopLoginService,
+    ),
+    organizations: createOrganizationsRouter(deps.orgsService),
+    collaborators: createCollaboratorsRouter(deps.collaboratorsService),
+    configFlags: createConfigFlagsRouter(deps.flagsService),
+    configQuotas: createConfigQuotasRouter(deps.quotasService),
+    configThemes: createConfigThemesRouter(
+      deps.themesService,
+      deps.orgsService,
+    ),
+    configWebhooks: createConfigWebhooksRouter(deps.webhooksService),
+    configAudit: createConfigAuditRouter(deps.auditService),
+    configSecrets: createConfigSecretsRouter(deps.secretsService),
     configTemplates: createConfigTemplatesRouter(deps.templatesService),
-    affiliates:      createAffiliatesRouter(deps.affiliatesService),
-    markets:         createMarketsRouter(deps.marketsService),
-    sessions:        createSessionsRouter(deps.sessionsService),
-    whatsapp:        createWhatsappRouter(deps.whatsappService),
-    desktop:         createDesktopRouter(deps.desktopService),
+    affiliates: createAffiliatesRouter(deps.affiliatesService),
+    markets: createMarketsRouter(deps.marketsService),
+    sessions: createSessionsRouter(deps.sessionsService),
+    whatsapp: createWhatsappRouter(deps.whatsappService),
+    feedback: createFeedbackRouter(deps.feedbackService),
+    desktop: createDesktopRouter(deps.desktopService),
   });
 }
 

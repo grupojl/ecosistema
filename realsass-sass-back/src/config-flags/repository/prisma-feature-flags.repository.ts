@@ -1,9 +1,12 @@
-import { Injectable }    from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { z }             from 'zod';
-import type { Prisma }   from '@/generated/prisma';
+import { z } from 'zod';
+import type { Prisma } from '@/generated/prisma';
 import type { IFeatureFlagsRepository } from '@/config-flags/repository/feature-flags.repository.interface';
-import type { FeatureFlag, UpdateFeatureFlagInput } from '@/domain/feature-flag.entity';
+import type {
+  FeatureFlag,
+  UpdateFeatureFlagInput,
+} from '@/domain/feature-flag.entity';
 
 type PrismaFlag = Prisma.FeatureFlagGetPayload<Record<string, never>>;
 
@@ -16,15 +19,15 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
 
   private toEntity(row: PrismaFlag): FeatureFlag {
     return {
-      id:                row.id,
-      organizationId:    row.organizationId,
-      key:               row.key,
-      enabled:           row.enabled,
-      description:       row.description,
+      id: row.id,
+      organizationId: row.organizationId,
+      key: row.key,
+      enabled: row.enabled,
+      description: row.description,
       rolloutPercentage: row.rolloutPercentage,
-      conditions:        ConditionsSchema.parse(row.conditions),
-      createdAt:         row.createdAt,
-      updatedAt:         row.updatedAt,
+      conditions: ConditionsSchema.parse(row.conditions),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
@@ -33,7 +36,7 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
       where: { OR: [{ organizationId }, { organizationId: null }] },
       orderBy: { key: 'asc' },
     });
-    return rows.map(r => this.toEntity(r));
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findById(id: string): Promise<FeatureFlag | null> {
@@ -41,8 +44,14 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
     return row ? this.toEntity(row) : null;
   }
 
-  async update(id: string, input: UpdateFeatureFlagInput): Promise<FeatureFlag> {
-    const row = await this.prisma.featureFlag.update({ where: { id }, data: input as any });
+  async update(
+    id: string,
+    input: UpdateFeatureFlagInput,
+  ): Promise<FeatureFlag> {
+    const row = await this.prisma.featureFlag.update({
+      where: { id },
+      data: input as any,
+    });
     return this.toEntity(row);
   }
 }

@@ -15,22 +15,22 @@
  * NOTA: este módulo está preparado pero requiere instalar las dependencias
  * antes de importarlo en app.module.ts. Ver comentario en app.module.ts.
  */
-import { Module }         from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
-import { BullMQAdapter }  from '@bull-board/api/bullMQAdapter';
-import { BullModule }     from '@nestjs/bullmq';
-import { WEBHOOK_QUEUE }  from '@/config-webhooks/webhook-delivery.service';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { BullModule } from '@nestjs/bullmq';
+import { WEBHOOK_QUEUE } from '@/config-webhooks/webhook-delivery.service';
 
 @Module({
   imports: [
     BullModule.registerQueue({ name: WEBHOOK_QUEUE }),
     BullBoardModule.forRoot({
-      route:   '/admin/queues',
+      route: '/admin/queues',
       adapter: ExpressAdapter,
     }),
     BullBoardModule.forFeature({
-      name:    WEBHOOK_QUEUE,
+      name: WEBHOOK_QUEUE,
       adapter: BullMQAdapter,
     }),
   ],

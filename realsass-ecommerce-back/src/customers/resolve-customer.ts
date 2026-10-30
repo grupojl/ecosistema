@@ -5,15 +5,15 @@
  * PURO: la creación/búsqueda real se inyecta (`identify`), así se testea sin base de datos.
  */
 export interface VerifiedUser {
-  readonly email:          string;
+  readonly email: string;
   readonly emailVerified?: boolean;
-  readonly displayName:    string | null;
+  readonly displayName: string | null;
 }
 
 export type IdentifyFn = (
   organizationId: string,
-  email:          string,
-  displayName?:   string,
+  email: string,
+  displayName?: string,
 ) => Promise<{ customerId: string }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,15 +24,21 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  *  - sin organización, con un id que no es un UUID, o que no existe / no tiene ecommerce (evita clientes huérfanos).
  */
 export async function resolveCustomerFromUser(
-  user:           VerifiedUser | undefined | null,
+  user: VerifiedUser | undefined | null,
   organizationId: string | null,
-  identify:       IdentifyFn,
-  organizationIsEnabled: (organizationId: string) => Promise<boolean> = async () => true,
+  identify: IdentifyFn,
+  organizationIsEnabled: (
+    organizationId: string,
+  ) => Promise<boolean> = async () => true,
 ): Promise<string | null> {
   if (!user || !user.email || user.emailVerified !== true) return null;
   if (!organizationId || !UUID.test(organizationId)) return null;
   // Un UUID bien formado pero inexistente (o sin ecommerce) tampoco crea clientes huérfanos.
   if (!(await organizationIsEnabled(organizationId))) return null;
-  const { customerId } = await identify(organizationId, user.email, user.displayName ?? undefined);
+  const { customerId } = await identify(
+    organizationId,
+    user.email,
+    user.displayName ?? undefined,
+  );
   return customerId;
 }

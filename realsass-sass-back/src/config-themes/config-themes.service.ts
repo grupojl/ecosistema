@@ -1,19 +1,26 @@
 import {
-  Injectable, NotFoundException, ConflictException, ForbiddenException, Inject,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
 } from '@nestjs/common';
-import { ConfigCacheService }   from '@/config-cache/config-cache.service';
-import { ConfigAuditService }   from '@/config-audit/config-audit.service';
-import { EventEmitter2 }        from '@nestjs/event-emitter';
-import { CreateThemeDto }       from '@/config-themes/dto/create-theme.dto';
-import { THEMES_REPOSITORY, type IThemesRepository } from '@/config-themes/repository/themes.repository.interface';
+import { ConfigCacheService } from '@/config-cache/config-cache.service';
+import { ConfigAuditService } from '@/config-audit/config-audit.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { CreateThemeDto } from '@/config-themes/dto/create-theme.dto';
+import {
+  THEMES_REPOSITORY,
+  type IThemesRepository,
+} from '@/config-themes/repository/themes.repository.interface';
 
 @Injectable()
 export class ConfigThemesService {
   constructor(
     @Inject(THEMES_REPOSITORY)
-    private readonly repo:   IThemesRepository,
-    private readonly cache:  ConfigCacheService,
-    private readonly audit:  ConfigAuditService,
+    private readonly repo: IThemesRepository,
+    private readonly cache: ConfigCacheService,
+    private readonly audit: ConfigAuditService,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -27,7 +34,13 @@ export class ConfigThemesService {
 
   async create(organizationId: string, userId: string, dto: CreateThemeDto) {
     const theme = await this.repo.create({ ...dto, organizationId });
-    this.audit.log({ organizationId, userId, configType: 'theme', action: 'create', newValue: theme.name });
+    this.audit.log({
+      organizationId,
+      userId,
+      configType: 'theme',
+      action: 'create',
+      newValue: theme.name,
+    });
     return theme;
   }
 
@@ -35,10 +48,19 @@ export class ConfigThemesService {
     const theme = await this.repo.findById(id);
     if (!theme) throw new NotFoundException(`Theme ${id} not found`);
     if (theme.organizationId !== organizationId) throw new ForbiddenException();
-    if (theme.isSystemDefault) throw new ConflictException('Cannot activate system default theme directly');
+    if (theme.isSystemDefault)
+      throw new ConflictException(
+        'Cannot activate system default theme directly',
+      );
 
     await this.repo.activate(id, organizationId);
-    this.audit.log({ organizationId, userId, configType: 'theme', action: 'activate', newValue: id });
+    this.audit.log({
+      organizationId,
+      userId,
+      configType: 'theme',
+      action: 'activate',
+      newValue: id,
+    });
     this.events.emit('config.theme.activated', { organizationId, themeId: id });
   }
 
@@ -46,10 +68,18 @@ export class ConfigThemesService {
     const theme = await this.repo.findById(id);
     if (!theme) throw new NotFoundException(`Theme ${id} not found`);
     if (theme.organizationId !== organizationId) throw new ForbiddenException();
-    if (theme.isActive) throw new ConflictException('Cannot remove active theme');
-    if (theme.isSystemDefault) throw new ConflictException('Cannot remove system default theme');
+    if (theme.isActive)
+      throw new ConflictException('Cannot remove active theme');
+    if (theme.isSystemDefault)
+      throw new ConflictException('Cannot remove system default theme');
 
     await this.repo.remove(id);
-    this.audit.log({ organizationId, userId, configType: 'theme', action: 'delete', previousValue: id });
+    this.audit.log({
+      organizationId,
+      userId,
+      configType: 'theme',
+      action: 'delete',
+      previousValue: id,
+    });
   }
 }

@@ -1,10 +1,22 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+  Inject,
+} from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { QuotaExceededException } from '@/common/exceptions/quota-exceeded.exception';
 import { Prisma } from '@/generated/prisma';
 import { MarketsService } from '@/markets/markets.service';
-import type { UpdateOrganizationInput, StoreInfo } from '@/organizations/domain/organization.entity';
-import { ORGANIZATIONS_REPOSITORY, type IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
+import type {
+  UpdateOrganizationInput,
+  StoreInfo,
+} from '@/organizations/domain/organization.entity';
+import {
+  ORGANIZATIONS_REPOSITORY,
+  type IOrganizationsRepository,
+} from '@/organizations/repository/organizations.repository.interface';
 
 @Injectable()
 export class OrganizationsService {
@@ -16,9 +28,23 @@ export class OrganizationsService {
     private readonly marketsService: MarketsService,
   ) {}
 
-  async createForUser(userId: string, tx?: Prisma.TransactionClient, name?: string, countryCode?: string) {
+  async createForUser(
+    userId: string,
+    tx?: Prisma.TransactionClient,
+    name?: string,
+    countryCode?: string,
+  ) {
     const slug = await this.generateSlug(name);
-    return this.repo.create({ userId, firebaseUid: '', slug, ...(name ? { name } : {}), ...(countryCode ? { countryCode } : {}) }, tx);
+    return this.repo.create(
+      {
+        userId,
+        firebaseUid: '',
+        slug,
+        ...(name ? { name } : {}),
+        ...(countryCode ? { countryCode } : {}),
+      },
+      tx,
+    );
   }
 
   /** Tope de organizaciones propias por usuario (D3). Configurable por plan; hoy un único valor. */
@@ -29,10 +55,14 @@ export class OrganizationsService {
 
   /** Slug legible + sufijo aleatorio: único y no derivable del id del usuario. */
   private async generateSlug(name?: string): Promise<string> {
-    const base = (name ?? 'tienda')
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-      .slice(0, 40) || 'tienda';
+    const base =
+      (name ?? 'tienda')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 40) || 'tienda';
     for (let i = 0; i < 5; i++) {
       const slug = base + '-' + randomBytes(2).toString('hex');
       if (!(await this.repo.slugExists(slug))) return slug;
@@ -46,23 +76,42 @@ export class OrganizationsService {
   }
 
   /** D3: crea una organización adicional, respetando el tope del plan. */
-  async createMine(firebaseUid: string, dto: { name: string; countryCode?: string }) {
+  async createMine(
+    firebaseUid: string,
+    dto: { name: string; countryCode?: string },
+  ) {
     const userId = await this.repo.resolveUserId(firebaseUid);
     if (!userId) throw new NotFoundException('User not found');
     const current = await this.repo.countByUserId(userId);
     if (current >= this.maxOrgsPerUser) {
-      throw new QuotaExceededException('organizations', this.maxOrgsPerUser, current);
+      throw new QuotaExceededException(
+        'organizations',
+        this.maxOrgsPerUser,
+        current,
+      );
     }
-    return this.createForUserWithDefaultMarket(userId, dto.countryCode ?? 'AR', dto.name);
+    return this.createForUserWithDefaultMarket(
+      userId,
+      dto.countryCode ?? 'AR',
+      dto.name,
+    );
   }
 
   /** D1: garantiza que el usuario tenga al menos una organización. Devuelve la que existe o la creada. */
-  async ensureDefaultOrganization(user: { id: string; displayName?: string | null; email?: string | null }) {
+  async ensureDefaultOrganization(user: {
+    id: string;
+    displayName?: string | null;
+    email?: string | null;
+  }) {
     const existing = await this.repo.findByUserId(user.id);
     if (existing) return { organization: existing, created: false as const };
     const owner = (user.displayName ?? user.email?.split('@')[0] ?? '').trim();
-    const name  = owner ? 'Tienda de ' + owner : 'Mi tienda';
-    const organization = await this.createForUserWithDefaultMarket(user.id, 'AR', name);
+    const name = owner ? 'Tienda de ' + owner : 'Mi tienda';
+    const organization = await this.createForUserWithDefaultMarket(
+      user.id,
+      'AR',
+      name,
+    );
     return { organization, created: true as const };
   }
 
@@ -71,21 +120,35 @@ export class OrganizationsService {
    * Antes estaba declarado FUERA de la clase (error de sintaxis) y sin
    * MarketsService inyectado: sass-back no compilaba.
    */
-  async createForUserWithDefaultMarket(userId: string, countryCode = 'AR', name?: string) {
+  async createForUserWithDefaultMarket(
+    userId: string,
+    countryCode = 'AR',
+    name?: string,
+  ) {
     const org = await this.createForUser(userId, undefined, name, countryCode);
     await this.marketsService.seedDefaultMarket(org.id, countryCode);
     return org;
   }
 
   /** Organización activa si se indica y es propia; si no, la más antigua. */
-  async getMyOrganization(firebaseUid: string, activeOrganizationId?: string | null) {
+  async getMyOrganization(
+    firebaseUid: string,
+    activeOrganizationId?: string | null,
+  ) {
     const all = await this.repo.listByFirebaseUid(firebaseUid);
-    const org = (activeOrganizationId ? all.find(o => o.id === activeOrganizationId) : undefined) ?? all[0];
+    const org =
+      (activeOrganizationId
+        ? all.find((o) => o.id === activeOrganizationId)
+        : undefined) ?? all[0];
     if (!org) throw new NotFoundException('Organization not found');
     return org;
   }
 
-  async updateMyOrganization(firebaseUid: string, dto: UpdateOrganizationInput, activeOrganizationId?: string | null) {
+  async updateMyOrganization(
+    firebaseUid: string,
+    dto: UpdateOrganizationInput,
+    activeOrganizationId?: string | null,
+  ) {
     const org = await this.getMyOrganization(firebaseUid, activeOrganizationId);
     return this.repo.update(org.id, dto);
   }
@@ -116,7 +179,7 @@ export class OrganizationsService {
   async getOrganizationWithOwner(organizationId: string, firebaseUid: string) {
     const all = await this.repo.listByFirebaseUid(firebaseUid);
     if (all.length === 0) throw new NotFoundException('Organization not found');
-    const org = all.find(o => o.id === organizationId);
+    const org = all.find((o) => o.id === organizationId);
     if (!org) throw new ForbiddenException('Not owner');
     return org;
   }

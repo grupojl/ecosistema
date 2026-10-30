@@ -5,27 +5,31 @@
  * E12-02 — Fase 4 / Escalón 12
  */
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
-import { Public }        from '@real/auth-server';
+import { Public } from '@real/auth-server';
 import { PrismaService } from '@/prisma/prisma.service';
-import { RedisService }  from '@/redis/redis.service';
+import { RedisService } from '@/redis/redis.service';
 
 const LATENCY_WARN_MS = 200;
 
 type HealthStatus = 'ok' | 'degraded' | 'down';
 
-interface HealthDetail  { status: 'up' | 'down'; latencyMs: number }
+interface HealthDetail {
+  status: 'up' | 'down';
+  latencyMs: number;
+}
 interface HealthResponse {
-  status:  HealthStatus;
-  db:      HealthDetail;
-  redis:   HealthDetail;
-  uptime:  number;
+  status: HealthStatus;
+  db: HealthDetail;
+  redis: HealthDetail;
+  uptime: number;
   version: string;
 }
 
 function resolveStatus(db: HealthDetail, redis: HealthDetail): HealthStatus {
   if (db.status === 'down') return 'down';
   if (redis.status === 'down') return 'degraded';
-  if (db.latencyMs > LATENCY_WARN_MS || redis.latencyMs > LATENCY_WARN_MS) return 'degraded';
+  if (db.latencyMs > LATENCY_WARN_MS || redis.latencyMs > LATENCY_WARN_MS)
+    return 'degraded';
   return 'ok';
 }
 
@@ -34,7 +38,7 @@ function resolveStatus(db: HealthDetail, redis: HealthDetail): HealthStatus {
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis:  RedisService,
+    private readonly redis: RedisService,
   ) {}
 
   @Get()
@@ -48,20 +52,27 @@ export class HealthController {
       })(),
       (async () => {
         const t = Date.now();
-        await this.redis.set('health:ping', 'pong', 5)
-          .catch(() => { throw new Error('redis unreachable'); });
+        await this.redis.set('health:ping', 'pong', 5).catch(() => {
+          throw new Error('redis unreachable');
+        });
         return { status: 'up' as const, latencyMs: Date.now() - t };
       })(),
     ]);
 
-    const db    = dbR.status    === 'fulfilled' ? dbR.value    : { status: 'down' as const, latencyMs: 0 };
-    const redis = redisR.status === 'fulfilled' ? redisR.value : { status: 'down' as const, latencyMs: 0 };
+    const db =
+      dbR.status === 'fulfilled'
+        ? dbR.value
+        : { status: 'down' as const, latencyMs: 0 };
+    const redis =
+      redisR.status === 'fulfilled'
+        ? redisR.value
+        : { status: 'down' as const, latencyMs: 0 };
 
     return {
-      status:  resolveStatus(db, redis),
+      status: resolveStatus(db, redis),
       db,
       redis,
-      uptime:  Math.floor(process.uptime()),
+      uptime: Math.floor(process.uptime()),
       version: process.env['npm_package_version'] ?? '0.0.0',
     };
   }

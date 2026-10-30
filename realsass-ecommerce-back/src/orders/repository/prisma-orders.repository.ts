@@ -4,10 +4,14 @@
  * Adaptador concreto de IOrdersRepository usando Prisma.
  * ÚNICO archivo del módulo orders que puede importar PrismaService.
  */
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "@/prisma/prisma.service";
-import type { IOrdersRepository, OrderRecord, CreateOrderInput } from "@/orders/repository/orders.repository.interface";
-import type { OrderStatus } from "@/domain/order.errors";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import type {
+  IOrdersRepository,
+  OrderRecord,
+  CreateOrderInput,
+} from '@/orders/repository/orders.repository.interface';
+import type { OrderStatus } from '@/domain/order.errors';
 import { Prisma, $Enums } from '@/generated/prisma';
 
 const ORDER_WITH_ITEMS = {
@@ -24,28 +28,37 @@ const ORDER_WITH_ITEMS = {
 export class PrismaOrdersRepository implements IOrdersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findById(organizationId: string, orderId: string): Promise<OrderRecord | null> {
-    const order = await this.prisma.order.findFirst({
-      where:   { id: orderId, organizationId },
+  async findById(
+    organizationId: string,
+    orderId: string,
+  ): Promise<OrderRecord | null> {
+    const order = await this.prisma.forTenant(organizationId).order.findFirst({
+      where: { id: orderId, organizationId },
       include: ORDER_WITH_ITEMS,
     });
     return order as OrderRecord | null;
   }
 
-  async findByCustomer(organizationId: string, customerId: string): Promise<OrderRecord[]> {
-    const orders = await this.prisma.order.findMany({
-      where:   { organizationId, customerId },
+  async findByCustomer(
+    organizationId: string,
+    customerId: string,
+  ): Promise<OrderRecord[]> {
+    const orders = await this.prisma.forTenant(organizationId).order.findMany({
+      where: { organizationId, customerId },
       include: ORDER_WITH_ITEMS,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
     return orders as OrderRecord[];
   }
 
-  async findByCart(organizationId: string, cartId: string): Promise<OrderRecord[]> {
-    const orders = await this.prisma.order.findMany({
-      where:   { organizationId, cartId },
+  async findByCart(
+    organizationId: string,
+    cartId: string,
+  ): Promise<OrderRecord[]> {
+    const orders = await this.prisma.forTenant(organizationId).order.findMany({
+      where: { organizationId, cartId },
       include: ORDER_WITH_ITEMS,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
     return orders as OrderRecord[];
   }
@@ -54,9 +67,9 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     organizationId: string,
     filters?: { status?: OrderStatus; page?: number; limit?: number },
   ): Promise<{ items: OrderRecord[]; total: number }> {
-    const page  = filters?.page  ?? 1;
+    const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
-    const skip  = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
     const where = {
       organizationId,
@@ -64,57 +77,68 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     };
 
     const [orders, total] = await Promise.all([
-      this.prisma.order.findMany({
+      this.prisma.forTenant(organizationId).order.findMany({
         where,
         include: ORDER_WITH_ITEMS,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         skip,
-        take:    limit,
+        take: limit,
       }),
-      this.prisma.order.count({ where }),
+      this.prisma.forTenant(organizationId).order.count({ where }),
     ]);
 
     return { items: orders as OrderRecord[], total };
   }
 
   async create(input: CreateOrderInput): Promise<OrderRecord> {
-    const order = await this.prisma.order.create({
-      data: {
-        organizationId:  input.organizationId,
-        cartId:          input.cartId,
-        customerId:      input.customerId,
-        subtotalCents:   input.subtotalCents,
-        shippingCents:   input.shippingCents,
-        status:          'PENDING_PAYMENT' as $Enums.OrderStatus,
-        totalCents:      input.totalCents,
-        currency:        input.currency,
-        shippingAddress: (input.shippingAddress ?? null) as Prisma.InputJsonValue,
-        items: {
-          create: input.items.map((item) => ({
-            variantId:              item.variantId,
-            quantity:               item.quantity,
-            unitPriceCentsSnapshot: item.unitPriceCentsSnapshot,
-          })),
+    const order = await this.prisma
+      .forTenant(input.organizationId)
+      .order.create({
+        data: {
+          organizationId: input.organizationId,
+          cartId: input.cartId,
+          customerId: input.customerId,
+          subtotalCents: input.subtotalCents,
+          shippingCents: input.shippingCents,
+          status: 'PENDING_PAYMENT' as $Enums.OrderStatus,
+          totalCents: input.totalCents,
+          currency: input.currency,
+          shippingAddress: (input.shippingAddress ??
+            null) as Prisma.InputJsonValue,
+          items: {
+            create: input.items.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              unitPriceCentsSnapshot: item.unitPriceCentsSnapshot,
+            })),
+          },
         },
-      },
-      include: ORDER_WITH_ITEMS,
-    });
+        include: ORDER_WITH_ITEMS,
+      });
     return order as OrderRecord;
   }
 
-  async updateStatus(orderId: string, status: OrderStatus): Promise<OrderRecord> {
-    const order = await this.prisma.order.update({
-      where:   { id: orderId },
-      data:    { status: status as $Enums.OrderStatus },
-      include: ORDER_WITH_ITEMS,
-    });
-    return order as OrderRecord;
-  }
-
-  async setPaymentIntent(orderId: string, paymentIntentId: string): Promise<void> {
-    await this.prisma.order.update({
+  async updateStatus(
+    organizationId: string,
+    orderId: string,
+    status: OrderStatus,
+  ): Promise<OrderRecord> {
+    const order = await this.prisma.forTenant(organizationId).order.update({
       where: { id: orderId },
-      data:  { paymentIntentId },
+      data: { status: status as $Enums.OrderStatus },
+      include: ORDER_WITH_ITEMS,
+    });
+    return order as OrderRecord;
+  }
+
+  async setPaymentIntent(
+    organizationId: string,
+    orderId: string,
+    paymentIntentId: string,
+  ): Promise<void> {
+    await this.prisma.forTenant(organizationId).order.update({
+      where: { id: orderId },
+      data: { paymentIntentId },
     });
   }
 }

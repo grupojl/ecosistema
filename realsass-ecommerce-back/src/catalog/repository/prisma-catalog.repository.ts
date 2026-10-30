@@ -30,8 +30,11 @@ const PRODUCT_INCLUDE = {
 export class PrismaCatalogRepository implements CatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async existsByHandle(organizationId: string, handle: string): Promise<boolean> {
-    const count = await this.prisma.product.count({
+  async existsByHandle(
+    organizationId: string,
+    handle: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.forTenant(organizationId).product.count({
       where: { organizationId, handle },
     });
     return count > 0;
@@ -41,7 +44,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
     organizationId: string,
     draft: ProductDraft,
   ): Promise<ProductRecord> {
-    const created = await this.prisma.product.create({
+    const created = await this.prisma.forTenant(organizationId).product.create({
       data: {
         organizationId,
         name: draft.name,
@@ -61,27 +64,29 @@ export class PrismaCatalogRepository implements CatalogRepository {
       include: PRODUCT_INCLUDE,
     });
 
-    return created as ProductRecord;
+    return created;
   }
 
   async findByIdAdmin(
     organizationId: string,
     productId: string,
   ): Promise<ProductRecord | null> {
-    const found = await this.prisma.product.findFirst({
-      where: { id: productId, organizationId },
-      include: PRODUCT_INCLUDE,
-    });
-    return found as ProductRecord | null;
+    const found = await this.prisma
+      .forTenant(organizationId)
+      .product.findFirst({
+        where: { id: productId, organizationId },
+        include: PRODUCT_INCLUDE,
+      });
+    return found;
   }
 
   async listAdmin(organizationId: string): Promise<ProductRecord[]> {
-    const list = await this.prisma.product.findMany({
+    const list = await this.prisma.forTenant(organizationId).product.findMany({
       where: { organizationId },
       include: PRODUCT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    return list as ProductRecord[];
+    return list;
   }
 
   async updateProduct(
@@ -89,40 +94,40 @@ export class PrismaCatalogRepository implements CatalogRepository {
     productId: string,
     patch: UpdateProductPatch,
   ): Promise<ProductRecord> {
-    const updated = await this.prisma.product.update({
+    const updated = await this.prisma.forTenant(organizationId).product.update({
       where: { id: productId, organizationId },
       data: patch,
       include: PRODUCT_INCLUDE,
     });
-    return updated as ProductRecord;
+    return updated;
   }
 
   async listPublished(
     organizationId: string,
     categoryHandle?: string,
   ): Promise<ProductRecord[]> {
-    const list = await this.prisma.product.findMany({
+    const list = await this.prisma.forTenant(organizationId).product.findMany({
       where: {
         organizationId,
         status: 'PUBLISHED',
-        ...(categoryHandle
-          ? { category: { handle: categoryHandle } }
-          : {}),
+        ...(categoryHandle ? { category: { handle: categoryHandle } } : {}),
       },
       include: PRODUCT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    return list as ProductRecord[];
+    return list;
   }
 
   async findPublishedByHandle(
     organizationId: string,
     handle: string,
   ): Promise<ProductRecord | null> {
-    const found = await this.prisma.product.findFirst({
-      where: { organizationId, handle, status: 'PUBLISHED' },
-      include: PRODUCT_INCLUDE,
-    });
-    return found as ProductRecord | null;
+    const found = await this.prisma
+      .forTenant(organizationId)
+      .product.findFirst({
+        where: { organizationId, handle, status: 'PUBLISHED' },
+        include: PRODUCT_INCLUDE,
+      });
+    return found;
   }
 }

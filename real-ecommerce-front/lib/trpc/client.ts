@@ -13,6 +13,8 @@
 import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink }   from '@trpc/client';
 import type { AppRouter }  from '@/lib/trpc/router-type';
+import { useMarketStore }  from '@/stores/use-market-store';
+import { visitorCountryHeader } from '@/lib/market/visitor-country-header';
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -28,7 +30,7 @@ export function createTrpcClient(getCustomerId: () => string | null) {
           const result: Record<string, string> = {};
           if (orgId)      result['x-organization-id'] = orgId;
           if (customerId) result['x-customer-id']      = customerId;
-          return result;
+          return { ...result, ...visitorCountryHeader(useMarketStore.getState().currentCountry) };
         },
       }),
     ],
@@ -59,6 +61,7 @@ export function createStoreTrpcClient(opts: {
           const token = await opts.getIdToken();
           return {
             'x-organization-id': opts.getOrganizationId(),
+            ...visitorCountryHeader(useMarketStore.getState().currentCountry), // ADR-014: el back resuelve el Market de la orden
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           };
         },

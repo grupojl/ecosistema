@@ -18,9 +18,9 @@
  */
 
 export const AUTH_THROTTLE_CONFIG = {
-  name:  'auth',
-  ttl:   60_000, // 1 minuto en ms
-  limit: 10,     // 10 requests por IP por minuto
+  name: 'auth',
+  ttl: 60_000, // 1 minuto en ms
+  limit: 10, // 10 requests por IP por minuto
 } as const;
 
 /**
@@ -34,5 +34,5 @@ export const AUTH_THROTTLE_CONFIG = {
  */
 export const THROTTLER_CONFIG = [
   { name: 'default', ttl: 60_000, limit: 30 },
-  { name: 'auth',    ttl: 60_000, limit: 10 },
+  { name: 'auth', ttl: 60_000, limit: 10 },
 ] as const;

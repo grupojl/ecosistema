@@ -7,7 +7,8 @@
  */
 import { useState }        from 'react'
 import { Users, Plus, Trash2, Copy, Check, Loader2, CircleAlert, Mail } from 'lucide-react'
-import { Button, Input, Badge, Skeleton, Switch, Label } from '@real/ui'
+import { Button, Input, Badge, Skeleton, Switch, Label, SectionHeader,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Card, EmptyState } from '@real/ui'
 import { useAuth }         from '@/context/auth-context'
 import {
   useCollaborators,
@@ -18,17 +19,6 @@ import {
 import { getErrorMessage } from '@/lib/errors'
 
 // ── Estado vacío ──────────────────────────────────────────────────────────────
-function EmptyState({ onInvite }: { onInvite: () => void }) {
-  return (
-    <div className="flex flex-col items-center gap-4 py-12 text-center">
-      <Users className="h-10 w-10 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">No tenés colaboradores todavía</p>
-      <Button size="sm" onClick={onInvite}>
-        <Plus className="h-4 w-4 mr-2" /> Invitar colaborador
-      </Button>
-    </div>
-  )
-}
 
 // ── Fila de colaborador ───────────────────────────────────────────────────────
 function CollaboratorRow({
@@ -55,7 +45,7 @@ function CollaboratorRow({
   }
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border">
+    <Card className="flex items-center justify-between p-3">
       <div className="flex items-center gap-3">
         <Mail className="h-4 w-4 text-muted-foreground" />
         <div>
@@ -68,7 +58,7 @@ function CollaboratorRow({
       <div className="flex items-center gap-2">
         {collab.status === 'PENDING' && collab.inviteLink && (
           <Button variant="ghost" size="icon" onClick={handleCopy}>
-            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4 text-success-ink" /> : <Copy className="h-4 w-4" />}
           </Button>
         )}
         <Button
@@ -79,7 +69,7 @@ function CollaboratorRow({
           {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 text-destructive" />}
         </Button>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -95,9 +85,12 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-xl p-6 w-full max-w-md space-y-4">
-        <h3 className="font-semibold">Invitar colaborador</h3>
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent preset="form">
+        <DialogHeader>
+          <DialogTitle>Invitar colaborador</DialogTitle>
+          <DialogDescription>Le enviamos un correo con el enlace para unirse a tu organización.</DialogDescription>
+        </DialogHeader>
         <Input
           type="email"
           placeholder="email@ejemplo.com"
@@ -110,15 +103,15 @@ function InviteModal({ onClose }: { onClose: () => void }) {
             {getErrorMessage(invite.error)}
           </p>
         )}
-        <div className="flex gap-2 justify-end">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button disabled={invite.isPending || !email.trim()} onClick={handleSubmit}>
             {invite.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Enviar invitación
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -134,10 +127,7 @@ export function CollaboratorsSection() {
   )
 
   if (error) return (
-    <div className="flex items-center gap-2 text-destructive p-4 rounded-lg border border-destructive/20">
-      <CircleAlert className="h-4 w-4" />
-      <p className="text-sm">{getErrorMessage(error)}</p>
-    </div>
+    <EmptyState kind="error" description={getErrorMessage(error)} />
   )
 
   const collaborators = data ?? []
@@ -145,16 +135,19 @@ export function CollaboratorsSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Users className="h-4 w-4" /> Colaboradores
-        </h3>
+        <SectionHeader size="sm" icon={<Users />} title="Colaboradores" />
         <Button size="sm" onClick={() => setShowInvite(true)}>
           <Plus className="h-4 w-4 mr-2" /> Invitar
         </Button>
       </div>
 
       {collaborators.length === 0
-        ? <EmptyState onInvite={() => setShowInvite(true)} />
+        ? <EmptyState
+            icon={<Users />}
+            title="Sin colaboradores"
+            description="No tenés colaboradores todavía"
+            action={<Button size="sm" onClick={() => setShowInvite(true)}><Plus className="h-4 w-4 mr-2" /> Invitar colaborador</Button>}
+          />
         : (
           <div className="space-y-2">
             {collaborators.map(c => (

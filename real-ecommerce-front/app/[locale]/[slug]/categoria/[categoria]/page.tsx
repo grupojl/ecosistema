@@ -5,6 +5,7 @@
 // home). Resultado: Google veía cada categoría como "duplicado de la home"
 // y la sacaba del índice. Cada página indexable necesita su propio canonical
 // self-referencial (ADR-016 D4).
+import { PageContainer, PageHeader } from '@real/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProducts, getCategoryByHandle } from '@/lib/store'
@@ -41,18 +42,17 @@ export default async function CategoriaPage({ params }: Props) {
   const path = `/${locale}/${slug}/categoria/${category.handle}`
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div>
-        <Link href={`/${locale}/${slug}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          {dict.catalog.back}
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight mt-2">{category.name}</h1>
-      </div>
+    <PageContainer size="xl" className="space-y-8">
+      <PageHeader
+        title={category.name}
+        breadcrumb={[{ label: storeName, href: `/${locale}/${slug}` }, { label: category.name }]}
+        breadcrumbLinkAs={Link}
+      />
 
       {products.length === 0 ? (
         <p className="text-center py-16 text-muted-foreground">{dict.catalog.emptyCategory}</p>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid medium:grid-cols-2 expanded:grid-cols-4 gap-6">
           {products.map((p) => (
             <ProductCard
               key={p.id}
@@ -71,7 +71,7 @@ export default async function CategoriaPage({ params }: Props) {
           { name: category.name, url: path },
         ])}
       />
-    </div>
+    </PageContainer>
   )
 }
 

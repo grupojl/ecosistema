@@ -9,7 +9,7 @@
  */
 import { useState }                       from 'react'
 import { KeyRound, Loader2, Plus, RotateCw, Trash2 } from 'lucide-react'
-import { Badge, Button, Input }           from '@real/ui'
+import { Badge, Button, Input, NativeSelect, SectionHeader, Skeleton, Card, EmptyState } from '@real/ui'
 import { useSecrets, useCreateSecret, useRotateSecret, useRevokeSecret } from '@/hooks/use-config'
 import { useStepUp }                      from '@/hooks/use-step-up'
 import { getErrorMessage }                from '@/lib/errors'
@@ -83,39 +83,38 @@ export function SecretsSection() {
 
   return (
     <section className="space-y-3" aria-labelledby="secrets-title">
-      <div className="flex items-center justify-between">
-        <h2 id="secrets-title" className="flex items-center gap-2 text-lg font-medium">
-          <KeyRound className="h-4 w-4 text-muted-foreground" /> Claves y secretos
-        </h2>
-        {!creating && (
+      <SectionHeader
+        id="secrets-title"
+        icon={<KeyRound />}
+        title="Claves y secretos"
+        actions={!creating && (
           <Button size="sm" onClick={() => { setCreating(true); setMessage(null) }}>
             <Plus className="mr-1 h-4 w-4" /> Nueva clave
           </Button>
         )}
-      </div>
+      />
       <p className="text-xs text-muted-foreground">
         Se guardan cifradas y no se pueden volver a ver. Para cambiar una, rotala.
       </p>
 
       {message && (
         <p role={message.kind === 'error' ? 'alert' : 'status'}
-           className={'text-sm ' + (message.kind === 'error' ? 'text-destructive' : 'text-green-600')}>
+           className={'text-sm ' + (message.kind === 'error' ? 'text-destructive' : 'text-success-ink')}>
           {message.text}
         </p>
       )}
 
       {creating && (
-        <form onSubmit={handleCreate} className="space-y-2 rounded-lg border p-4" autoComplete="off">
+        <Card className="p-4"><form onSubmit={handleCreate} className="space-y-2" autoComplete="off">
           <Input value={key} onChange={e => setKey(e.target.value)} placeholder="Nombre (ej. STRIPE_SECRET_KEY)"
                  pattern="[A-Za-z][A-Za-z0-9_.\-]{1,99}" title="Letras, números, _ . - (2 a 100 caracteres)" required />
           <Input type="password" value={value} onChange={e => setValue(e.target.value)} placeholder="Valor"
                  autoComplete="new-password" required maxLength={4096} />
           <Input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descripción (opcional)" maxLength={300} />
           <div className="flex flex-wrap gap-2">
-            <select value={target} onChange={e => setTarget(e.target.value as Target)} aria-label="Servicio de destino"
-                    className="rounded-md border bg-background px-3 py-2 text-sm">
+            <NativeSelect value={target} onChange={e => setTarget(e.target.value as Target)} aria-label="Servicio de destino">
               {TARGETS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            </NativeSelect>
             <Input type="date" value={expires} onChange={e => setExpires(e.target.value)} aria-label="Vence (opcional)"
                    className="w-auto" min={new Date().toISOString().slice(0, 10)} />
           </div>
@@ -125,21 +124,19 @@ export function SecretsSection() {
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => { setCreating(false); setValue('') }}>Cancelar</Button>
           </div>
-        </form>
+        </form></Card>
       )}
 
-      {isLoading && <div className="h-16 animate-pulse rounded-lg bg-muted" />}
-      {error && <p role="alert" className="text-sm text-destructive">{getErrorMessage(error, 'No pudimos cargar las claves.')}</p>}
+      {isLoading && <Skeleton className="h-16 rounded-lg" />}
+      {error && <EmptyState kind="error" description={getErrorMessage(error, 'No pudimos cargar las claves.')} />}
       {secrets && secrets.length === 0 && !creating && (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          Todavía no cargaste ninguna clave.
-        </p>
+        <EmptyState title="Sin claves" description="Todavía no cargaste ninguna clave." />
       )}
 
       {secrets?.map(s => {
         const expired = s.expiresAt ? new Date(s.expiresAt) < new Date() : false
         return (
-          <div key={s.id} className="space-y-2 rounded-lg border p-4">
+          <Card key={s.id} className="space-y-2 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-mono text-sm font-medium">{s.key}</p>
@@ -189,7 +186,7 @@ export function SecretsSection() {
                 Los servicios que usan esta clave dejarán de funcionar. Esta acción no se puede deshacer.
               </p>
             )}
-          </div>
+          </Card>
         )
       })}
     </section>

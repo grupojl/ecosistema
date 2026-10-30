@@ -5,11 +5,21 @@
   "description": "Auth compartido — Firebase, apiFetch con retry en 401, AppError tipado",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "scripts": { "build": "tsc --noEmit", "typecheck": "tsc --noEmit" },
-  "dependencies": { "firebase": "catalog:", "zod": "catalog:" },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "firebase": "catalog:",
+    "zod": "catalog:"
+  },
   "devDependencies": {
     "typescript": "catalog:",
-    "@types/react": "catalog:"
+    "@types/react": "catalog:",
+    "vitest": "catalog:"
   },
-  "peerDependencies": { "react": ">=19.0.0" }
+  "peerDependencies": {
+    "react": ">=19.0.0"
+  }
 }

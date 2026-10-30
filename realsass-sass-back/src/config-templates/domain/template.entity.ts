@@ -1,14 +1,14 @@
 export interface ContentTemplate {
-  id:             string;
+  id: string;
   organizationId: string;
-  key:            string;
-  content:        string;
-  createdAt:      Date;
-  updatedAt:      Date;
+  key: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CreateTemplateInput {
   organizationId: string;
-  key:            string;
-  content:        string;
+  key: string;
+  content: string;
 }

@@ -1,12 +1,10 @@
-import { RedisService } from '@/redis/redis.service'
-import { Injectable } from '@nestjs/common'
-import type { MarketDTO } from '@real/trpc/markets'
+import { RedisService } from '@/redis/redis.service';
+import { Injectable } from '@nestjs/common';
+import type { MarketDTO } from '@real/trpc/markets';
 
 @Injectable()
 export class MarketResolverService {
-  constructor(
-    private readonly redis: RedisService,
-  ) {}
+  constructor(private readonly redis: RedisService) {}
 
   /**
    * Llama al endpoint interno de sass-back para resolver el Market.
@@ -18,25 +16,28 @@ export class MarketResolverService {
     sassBackUrl: string,
     internalApiKey: string,
   ): Promise<MarketDTO> {
-    const code     = visitorCountryCode.toUpperCase() || 'default'
-    const cacheKey = `market:${organizationId}:${code}`
+    const code = visitorCountryCode.toUpperCase() || 'default';
+    const cacheKey = `market:${organizationId}:${code}`;
 
-    const cached = await this.redis.get(cacheKey)
-    if (cached) return JSON.parse(cached) as MarketDTO
+    const cached = await this.redis.get(cacheKey);
+    if (cached) return JSON.parse(cached) as MarketDTO;
 
     const url = `${sassBackUrl}/trpc/markets.resolve?input=${encodeURIComponent(
-      JSON.stringify({ organizationId, countryCode: code === 'default' ? 'AR' : code })
-    )}`
+      JSON.stringify({
+        organizationId,
+        countryCode: code === 'default' ? 'AR' : code,
+      }),
+    )}`;
 
     const res = await fetch(url, {
       headers: { 'x-internal-api-key': internalApiKey },
-    })
-    if (!res.ok) throw new Error(`resolveMarket failed: ${res.status}`)
+    });
+    if (!res.ok) throw new Error(`resolveMarket failed: ${res.status}`);
 
-    const { result } = (await res.json()) as { result: { data: MarketDTO } }
-    const market      = result.data
+    const { result } = (await res.json()) as { result: { data: MarketDTO } };
+    const market = result.data;
 
-    await this.redis.set(cacheKey, JSON.stringify(market), 300)
-    return market
+    await this.redis.set(cacheKey, JSON.stringify(market), 300);
+    return market;
   }
 }

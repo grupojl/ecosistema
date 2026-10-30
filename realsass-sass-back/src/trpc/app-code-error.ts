@@ -5,7 +5,10 @@
 export type AppCode = 'REAUTH_REQUIRED' | 'QUOTA_EXCEEDED';
 
 export class AppCodeError extends Error {
-  constructor(public readonly appCode: AppCode, message: string) {
+  constructor(
+    public readonly appCode: AppCode,
+    message: string,
+  ) {
     super(message);
     this.name = 'AppCodeError';
   }

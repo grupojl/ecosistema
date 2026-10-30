@@ -9,33 +9,33 @@
  */
 
 export interface OrderItemOutput {
-  id:                      string;
-  variantId:               string;
-  quantity:                number;
-  unitPriceCentsSnapshot:  number;
+  id: string;
+  variantId: string;
+  quantity: number;
+  unitPriceCentsSnapshot: number;
 }
 
 export interface OrderStatusEventOutput {
-  id:         string;
+  id: string;
   fromStatus: string | null;
-  toStatus:   string;
-  reason:     string | null;
-  createdAt:  Date;
+  toStatus: string;
+  reason: string | null;
+  createdAt: Date;
 }
 
 export interface OrderOutput {
-  id:              string;
-  organizationId:  string;
-  customerId:      string;
-  cartId:          string;
-  status:          string;
-  totalCents:      number;
-  shippingCents:   number;
+  id: string;
+  organizationId: string;
+  customerId: string;
+  cartId: string;
+  status: string;
+  totalCents: number;
+  shippingCents: number;
   paymentIntentId: string | null;
-  locale:             string | null; // ADR-016 — idioma de la sesión, para el invoice
+  locale: string | null; // ADR-016 — idioma de la sesión, para el invoice
   shippingAddress: Record<string, unknown>;
-  createdAt:       Date;
-  updatedAt:       Date;
-  items?:          OrderItemOutput[];
-  statusHistory?:  OrderStatusEventOutput[];
+  createdAt: Date;
+  updatedAt: Date;
+  items?: OrderItemOutput[];
+  statusHistory?: OrderStatusEventOutput[];
 }

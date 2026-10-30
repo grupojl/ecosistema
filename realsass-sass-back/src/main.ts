@@ -1,8 +1,8 @@
-import { NestFactory }      from '@nestjs/core';
-import { ValidationPipe }   from '@nestjs/common';
-import helmet               from 'helmet';
-import cookieParser         from 'cookie-parser';
-import { AppModule }        from '@/app.module';
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import { AppModule } from '@/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,14 +13,19 @@ async function bootstrap() {
   // credentials: true con origin: '*' es una vulnerabilidad CORS activa.
   const rawOrigins = process.env.ALLOWED_ORIGINS ?? '';
   if (!rawOrigins) {
-    throw new Error('ALLOWED_ORIGINS no está definida — el servidor no puede arrancar sin CORS configurado');
+    throw new Error(
+      'ALLOWED_ORIGINS no está definida — el servidor no puede arrancar sin CORS configurado',
+    );
   }
-  const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
+  const allowedOrigins = rawOrigins
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   app.enableCors({
-    origin:      allowedOrigins,
-    credentials: true,  // requerido para cookies HttpOnly (ADR-004)
-    methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    origin: allowedOrigins,
+    credentials: true, // requerido para cookies HttpOnly (ADR-004)
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -36,11 +41,13 @@ async function bootstrap() {
   app.use(helmet());
 
   // ── Validación global ─────────────────────────────────────────────────────
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist:        true,
-    forbidNonWhitelisted: true,
-    transform:        true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const port = process.env.PORT ?? 3020;
   app.useGlobalFilters(new (require('@real/auth-server').ZodExceptionFilter)());

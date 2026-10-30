@@ -14,6 +14,7 @@
       "types": "./src/components/*.tsx",
       "default": "./src/components/*.tsx"
     },
+    "./styles/*": "./src/styles/*",
     "./utils": {
       "types": "./src/utils/cn.ts",
       "default": "./src/utils/cn.ts"
@@ -21,7 +22,8 @@
   },
   "scripts": {
     "build": "echo \"@real/ui ok\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "catalog:",
@@ -66,7 +68,8 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

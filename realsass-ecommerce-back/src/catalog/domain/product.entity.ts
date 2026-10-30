@@ -82,7 +82,9 @@ export function assertNoDuplicateSkus(variants: ProductVariantDraft[]): void {
  * en el catálogo. Esto es una decisión de negocio, no una restricción
  * técnica de la DB (la FK permite productos sin variantes).
  */
-export function assertHasAtLeastOneVariant(variants: ProductVariantDraft[]): void {
+export function assertHasAtLeastOneVariant(
+  variants: ProductVariantDraft[],
+): void {
   if (variants.length === 0) {
     throw new ProductWithoutVariantsError();
   }

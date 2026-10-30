@@ -7,40 +7,40 @@
  * Token de inyección: CART_REPOSITORY (ver cart.module.ts)
  */
 
-export const CART_REPOSITORY = Symbol("CART_REPOSITORY");
+export const CART_REPOSITORY = Symbol('CART_REPOSITORY');
 
 export interface CartItemRecord {
-  id:        string;
-  cartId:    string;
+  id: string;
+  cartId: string;
   variantId: string;
-  quantity:  number;
+  quantity: number;
   variant: {
-    id:         string;
-    sku:        string;
-    title:      string;
+    id: string;
+    sku: string;
+    title: string;
     priceCents: number;
-    currency:   string;
+    currency: string;
     product: {
-      id:   string;
+      id: string;
       name: string;
     };
     inventory: {
       quantityAvailable: number;
-      quantityReserved:  number;
+      quantityReserved: number;
     } | null;
   };
 }
 
 export interface CartRecord {
-  id:             string;
+  id: string;
   organizationId: string;
-  sessionId:      string;
+  sessionId: string;
   /** Dueño del carrito (cliente de Firebase, ADR-021). null = carrito anónimo anterior a ADR-021. */
-  customerId:     string | null;
-  status:         "ACTIVE" | "CONVERTED" | "ABANDONED";
-  createdAt:      Date;
-  updatedAt:      Date;
-  items:          CartItemRecord[];
+  customerId: string | null;
+  status: 'ACTIVE' | 'CONVERTED' | 'ABANDONED';
+  createdAt: Date;
+  updatedAt: Date;
+  items: CartItemRecord[];
 }
 
 export interface ICartRepository {
@@ -49,49 +49,52 @@ export interface ICartRepository {
    */
   findActiveBySession(
     organizationId: string,
-    sessionId:      string,
+    sessionId: string,
   ): Promise<CartRecord | null>;
 
   /**
    * Busca un carrito por id, con validación de organización.
    */
-  findById(
-    organizationId: string,
-    cartId:         string,
-  ): Promise<CartRecord | null>;
+  findById(organizationId: string, cartId: string): Promise<CartRecord | null>;
 
   /**
    * Crea un carrito vacío para una sesión.
    */
   create(
     organizationId: string,
-    sessionId:      string,
-    customerId?:    string,
+    sessionId: string,
+    customerId?: string,
   ): Promise<CartRecord>;
 
   /** Asigna dueño a un carrito sin dueño. */
-  assignCustomer(cartId: string, customerId: string): Promise<void>;
+  assignCustomer(
+    organizationId: string,
+    cartId: string,
+    customerId: string,
+  ): Promise<void>;
 
   /**
    * Agrega o incrementa un ítem en el carrito.
    * Si ya existe la variante, suma la cantidad.
    */
   upsertItem(
-    cartId:    string,
+    organizationId: string,
+    cartId: string,
     variantId: string,
-    quantity:  number,
+    quantity: number,
   ): Promise<CartRecord>;
 
   /**
    * Elimina un ítem del carrito por variantId.
    */
   removeItem(
-    cartId:    string,
+    organizationId: string,
+    cartId: string,
     variantId: string,
   ): Promise<CartRecord>;
 
   /**
    * Marca el carrito como CONVERTED en pedido (checkout exitoso).
    */
-  complete(cartId: string): Promise<void>;
+  complete(organizationId: string, cartId: string): Promise<void>;
 }

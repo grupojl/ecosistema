@@ -32,9 +32,9 @@ const mockOrder = {
 }
 
 const carrierInfo = {
-  envia: { name: "Envia", color: "bg-orange-500", description: "Paquetería ligera < 5kg" },
-  welivery: { name: "Welivery", color: "bg-blue-500", description: "Paquetería media 5-20kg" },
-  correo: { name: "Correo", color: "bg-green-500", description: "Paquetería pesada > 20kg" },
+  envia: { name: "Envia", color: "bg-warning text-warning-foreground", description: "Paquetería ligera < 5kg" },
+  welivery: { name: "Welivery", color: "bg-primary text-primary-foreground", description: "Paquetería media 5-20kg" },
+  correo: { name: "Correo", color: "bg-success text-success-foreground", description: "Paquetería pesada > 20kg" },
 }
 
 export function TrackingView() {
@@ -62,7 +62,7 @@ export function TrackingView() {
                 <CardTitle className="text-2xl mb-2">Orden {order.id}</CardTitle>
                 <CardDescription>Tracking: {order.trackingNumber}</CardDescription>
               </div>
-              <Badge className={`${carrier.color} text-white`}>{carrier.name}</Badge>
+              <Badge className={`${carrier.color} border-transparent`}>{carrier.name}</Badge>
             </div>
           </CardHeader>
           <CardContent>

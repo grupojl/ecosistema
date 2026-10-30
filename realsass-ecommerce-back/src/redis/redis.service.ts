@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import Redis from 'ioredis';
 
 // REDIS_ENABLED=true  → se conecta normalmente (requiere REDIS_URL válida).
@@ -20,11 +25,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.client = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379', {
-      lazyConnect: true,
-      maxRetriesPerRequest: 3,
-      retryStrategy: (retries) => (retries > 10 ? null : Math.min(retries * 200, 10_000)),
-    });
+    this.client = new Redis(
+      process.env['REDIS_URL'] ?? 'redis://localhost:6379',
+      {
+        lazyConnect: true,
+        maxRetriesPerRequest: 3,
+        retryStrategy: (retries) =>
+          retries > 10 ? null : Math.min(retries * 200, 10_000),
+      },
+    );
     this.client.on('error', (err) => this.logger.error('Redis error', err));
   }
 

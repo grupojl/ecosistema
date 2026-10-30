@@ -17,16 +17,8 @@ const nextConfig = {
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
         ],
       },
-      // Solo en producción: los archivos llevan hash en el nombre. En desarrollo no, y `immutable` por un
-      // año hace que el navegador se quede con JavaScript viejo (y Next avisa que rompe el dev).
-      ...(process.env.NODE_ENV === 'production'
-        ? [{
-            source: '/_next/static/:path*',
-            headers: [
-              { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-            ],
-          }]
-        : []),
+      // /_next/static ya se sirve con `public, max-age=31536000, immutable` por defecto en producción (Next).
+      // No se redefine acá: un Cache-Control propio sobre esa ruta hace que Next avise que rompe el dev.
     ];
   },
 }

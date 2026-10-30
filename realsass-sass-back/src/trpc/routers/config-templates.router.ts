@@ -1,14 +1,14 @@
-import { z }                                       from 'zod';
+import { z } from 'zod';
 import { router, tenantProcedure, ownerProcedure } from '@/trpc';
-import type { ConfigTemplatesService }             from '@/config-templates/config-templates.service';
+import type { ConfigTemplatesService } from '@/config-templates/config-templates.service';
 
-export function createConfigTemplatesRouter(templatesService: ConfigTemplatesService) {
+export function createConfigTemplatesRouter(
+  templatesService: ConfigTemplatesService,
+) {
   return router({
-
-    list: tenantProcedure
-      .query(({ ctx }) =>
-        templatesService.list(ctx.organizationId),
-      ),
+    list: tenantProcedure.query(({ ctx }) =>
+      templatesService.list(ctx.organizationId),
+    ),
 
     resolve: tenantProcedure
       .input(z.object({ key: z.string() }))
@@ -17,24 +17,34 @@ export function createConfigTemplatesRouter(templatesService: ConfigTemplatesSer
       ),
 
     render: tenantProcedure
-      .input(z.object({
-        key:       z.string(),
-        variables: z.record(z.string(), z.string()),
-      }))
+      .input(
+        z.object({
+          key: z.string(),
+          variables: z.record(z.string(), z.string()),
+        }),
+      )
       .mutation(({ ctx, input }) =>
-        templatesService.renderByKey(ctx.organizationId, input.key, input.variables),
+        templatesService.renderByKey(
+          ctx.organizationId,
+          input.key,
+          input.variables,
+        ),
       ),
 
     create: ownerProcedure
-      .input(z.object({
-        key:         z.string().min(1),
-        content:     z.string().min(1),
-        description: z.string().optional(),
-      }))
+      .input(
+        z.object({
+          key: z.string().min(1),
+          content: z.string().min(1),
+          description: z.string().optional(),
+        }),
+      )
       .mutation(({ ctx, input }) =>
-        templatesService.create(ctx.organizationId, ctx.uid!, input),
+        templatesService.create(ctx.organizationId, ctx.uid, input),
       ),
   });
 }
 
-export type ConfigTemplatesRouter = ReturnType<typeof createConfigTemplatesRouter>;
+export type ConfigTemplatesRouter = ReturnType<
+  typeof createConfigTemplatesRouter
+>;

@@ -26,17 +26,16 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
-import { Public }                           from '@real/auth-server';
-import { InternalApiKeyGuard }              from '@/internal/internal-api-key.guard';
-import { InternalOrganizationsService }     from '@/internal/internal-organizations.service';
+import { Public } from '@real/auth-server';
+import { InternalApiKeyGuard } from '@/internal/internal-api-key.guard';
+import { InternalOrganizationsService } from '@/internal/internal-organizations.service';
 import {
   InternalListOrgsSchema,
   InternalOrgActionSchema,
   type InternalListOrgsDto,
   type InternalOrgActionDto,
 } from '@/internal/schemas';
-import { ZodValidationPipe }            from '@/common/pipes/zod-validation.pipe';
-
+import { ZodValidationPipe } from '@/common/pipes/zod-validation.pipe';
 
 @ApiTags('internal')
 @ApiHeader({ name: 'x-internal-api-key', required: true })
@@ -49,9 +48,12 @@ export class InternalOrganizationsController {
   // ── Lectura ───────────────────────────────────────────────────────────────
 
   @Get()
-  @ApiOperation({ summary: 'Lista orgs para superadmin — paginada con filtros' })
+  @ApiOperation({
+    summary: 'Lista orgs para superadmin — paginada con filtros',
+  })
   findAll(
-    @Query(new ZodValidationPipe(InternalListOrgsSchema)) dto: InternalListOrgsDto,
+    @Query(new ZodValidationPipe(InternalListOrgsSchema))
+    dto: InternalListOrgsDto,
   ) {
     return this.svc.findAll(dto);
   }
@@ -69,7 +71,8 @@ export class InternalOrganizationsController {
   @ApiOperation({ summary: 'Suspende acceso al panel — reason >= 10 chars' })
   suspend(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(InternalOrgActionSchema)) dto: InternalOrgActionDto,
+    @Body(new ZodValidationPipe(InternalOrgActionSchema))
+    dto: InternalOrgActionDto,
   ) {
     return this.svc.suspend(id, dto.reason);
   }
@@ -79,7 +82,8 @@ export class InternalOrganizationsController {
   @ApiOperation({ summary: 'Reactiva acceso al panel' })
   unsuspend(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(InternalOrgActionSchema)) dto: InternalOrgActionDto,
+    @Body(new ZodValidationPipe(InternalOrgActionSchema))
+    dto: InternalOrgActionDto,
   ) {
     return this.svc.unsuspend(id, dto.reason);
   }
@@ -88,10 +92,13 @@ export class InternalOrganizationsController {
 
   @Post(':id/pause-store')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Pausa el storefront público — compradores ven 404' })
+  @ApiOperation({
+    summary: 'Pausa el storefront público — compradores ven 404',
+  })
   pauseStore(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(InternalOrgActionSchema)) dto: InternalOrgActionDto,
+    @Body(new ZodValidationPipe(InternalOrgActionSchema))
+    dto: InternalOrgActionDto,
   ) {
     return this.svc.pauseStore(id, dto.reason);
   }
@@ -101,7 +108,8 @@ export class InternalOrganizationsController {
   @ApiOperation({ summary: 'Reactiva el storefront público' })
   resumeStore(
     @Param('id') id: string,
-    @Body(new ZodValidationPipe(InternalOrgActionSchema)) dto: InternalOrgActionDto,
+    @Body(new ZodValidationPipe(InternalOrgActionSchema))
+    dto: InternalOrgActionDto,
   ) {
     return this.svc.resumeStore(id, dto.reason);
   }

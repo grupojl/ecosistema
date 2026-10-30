@@ -7,27 +7,26 @@
  *   OrganizationsService.listMine(firebaseUid) / createMine(firebaseUid, dto)   (D3)
  *   OrganizationsService.findByUserId(userId)
  */
-import { z }                    from 'zod';
+import { z } from 'zod';
 import { router, authProcedure } from '@/trpc';
 import type { OrganizationsService } from '@/organizations/organizations.service';
 
 const CreateOrgInput = z.object({
-  name:        z.string().trim().min(2).max(100),
+  name: z.string().trim().min(2).max(100),
   countryCode: z.string().length(2).toUpperCase().optional(),
 });
 
 const UpdateOrgInput = z.object({
-  name:        z.string().min(2).max(100).optional(),
+  name: z.string().min(2).max(100).optional(),
   description: z.string().max(500).optional(),
-  logoUrl:     z.string().url().optional(),
-  website:     z.string().url().optional(),
-  phone:       z.string().max(20).optional(),
-  address:     z.string().max(200).optional(),
+  logoUrl: z.string().url().optional(),
+  website: z.string().url().optional(),
+  phone: z.string().max(20).optional(),
+  address: z.string().max(200).optional(),
 });
 
 export function createOrganizationsRouter(orgsService: OrganizationsService) {
   return router({
-
     /**
      * organizations.me
      * Organización del usuario autenticado.
@@ -58,7 +57,11 @@ export function createOrganizationsRouter(orgsService: OrganizationsService) {
     update: authProcedure
       .input(UpdateOrgInput)
       .mutation(async ({ ctx, input }) => {
-        return orgsService.updateMyOrganization(ctx.uid, input, ctx.organizationId);
+        return orgsService.updateMyOrganization(
+          ctx.uid,
+          input,
+          ctx.organizationId,
+        );
       }),
   });
 }

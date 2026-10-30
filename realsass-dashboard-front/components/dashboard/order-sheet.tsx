@@ -4,8 +4,7 @@
 // todavía no expone cambios de estado desde el panel.
 import { CircleAlert, Loader2 } from 'lucide-react';
 import {
-  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
-} from '@real/ui';
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Card } from '@real/ui';
 import { Badge } from '@real/ui';
 import { Skeleton } from '@real/ui';
 import {
@@ -113,11 +112,11 @@ export function OrderSheet({ orderId, onOpenChange }: OrderSheetProps) {
               {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dirección de envío</p>
-                  <div className="rounded-lg border border-border p-3 space-y-1">
+                  <Card className="border-border p-3 space-y-1">
                     {Object.entries(order.shippingAddress).map(([key, value]) => (
                       <Row key={key} label={key} value={String(value ?? '—')} />
                     ))}
-                  </div>
+                  </Card>
                 </div>
               )}
             </>

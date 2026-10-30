@@ -11,36 +11,35 @@
  * El catálogo PÚBLICO (listProductsPublic, getProductPublic) permanece
  * en REST con @Public() — lo consume SSG/ISR de Next.js.
  */
-import { z }                                      from 'zod';
-import { router, adminProcedure }                 from '@/trpc';
-import type { CatalogService }                    from '@/catalog/catalog.service';
+import { z } from 'zod';
+import { router, adminProcedure } from '@/trpc';
+import type { CatalogService } from '@/catalog/catalog.service';
 
 const VariantInput = z.object({
-  sku:        z.string().min(1),
-  title:      z.string().min(1),
+  sku: z.string().min(1),
+  title: z.string().min(1),
   priceCents: z.number().int().min(0),
-  currency:   z.string().default('USD'),
+  currency: z.string().default('USD'),
 });
 
 const CreateProductInput = z.object({
-  name:        z.string().min(1),
-  handle:      z.string().min(1),
+  name: z.string().min(1),
+  handle: z.string().min(1),
   description: z.string().optional(),
-  categoryId:  z.string().uuid().optional(),
-  status:      z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
-  variants:    z.array(VariantInput).min(1),
+  categoryId: z.string().uuid().optional(),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
+  variants: z.array(VariantInput).min(1),
 });
 
 const UpdateProductInput = z.object({
-  name:        z.string().optional(),
+  name: z.string().optional(),
   description: z.string().optional(),
-  categoryId:  z.string().uuid().optional(),
-  status:      z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
+  categoryId: z.string().uuid().optional(),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
 });
 
 export function createAdminCatalogRouter(catalogService: CatalogService) {
   return router({
-
     list: adminProcedure.query(async ({ ctx }) => {
       return catalogService.listProductsAdmin(ctx.organizationId);
     }),
@@ -52,12 +51,18 @@ export function createAdminCatalogRouter(catalogService: CatalogService) {
       }),
 
     update: adminProcedure
-      .input(z.object({
-        productId: z.string().uuid(),
-        data:      UpdateProductInput,
-      }))
+      .input(
+        z.object({
+          productId: z.string().uuid(),
+          data: UpdateProductInput,
+        }),
+      )
       .mutation(async ({ ctx, input }) => {
-        return catalogService.updateProduct(ctx.organizationId, input.productId, input.data);
+        return catalogService.updateProduct(
+          ctx.organizationId,
+          input.productId,
+          input.data,
+        );
       }),
   });
 }

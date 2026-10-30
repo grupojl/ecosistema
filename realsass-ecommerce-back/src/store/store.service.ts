@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException, ServiceUnavailableException, Logger } from '@nestjs/common';
-import { parseSassBackStoreResponse, type StoreInfo } from '@/store/store.contract';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  Logger,
+} from '@nestjs/common';
+import {
+  parseSassBackStoreResponse,
+  type StoreInfo,
+} from '@/store/store.contract';
 
 export type { StoreInfo };
 
-const FRESH_MS = 60_000;      // dentro de este plazo no se vuelve a consultar al sass-back
+const FRESH_MS = 60_000; // dentro de este plazo no se vuelve a consultar al sass-back
 const STALE_MS = 10 * 60_000; // si el sass-back falla, se sirve el último resultado bueno hasta este plazo
 const MAX_ENTRIES = 500;
 
@@ -43,8 +51,14 @@ export class StoreService {
       .catch((err: unknown) => {
         // Solo las fallas de infraestructura (503) caen al último resultado bueno. Un 404 es la verdad: la tienda
         // no existe o fue pausada, y Google tiene que enterarse.
-        if (err instanceof ServiceUnavailableException && hit && Date.now() - hit.at < STALE_MS) {
-          this.logger.warn(`sass-back no respondió para "${slug}"; se sirve la copia de hace ${Math.round((Date.now() - hit.at) / 1000)} s`);
+        if (
+          err instanceof ServiceUnavailableException &&
+          hit &&
+          Date.now() - hit.at < STALE_MS
+        ) {
+          this.logger.warn(
+            `sass-back no respondió para "${slug}"; se sirve la copia de hace ${Math.round((Date.now() - hit.at) / 1000)} s`,
+          );
           return hit.store;
         }
         throw err;
@@ -55,35 +69,59 @@ export class StoreService {
     return request;
   }
 
-  private storesCache: { at: number; value: Array<{ slug: string; countryCode: string; updatedAt: string }> } | null = null;
+  private storesCache: {
+    at: number;
+    value: Array<{ slug: string; countryCode: string; updatedAt: string }>;
+  } | null = null;
 
   /**
    * Tiendas activas para el sitemap del storefront (índice `/sitemaps`). Caché de 10 min. Si el sass-back no responde se
    * sirve la última copia (hasta 1 h); sin copia, 503 (nunca una lista vacía que haría pensar que no hay tiendas).
    */
-  async listStores(): Promise<Array<{ slug: string; countryCode: string; updatedAt: string }>> {
+  async listStores(): Promise<
+    Array<{ slug: string; countryCode: string; updatedAt: string }>
+  > {
     const hit = this.storesCache;
     if (hit && Date.now() - hit.at < 10 * 60_000) return hit.value;
 
     try {
       if (!this.sassBackUrl) throw new Error('SASS_BACK_URL no configurado');
-      const res = await fetch(`${this.sassBackUrl}/organizations/public/stores`, { signal: AbortSignal.timeout(8_000) });
+      const res = await fetch(
+        `${this.sassBackUrl}/organizations/public/stores`,
+        { signal: AbortSignal.timeout(8_000) },
+      );
       if (!res.ok) throw new Error(`sass-back respondió ${res.status}`);
       const body: unknown = await res.json();
       const rows = Array.isArray(body) ? body : [];
       const value = rows.flatMap((r: unknown) => {
         if (typeof r !== 'object' || r === null) return [];
-        const o = r as { slug?: unknown; countryCode?: unknown; updatedAt?: unknown };
-        return typeof o.slug === 'string' && typeof o.countryCode === 'string' && typeof o.updatedAt === 'string'
-          ? [{ slug: o.slug, countryCode: o.countryCode, updatedAt: o.updatedAt }]
+        const o = r as {
+          slug?: unknown;
+          countryCode?: unknown;
+          updatedAt?: unknown;
+        };
+        return typeof o.slug === 'string' &&
+          typeof o.countryCode === 'string' &&
+          typeof o.updatedAt === 'string'
+          ? [
+              {
+                slug: o.slug,
+                countryCode: o.countryCode,
+                updatedAt: o.updatedAt,
+              },
+            ]
           : [];
       });
       this.storesCache = { at: Date.now(), value };
       return value;
     } catch (err) {
-      this.logger.error(`No se pudo listar las tiendas para el sitemap: ${String(err)}`);
+      this.logger.error(
+        `No se pudo listar las tiendas para el sitemap: ${String(err)}`,
+      );
       if (hit && Date.now() - hit.at < 60 * 60_000) return hit.value;
-      throw new ServiceUnavailableException('No se pudo obtener el listado de tiendas.');
+      throw new ServiceUnavailableException(
+        'No se pudo obtener el listado de tiendas.',
+      );
     }
   }
 
@@ -96,15 +134,28 @@ export class StoreService {
     const hit = this.orgChecks.get(organizationId);
     if (hit && Date.now() - hit.at < FRESH_MS) return hit.ok;
 
-    if (!this.sassBackUrl) throw new ServiceUnavailableException('Servicio de organizaciones no configurado.');
+    if (!this.sassBackUrl)
+      throw new ServiceUnavailableException(
+        'Servicio de organizaciones no configurado.',
+      );
     let res: Response;
     try {
-      res = await fetch(`${this.sassBackUrl}/organizations/public/by-id/${encodeURIComponent(organizationId)}`, { signal: AbortSignal.timeout(5_000) });
+      res = await fetch(
+        `${this.sassBackUrl}/organizations/public/by-id/${encodeURIComponent(organizationId)}`,
+        { signal: AbortSignal.timeout(5_000) },
+      );
     } catch (err) {
-      this.logger.error(`Error de red validando la organización ${organizationId}: ${String(err)}`);
-      throw new ServiceUnavailableException('No se pudo conectar al servicio de organizaciones.');
+      this.logger.error(
+        `Error de red validando la organización ${organizationId}: ${String(err)}`,
+      );
+      throw new ServiceUnavailableException(
+        'No se pudo conectar al servicio de organizaciones.',
+      );
     }
-    if (res.status !== 404 && !res.ok) throw new ServiceUnavailableException(`No se pudo validar la organización (${res.status}).`);
+    if (res.status !== 404 && !res.ok)
+      throw new ServiceUnavailableException(
+        `No se pudo validar la organización (${res.status}).`,
+      );
 
     let ok = false;
     if (res.ok) {
@@ -119,7 +170,9 @@ export class StoreService {
   private async fetchStore(slug: string): Promise<StoreInfo> {
     if (!this.sassBackUrl) {
       this.logger.error('SASS_BACK_URL no configurado');
-      throw new ServiceUnavailableException('Servicio de organizaciones no configurado.');
+      throw new ServiceUnavailableException(
+        'Servicio de organizaciones no configurado.',
+      );
     }
 
     const url = `${this.sassBackUrl}/organizations/public/by-slug/${encodeURIComponent(slug)}`;
@@ -128,27 +181,39 @@ export class StoreService {
     try {
       res = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     } catch (err) {
-      this.logger.error(`Error de red al contactar sass-back para slug "${slug}": ${String(err)}`);
-      throw new ServiceUnavailableException('No se pudo conectar al servicio de organizaciones.');
+      this.logger.error(
+        `Error de red al contactar sass-back para slug "${slug}": ${String(err)}`,
+      );
+      throw new ServiceUnavailableException(
+        'No se pudo conectar al servicio de organizaciones.',
+      );
     }
 
     if (res.status === 404) {
-      throw new NotFoundException(`No existe una tienda con el slug "${slug}".`);
+      throw new NotFoundException(
+        `No existe una tienda con el slug "${slug}".`,
+      );
     }
 
     if (!res.ok) {
       this.logger.warn(`sass-back respondió ${res.status} para slug "${slug}"`);
-      throw new ServiceUnavailableException(`No se pudo resolver la tienda "${slug}".`);
+      throw new ServiceUnavailableException(
+        `No se pudo resolver la tienda "${slug}".`,
+      );
     }
 
     const store = parseSassBackStoreResponse(await res.json());
     if (!store) {
       this.logger.error(`Contrato inválido de sass-back para slug "${slug}"`);
-      throw new ServiceUnavailableException('Respuesta inválida del servicio de organizaciones.');
+      throw new ServiceUnavailableException(
+        'Respuesta inválida del servicio de organizaciones.',
+      );
     }
 
     if (!store.ecommerceEnabled) {
-      throw new NotFoundException(`La organización "${slug}" no tiene ecommerce habilitado.`);
+      throw new NotFoundException(
+        `La organización "${slug}" no tiene ecommerce habilitado.`,
+      );
     }
 
     return store;

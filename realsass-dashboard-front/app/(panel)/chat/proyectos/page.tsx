@@ -2,7 +2,7 @@
 // app/(panel)/chat/proyectos/page.tsx — gestión de proyectos IA
 import Link from 'next/link';
 import { Bot, ArrowLeft, RefreshCw, CheckCircle, CircleX } from 'lucide-react';
-import { Badge } from '@real/ui';
+import { Badge, LoadingState, PageContainer, PageHeader, Card } from '@real/ui';
 import { Button } from '@real/ui';
 import { useProyectosIA } from '@/features/chat/hooks';
 
@@ -10,35 +10,22 @@ export default function ProyectosIAPage() {
   const { data: proyectos, isLoading, refetch } = useProyectosIA();
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/chat">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold">Proyectos IA</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Configuración de asistentes por canal
-            </p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Actualizar
-        </Button>
-      </div>
+    <PageContainer size="xl">
+      <PageHeader
+        title="Proyectos IA"
+        description="Configuración de asistentes por canal"
+        breadcrumb={[{ label: 'Chat IA', href: '/chat' }, { label: 'Proyectos IA' }]}
+        breadcrumbLinkAs={Link}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar
+          </Button>
+        }
+      />
 
       {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-          Cargando proyectos...
-        </div>
-      )}
+      {isLoading && <LoadingState label="Cargando proyectos…" />}
 
       {/* Empty */}
       {!isLoading && !proyectos?.length && (
@@ -55,9 +42,9 @@ export default function ProyectosIAPage() {
       {proyectos && proyectos.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {proyectos.map((proyecto) => (
-            <div
+            <Card
               key={proyecto.id}
-              className="rounded-lg border bg-card p-4 flex flex-col gap-3"
+              className="bg-card p-4 flex flex-col gap-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -65,7 +52,7 @@ export default function ProyectosIAPage() {
                   <span className="font-medium truncate">{proyecto.name}</span>
                 </div>
                 {proyecto.isActive ? (
-                  <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-success-ink shrink-0" />
                 ) : (
                   <CircleX className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
@@ -85,10 +72,10 @@ export default function ProyectosIAPage() {
                   {new Date(proyecto.createdAt).toLocaleDateString('es-AR')}
                 </span>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

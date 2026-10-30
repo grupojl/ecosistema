@@ -27,20 +27,24 @@ import {
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
-import { Throttle }                                    from '@nestjs/throttler';
-import type { Request, Response }                        from 'express';
-import { SessionService, SESSION_COOKIE_NAME, SESSION_ID_COOKIE_NAME } from '@real/auth-server';
-import { Public, CurrentUser }                         from '@real/auth-server';
-import type { CurrentUserPayload }                     from '@real/auth-server';
-import { SecurityLogger }                              from '@/common/logger/security-logger';
-import { SessionsService }                             from '@/sessions/sessions.service';
+import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
+import {
+  SessionService,
+  SESSION_COOKIE_NAME,
+  SESSION_ID_COOKIE_NAME,
+} from '@real/auth-server';
+import { Public, CurrentUser } from '@real/auth-server';
+import type { CurrentUserPayload } from '@real/auth-server';
+import { SecurityLogger } from '@/common/logger/security-logger';
+import { SessionsService } from '@/sessions/sessions.service';
 
 @Controller('auth')
 export class AuthSessionThrottledController {
   private readonly logger = new Logger(AuthSessionThrottledController.name);
 
   constructor(
-    private readonly sessionService:  SessionService,
+    private readonly sessionService: SessionService,
     private readonly sessionsService: SessionsService,
   ) {}
 
@@ -65,7 +69,8 @@ export class AuthSessionThrottledController {
       throw new UnauthorizedException('idToken requerido');
     }
 
-    const sessionCookie = await this.sessionService.createSessionCookie(idToken);
+    const sessionCookie =
+      await this.sessionService.createSessionCookie(idToken);
 
     res.cookie(
       SESSION_COOKIE_NAME,
@@ -90,11 +95,12 @@ export class AuthSessionThrottledController {
   ): Promise<{ ok: boolean }> {
     await this.sessionService.revokeSession(user.uid);
     // Firebase revoca los refresh tokens de todos los dispositivos: las filas quedan igual.
-    await this.sessionsService.revokeAll(user.uid).catch((err) =>
-      this.logger.warn(`revokeAll falló: ${String(err)}`));
+    await this.sessionsService
+      .revokeAll(user.uid)
+      .catch((err) => this.logger.warn(`revokeAll falló: ${String(err)}`));
 
     SecurityLogger.sessionRevoked(this.logger, {
-      uid:    user.uid,
+      uid: user.uid,
       reason: 'logout',
     });
 
@@ -103,7 +109,11 @@ export class AuthSessionThrottledController {
       '',
       this.sessionService.getClearCookieOptions(),
     );
-    res.cookie(SESSION_ID_COOKIE_NAME, '', this.sessionService.getClearCookieOptions());
+    res.cookie(
+      SESSION_ID_COOKIE_NAME,
+      '',
+      this.sessionService.getClearCookieOptions(),
+    );
 
     return { ok: true };
   }
@@ -112,18 +122,36 @@ export class AuthSessionThrottledController {
    * ADR-020: registra o renueva la sesión del dispositivo y emite `__sid`.
    * Es best-effort: si falla, el login igual funciona (la sesión no aparece en la lista).
    */
-  private async registerDevice(sessionCookie: string, req: Request, res: Response): Promise<void> {
+  private async registerDevice(
+    sessionCookie: string,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     try {
-      const { uid } = await this.sessionService.verifySessionCookie(sessionCookie);
-      const current  = (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_ID_COOKIE_NAME];
-      const sid      = await this.sessionsService.register(uid, {
-        userAgent:     req.headers['user-agent'],
-        ip:            req.ip,
-        countryHeader: req.headers['cf-ipcountry'] as string | undefined,
-      }, current);
-      if (sid) res.cookie(SESSION_ID_COOKIE_NAME, sid, this.sessionService.getCookieOptions());
+      const { uid } =
+        await this.sessionService.verifySessionCookie(sessionCookie);
+      const current = (
+        req.cookies as Record<string, string | undefined> | undefined
+      )?.[SESSION_ID_COOKIE_NAME];
+      const sid = await this.sessionsService.register(
+        uid,
+        {
+          userAgent: req.headers['user-agent'],
+          ip: req.ip,
+          countryHeader: req.headers['cf-ipcountry'] as string | undefined,
+        },
+        current,
+      );
+      if (sid)
+        res.cookie(
+          SESSION_ID_COOKIE_NAME,
+          sid,
+          this.sessionService.getCookieOptions(),
+        );
     } catch (err) {
-      this.logger.warn(`No se pudo registrar la sesión del dispositivo: ${String(err)}`);
+      this.logger.warn(
+        `No se pudo registrar la sesión del dispositivo: ${String(err)}`,
+      );
     }
   }
 }

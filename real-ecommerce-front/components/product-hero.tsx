@@ -27,38 +27,33 @@ export default function ProductHero({
   title, subtitle, description, image, darkBg, buttons, primary, secondary, noImageLabel, headingLevel = 'h1',
 }: ProductHeroProps) {
   const Heading = headingLevel
-  const primaryClass = "px-8 py-2 rounded-full font-semibold bg-blue-500 hover:bg-blue-600 text-white"
-  const secondaryClass = `px-8 py-2 rounded-full font-semibold ${
-    darkBg ? "border-white text-white hover:bg-white/10" : "border-black text-black hover:bg-black/5"
-  }`
-  const linkBase = "inline-flex items-center justify-center text-sm transition-colors"
   const hasActions = Boolean(primary || secondary || buttons?.length)
 
   return (
-    <section className={`w-full py-20 md:py-32 ${darkBg ? "bg-black text-white" : "bg-white text-black"}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className={`w-full py-16 medium:py-24 expanded:py-32 text-foreground ${darkBg ? "bg-muted/50" : "bg-background"}`}>
+      <div className="max-w-7xl mx-auto px-4 medium:px-6 expanded:px-8">
         {/* Content Section */}
         <div className="flex flex-col items-center text-center mb-12">
-          <Heading className="text-5xl md:text-6xl font-bold tracking-tight mb-2">{title}</Heading>
-          <p className={`text-lg md:text-xl font-semibold ${darkBg ? "text-gray-400" : "text-gray-600"} mb-2`}>
+          <Heading className="font-display text-4xl medium:text-5xl expanded:text-6xl font-semibold tracking-tight text-balance mb-2">{title}</Heading>
+          <p className="text-lg medium:text-xl font-medium text-muted-foreground mb-2">
             {subtitle}
           </p>
           {description && (
-            <p className={`text-base max-w-2xl ${darkBg ? "text-gray-400" : "text-gray-600"}`}>{description}</p>
+            <p className="text-base max-w-2xl text-muted-foreground">{description}</p>
           )}
 
           {/* Buttons */}
           {hasActions && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+            <div className="flex flex-col medium:flex-row gap-3 justify-center mt-8">
               {primary ? (
-                <Link href={primary.href} className={`${linkBase} ${primaryClass}`}>{primary.label}</Link>
+                <Button asChild size="lg"><Link href={primary.href}>{primary.label}</Link></Button>
               ) : buttons?.[0] ? (
-                <Button variant="default" className={primaryClass}>{buttons[0]}</Button>
+                <Button size="lg">{buttons[0]}</Button>
               ) : null}
               {secondary ? (
-                <Link href={secondary.href} className={`${linkBase} border ${secondaryClass}`}>{secondary.label}</Link>
+                <Button asChild variant="outline" size="lg"><Link href={secondary.href}>{secondary.label}</Link></Button>
               ) : buttons?.[1] ? (
-                <Button variant="outline" className={secondaryClass}>{buttons[1]}</Button>
+                <Button variant="outline" size="lg">{buttons[1]}</Button>
               ) : null}
             </div>
           )}
@@ -73,9 +68,7 @@ export default function ProductHero({
                 <img src={image} alt={title} className="w-full h-full object-contain" />
               ) : (
                 <div
-                  className={`w-full h-full rounded-3xl flex items-center justify-center text-sm ${
-                    darkBg ? "bg-white/5 text-gray-500" : "bg-gray-100 text-gray-400"
-                  }`}
+                  className="w-full h-full rounded-lg border flex items-center justify-center text-sm bg-muted text-muted-foreground"
                   aria-hidden="true"
                 >
                   {noImageLabel}

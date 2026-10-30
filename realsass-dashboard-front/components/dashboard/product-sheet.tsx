@@ -4,10 +4,9 @@
 // de adminCatalog (@real/trpc); el stock se edita por variante con adminInventory.setStock.
 import { useState } from 'react';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@real/ui';
 import {
-  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
-} from '@real/ui';
+  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Card } from '@real/ui';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Label } from '@real/ui';
@@ -158,7 +157,7 @@ function CreateProductForm({ onDone }: { onDone: () => void }) {
             </Button>
           </div>
           {variants.map((v, i) => (
-            <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+            <Card key={i} className="border-border p-3 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <Input value={v.sku} onChange={(e) => patchVariant(i, { sku: e.target.value })} placeholder="SKU" className="font-mono text-sm" />
                 <Input value={v.title} onChange={(e) => patchVariant(i, { title: e.target.value })} placeholder="Título (ej: Talle M)" />
@@ -172,7 +171,7 @@ function CreateProductForm({ onDone }: { onDone: () => void }) {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
 
@@ -271,7 +270,7 @@ function EditProductForm({ product, onDone }: { product: Product; onDone: () => 
           {product.variants.map((v) => {
             const saving = setStock.isPending && setStock.variables?.variantId === v.id;
             return (
-              <div key={v.id} className="rounded-lg border border-border p-3 space-y-2">
+              <Card key={v.id} className="border-border p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{v.title}</p>
@@ -292,7 +291,7 @@ function EditProductForm({ product, onDone }: { product: Product; onDone: () => 
                 {(v.inventory?.quantityReserved ?? 0) > 0 && (
                   <p className="text-xs text-muted-foreground">{v.inventory?.quantityReserved} reservadas por pedidos en curso</p>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>

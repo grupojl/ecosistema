@@ -21,7 +21,8 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "RUN_DB_TESTS=1 jest src/prisma/tenant-scope.integration.spec.ts --runInBand --forceExit"
   },
   "dependencies": {
     "@nestjs/bullmq": "catalog:",

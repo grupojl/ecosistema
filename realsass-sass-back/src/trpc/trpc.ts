@@ -8,8 +8,18 @@ import type { CreateExpressContextOptions } from '@trpc/server/adapters/express'
 import type { Request } from 'express';
 
 interface AuthenticatedRequest extends Request {
-  user?:   { uid: string; email: string; displayName: string | null; avatarUrl: string | null };
-  tenant?: { userId: string; organizationId: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'; permissions: Record<string, boolean> };
+  user?: {
+    uid: string;
+    email: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+  tenant?: {
+    userId: string;
+    organizationId: string;
+    role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+    permissions: Record<string, boolean>;
+  };
 }
 
 export interface TrpcContext {
@@ -35,14 +45,22 @@ export interface OwnerTrpcContext extends TenantTrpcContext {
 
 /** Builder de procedures con `TOverrides` nombrado (ver nota sobre TS2883 arriba). */
 type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
-  TrpcContext, object, TOverrides,
-  TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, TRPCUnsetMarker, false
+  TrpcContext,
+  object,
+  TOverrides,
+  TRPCUnsetMarker,
+  TRPCUnsetMarker,
+  TRPCUnsetMarker,
+  TRPCUnsetMarker,
+  false
 >;
 
-export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcContext {
-  const typedReq      = req as AuthenticatedRequest;
-  const user          = typedReq.user  ?? null;
-  const tenant        = typedReq.tenant ?? null;
+export function createTrpcContext({
+  req,
+}: CreateExpressContextOptions): TrpcContext {
+  const typedReq = req as AuthenticatedRequest;
+  const user = typedReq.user ?? null;
+  const tenant = typedReq.tenant ?? null;
   const organizationId =
     tenant?.organizationId ??
     (req.headers['x-organization-id'] as string | undefined) ??
@@ -50,22 +68,29 @@ export function createTrpcContext({ req }: CreateExpressContextOptions): TrpcCon
 
   return {
     req,
-    uid:            user?.uid   ?? null,
+    uid: user?.uid ?? null,
     organizationId,
-    role:           (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
+    role: (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
   };
 }
 
 /** HTTP status de una excepción de Nest → código tRPC (catálogo de errores del flow del dueño, §4.1). */
 function statusToTrpcCode(status: number): TRPCError['code'] {
   switch (status) {
-    case 400: return 'BAD_REQUEST';
-    case 401: return 'UNAUTHORIZED';
-    case 403: return 'FORBIDDEN';
-    case 404: return 'NOT_FOUND';
-    case 409: return 'CONFLICT';
-    case 429: return 'TOO_MANY_REQUESTS';
-    default:  return 'INTERNAL_SERVER_ERROR';
+    case 400:
+      return 'BAD_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    case 429:
+      return 'TOO_MANY_REQUESTS';
+    default:
+      return 'INTERNAL_SERVER_ERROR';
   }
 }
 
@@ -75,7 +100,12 @@ function appCodeOf(error: TRPCError): AppCode | null {
   if (cause instanceof AppCodeError) return cause.appCode;
   if (cause instanceof HttpException) {
     const body = cause.getResponse();
-    if (typeof body === 'object' && body !== null && 'error' in body && body.error === 'Quota Exceeded') {
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'error' in body &&
+      body.error === 'Quota Exceeded'
+    ) {
       return 'QUOTA_EXCEEDED';
     }
   }
@@ -85,17 +115,22 @@ function appCodeOf(error: TRPCError): AppCode | null {
 const t = initTRPC.context<TrpcContext>().create({
   errorFormatter({ shape, error }) {
     const cause = error.cause;
-    const body  = cause instanceof HttpException ? cause.getResponse() : null;
+    const body = cause instanceof HttpException ? cause.getResponse() : null;
     return {
       ...shape,
       data: {
         ...shape.data,
         zodError: cause instanceof ZodError ? cause.issues : null,
         // Código estable de la UI + datos de cuota (resource/limit/current) cuando aplica.
-        appCode:  appCodeOf(error),
-        quota:    typeof body === 'object' && body !== null && 'resource' in body
-          ? { resource: String(body.resource), limit: Number((body as { limit?: unknown }).limit ?? 0), current: Number((body as { current?: unknown }).current ?? 0) }
-          : null,
+        appCode: appCodeOf(error),
+        quota:
+          typeof body === 'object' && body !== null && 'resource' in body
+            ? {
+                resource: String(body.resource),
+                limit: Number((body as { limit?: unknown }).limit ?? 0),
+                current: Number((body as { current?: unknown }).current ?? 0),
+              }
+            : null,
       },
     };
   },
@@ -107,13 +142,22 @@ const t = initTRPC.context<TrpcContext>().create({
  */
 const mapNestErrors = t.middleware(async ({ next }) => {
   const result = await next();
-  if (!result.ok && result.error.code === 'INTERNAL_SERVER_ERROR' && result.error.cause instanceof HttpException) {
+  if (
+    !result.ok &&
+    result.error.code === 'INTERNAL_SERVER_ERROR' &&
+    result.error.cause instanceof HttpException
+  ) {
     const cause = result.error.cause;
-    const body  = cause.getResponse();
-    const raw   = typeof body === 'object' && body !== null && 'message' in body ? (body as { message?: unknown }).message : cause.message;
+    const body = cause.getResponse();
+    const raw =
+      typeof body === 'object' && body !== null && 'message' in body
+        ? (body as { message?: unknown }).message
+        : cause.message;
     throw new TRPCError({
-      code:    statusToTrpcCode(cause.getStatus()),
-      message: Array.isArray(raw) ? raw.join(', ') : String(raw ?? cause.message),
+      code: statusToTrpcCode(cause.getStatus()),
+      message: Array.isArray(raw)
+        ? raw.join(', ')
+        : String(raw ?? cause.message),
       cause,
     });
   }
@@ -121,24 +165,54 @@ const mapNestErrors = t.middleware(async ({ next }) => {
 });
 
 const enforceAuth = t.middleware(({ ctx, next }) => {
-  if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Token Firebase requerido' });
+  if (!ctx.uid)
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Token Firebase requerido',
+    });
   const authed: AuthedTrpcContext = { ...ctx, uid: ctx.uid };
   return next({ ctx: authed });
 });
 
 const enforceTenant = t.middleware(({ ctx, next }) => {
   if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED' });
-  if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
-  if (!ctx.role) throw new TRPCError({ code: 'FORBIDDEN', message: 'Sin acceso a esta organización' });
-  const tenant: TenantTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: ctx.role };
+  if (!ctx.organizationId)
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Header x-organization-id requerido',
+    });
+  if (!ctx.role)
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Sin acceso a esta organización',
+    });
+  const tenant: TenantTrpcContext = {
+    ...ctx,
+    uid: ctx.uid,
+    organizationId: ctx.organizationId,
+    role: ctx.role,
+  };
   return next({ ctx: tenant });
 });
 
 const enforceOwner = t.middleware(({ ctx, next }) => {
   if (!ctx.uid) throw new TRPCError({ code: 'UNAUTHORIZED' });
-  if (!ctx.organizationId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Header x-organization-id requerido' });
-  if (ctx.role !== 'OWNER') throw new TRPCError({ code: 'FORBIDDEN', message: 'Solo el OWNER puede realizar esta acción' });
-  const owner: OwnerTrpcContext = { ...ctx, uid: ctx.uid, organizationId: ctx.organizationId, role: 'OWNER' };
+  if (!ctx.organizationId)
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Header x-organization-id requerido',
+    });
+  if (ctx.role !== 'OWNER')
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Solo el OWNER puede realizar esta acción',
+    });
+  const owner: OwnerTrpcContext = {
+    ...ctx,
+    uid: ctx.uid,
+    organizationId: ctx.organizationId,
+    role: 'OWNER',
+  };
   return next({ ctx: owner });
 });
 
@@ -148,19 +222,35 @@ const enforceOwner = t.middleware(({ ctx, next }) => {
  */
 const enforceInternal = t.middleware(({ ctx, next }) => {
   const expected = process.env['INTERNAL_API_KEY'];
-  if (!expected) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'INTERNAL_API_KEY no configurada en el servidor' });
+  if (!expected)
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'INTERNAL_API_KEY no configurada en el servidor',
+    });
   const given = ctx.req.headers['x-internal-api-key'];
   const a = Buffer.from(typeof given === 'string' ? given : '');
   const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Clave interna inválida' });
+  if (a.length !== b.length || !timingSafeEqual(a, b))
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Clave interna inválida',
+    });
   return next();
 });
 
-export const router          = t.router;
+export const router = t.router;
 /** Para tests: llama a un router sin HTTP (en tRPC v11 sale de initTRPC, no de '@trpc/server'). */
 export const createCallerFactory = t.createCallerFactory;
 export const publicProcedure = t.procedure.use(mapNestErrors);
-export const authProcedure:   ProcedureWith<AuthedTrpcContext> = t.procedure.use(mapNestErrors).use(enforceAuth);
-export const tenantProcedure: ProcedureWith<TenantTrpcContext> = t.procedure.use(mapNestErrors).use(enforceTenant);
-export const ownerProcedure:  ProcedureWith<OwnerTrpcContext>  = t.procedure.use(mapNestErrors).use(enforceOwner);
-export const internalProcedure: ProcedureWith<TrpcContext>     = t.procedure.use(mapNestErrors).use(enforceInternal);
+export const authProcedure: ProcedureWith<AuthedTrpcContext> = t.procedure
+  .use(mapNestErrors)
+  .use(enforceAuth);
+export const tenantProcedure: ProcedureWith<TenantTrpcContext> = t.procedure
+  .use(mapNestErrors)
+  .use(enforceTenant);
+export const ownerProcedure: ProcedureWith<OwnerTrpcContext> = t.procedure
+  .use(mapNestErrors)
+  .use(enforceOwner);
+export const internalProcedure: ProcedureWith<TrpcContext> = t.procedure
+  .use(mapNestErrors)
+  .use(enforceInternal);

@@ -6,20 +6,20 @@ import {
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
-} from "@nestjs/common";
+} from '@nestjs/common';
 import {
   CUSTOMERS_REPOSITORY,
   type ICustomersRepository,
-} from "@/customers/repository/customers.repository.interface";
+} from '@/customers/repository/customers.repository.interface';
 import {
   assertValidEmail,
   CustomerNotFoundError,
   InvalidEmailError,
-} from "@/customers/domain/customer.errors";
+} from '@/customers/domain/customer.errors';
 
 export interface IdentifyCustomerOutput {
   customerId: string;
-  isNew:      boolean;
+  isNew: boolean;
 }
 
 @Injectable()
@@ -36,17 +36,17 @@ export class CustomersService {
    */
   async identify(
     organizationId: string,
-    email:          string,
-    name?:          string,
-    phone?:         string,
-    cartId?:        string,
+    email: string,
+    name?: string,
+    phone?: string,
+    cartId?: string,
   ): Promise<IdentifyCustomerOutput> {
     const normalized = email.trim().toLowerCase();
     try {
       assertValidEmail(normalized);
     } catch (err) {
       throw new UnprocessableEntityException(
-        err instanceof InvalidEmailError ? err.message : "Email inválido",
+        err instanceof InvalidEmailError ? err.message : 'Email inválido',
       );
     }
 
@@ -54,7 +54,7 @@ export class CustomersService {
       organizationId,
       normalized,
       {
-        ...(name?.trim()  && { displayName: name.trim() }),
+        ...(name?.trim() && { displayName: name.trim() }),
         ...(phone?.trim() && { phone: phone.trim() }),
       },
     );
@@ -66,9 +66,14 @@ export class CustomersService {
   }
 
   async findById(organizationId: string, customerId: string) {
-    const customer = await this.customersRepository.findById(organizationId, customerId);
+    const customer = await this.customersRepository.findById(
+      organizationId,
+      customerId,
+    );
     if (!customer) {
-      throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+      throw new NotFoundException(
+        new CustomerNotFoundError(customerId).message,
+      );
     }
     return customer;
   }
@@ -79,7 +84,7 @@ export class CustomersService {
 
   async update(
     organizationId: string,
-    customerId:     string,
+    customerId: string,
     patch: { email?: string; name?: string; phone?: string },
   ) {
     if (patch.email) {
@@ -87,13 +92,19 @@ export class CustomersService {
         assertValidEmail(patch.email);
       } catch (err) {
         throw new UnprocessableEntityException(
-          err instanceof InvalidEmailError ? err.message : "Email inválido",
+          err instanceof InvalidEmailError ? err.message : 'Email inválido',
         );
       }
     }
 
-    const exists = await this.customersRepository.findById(organizationId, customerId);
-    if (!exists) throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+    const exists = await this.customersRepository.findById(
+      organizationId,
+      customerId,
+    );
+    if (!exists)
+      throw new NotFoundException(
+        new CustomerNotFoundError(customerId).message,
+      );
 
     return this.customersRepository.update(organizationId, customerId, patch);
   }

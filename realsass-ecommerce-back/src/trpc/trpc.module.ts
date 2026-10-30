@@ -17,56 +17,58 @@ import {
   type NestModule,
   type MiddlewareConsumer,
 } from '@nestjs/common';
-import { createExpressMiddleware }    from '@trpc/server/adapters/express';
-import { createTrpcAuthMiddleware }   from '@real/auth-server';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { createTrpcAuthMiddleware } from '@real/auth-server';
 
-import { createEcommerceAppRouter }   from '@/trpc/app-router';
-import { makeTrpcContext }            from '@/trpc/trpc';
-import { resolveCustomerFromUser }    from '@/customers/resolve-customer';
+import { createEcommerceAppRouter } from '@/trpc/app-router';
+import { makeTrpcContext } from '@/trpc/trpc';
+import { resolveCustomerFromUser } from '@/customers/resolve-customer';
 
-import { CatalogService }             from '@/catalog/catalog.service';
-import { InventoryService }           from '@/inventory/inventory.service';
-import { OrdersService }              from '@/orders/orders.service';
-import { CustomersService }           from '@/customers/customers.service';
-import { CartService }                from '@/cart/cart.service';
+import { CatalogService } from '@/catalog/catalog.service';
+import { InventoryService } from '@/inventory/inventory.service';
+import { OrdersService } from '@/orders/orders.service';
+import { CustomersService } from '@/customers/customers.service';
+import { CartService } from '@/cart/cart.service';
 import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
 
-import { CatalogModule }              from '@/catalog/catalog.module';
-import { InventoryModule }            from '@/inventory/inventory.module';
-import { OrdersModule }               from '@/orders/orders.module';
-import { CustomersModule }            from '@/customers/customers.module';
-import { StoreService }              from '@/store/store.service';
-import { StoreModule }               from '@/store/store.module';
-import { CartModule }                 from '@/cart/cart.module';
-import { OrganizationsClientModule }  from '@/organizations-client/organizations-client.module';
+import { CatalogModule } from '@/catalog/catalog.module';
+import { InventoryModule } from '@/inventory/inventory.module';
+import { OrdersModule } from '@/orders/orders.module';
+import { CustomersModule } from '@/customers/customers.module';
+import { StoreService } from '@/store/store.service';
+import { StoreModule } from '@/store/store.module';
+import { CartModule } from '@/cart/cart.module';
+import { OrganizationsClientModule } from '@/organizations-client/organizations-client.module';
 
 @Injectable()
 export class TrpcService {
   constructor(
-    private readonly catalog:    CatalogService,
-    private readonly inventory:  InventoryService,
-    private readonly orders:     OrdersService,
-    private readonly customers:  CustomersService,
-    private readonly cart:       CartService,
-    private readonly store:      StoreService,
+    private readonly catalog: CatalogService,
+    private readonly inventory: InventoryService,
+    private readonly orders: OrdersService,
+    private readonly customers: CustomersService,
+    private readonly cart: CartService,
+    private readonly store: StoreService,
     private readonly orgsClient: OrganizationsClientService,
   ) {}
 
   get handler() {
     const router = createEcommerceAppRouter({
-      catalogService:   this.catalog,
+      catalogService: this.catalog,
       inventoryService: this.inventory,
-      ordersService:    this.orders,
+      ordersService: this.orders,
       customersService: this.customers,
-      cartService:      this.cart,
-      storeService:     this.store,
+      cartService: this.cart,
+      storeService: this.store,
     });
 
     return createExpressMiddleware({
       router,
       createContext: makeTrpcContext((req, organizationId) =>
-        resolveCustomerFromUser(req.user, organizationId, (org, email, name) =>
-          this.customers.identify(org, email, name),
+        resolveCustomerFromUser(
+          req.user,
+          organizationId,
+          (org, email, name) => this.customers.identify(org, email, name),
           (org) => this.store.organizationIsEnabled(org),
         ),
       ),
@@ -78,7 +80,8 @@ export class TrpcService {
       getOrganizationAccess: (token, uid, orgId) =>
         this.orgsClient.getAccess(token, uid, orgId),
       // ADR-020: una sesión cerrada desde "Dispositivos" también deja de valer acá.
-      isSessionRevoked: (sid, uid) => this.orgsClient.isSessionRevoked(sid, uid),
+      isSessionRevoked: (sid, uid) =>
+        this.orgsClient.isSessionRevoked(sid, uid),
     });
   }
 }

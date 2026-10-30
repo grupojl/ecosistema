@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ProductHero from '@/components/product-hero'
 
 describe('ProductHero', () => {
-  it('tienda: botones con destino real y fondo según darkBg', () => {
+  it('tienda: botones con destino real y fondo alternado según darkBg', () => {
     const html = renderToStaticMarkup(
       <ProductHero
         darkBg
@@ -15,16 +15,16 @@ describe('ProductHero', () => {
         secondary={{ label: 'Ver todos', href: '/es/x/productos' }}
       />,
     )
-    expect(html).toContain('bg-black text-white')
+    expect(html).toContain('bg-muted/50')
     expect(html).toContain('href="/es/x/productos/zapatilla-urbana"')
     expect(html).toContain('href="/es/x/productos"')
     expect(html).toContain('Sin imagen')
     expect(html).not.toContain('href="#"')
   })
 
-  it('claro: fondo blanco', () => {
+  it('nunca fuerza el modo oscuro (la persona elige el tema)', () => {
     const html = renderToStaticMarkup(<ProductHero darkBg={false} title="T" subtitle="S" primary={{ label: 'A', href: '/a' }} />)
-    expect(html).toContain('bg-white text-black')
+    expect(html).not.toMatch(/class="[^"]*dark/)
   })
 
   it('sin imagen ni placeholder no renderiza el bloque de imagen', () => {

@@ -109,6 +109,7 @@ model Organization {
   quotas        QuotaConfig[]
   webhooks      WebhookEndpoint[]
   configAudit   ConfigAuditLog[]
+  feedback      FeedbackReport[]
 
   @@index([userId])
   @@map("organizations")
@@ -345,4 +346,37 @@ model Market {
   @@unique([organizationId, countryCode])
   @@index([organizationId, isActive])
   @@map("markets")
+}
+
+// ── Reportes de usuario (ADR-027) ────────────────────────────────────────────
+enum FeedbackStatus {
+  RECEIVED
+  IN_PROGRESS
+  RESOLVED
+  WONT_FIX
+}
+
+model FeedbackReport {
+  id             String         @id @default(uuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// uid de Firebase de quien reporta (igual que el contexto de tRPC).
+  userUid        String
+  role           String
+  module         String
+  route          String
+  message        String
+  expected       String?
+  /// Contexto automático (release, traceId, userAgent) + diagnóstico con consentimiento, ya saneado.
+  context        Json           @default("{}")
+  status         FeedbackStatus @default(RECEIVED)
+  /// Solo la ve superadmin; nunca llega al usuario.
+  internalNote   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([userUid])
+  @@index([status, createdAt])
+  @@map("feedback_reports")
 }

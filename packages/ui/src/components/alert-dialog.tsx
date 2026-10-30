@@ -1,10 +1,18 @@
 "use client"
 
+/**
+ * AlertDialog — «Alerta» de welver.html: confirmar algo irreversible.
+ *
+ * Centrado en las tres clases de tamaño; en compact los botones van apilados. El foco empieza en la opción
+ * segura (Cancelar) y tocar fuera NO la cierra. Las animaciones y la presentación viven en `styles/welver.css`.
+ */
 import * as React from "react"
+import { quietRefocus } from "../utils/focus"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@real/ui/utils"
 import { buttonVariants } from "@real/ui/components/button"
+import { useSizeClass } from "../hooks/use-size-class"
 
 const AlertDialog = AlertDialogPrimitive.Root
 
@@ -17,10 +25,8 @@ const AlertDialogOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
-    className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
-    )}
+    data-slot="modal-overlay"
+    className={className}
     {...props}
     ref={ref}
   />
@@ -30,32 +36,32 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-))
+>(({ className, ...props }, ref) => {
+  const sizeClass = useSizeClass()
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        data-slot="modal"
+        data-alert=""
+        data-pres="center"
+        data-size={sizeClass}
+        data-psize="sm"
+        className={className}
+        {...props}
+        onCloseAutoFocus={(e) => { props.onCloseAutoFocus?.(e); quietRefocus() }}
+      />
+    </AlertDialogPortal>
+  )
+})
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
-    {...props}
-  />
+  <div data-slot="modal-header" className={className} {...props} />
 )
 AlertDialogHeader.displayName = "AlertDialogHeader"
 
@@ -63,13 +69,7 @@ const AlertDialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
-    {...props}
-  />
+  <div data-slot="modal-footer" className={className} {...props} />
 )
 AlertDialogFooter.displayName = "AlertDialogFooter"
 
@@ -79,7 +79,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold", className)}
+    className={cn("font-display text-lg font-semibold leading-tight tracking-tight", className)}
     {...props}
   />
 ))
@@ -100,11 +100,16 @@ AlertDialogDescription.displayName =
 
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> & {
+    /** `destructive` para acciones irreversibles (borrar, archivar). */
+    variant?: "default" | "destructive"
+  }
+>(({ className, variant = "default", ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(buttonVariants(), className)}
+    data-slot="button"
+    data-variant={variant}
+    className={cn(buttonVariants({ variant }), className)}
     {...props}
   />
 ))
@@ -116,11 +121,9 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className
-    )}
+    data-slot="button"
+    data-variant="outline"
+    className={cn(buttonVariants({ variant: "outline" }), className)}
     {...props}
   />
 ))

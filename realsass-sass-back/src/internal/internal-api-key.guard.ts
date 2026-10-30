@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
+import { safeEqual } from '@/common/security/safe-equal';
 
 @Injectable()
 export class InternalApiKeyGuard implements CanActivate {
@@ -24,11 +25,11 @@ export class InternalApiKeyGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const req  = ctx.switchToHttp().getRequest<Request>();
-    const key  = req.headers['x-internal-api-key'] as string | undefined;
+    const req = ctx.switchToHttp().getRequest<Request>();
+    const key = req.headers['x-internal-api-key'] as string | undefined;
     const expected = this.config.getOrThrow<string>('INTERNAL_API_KEY');
 
-    if (!key || key !== expected) {
+    if (!safeEqual(key, expected)) {
       this.logger.warn(
         `[InternalApiKeyGuard] Unauthorized attempt from ${req.ip} — key mismatch`,
       );

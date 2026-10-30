@@ -9,10 +9,10 @@ import { ChevronDown, ChevronUp, TrendingUp, Eye, MousePointer, DollarSign } fro
 import type { Campana } from '@/features/campanas/types';
 
 const ESTADO_COLORS: Record<string, string> = {
-  activa: 'bg-green-500/10 text-green-600 border-green-500/20',
-  pausada: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  activa: 'bg-success/10 text-success-ink border-success/20',
+  pausada: 'bg-warning/10 text-warning-ink border-warning/20',
   finalizada: 'bg-muted text-muted-foreground border-border',
-  borrador: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  borrador: 'bg-primary/10 text-primary border-primary/20',
 };
 
 interface CampanaCardProps {

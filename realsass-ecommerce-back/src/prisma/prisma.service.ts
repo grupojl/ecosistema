@@ -1,14 +1,23 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaPg }    from '@prisma/adapter-pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma';
 import * as pg from 'pg';
+import { withTenant } from '@/prisma/tenant-scope';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
-    const pool    = new pg.Pool({ connectionString: process.env['DATABASE_URL'] });
+    const pool = new pg.Pool({ connectionString: process.env['DATABASE_URL'] });
     const adapter = new PrismaPg(pool);
     super({ adapter });
+  }
+
+  /** Cliente limitado a una organización: inyecta organizationId y rechaza salirse de ella (ADR-029). */
+  forTenant(organizationId: string) {
+    return withTenant(this, organizationId);
   }
 
   async onModuleInit(): Promise<void> {

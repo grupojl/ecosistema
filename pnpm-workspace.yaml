@@ -4,6 +4,8 @@ packages:
   - realsass-sass-front
   - realsass-dashboard-front
   - real-ecommerce-front
+  - realsass-docs-front
+  - realsass-design-front
   - packages/*
 catalog:
   typescript: ^6.0.3

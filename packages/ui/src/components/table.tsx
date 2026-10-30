@@ -4,11 +4,15 @@ import { cn } from "@real/ui/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableElement> & {
+    /** En compact la tabla se convierte en lista de tarjetas; cada TableCell lleva data-label con el nombre de su columna. */
+    stack?: boolean
+  }
+>(({ className, stack, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
     <table
       ref={ref}
+      data-stack={stack ? "" : undefined}
       className={cn("w-full caption-bottom text-sm", className)}
       {...props}
     />
@@ -73,7 +77,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-11 px-4 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground [&:has([role=checkbox])]:pr-0",
       className
     )}
     {...props}

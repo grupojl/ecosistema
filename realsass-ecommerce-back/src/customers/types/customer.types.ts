@@ -5,16 +5,16 @@
  */
 
 export interface CustomerOutput {
-  id:             string;
+  id: string;
   organizationId: string;
-  email:          string;
-  displayName:    string | null;
-  phone:          string | null;
-  createdAt:      Date;
-  updatedAt:      Date;
+  email: string;
+  displayName: string | null;
+  phone: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IdentifyCustomerOutput {
-  customerId:      string;
-  isNew:           boolean;
+  customerId: string;
+  isNew: boolean;
 }

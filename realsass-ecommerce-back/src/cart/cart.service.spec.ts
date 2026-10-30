@@ -27,19 +27,19 @@ function fakeRepo() {
       carts.push(cart);
       return cart;
     },
-    async assignCustomer(cartId, customerId) {
-      const c = carts.find((x) => x.id === cartId);
+    async assignCustomer(org, cartId, customerId) {
+      const c = carts.find((x) => x.id === cartId && x.organizationId === org);
       if (c) c.customerId = customerId;
     },
-    async upsertItem(cartId, variantId, quantity) {
-      const c = carts.find((x) => x.id === cartId)!;
+    async upsertItem(org, cartId, variantId, quantity) {
+      const c = carts.find((x) => x.id === cartId && x.organizationId === org)!;
       const item = c.items.find((i) => i.variantId === variantId);
       if (item) item.quantity += quantity;
       else c.items.push({ id: `i-${++seq}`, cartId, variantId, quantity, variant: {} as never });
       return c;
     },
-    async removeItem(cartId, variantId) {
-      const c = carts.find((x) => x.id === cartId)!;
+    async removeItem(org, cartId, variantId) {
+      const c = carts.find((x) => x.id === cartId && x.organizationId === org)!;
       c.items = c.items.filter((i) => i.variantId !== variantId);
       return c;
     },

@@ -1,18 +1,18 @@
-import { Module }                  from '@nestjs/common';
-import { ConfigQuotasService }     from '@/config-quotas/config-quotas.service';
-import { PrismaQuotasRepository }  from '@/config-quotas/repository/prisma-quotas.repository';
-import { QUOTAS_REPOSITORY }       from '@/config-quotas/repository/quotas.repository.interface';
-import { PrismaModule }            from '@/prisma/prisma.module';
-import { ConfigCacheModule }       from '@/config-cache/config-cache.module';
-import { ConfigAuditModule }       from '@/config-audit/config-audit.module';
+import { Module } from '@nestjs/common';
+import { ConfigQuotasService } from '@/config-quotas/config-quotas.service';
+import { PrismaQuotasRepository } from '@/config-quotas/repository/prisma-quotas.repository';
+import { QUOTAS_REPOSITORY } from '@/config-quotas/repository/quotas.repository.interface';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { ConfigCacheModule } from '@/config-cache/config-cache.module';
+import { ConfigAuditModule } from '@/config-audit/config-audit.module';
 
 @Module({
-  imports:     [PrismaModule, ConfigCacheModule, ConfigAuditModule],
-  
-  providers:   [
+  imports: [PrismaModule, ConfigCacheModule, ConfigAuditModule],
+
+  providers: [
     ConfigQuotasService,
     { provide: QUOTAS_REPOSITORY, useClass: PrismaQuotasRepository },
   ],
-  exports:     [ConfigQuotasService],
+  exports: [ConfigQuotasService],
 })
 export class ConfigQuotasModule {}

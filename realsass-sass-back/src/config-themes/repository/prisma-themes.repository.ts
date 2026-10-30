@@ -1,6 +1,6 @@
-import { Injectable }    from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@/generated/prisma';
+import type { Prisma } from '@/generated/prisma';
 import type { IThemesRepository } from '@/config-themes/repository/themes.repository.interface';
 import type { ThemeConfig, CreateThemeInput } from '@/domain/theme.entity';
 
@@ -12,30 +12,31 @@ export class PrismaThemesRepository implements IThemesRepository {
 
   private toEntity(row: PrismaTheme): ThemeConfig {
     return {
-      id:              row.id,
-      organizationId:  row.organizationId ?? '',
-      name:            row.name,
-      primaryColor:    row.primaryColor,
-      secondaryColor:  row.secondaryColor,
-      accentColor:     row.accentColor,
-      fontFamily:      row.fontFamily,
-      borderRadius:    row.borderRadius,
-      logoUrl:         row.logoUrl,
-      faviconUrl:      row.faviconUrl,
-      darkMode:        row.darkMode,
-      customCSS:       row.customCSS,
+      id: row.id,
+      organizationId: row.organizationId ?? '',
+      name: row.name,
+      primaryColor: row.primaryColor,
+      secondaryColor: row.secondaryColor,
+      accentColor: row.accentColor,
+      fontFamily: row.fontFamily,
+      borderRadius: row.borderRadius,
+      logoUrl: row.logoUrl,
+      faviconUrl: row.faviconUrl,
+      darkMode: row.darkMode,
+      customCSS: row.customCSS,
       isSystemDefault: row.isSystemDefault,
-      isActive:        row.isActive,
-      createdAt:       row.createdAt,
-      updatedAt:       row.updatedAt,
+      isActive: row.isActive,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
   async findAllByOrg(organizationId: string): Promise<ThemeConfig[]> {
     const rows = await this.prisma.themeConfig.findMany({
-      where: { organizationId }, orderBy: { createdAt: 'asc' },
+      where: { organizationId },
+      orderBy: { createdAt: 'asc' },
     });
-    return rows.map(r => this.toEntity(r));
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findById(id: string): Promise<ThemeConfig | null> {
@@ -44,12 +45,16 @@ export class PrismaThemesRepository implements IThemesRepository {
   }
 
   async findActive(organizationId: string): Promise<ThemeConfig | null> {
-    const row = await this.prisma.themeConfig.findFirst({ where: { organizationId, isActive: true } });
+    const row = await this.prisma.themeConfig.findFirst({
+      where: { organizationId, isActive: true },
+    });
     return row ? this.toEntity(row) : null;
   }
 
   async findPublicByOrgId(organizationId: string): Promise<ThemeConfig | null> {
-    const row = await this.prisma.themeConfig.findFirst({ where: { organizationId, isActive: true } });
+    const row = await this.prisma.themeConfig.findFirst({
+      where: { organizationId, isActive: true },
+    });
     return row ? this.toEntity(row) : null;
   }
 
@@ -62,8 +67,14 @@ export class PrismaThemesRepository implements IThemesRepository {
 
   async activate(id: string, organizationId: string): Promise<void> {
     await this.prisma.$transaction([
-      this.prisma.themeConfig.updateMany({ where: { organizationId }, data: { isActive: false } }),
-      this.prisma.themeConfig.update({ where: { id }, data: { isActive: true } }),
+      this.prisma.themeConfig.updateMany({
+        where: { organizationId },
+        data: { isActive: false },
+      }),
+      this.prisma.themeConfig.update({
+        where: { id },
+        data: { isActive: true },
+      }),
     ]);
   }
 

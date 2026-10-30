@@ -59,7 +59,7 @@ export default async function StoreLayout({ children, params }: Props) {
 
         <LocaleMemo locale={locale} />
         {/* Sin contenedor: cada página decide su ancho (la home usa secciones a pantalla completa). */}
-        <main>{children}</main>
+        <main className="pb-[calc(3.5rem+env(safe-area-inset-bottom))] medium:pb-0">{children}</main>
 
         <StoreFooter
           storeName={storeName}

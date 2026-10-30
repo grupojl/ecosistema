@@ -32,27 +32,27 @@ export class OrderAlreadyPaidError extends OrderDomainError {
 // PENDING → CONFIRMED → SHIPPED → DELIVERED
 //         → CANCELLED (desde PENDING o CONFIRMED)
 export type OrderStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "PAID"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED"
-  | "REFUNDED";
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'PAID'
+  | 'SHIPPED'
+  | 'DELIVERED'
+  | 'CANCELLED'
+  | 'REFUNDED';
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING:   ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["PAID", "CANCELLED"],
-  PAID:      ["SHIPPED"],
-  SHIPPED:   ["DELIVERED"],
-  DELIVERED: ["REFUNDED"],
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PAID', 'CANCELLED'],
+  PAID: ['SHIPPED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: ['REFUNDED'],
   CANCELLED: [],
-  REFUNDED:  [],
+  REFUNDED: [],
 };
 
 export function assertValidOrderTransition(
   from: OrderStatus,
-  to:   OrderStatus,
+  to: OrderStatus,
 ): void {
   const allowed = VALID_TRANSITIONS[from] ?? [];
   if (!allowed.includes(to)) {

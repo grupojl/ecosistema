@@ -1,8 +1,11 @@
-import { Injectable }    from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@/generated/prisma';
+import type { Prisma } from '@/generated/prisma';
 import type { ITemplatesRepository } from '@/config-templates/repository/templates.repository.interface';
-import type { ContentTemplate, CreateTemplateInput } from '@/domain/template.entity';
+import type {
+  ContentTemplate,
+  CreateTemplateInput,
+} from '@/domain/template.entity';
 
 type PrismaTemplate = Prisma.ContentTemplateGetPayload<Record<string, never>>;
 
@@ -12,24 +15,30 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
 
   private toEntity(row: PrismaTemplate): ContentTemplate {
     return {
-      id:             row.id,
+      id: row.id,
       organizationId: row.organizationId ?? '',
-      key:            row.key,
-      content:        row.content,
-      createdAt:      row.createdAt,
-      updatedAt:      row.updatedAt,
+      key: row.key,
+      content: row.content,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
   async findAllByOrg(organizationId: string): Promise<ContentTemplate[]> {
     const rows = await this.prisma.contentTemplate.findMany({
-      where: { organizationId }, orderBy: { key: 'asc' },
+      where: { organizationId },
+      orderBy: { key: 'asc' },
     });
-    return rows.map(r => this.toEntity(r));
+    return rows.map((r) => this.toEntity(r));
   }
 
-  async findByKey(organizationId: string, key: string): Promise<ContentTemplate | null> {
-    const row = await this.prisma.contentTemplate.findFirst({ where: { organizationId, key } });
+  async findByKey(
+    organizationId: string,
+    key: string,
+  ): Promise<ContentTemplate | null> {
+    const row = await this.prisma.contentTemplate.findFirst({
+      where: { organizationId, key },
+    });
     return row ? this.toEntity(row) : null;
   }
 
@@ -37,9 +46,9 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
     const row = await this.prisma.contentTemplate.create({
       data: {
         organizationId: input.organizationId,
-        key:            input.key,
-        content:        input.content,
-        name:           input.key,
+        key: input.key,
+        content: input.content,
+        name: input.key,
       } as any,
     });
     return this.toEntity(row);

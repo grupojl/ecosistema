@@ -1,7 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RedisService } from '@/redis/redis.service';
-import { AuthService }  from '@/auth/auth.service';
+import { AuthService } from '@/auth/auth.service';
 
 /**
  * Login de la app de escritorio con código de un solo uso + PKCE (DT-DESK-3, norte de desktop pilar 1).
@@ -15,28 +19,41 @@ import { AuthService }  from '@/auth/auth.service';
  * Sin Redis se usa memoria SOLO fuera de producción: con varias instancias un código emitido en una no lo vería otra.
  */
 const CODE_TTL_SECONDS = 60;
-const KEY_PREFIX       = 'desktop-login:';
-const HEX_64           = /^[a-f0-9]{64}$/;
+const KEY_PREFIX = 'desktop-login:';
+const HEX_64 = /^[a-f0-9]{64}$/;
 
-interface Stored { uid: string; challenge: string }
+interface Stored {
+  uid: string;
+  challenge: string;
+}
 
 @Injectable()
 export class DesktopLoginService {
-  private readonly memory = new Map<string, { value: string; expires: number }>();
+  private readonly memory = new Map<
+    string,
+    { value: string; expires: number }
+  >();
 
   constructor(
     private readonly redis: RedisService,
-    private readonly auth:  AuthService,
+    private readonly auth: AuthService,
   ) {}
 
-  async issue(uid: string, challenge: string): Promise<{ code: string; expiresIn: number }> {
-    if (!HEX_64.test(challenge)) throw new UnauthorizedException('Solicitud inválida');
+  async issue(
+    uid: string,
+    challenge: string,
+  ): Promise<{ code: string; expiresIn: number }> {
+    if (!HEX_64.test(challenge))
+      throw new UnauthorizedException('Solicitud inválida');
     const code = randomBytes(32).toString('base64url');
     await this.put(code, JSON.stringify({ uid, challenge } satisfies Stored));
     return { code, expiresIn: CODE_TTL_SECONDS };
   }
 
-  async redeem(code: string, verifier: string): Promise<{ customToken: string }> {
+  async redeem(
+    code: string,
+    verifier: string,
+  ): Promise<{ customToken: string }> {
     // Mismo error ante cualquier falla: no se revela si el código existía, venció o el verifier no coincidía.
     const invalid = new UnauthorizedException('Código inválido o vencido');
     if (!HEX_64.test(verifier)) throw invalid;
@@ -45,9 +62,12 @@ export class DesktopLoginService {
     if (!raw) throw invalid;
     const { uid, challenge } = JSON.parse(raw) as Stored;
 
-    const actual   = Buffer.from(createHash('sha256').update(verifier).digest('hex'));
+    const actual = Buffer.from(
+      createHash('sha256').update(verifier).digest('hex'),
+    );
     const expected = Buffer.from(challenge);
-    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw invalid;
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected))
+      throw invalid;
 
     return this.auth.generateCustomTokenForUid(uid);
   }
@@ -59,10 +79,14 @@ export class DesktopLoginService {
   }
 
   private async put(code: string, value: string): Promise<void> {
-    if (this.useRedis) return this.redis.set(KEY_PREFIX + code, value, CODE_TTL_SECONDS);
+    if (this.useRedis)
+      return this.redis.set(KEY_PREFIX + code, value, CODE_TTL_SECONDS);
     this.requireMemoryAllowed();
     this.sweep();
-    this.memory.set(code, { value, expires: Date.now() + CODE_TTL_SECONDS * 1000 });
+    this.memory.set(code, {
+      value,
+      expires: Date.now() + CODE_TTL_SECONDS * 1000,
+    });
   }
 
   /** Lee Y borra en un solo paso: dos canjes simultáneos no pueden ganar los dos. */
@@ -76,12 +100,15 @@ export class DesktopLoginService {
 
   private requireMemoryAllowed(): void {
     if (process.env['NODE_ENV'] === 'production') {
-      throw new ServiceUnavailableException('El inicio de sesión de escritorio requiere Redis en producción');
+      throw new ServiceUnavailableException(
+        'El inicio de sesión de escritorio requiere Redis en producción',
+      );
     }
   }
 
   private sweep(): void {
     const now = Date.now();
-    for (const [k, v] of this.memory) if (v.expires <= now) this.memory.delete(k);
+    for (const [k, v] of this.memory)
+      if (v.expires <= now) this.memory.delete(k);
   }
 }

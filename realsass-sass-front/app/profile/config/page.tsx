@@ -12,7 +12,7 @@
  */
 import { useRouter }         from 'next/navigation'
 import { Loader2, CircleAlert, ArrowLeft } from 'lucide-react'
-import { Button }            from '@real/ui'
+import { Alert, Button, LoadingState, PageContainer, PageHeader, SectionHeader, Card } from '@real/ui'
 import { useAuth }           from '@/context/auth-context'
 import {
   useFeatureFlags,
@@ -37,21 +37,12 @@ function BackButton({ onClick }: { onClick: () => void }) {
 }
 
 function LoadingSkeleton() {
-  return (
-    <div className="space-y-4 animate-pulse">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="h-16 rounded-lg bg-muted" />
-      ))}
-    </div>
-  )
+  return <LoadingState className="p-6" />
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 text-destructive p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-      <CircleAlert className="h-4 w-4 shrink-0" />
-      <p className="text-sm">{message}</p>
-    </div>
+    <Alert variant="destructive">{message}</Alert>
   )
 }
 
@@ -81,17 +72,17 @@ export default function ConfigPage() {
   if (hasError)  return <ErrorState message="Error al cargar la configuración. Intentá de nuevo." />
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-8">
+    <PageContainer size="md" className="space-y-8">
       <BackButton onClick={() => router.back()} />
 
-      <h1 className="text-2xl font-semibold">Configuración de organización</h1>
+      <PageHeader title="Configuración de organización" />
 
       {/* Feature Flags */}
       {flags && flags.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-medium">Feature flags</h2>
+          <SectionHeader title="Feature flags" />
           {flags.map(flag => (
-            <div key={flag.id} className="flex items-center justify-between p-4 rounded-lg border">
+            <Card key={flag.id} className="flex items-center justify-between p-4">
               <div>
                 <p className="font-medium text-sm">{flag.key}</p>
                 {flag.description && (
@@ -106,7 +97,7 @@ export default function ConfigPage() {
               >
                 {flag.enabled ? 'Activo' : 'Inactivo'}
               </Button>
-            </div>
+            </Card>
           ))}
         </section>
       )}
@@ -114,14 +105,14 @@ export default function ConfigPage() {
       {/* Quotas — solo lectura */}
       {quotas && quotas.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-medium">Quotas</h2>
+          <SectionHeader title="Quotas" />
           {quotas.map(quota => (
-            <div key={quota.id} className="flex items-center justify-between p-4 rounded-lg border">
+            <Card key={quota.id} className="flex items-center justify-between p-4">
               <p className="font-medium text-sm">{quota.resource}</p>
               <span className="text-sm text-muted-foreground">
                 {quota.currentUsage} / {quota.limit ?? '∞'}
               </span>
-            </div>
+            </Card>
           ))}
         </section>
       )}
@@ -129,9 +120,9 @@ export default function ConfigPage() {
       {/* Temas */}
       {themes && themes.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-medium">Temas</h2>
+          <SectionHeader title="Temas" />
           {themes.map(theme => (
-            <div key={theme.id} className="flex items-center justify-between p-4 rounded-lg border">
+            <Card key={theme.id} className="flex items-center justify-between p-4">
               <p className="font-medium text-sm">{theme.name}</p>
               <Button
                 variant={theme.isActive ? 'default' : 'outline'}
@@ -141,7 +132,7 @@ export default function ConfigPage() {
               >
                 {theme.isActive ? 'Activo' : 'Activar'}
               </Button>
-            </div>
+            </Card>
           ))}
         </section>
       )}
@@ -152,6 +143,6 @@ export default function ConfigPage() {
 
       {/* WhatsApp de la organización (ADR-025): Embedded Signup de Meta */}
       <WhatsappSection />
-    </div>
+    </PageContainer>
   )
 }

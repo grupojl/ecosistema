@@ -8,7 +8,7 @@
  */
 import { useState }                   from 'react'
 import { Activity, Loader2, Plus, RotateCw, Send, Trash2, TriangleAlert, Webhook } from 'lucide-react'
-import { Badge, Button, Input }       from '@real/ui'
+import { Badge, Button, Input, SectionHeader, Skeleton, Card, EmptyState } from '@real/ui'
 import {
   useWebhooks, useCreateWebhook, useDeleteWebhook, useRotateWebhookSecret, useTestWebhook, useWebhookLogs,
 } from '@/hooks/use-config'
@@ -28,7 +28,7 @@ function Deliveries({ webhookId }: { webhookId: string }) {
           {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Actualizar'}
         </Button>
       </div>
-      {isLoading && <div className="h-8 animate-pulse rounded bg-muted" />}
+      {isLoading && <Skeleton className="h-8" />}
       {error && <p role="alert" className="text-xs text-destructive">{getErrorMessage(error)}</p>}
       {logs && logs.length === 0 && <p className="text-xs text-muted-foreground">Todavía no hubo entregas.</p>}
       {logs?.map(l => (
@@ -107,26 +107,26 @@ export function WebhooksSection() {
     <section className="space-y-3" aria-labelledby="webhooks-title">
       <RevealSecretDialog title={revealed?.title ?? ''} secret={revealed?.secret ?? null} onClose={() => setRevealed(null)} />
 
-      <div className="flex items-center justify-between">
-        <h2 id="webhooks-title" className="flex items-center gap-2 text-lg font-medium">
-          <Webhook className="h-4 w-4 text-muted-foreground" /> Webhooks
-        </h2>
-        {!creating && (
+      <SectionHeader
+        id="webhooks-title"
+        icon={<Webhook />}
+        title="Webhooks"
+        actions={!creating && (
           <Button size="sm" onClick={() => { setCreating(true); setMessage(null) }}>
             <Plus className="mr-1 h-4 w-4" /> Agregar
           </Button>
         )}
-      </div>
+      />
 
       {message && (
         <p role={message.kind === 'error' ? 'alert' : 'status'}
-           className={'text-sm ' + (message.kind === 'error' ? 'text-destructive' : 'text-green-600')}>
+           className={'text-sm ' + (message.kind === 'error' ? 'text-destructive' : 'text-success-ink')}>
           {message.text}
         </p>
       )}
 
       {creating && (
-        <form onSubmit={handleCreate} className="space-y-2 rounded-lg border p-4">
+        <Card className="p-4"><form onSubmit={handleCreate} className="space-y-2">
           <Input type="url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://tu-sistema.com/webhooks" required maxLength={2048} />
           <Input value={events} onChange={e => setEvents(e.target.value)} placeholder="Eventos separados por coma (* = todos)" required />
           <Input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descripción (opcional)" maxLength={200} />
@@ -139,19 +139,17 @@ export function WebhooksSection() {
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>Cancelar</Button>
           </div>
-        </form>
+        </form></Card>
       )}
 
-      {isLoading && <div className="h-16 animate-pulse rounded-lg bg-muted" />}
-      {error && <p role="alert" className="text-sm text-destructive">{getErrorMessage(error, 'No pudimos cargar los webhooks.')}</p>}
+      {isLoading && <Skeleton className="h-16 rounded-lg" />}
+      {error && <EmptyState kind="error" description={getErrorMessage(error, 'No pudimos cargar los webhooks.')} />}
       {webhooks && webhooks.length === 0 && !creating && (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-          Todavía no configuraste ningún webhook.
-        </p>
+        <EmptyState title="Sin webhooks" description="Todavía no configuraste ningún webhook." />
       )}
 
       {webhooks?.map(wh => (
-        <div key={wh.id} className="space-y-2 rounded-lg border p-4">
+        <Card key={wh.id} className="space-y-2 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <p className="truncate font-mono text-sm">{wh.url}</p>
@@ -163,7 +161,7 @@ export function WebhooksSection() {
                 {wh.description ? ' · ' + wh.description : ''}
               </p>
               {!wh.secretHint && (
-                <p className="flex items-center gap-1 text-xs text-amber-600">
+                <p className="flex items-center gap-1 text-xs text-warning-ink">
                   <TriangleAlert className="h-3 w-3" /> Sin clave de firma: rotala para poder enviar eventos.
                 </p>
               )}
@@ -193,7 +191,7 @@ export function WebhooksSection() {
             </div>
           </div>
           {logsOpen === wh.id && <Deliveries webhookId={wh.id} />}
-        </div>
+        </Card>
       ))}
     </section>
   )

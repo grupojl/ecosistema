@@ -1,16 +1,16 @@
-import { Injectable, Inject } from '@nestjs/common'
-import { TRPCError }          from '@trpc/server'
-import type { IMarketRepository } from '@/markets/repository/market.repository.interface'
-import { MARKET_REPOSITORY }      from '@/markets/repository/market.repository.interface'
-import { FulfillmentConfigSchema } from '@/markets/domain/market.entity'
-import type { FulfillmentConfig }  from '@/markets/domain/market.entity'
+import { Injectable, Inject } from '@nestjs/common';
+import { TRPCError } from '@trpc/server';
+import type { IMarketRepository } from '@/markets/repository/market.repository.interface';
+import { MARKET_REPOSITORY } from '@/markets/repository/market.repository.interface';
+import { FulfillmentConfigSchema } from '@/markets/domain/market.entity';
+import type { FulfillmentConfig } from '@/markets/domain/market.entity';
 import {
   MarketNotFoundError,
   DuplicateMarketError,
   CannotDeactivateDefaultMarketError,
   CannotDeleteDefaultMarketError,
-} from '@/markets/domain/market.errors'
-import type { MarketDTO } from '@/markets/domain/market.entity'
+} from '@/markets/domain/market.errors';
+import type { MarketDTO } from '@/markets/domain/market.entity';
 
 @Injectable()
 export class MarketsService {
@@ -19,96 +19,124 @@ export class MarketsService {
   ) {}
 
   // ── resolveMarket — contrato central: NUNCA retorna null ───────────────────
-  async resolveMarket(organizationId: string, visitorCountryCode: string): Promise<MarketDTO> {
-    const specific = await this.repo.findActive(organizationId, visitorCountryCode)
-    if (specific) return specific.toDTO()
+  async resolveMarket(
+    organizationId: string,
+    visitorCountryCode: string,
+  ): Promise<MarketDTO> {
+    const specific = await this.repo.findActive(
+      organizationId,
+      visitorCountryCode,
+    );
+    if (specific) return specific.toDTO();
 
-    const fallback = await this.repo.findDefault(organizationId)
+    const fallback = await this.repo.findDefault(organizationId);
     if (!fallback) {
       throw new TRPCError({
-        code:    'NOT_FOUND',
+        code: 'NOT_FOUND',
         message: new MarketNotFoundError(organizationId).message,
-      })
+      });
     }
-    return fallback.toDTO()
+    return fallback.toDTO();
   }
 
   async list(organizationId: string): Promise<MarketDTO[]> {
-    const markets = await this.repo.findAll(organizationId)
-    return markets.map(m => m.toDTO())
+    const markets = await this.repo.findAll(organizationId);
+    return markets.map((m) => m.toDTO());
   }
 
   async create(input: {
-    organizationId:    string
-    countryCode:       string
-    fulfillmentConfig?: FulfillmentConfig
+    organizationId: string;
+    countryCode: string;
+    fulfillmentConfig?: FulfillmentConfig;
   }): Promise<MarketDTO> {
     // Invariante: no duplicados por (organizationId, countryCode)
-    const existing = await this.repo.findActive(input.organizationId, input.countryCode)
+    const existing = await this.repo.findActive(
+      input.organizationId,
+      input.countryCode,
+    );
     if (existing) {
       throw new TRPCError({
-        code:    'CONFLICT',
-        message: new DuplicateMarketError(input.organizationId, input.countryCode).message,
-      })
+        code: 'CONFLICT',
+        message: new DuplicateMarketError(
+          input.organizationId,
+          input.countryCode,
+        ).message,
+      });
     }
-    const isFirstMarket = (await this.repo.findAll(input.organizationId)).length === 0
+    const isFirstMarket =
+      (await this.repo.findAll(input.organizationId)).length === 0;
     const market = await this.repo.create({
-      organizationId:    input.organizationId,
-      countryCode:       input.countryCode,
-      isDefault:         isFirstMarket,
-      fulfillmentConfig: FulfillmentConfigSchema.parse(input.fulfillmentConfig ?? { priority: 1 }),
-    })
-    return market.toDTO()
+      organizationId: input.organizationId,
+      countryCode: input.countryCode,
+      isDefault: isFirstMarket,
+      fulfillmentConfig: FulfillmentConfigSchema.parse(
+        input.fulfillmentConfig ?? { priority: 1 },
+      ),
+    });
+    return market.toDTO();
   }
 
   /** Con `organizationId`, un mercado de otra organización se trata como inexistente (no se revela que existe). */
   private async findOwned(id: string, organizationId?: string) {
-    const market = await this.repo.findById(id)
-    if (!market || (organizationId !== undefined && market.organizationId !== organizationId)) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: `Market id=${id} not found` })
+    const market = await this.repo.findById(id);
+    if (
+      !market ||
+      (organizationId !== undefined && market.organizationId !== organizationId)
+    ) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: `Market id=${id} not found`,
+      });
     }
-    return market
+    return market;
   }
 
-  async update(id: string, data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig }, organizationId?: string): Promise<MarketDTO> {
-    const market = await this.findOwned(id, organizationId)
+  async update(
+    id: string,
+    data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig },
+    organizationId?: string,
+  ): Promise<MarketDTO> {
+    const market = await this.findOwned(id, organizationId);
 
     // Invariante: el Market default no puede desactivarse
     if (market.isDefault && data.isActive === false) {
       throw new TRPCError({
-        code:    'BAD_REQUEST',
+        code: 'BAD_REQUEST',
         message: new CannotDeactivateDefaultMarketError(id).message,
-      })
+      });
     }
-    const updated = await this.repo.update(id, data)
-    return updated.toDTO()
+    const updated = await this.repo.update(id, data);
+    return updated.toDTO();
   }
 
   async setDefault(id: string, organizationId?: string): Promise<MarketDTO> {
-    const market = await this.findOwned(id, organizationId)
-    const updated = await this.repo.setDefault(id, market.organizationId)
-    return updated.toDTO()
+    const market = await this.findOwned(id, organizationId);
+    const updated = await this.repo.setDefault(id, market.organizationId);
+    return updated.toDTO();
   }
 
   async delete(id: string, organizationId?: string): Promise<void> {
-    const market = await this.findOwned(id, organizationId)
+    const market = await this.findOwned(id, organizationId);
     if (market.isDefault) {
       throw new TRPCError({
-        code:    'BAD_REQUEST',
+        code: 'BAD_REQUEST',
         message: new CannotDeleteDefaultMarketError(id).message,
-      })
+      });
     }
-    await this.repo.delete(id)
+    await this.repo.delete(id);
   }
 
   // Llamado internamente al crear una Organization (seed del Market default)
-  async seedDefaultMarket(organizationId: string, countryCode: string): Promise<MarketDTO> {
+  async seedDefaultMarket(
+    organizationId: string,
+    countryCode: string,
+  ): Promise<MarketDTO> {
     const market = await this.repo.create({
       organizationId,
-      countryCode:       countryCode.toUpperCase(),
-      isDefault:         true,
+      countryCode: countryCode.toUpperCase(),
+      isDefault: true,
       fulfillmentConfig: { priority: 1 },
-    })
-    return market.toDTO()
+    });
+    return market.toDTO();
   }
 }

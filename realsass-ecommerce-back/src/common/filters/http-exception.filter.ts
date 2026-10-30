@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import type { Response, Request } from 'express';
 
 @Catch()
@@ -6,17 +13,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const ctx      = host.switchToHttp();
+    const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request  = ctx.getRequest<Request>();
+    const request = ctx.getRequest<Request>();
 
-    const status = exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const body = exception instanceof HttpException
-      ? exception.getResponse()
-      : null;
+    const body =
+      exception instanceof HttpException ? exception.getResponse() : null;
 
     const message =
       typeof body === 'object' && body !== null && 'message' in body
@@ -27,7 +34,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const bodyWithMessage = body as { message?: unknown };
     const errors =
-      typeof body === 'object' && body !== null && Array.isArray(bodyWithMessage.message)
+      typeof body === 'object' &&
+      body !== null &&
+      Array.isArray(bodyWithMessage.message)
         ? (bodyWithMessage.message as string[])
         : undefined;
 
@@ -39,12 +48,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     response.status(status).json({
-      success:    false,
+      success: false,
       statusCode: status,
       message,
       ...(errors && { errors }),
       timestamp: new Date().toISOString(),
-      path:      request.url,
+      path: request.url,
     });
   }
 }

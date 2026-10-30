@@ -22,25 +22,25 @@
  *   customer.cart.removeItem → quitar variante del carrito
  *   customer.checkout        → convertir carrito en orden
  */
-import { z }                                from 'zod';
-import { TRPCError }                        from '@trpc/server';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, publicProcedure, customerProcedure } from '@/trpc';
-import type { CustomersService }            from '@/customers/customers.service';
-import type { OrdersService }               from '@/orders/orders.service';
-import type { CartService }                 from '@/cart/cart.service';
-import type { CatalogService }              from '@/catalog/catalog.service';
-import type { StoreService }                from '@/store/store.service';
-import { rethrowAsTrpcStoreError }          from '@/store/store.trpc-errors';
+import type { CustomersService } from '@/customers/customers.service';
+import type { OrdersService } from '@/orders/orders.service';
+import type { CartService } from '@/cart/cart.service';
+import type { CatalogService } from '@/catalog/catalog.service';
+import type { StoreService } from '@/store/store.service';
+import { rethrowAsTrpcStoreError } from '@/store/store.trpc-errors';
+import { resolveVisitorCountry } from '@/orders/lib/resolve-visitor-country';
 
 export function createCustomerRouter(
   customersService: CustomersService,
-  ordersService:    OrdersService,
-  cartService:      CartService,
-  catalogService:   CatalogService,
-  storeService:     StoreService,
+  ordersService: OrdersService,
+  cartService: CartService,
+  catalogService: CatalogService,
+  storeService: StoreService,
 ) {
   return router({
-
     // ── Bootstrap público (sin auth) ───────────────────────────────────────
 
     /**
@@ -50,7 +50,9 @@ export function createCustomerRouter(
      */
     resolveStore: publicProcedure
       .input(z.object({ slug: z.string().min(1) }))
-      .query(({ input }) => storeService.resolveBySlug(input.slug).catch(rethrowAsTrpcStoreError)),
+      .query(({ input }) =>
+        storeService.resolveBySlug(input.slug).catch(rethrowAsTrpcStoreError),
+      ),
 
     /**
      * customer.getProducts — @Public
@@ -61,14 +63,15 @@ export function createCustomerRouter(
      * customer.listStores — @Public
      * Tiendas activas (slug, país, fecha) para el índice de sitemaps del storefront. Datos ya públicos.
      */
-    listStores: publicProcedure
-      .query(() => storeService.listStores()),
+    listStores: publicProcedure.query(() => storeService.listStores()),
 
     getProducts: publicProcedure
-      .input(z.object({
-        organizationId: z.string().uuid(),
-        category:       z.string().optional(),
-      }))
+      .input(
+        z.object({
+          organizationId: z.string().uuid(),
+          category: z.string().optional(),
+        }),
+      )
       .query(({ input }) =>
         catalogService.listProductsPublic(input.organizationId, input.category),
       ),
@@ -79,17 +82,22 @@ export function createCustomerRouter(
      * Equivalente a GET /ecommerce/public/:orgId/catalog/:handle
      */
     getProduct: publicProcedure
-      .input(z.object({
-        organizationId: z.string().uuid(),
-        handle:         z.string().min(1),
-      }))
+      .input(
+        z.object({
+          organizationId: z.string().uuid(),
+          handle: z.string().min(1),
+        }),
+      )
       .query(async ({ input }) => {
         const product = await catalogService.getProductPublic(
           input.organizationId,
           input.handle,
         );
         if (!product) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: `Product '${input.handle}' not found` });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Product '${input.handle}' not found`,
+          });
         }
         return product;
       }),
@@ -99,18 +107,16 @@ export function createCustomerRouter(
     /**
      * customer.me — perfil del cliente autenticado
      */
-    me: customerProcedure
-      .query(({ ctx }) =>
-        customersService.findById(ctx.organizationId!, ctx.customerId!),
-      ),
+    me: customerProcedure.query(({ ctx }) =>
+      customersService.findById(ctx.organizationId, ctx.customerId),
+    ),
 
     /**
      * customer.orders — historial de órdenes del cliente
      */
-    orders: customerProcedure
-      .query(({ ctx }) =>
-        ordersService.listByCustomer(ctx.organizationId!, ctx.customerId!),
-      ),
+    orders: customerProcedure.query(({ ctx }) =>
+      ordersService.listByCustomer(ctx.organizationId, ctx.customerId),
+    ),
 
     /**
      * customer.orderDetail — detalle de una orden
@@ -118,7 +124,10 @@ export function createCustomerRouter(
     orderDetail: customerProcedure
       .input(z.object({ orderId: z.string().uuid() }))
       .query(async ({ ctx, input }) => {
-        const order = await ordersService.getOrder(ctx.organizationId!, input.orderId);
+        const order = await ordersService.getOrder(
+          ctx.organizationId,
+          input.orderId,
+        );
         if (!order || order.customerId !== ctx.customerId) {
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
@@ -128,38 +137,46 @@ export function createCustomerRouter(
     // ── Carrito ───────────────────────────────────────────────────────────
 
     cart: router({
-
       get: customerProcedure
         .input(z.object({ cartId: z.string() }))
         .query(({ ctx, input }) =>
-          cartService.getCart(ctx.organizationId!, input.cartId, ctx.customerId!),
+          cartService.getCart(ctx.organizationId, input.cartId, ctx.customerId),
         ),
 
       addItem: customerProcedure
-        .input(z.object({
-          variantId: z.string().uuid(),
-          quantity:  z.number().int().positive(),
-          sessionId: z.string(),
-          cartId:    z.string().optional(),
-        }))
+        .input(
+          z.object({
+            variantId: z.string().uuid(),
+            quantity: z.number().int().positive(),
+            sessionId: z.string(),
+            cartId: z.string().optional(),
+          }),
+        )
         .mutation(({ ctx, input }) =>
           cartService.addItem(
-            ctx.organizationId!,
+            ctx.organizationId,
             input.sessionId,
             input.variantId,
             input.quantity,
             input.cartId,
-            ctx.customerId!,
+            ctx.customerId,
           ),
         ),
 
       removeItem: customerProcedure
-        .input(z.object({
-          cartId:    z.string(),
-          variantId: z.string().uuid(),
-        }))
+        .input(
+          z.object({
+            cartId: z.string(),
+            variantId: z.string().uuid(),
+          }),
+        )
         .mutation(({ ctx, input }) =>
-          cartService.removeItem(ctx.organizationId!, input.cartId, input.variantId, ctx.customerId!),
+          cartService.removeItem(
+            ctx.organizationId,
+            input.cartId,
+            input.variantId,
+            ctx.customerId,
+          ),
         ),
     }),
 
@@ -168,26 +185,34 @@ export function createCustomerRouter(
      * Reserva stock atómicamente — no tocar la lógica interna.
      */
     checkout: customerProcedure
-      .input(z.object({
-        cartId:          z.string(),
-        shippingAddress: z.object({
-          street:     z.string(),
-          city:       z.string(),
-          state:      z.string().optional(),
-          postalCode: z.string(),
-          country:    z.string(),
+      .input(
+        z.object({
+          cartId: z.string(),
+          shippingAddress: z.object({
+            street: z.string(),
+            city: z.string(),
+            state: z.string().optional(),
+            postalCode: z.string(),
+            country: z.string(),
+          }),
+          shippingCents: z.number().int().nonnegative().optional(),
+          visitorCountryCode: z.string().length(2).toUpperCase().optional(), // ADR-014
+          locale: z.string().min(2).max(10).optional(), // ADR-016 — idioma de la sesión, para el invoice
         }),
-        shippingCents:       z.number().int().nonnegative().optional(),
-        visitorCountryCode:  z.string().length(2).toUpperCase().optional(), // ADR-014
-        locale:              z.string().min(2).max(10).optional(), // ADR-016 — idioma de la sesión, para el invoice
-      }))
+      )
       .mutation(({ ctx, input }) =>
-        ordersService.checkout({organizationId: ctx.organizationId!,
-          cartId:          input.cartId,
-          customerId:      ctx.customerId!,
+        ordersService.checkout({
+          organizationId: ctx.organizationId,
+          cartId: input.cartId,
+          customerId: ctx.customerId,
           shippingAddress: input.shippingAddress,
-          shippingCents:   input.shippingCents,
-          locale:          input.locale,
+          shippingCents: input.shippingCents,
+          // ADR-014: lo explícito del input gana; si no, X-Visitor-Country / CF-IPCountry / X-Forwarded-Country; si no, Market default.
+          visitorCountryCode:
+            input.visitorCountryCode ??
+            resolveVisitorCountry(ctx.req) ??
+            undefined,
+          locale: input.locale,
         }),
       ),
   });

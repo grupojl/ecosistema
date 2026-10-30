@@ -221,7 +221,9 @@ workers:    /api/v1/campaigns (+ /:id/dispatch) ; GET /api/v1/jobs/:jobId/status
 | realsass-sass-front | 3021 |
 | realsass-dashboard-front | 3022 |
 | real-ecommerce-front | 3023 |
+| realsass-docs-front | 3024 |
 | realsass-ecommerce-back | 3025 |
+| realsass-design-front | 3026 |
 
 ## Infra local (docker-compose)
 

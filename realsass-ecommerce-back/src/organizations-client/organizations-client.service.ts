@@ -8,10 +8,13 @@ import {
 import { RedisService } from '@/redis/redis.service';
 import type { OrganizationAccessResult } from '@/organizations-client/types/organization-access.types';
 
-const CACHE_TTL_SECONDS = Number(process.env['CONFIG_CACHE_TTL_ORG_ACCESS'] ?? 30);
+const CACHE_TTL_SECONDS = Number(
+  process.env['CONFIG_CACHE_TTL_ORG_ACCESS'] ?? 30,
+);
 const REQUEST_TIMEOUT_MS = 5000;
 
-const ORGANIZATIONS_SERVICE_PREFIX = process.env['ORGANIZATIONS_SERVICE_PREFIX'] ?? '/api/v1';
+const ORGANIZATIONS_SERVICE_PREFIX =
+  process.env['ORGANIZATIONS_SERVICE_PREFIX'] ?? '/api/v1';
 const MARKET_CACHE_TTL = 300;
 
 @Injectable()
@@ -20,7 +23,9 @@ export class OrganizationsClientService {
   private readonly baseUrl: string;
 
   constructor(private readonly redis: RedisService) {
-    this.baseUrl = (process.env['ORGANIZATIONS_SERVICE_URL'] ?? 'http://localhost:3020').replace(/\/+$/, '');
+    this.baseUrl = (
+      process.env['ORGANIZATIONS_SERVICE_URL'] ?? 'http://localhost:3020'
+    ).replace(/\/+$/, '');
   }
 
   private cacheKey(firebaseUid: string, organizationId: string): string {
@@ -39,10 +44,15 @@ export class OrganizationsClientService {
       return JSON.parse(cached) as OrganizationAccessResult;
     }
 
-    const result = await this.fetchFromOrganizationsService(firebaseUid, organizationId);
+    const result = await this.fetchFromOrganizationsService(
+      firebaseUid,
+      organizationId,
+    );
 
     if (result.canAccess) {
-      await this.redis.set(key, JSON.stringify(result), CACHE_TTL_SECONDS).catch(() => undefined);
+      await this.redis
+        .set(key, JSON.stringify(result), CACHE_TTL_SECONDS)
+        .catch(() => undefined);
     }
 
     return result;
@@ -63,49 +73,78 @@ export class OrganizationsClientService {
 
     try {
       const response = await fetch(url, {
-        headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' },
+        headers: {
+          'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '',
+        },
         signal: controller.signal,
       });
 
       if (response.status === 401) {
         // La credencial de servicio no coincide con la de real-back: es un error de configuración, no del usuario.
-        this.logger.error('real-back rechazó INTERNAL_API_KEY — revisar que sea la misma en ambos servicios');
-        throw new ServiceUnavailableException('Servicio de identidad mal configurado');
+        this.logger.error(
+          'real-back rechazó INTERNAL_API_KEY — revisar que sea la misma en ambos servicios',
+        );
+        throw new ServiceUnavailableException(
+          'Servicio de identidad mal configurado',
+        );
       }
       if (!response.ok) {
-        throw new ForbiddenException(`real-back respondió ${response.status} para organizationId=${organizationId}`);
+        throw new ForbiddenException(
+          `real-back respondió ${response.status} para organizationId=${organizationId}`,
+        );
       }
 
       return (await response.json()) as OrganizationAccessResult;
     } catch (error) {
-      if (error instanceof UnauthorizedException || error instanceof ForbiddenException || error instanceof ServiceUnavailableException) throw error;
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof ForbiddenException ||
+        error instanceof ServiceUnavailableException
+      )
+        throw error;
       this.logger.error('No se pudo contactar a real-back', error as Error);
-      throw new ServiceUnavailableException('Servicio de identidad no disponible temporalmente');
+      throw new ServiceUnavailableException(
+        'Servicio de identidad no disponible temporalmente',
+      );
     } finally {
       clearTimeout(timeout);
     }
   }
 
   // ── Sesiones cerradas desde "Dispositivos" (ADR-020 / DT-SES-05) ─────────────────────────────────────────────
-  private readonly sessionChecks = new Map<string, { revoked: boolean; at: number }>();
+  private readonly sessionChecks = new Map<
+    string,
+    { revoked: boolean; at: number }
+  >();
 
   /**
    * ¿La sesión `sid` fue cerrada? Cache de 30 s (una consulta por sesión cada 30 s, no por request).
    * Fail-open: si el sass-back no responde se acepta (la cookie de Firebase ya se verificó), igual que en el sass-back.
    */
-  async isSessionRevoked(sessionId: string, firebaseUid: string): Promise<boolean> {
+  async isSessionRevoked(
+    sessionId: string,
+    firebaseUid: string,
+  ): Promise<boolean> {
     const hit = this.sessionChecks.get(sessionId);
     if (hit && Date.now() - hit.at < 30_000) return hit.revoked;
 
     try {
       const res = await fetch(
         `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/internal/sessions/${encodeURIComponent(sessionId)}/revoked?uid=${encodeURIComponent(firebaseUid)}`,
-        { headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
+        {
+          headers: {
+            'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '',
+          },
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        },
       );
       if (!res.ok) return false;
       const { revoked } = (await res.json()) as { revoked?: boolean };
       if (this.sessionChecks.size >= 10_000) this.sessionChecks.clear();
-      this.sessionChecks.set(sessionId, { revoked: revoked === true, at: Date.now() });
+      this.sessionChecks.set(sessionId, {
+        revoked: revoked === true,
+        at: Date.now(),
+      });
       return revoked === true;
     } catch {
       return false;
@@ -116,38 +155,73 @@ export class OrganizationsClientService {
   async resolveMarket(
     organizationId: string,
     visitorCountryCode: string,
-  ): Promise<{ id: string; countryCode: string; isDefault: boolean; fulfillmentConfig: Record<string, unknown> }> {
-    const code     = (visitorCountryCode || 'default').toUpperCase();
+  ): Promise<{
+    id: string;
+    countryCode: string;
+    isDefault: boolean;
+    fulfillmentConfig: Record<string, unknown>;
+  }> {
+    const code = (visitorCountryCode || 'default').toUpperCase();
     const cacheKey = `market:${organizationId}:${code}`;
 
     const cached = await this.redis.get(cacheKey).catch(() => null);
-    if (cached) return JSON.parse(cached) as { id: string; countryCode: string; isDefault: boolean; fulfillmentConfig: Record<string, unknown> };
+    if (cached)
+      return JSON.parse(cached) as {
+        id: string;
+        countryCode: string;
+        isDefault: boolean;
+        fulfillmentConfig: Record<string, unknown>;
+      };
 
-    const input      = JSON.stringify({ organizationId, countryCode: code === 'DEFAULT' ? 'AR' : code });
-    const url        = `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/trpc/markets.resolve?input=${encodeURIComponent(input)}`;
+    const input = JSON.stringify({
+      organizationId,
+      countryCode: code === 'DEFAULT' ? 'AR' : code,
+    });
+    const url = `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/trpc/markets.resolve?input=${encodeURIComponent(input)}`;
 
     const controller = new AbortController();
-    const timeout    = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(url, {
-        headers: { 'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '' },
-        signal:  controller.signal,
+        headers: {
+          'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '',
+        },
+        signal: controller.signal,
       });
 
       if (!response.ok) {
-        this.logger.warn(`resolveMarket falló (${response.status}) — usando fallback default`);
-        return { id: 'default', countryCode: 'AR', isDefault: true, fulfillmentConfig: {} };
+        this.logger.warn(
+          `resolveMarket falló (${response.status}) — usando fallback default`,
+        );
+        return {
+          id: 'default',
+          countryCode: 'AR',
+          isDefault: true,
+          fulfillmentConfig: {},
+        };
       }
 
-      const body   = await response.json() as { result: { data: unknown } };
-      const market = body.result.data as { id: string; countryCode: string; isDefault: boolean; fulfillmentConfig: Record<string, unknown> };
+      const body = (await response.json()) as { result: { data: unknown } };
+      const market = body.result.data as {
+        id: string;
+        countryCode: string;
+        isDefault: boolean;
+        fulfillmentConfig: Record<string, unknown>;
+      };
 
-      await this.redis.set(cacheKey, JSON.stringify(market), MARKET_CACHE_TTL).catch(() => undefined);
+      await this.redis
+        .set(cacheKey, JSON.stringify(market), MARKET_CACHE_TTL)
+        .catch(() => undefined);
       return market;
     } catch {
       this.logger.warn('resolveMarket timeout/error — usando fallback default');
-      return { id: 'default', countryCode: 'AR', isDefault: true, fulfillmentConfig: {} };
+      return {
+        id: 'default',
+        countryCode: 'AR',
+        isDefault: true,
+        fulfillmentConfig: {},
+      };
     } finally {
       clearTimeout(timeout);
     }

@@ -1,0 +1,132 @@
+/* ============================================================================================================
+   MODALES ADAPTABLES (welver.html → «Modales adaptables»), importado por welver.css.
+   Un solo primitivo, 5 presentaciones que elige la clase de tamaño: center · sheet · side · fullscreen · top.
+   Los componentes (Dialog, AlertDialog, Sheet) ponen los atributos; acá vive toda la presentación:
+     data-slot="modal"  data-pres="center|sheet|side|fullscreen|top"  data-size="compact|medium|expanded"
+     data-psize="sm|lg"  data-tall  data-alert  data-side="left|right|top|bottom"
+   MOVIMIENTO: en compact hojas y pantallas suben 20 px con fundido; las alertas suben desde el borde de la barra
+   inferior. En pantallas grandes el centrado escala suave y el panel lateral se desliza 28 px.
+   ============================================================================================================ */
+html { scrollbar-gutter: stable; }
+
+[data-slot="modal-overlay"] { position: fixed; inset: 0; z-index: 50; background: hsl(0 0% 0% / .6); }
+[data-slot="modal-overlay"][data-state="open"]   { animation: m-fade 180ms ease-out backwards; }
+[data-slot="modal-overlay"][data-state="closed"] { animation: m-fade-out 160ms var(--ease-in) forwards; }
+
+[data-slot="modal"] {
+  position: fixed; z-index: 50; box-sizing: border-box; display: grid; gap: 1rem; align-content: start;
+  padding: 1.25rem; overflow-y: auto; overscroll-behavior: contain; outline: none;
+  background: var(--background); color: var(--foreground);
+  border: 1px solid var(--border); box-shadow: 0 25px 50px -12px hsl(0 0% 0% / .35);
+  --pw: 28rem; --sw: 36rem;
+}
+[data-slot="modal"][data-psize="sm"] { --pw: 24rem; --sw: 28rem; }
+[data-slot="modal"][data-psize="lg"] { --pw: 40rem; --sw: 44rem; }
+
+/* center */
+[data-slot="modal"][data-pres="center"] {
+  inset: 0; margin: auto; width: min(var(--pw), calc(100% - 2rem)); height: fit-content;
+  max-height: min(90dvh, calc(100dvh - 2rem)); border-radius: var(--radius-lg);
+}
+/* sheet (hoja inferior) */
+[data-slot="modal"][data-pres="sheet"] {
+  inset: auto 0 0 0; margin-inline: auto; width: 100%; max-width: var(--sw); max-height: min(94dvh, 100dvh);
+  border-bottom-width: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding-top: 0;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); will-change: transform;
+}
+[data-slot="modal"][data-pres="sheet"][data-tall] { height: min(94dvh, 100dvh); }
+/* side (panel lateral) */
+[data-slot="modal"][data-pres="side"] {
+  inset: 0 0 0 auto; width: min(var(--pw), 100%); height: 100%; border-width: 0 0 0 1px; border-radius: 0;
+}
+[data-slot="modal"][data-pres="side"][data-side="left"] { inset: 0 auto 0 0; border-width: 0 1px 0 0; }
+/* fullscreen */
+[data-slot="modal"][data-pres="fullscreen"] {
+  inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none;
+  padding-top: max(1.25rem, env(safe-area-inset-top)); padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+/* top (búsqueda / comandos) */
+[data-slot="modal"][data-pres="top"] {
+  inset: 10dvh 0 auto 0; margin-inline: auto; width: min(36rem, calc(100% - 2rem)); height: fit-content;
+  max-height: min(75dvh, calc(100dvh - 10dvh - 1rem)); border-radius: var(--radius-lg);
+}
+
+/* cabecera, pie y botón de cerrar */
+[data-slot="modal-header"] { display: flex; flex-direction: column; gap: .375rem; padding-right: 2.5rem; text-align: left; }
+[data-slot="modal"][data-pres="fullscreen"] [data-slot="modal-header"] {
+  position: sticky; top: calc(-1 * max(1.25rem, env(safe-area-inset-top))); z-index: 1; background: var(--background);
+  margin: calc(-1 * max(1.25rem, env(safe-area-inset-top))) -1.25rem 0; padding: max(.75rem, env(safe-area-inset-top)) 3.5rem .75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+[data-slot="modal-close"] {
+  position: absolute; top: .5rem; right: .5rem; z-index: 2; display: grid; place-items: center; width: 2.75rem; height: 2.75rem;
+  border-radius: var(--radius-md); color: var(--muted-foreground); background: transparent; border: 0; cursor: pointer;
+  transition: background-color .15s var(--ease-standard), color .15s var(--ease-standard);
+}
+[data-slot="modal-close"]:hover { background: var(--accent); color: var(--accent-foreground); }
+[data-slot="modal"][data-pres="sheet"] [data-slot="modal-close"] { top: .875rem; }
+[data-slot="modal"][data-pres="fullscreen"] [data-slot="modal-close"] { top: max(.25rem, calc(env(safe-area-inset-top) + .125rem)); }
+
+[data-slot="modal-footer"] { display: flex; flex-direction: column-reverse; gap: .5rem; }
+@media (min-width: 600px) {
+  [data-slot="modal-footer"] { flex-direction: row; justify-content: flex-end; }
+}
+/* Compact: las acciones de hojas y pantallas completas van en UNA fila (Cancelar | acción principal) y quedan fijas abajo;
+   las alertas mantienen los botones apilados. */
+[data-slot="modal"][data-size="compact"][data-pres="sheet"] [data-slot="modal-footer"],
+[data-slot="modal"][data-size="compact"][data-pres="fullscreen"] [data-slot="modal-footer"] {
+  position: sticky; bottom: calc(-1 * max(1.25rem, env(safe-area-inset-bottom))); z-index: 1; flex-direction: row; justify-content: stretch;
+  margin: 0 -1.25rem calc(-1 * max(1.25rem, env(safe-area-inset-bottom))); padding: .75rem 1rem max(.75rem, env(safe-area-inset-bottom));
+  background: var(--background); border-top: 1px solid var(--border);
+}
+[data-slot="modal"][data-size="compact"][data-pres="sheet"] [data-slot="modal-footer"] > *,
+[data-slot="modal"][data-size="compact"][data-pres="fullscreen"] [data-slot="modal-footer"] > * { flex: 1 1 0; min-width: 0; }
+
+/* agarre de la hoja inferior */
+[data-slot="modal-grip"] { display: flex; justify-content: center; width: 100%; padding: .625rem 0 .25rem; touch-action: none; cursor: grab; }
+[data-slot="modal-grip"]:active { cursor: grabbing; }
+[data-slot="modal-grip"] > span { width: 2.5rem; height: .3125rem; border-radius: 9999px; background: var(--input); transition: width .2s var(--ease-out); }
+[data-slot="modal-grip"]:hover > span, [data-slot="modal-grip"]:active > span { width: 3rem; }
+
+/* --- Entradas --- */
+[data-slot="modal"][data-state="open"][data-pres="center"],
+[data-slot="modal"][data-state="open"][data-pres="top"]        { animation: m-zoom 260ms var(--ease-sheet) backwards; }
+[data-slot="modal"][data-state="open"][data-pres="sheet"],
+[data-slot="modal"][data-state="open"][data-pres="fullscreen"] { animation: m-sheet-in 400ms var(--ease-soft) backwards, m-lift 400ms var(--ease-soft) backwards; }
+[data-slot="modal"][data-state="open"][data-pres="side"]       { animation: m-right 360ms var(--ease-sheet) backwards; }
+[data-slot="modal"][data-state="open"][data-size="compact"][data-pres="center"],
+[data-slot="modal"][data-state="open"][data-size="compact"][data-pres="top"],
+[data-slot="modal"][data-state="open"][data-size="compact"][data-pres="side"] { animation: m-soft-in 340ms var(--ease-soft) backwards; }
+
+/* --- Salidas (más cortas que la entrada) --- */
+[data-slot="modal"][data-state="closed"] { animation-duration: 200ms; animation-timing-function: var(--ease-in); animation-fill-mode: forwards; }
+[data-slot="modal"][data-state="closed"][data-pres="center"],
+[data-slot="modal"][data-state="closed"][data-pres="top"]        { animation-name: m-zoom-out; animation-duration: 150ms; }
+[data-slot="modal"][data-state="closed"][data-pres="sheet"],
+[data-slot="modal"][data-state="closed"][data-pres="fullscreen"] { animation-name: m-slide-down; animation-duration: 260ms; animation-timing-function: cubic-bezier(.4, 0, .6, 1); }
+[data-slot="modal"][data-state="closed"][data-pres="side"]       { animation-name: m-right-out; animation-duration: 170ms; }
+[data-slot="modal"][data-state="closed"][data-size="compact"][data-pres="center"],
+[data-slot="modal"][data-state="closed"][data-size="compact"][data-pres="top"],
+[data-slot="modal"][data-state="closed"][data-size="compact"][data-pres="side"] { animation-name: m-sink; animation-duration: 200ms; }
+
+/* Alertas: emergen en el centro. Escritorio sube 22 px; compact parte del borde de la barra inferior. */
+[data-slot="modal"][data-alert][data-state="open"]   { animation: m-alert-up 460ms var(--ease-soft); }
+[data-slot="modal"][data-alert][data-state="open"][data-size="compact"] { animation: m-alert-down 460ms var(--ease-soft); }
+[data-slot="modal"][data-alert][data-state="closed"] { animation: m-alert-out-down 200ms var(--ease-in) forwards; }
+[data-slot="modal"][data-alert][data-state="closed"][data-size="compact"] { animation: m-alert-out-up 200ms var(--ease-in) forwards; }
+
+@keyframes m-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-fade-out { to { opacity: 0; } }
+@keyframes m-zoom { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes m-zoom-out { to { opacity: 0; transform: scale(.97); } }
+@keyframes m-lift { from { transform: translateY(20px); } to { transform: none; } }
+@keyframes m-sheet-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-soft-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-slide-down { to { transform: translateY(100%); } }
+@keyframes m-sink { to { opacity: 0; transform: translateY(10px); } }
+@keyframes m-right { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes m-right-out { to { opacity: 0; transform: translateX(20px); } }
+@keyframes m-alert-up { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes m-alert-down { from { opacity: 0; transform: translateY(calc(50dvh - var(--tabh, 3.5rem))); } to { opacity: 1; transform: none; } }
+@keyframes m-alert-out-down { to { opacity: 0; transform: translateY(14px); } }
+@keyframes m-alert-out-up { to { opacity: 0; transform: translateY(calc(50dvh - var(--tabh, 3.5rem))); } }

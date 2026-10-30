@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { StatCard } from "@real/ui"
 import { TrendingUp, Users, Building2, Globe } from "lucide-react"
 
 const stats = [
@@ -55,16 +56,17 @@ export function StatsSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-2 gap-8 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
         >
           {stats.map((stat) => (
-            <motion.div key={stat.label} variants={item} className="flex flex-col items-center text-center md:items-start md:text-left">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10">
-                <stat.icon className="size-5 text-primary" />
-              </div>
-              <p className="mt-4 font-serif text-3xl text-foreground md:text-4xl">{stat.value}</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{stat.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{stat.description}</p>
+            <motion.div key={stat.label} variants={item}>
+              <StatCard
+                className="h-full p-6"
+                icon={<stat.icon aria-hidden="true" />}
+                label={stat.label}
+                value={stat.value}
+                hint={stat.description}
+              />
             </motion.div>
           ))}
         </motion.div>

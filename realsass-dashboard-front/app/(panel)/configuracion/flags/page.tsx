@@ -1,9 +1,9 @@
 'use client';
 
 import { CircleAlert, ToggleLeft, Globe, Loader2 } from 'lucide-react';
-import { Skeleton } from '@real/ui';
+import { Alert, SectionHeader, Skeleton } from '@real/ui';
 import { Switch } from '@real/ui';
-import { toast } from 'sonner';
+import { toast } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useFlags, useUpdateFlag } from '@/features/config-flags/hooks';
 import type { FeatureFlag } from '@/features/config/types';
@@ -31,15 +31,12 @@ export default function FlagsPage() {
 
   if (isLoading) return (
     <div className="space-y-2">
-      {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
+      {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
     </div>
   );
 
   if (error) return (
-    <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <CircleAlert className="h-4 w-4" />
-      Error al cargar feature flags.
-    </div>
+    <Alert variant="destructive">Error al cargar feature flags.</Alert>
   );
 
   const orgFlags    = flags.filter((f) => f.organizationId);
@@ -51,7 +48,7 @@ export default function FlagsPage() {
 
     return (
       <div className={cn(
-        'flex items-center justify-between gap-4 rounded-xl border px-4 py-3',
+        'flex items-center justify-between gap-4 rounded-lg border px-4 py-3',
         flag.enabled ? 'border-border bg-card' : 'border-border bg-card opacity-70',
       )}>
         <div className="min-w-0 flex-1">
@@ -64,7 +61,7 @@ export default function FlagsPage() {
               </span>
             )}
             {flag.rolloutPercentage < 100 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600">
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 border border-warning/20 text-warning-ink">
                 {flag.rolloutPercentage}% rollout
               </span>
             )}
@@ -90,17 +87,14 @@ export default function FlagsPage() {
     <div className="space-y-6">
       {orgFlags.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-medium text-foreground">Flags de tu organización</h2>
+          <SectionHeader title="Flags de tu organización" />
           {orgFlags.map((flag) => <FlagRow key={flag.id} flag={flag} />)}
         </section>
       )}
 
       {globalFlags.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-            <Globe className="h-3.5 w-3.5" />
-            Flags globales del sistema (solo lectura)
-          </h2>
+          <SectionHeader icon={<Globe />} title="Flags globales del sistema (solo lectura)" />
           {globalFlags.map((flag) => <FlagRow key={flag.id} flag={flag} />)}
         </section>
       )}

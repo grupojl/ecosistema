@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SiteFooter, type FooterColumn } from '@real/ui'
 
 interface StoreFooterProps {
   storeName:   string
@@ -15,41 +16,15 @@ interface StoreFooterProps {
   }
 }
 
-/** Server Component. Mismo pie en columnas que la base, con los enlaces REALES de la tienda (sin `#`). */
+/** Server Component. Pie en columnas de @real/ui con los enlaces REALES de la tienda (sin `#`). */
 export function StoreFooter({ storeName, description, poweredBy, homeHref, productsHref, categories, labels }: StoreFooterProps) {
+  const columns: FooterColumn[] = [
+    { title: labels.shop, links: [{ label: labels.home, href: homeHref }, { label: labels.products, href: productsHref }] },
+  ]
+  if (categories.length > 0) {
+    columns.push({ title: labels.categories, links: categories.slice(0, 6).map((c) => ({ label: c.name, href: c.href })) })
+  }
   return (
-    <footer className="bg-gray-100 text-gray-900 py-12 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-          <div className="col-span-2">
-            <h3 className="font-semibold text-sm mb-4">{storeName}</h3>
-            {description && <p className="text-xs text-gray-600 max-w-sm">{description}</p>}
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-sm mb-4">{labels.shop}</h3>
-            <ul className="space-y-2 text-xs text-gray-600">
-              <li><Link href={homeHref} className="hover:text-black">{labels.home}</Link></li>
-              <li><Link href={productsHref} className="hover:text-black">{labels.products}</Link></li>
-            </ul>
-          </div>
-
-          {categories.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-sm mb-4">{labels.categories}</h3>
-              <ul className="space-y-2 text-xs text-gray-600">
-                {categories.slice(0, 6).map((c) => (
-                  <li key={c.id}><Link href={c.href} className="hover:text-black">{c.name}</Link></li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-gray-300 pt-8">
-          <p className="text-xs text-gray-600 text-center">{poweredBy}</p>
-        </div>
-      </div>
-    </footer>
+    <SiteFooter className="mt-16" brand={storeName} tagline={description} columns={columns} legal={poweredBy} linkAs={Link} />
   )
 }

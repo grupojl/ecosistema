@@ -12,13 +12,13 @@ import { z } from 'zod';
 export const DEFAULT_STORE_COUNTRY = 'AR';
 
 export const StoreInfoSchema = z.object({
-  organizationId:   z.string().uuid(),
-  slug:             z.string().min(1),
-  name:             z.string().nullable(),
-  description:      z.string().nullable(),
-  logoUrl:          z.string().nullable(),
-  website:          z.string().nullable(),
-  countryCode:      z
+  organizationId: z.string().uuid(),
+  slug: z.string().min(1),
+  name: z.string().nullable(),
+  description: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  website: z.string().nullable(),
+  countryCode: z
     .string()
     .trim()
     .toUpperCase()

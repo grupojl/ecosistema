@@ -1,5 +1,5 @@
 export interface UpdateProductDto {
-  name?:        string;
+  name?: string;
   description?: string;
-  status?:      'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 }

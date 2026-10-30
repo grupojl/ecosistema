@@ -5,7 +5,7 @@
  * La UI vive en @real/ui; acá solo se cablea tRPC. La consulta corre únicamente con el modal abierto.
  */
 import { useState }       from 'react';
-import { toast }          from 'sonner';
+import { toast } from '@real/ui';
 import { DevicesDialog }  from '@real/ui';
 import { trpc }           from '@/lib/trpc/client';
 import { useAuth }        from '@/context/auth-context';

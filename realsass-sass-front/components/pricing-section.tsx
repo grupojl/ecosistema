@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { Badge, Button, Card, SectionIntro, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@real/ui"
 import { Check, ArrowRight } from "lucide-react"
 
 const plans = [
@@ -60,6 +61,8 @@ const container = {
   visible: { transition: { staggerChildren: 0.12 } },
 }
 
+const MotionCard = motion.create(Card)
+
 const item = {
   hidden: { opacity: 0, y: 30 },
   visible: {
@@ -79,15 +82,12 @@ export function PricingSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ type: "spring" as const, stiffness: 300, damping: 30 }}
-          className="mx-auto max-w-2xl text-center"
         >
-          <span className="text-xs font-semibold tracking-widest text-primary uppercase">Pricing</span>
-          <h2 className="mt-3 font-serif text-3xl text-foreground text-balance md:text-4xl lg:text-5xl">
-            Plans that scale with you
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Start free for 14 days. No credit card required. Upgrade or downgrade any time.
-          </p>
+          <SectionIntro
+            eyebrow="Pricing"
+            title="Plans that scale with you"
+            description="Start free for 14 days. No credit card required. Upgrade or downgrade any time."
+          />
         </motion.div>
 
         {/* Cards */}
@@ -99,54 +99,47 @@ export function PricingSection() {
           className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
         >
           {plans.map((plan) => (
-            <motion.div
+            <MotionCard
               key={plan.name}
               variants={item}
-              className={`relative flex flex-col overflow-hidden rounded-2xl border p-6 md:p-8 ${
-                plan.highlighted
-                  ? "border-primary bg-card shadow-xl shadow-primary/10"
-                  : "border-border bg-card"
-              }`}
+              className={`relative flex flex-col overflow-hidden ${plan.highlighted ? "border-primary shadow-lg" : ""}`}
             >
-              {plan.highlighted && (
-                <div className="absolute top-0 right-0 left-0 h-1 bg-primary" />
-              )}
+              {plan.highlighted && <div className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden="true" />}
 
-              <div>
-                <h3 className="text-base font-semibold text-foreground">{plan.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-              </div>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                  {plan.highlighted && <Badge>Popular</Badge>}
+                </div>
+                <CardDescription>{plan.description}</CardDescription>
+                <div className="flex items-baseline gap-1 pt-3">
+                  <span className="font-display text-4xl text-foreground md:text-5xl">
+                    {"$"}{plan.price}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{plan.period}</span>
+                </div>
+              </CardHeader>
 
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="font-serif text-4xl text-foreground md:text-5xl">
-                  {"$"}{plan.price}
-                </span>
-                <span className="text-sm text-muted-foreground">{plan.period}</span>
-              </div>
+              <CardContent className="flex-1">
+                <ul className="flex flex-col gap-3" role="list">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3">
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                      <span className="text-sm text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
 
-              <ul className="mt-8 flex flex-col gap-3" role="list">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span className="text-sm text-foreground">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-8 pt-2">
-                <a
-                  href="#"
-                  className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] ${
-                    plan.highlighted
-                      ? "bg-primary text-primary-foreground hover:opacity-90"
-                      : "border border-border bg-card text-foreground hover:bg-secondary"
-                  }`}
-                >
-                  {plan.cta}
-                  <ArrowRight className="size-4" />
-                </a>
-              </div>
-            </motion.div>
+              <CardFooter>
+                <Button asChild size="lg" variant={plan.highlighted ? "default" : "outline"} className="w-full">
+                  <a href="#">
+                    {plan.cta}
+                    <ArrowRight className="size-4" />
+                  </a>
+                </Button>
+              </CardFooter>
+            </MotionCard>
           ))}
         </motion.div>
       </div>

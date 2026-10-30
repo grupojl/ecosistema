@@ -10,6 +10,7 @@
 // pueda cambiar. Usa el mismo patrón de auth (Bearer Firebase token) que
 // @real/auth-client expone para el resto de la app.
 
+import { Alert, PageContainer, PageHeader } from '@real/ui'
 import { useCallback, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { getIdToken } from '@real/auth-client';
@@ -108,14 +109,11 @@ export default function PruebaAsistentePage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
-      <div>
-        <h1 className="text-xl font-semibold">Prueba del Asistente IA</h1>
-        <p className="text-sm text-muted-foreground">
-          Página de testing directo contra chat-ia-back ({CHAT_IA_URL}). No
-          persiste nada fuera de la sesión del asistente en el propio backend.
-        </p>
-      </div>
+    <PageContainer size="sm" className="space-y-4">
+      <PageHeader
+        title="Prueba del Asistente IA"
+        description={`Página de testing directo contra chat-ia-back (${CHAT_IA_URL}). No persiste nada fuera de la sesión del asistente en el propio backend.`}
+      />
 
       <p className="text-sm text-muted-foreground">
         Asistente de <span className="font-medium text-foreground">{organization?.name || organization?.slug || '...'}</span>
@@ -136,7 +134,7 @@ export default function PruebaAsistentePage() {
               >
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                    m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+                    m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
                   }`}
                 >
                   {m.role === 'user' ? (
@@ -165,10 +163,7 @@ export default function PruebaAsistentePage() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <CircleAlert className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
+            <Alert variant="destructive">{error}</Alert>
           )}
 
           <div className="flex gap-2">
@@ -189,6 +184,6 @@ export default function PruebaAsistentePage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

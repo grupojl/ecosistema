@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Skeleton } from '@real/ui';
+import { NativeSelect, Pagination, Label, Skeleton, Card, SectionHeader } from '@real/ui';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import {
@@ -46,10 +46,10 @@ export function TransactionsTable() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
+    <Card className="bg-card overflow-hidden">
       <div className="flex flex-col gap-3 p-4 border-b border-border">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Transacciones recientes</h2>
+          <SectionHeader size="sm" title="Transacciones recientes" />
           <div className="flex items-center gap-2">
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1 text-xs text-muted-foreground">
@@ -59,7 +59,7 @@ export function TransactionsTable() {
             <Button variant="outline" size="sm" onClick={() => setShowFilters((v) => !v)} className="h-8 gap-2 text-xs">
               <SlidersHorizontal className="h-3.5 w-3.5" />Filtros
               {hasActiveFilters && (
-                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[9px] font-bold" style={{ background: 'rgba(245,158,11,0.25)', color: '#fbbf24' }}>!</span>
+                <span className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-warning/25 text-[9px] font-bold text-warning-ink">!</span>
               )}
             </Button>
           </div>
@@ -68,23 +68,23 @@ export function TransactionsTable() {
         {showFilters && (
           <div className="flex flex-wrap items-end gap-3 pt-1">
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Estado</label>
-              <select
+              <Label className="text-xs text-muted-foreground">Estado</Label>
+              <NativeSelect
                 value={filters.estado ?? ''}
                 onChange={(e) => setFilters((prev) => ({ ...prev, page: 1, estado: e.target.value ? (e.target.value as EstadoTransaccion) : undefined }))}
-                className="h-8 text-xs rounded-md bg-secondary border border-border text-foreground px-2 min-w-36"
+                className="min-w-36"
               >
                 <option value="">Todos</option>
                 {ESTADOS.map((e) => <option key={e} value={e}>{ESTADO_LABELS[e]}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Desde</label>
-              <Input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} className="h-8 text-xs bg-secondary border-border w-36" />
+              <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Desde</label>
+              <Input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} className="h-8 text-xs bg-muted border-border w-36" />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Hasta</label>
-              <Input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} className="h-8 text-xs bg-secondary border-border w-36" />
+              <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Hasta</label>
+              <Input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} className="h-8 text-xs bg-muted border-border w-36" />
             </div>
             <Button size="sm" onClick={applyDateFilter} className="h-8 text-xs">Aplicar</Button>
           </div>
@@ -111,26 +111,26 @@ export function TransactionsTable() {
           <p className="text-sm text-muted-foreground">Sin transacciones</p>
         </div>
       ) : (
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-xs text-muted-foreground font-medium">ID</TableHead>
-              <TableHead className="text-xs text-muted-foreground font-medium">Descripcion</TableHead>
-              <TableHead className="text-xs text-muted-foreground font-medium">Proveedor</TableHead>
-              <TableHead className="text-xs text-muted-foreground font-medium">Estado</TableHead>
-              <TableHead className="text-xs text-muted-foreground font-medium text-right">Monto</TableHead>
-              <TableHead className="text-xs text-muted-foreground font-medium">Fecha</TableHead>
+              <TableHead className="">ID</TableHead>
+              <TableHead className="">Descripcion</TableHead>
+              <TableHead className="">Proveedor</TableHead>
+              <TableHead className="">Estado</TableHead>
+              <TableHead className=" text-right">Monto</TableHead>
+              <TableHead className="">Fecha</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transacciones.map((tx) => (
-              <TableRow key={tx.id} className="border-border hover:bg-secondary/50">
-                <TableCell className="text-xs text-muted-foreground font-mono">{tx.id.slice(0, 8)}...</TableCell>
-                <TableCell className="text-sm max-w-48 truncate">{tx.descripcion || tx.referencia || '—'}</TableCell>
-                <TableCell className="text-sm capitalize">{tx.proveedor}</TableCell>
-                <TableCell><TransactionStatusBadge estado={tx.estado} /></TableCell>
-                <TableCell className="text-right font-semibold text-sm">{formatMoney(tx.monto, tx.moneda)}</TableCell>
-                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(tx.createdAt)}</TableCell>
+              <TableRow key={tx.id} className="border-border hover:bg-muted/50">
+                <TableCell data-label="ID" className="text-xs text-muted-foreground font-mono">{tx.id.slice(0, 8)}...</TableCell>
+                <TableCell data-label="Descripción" className="text-sm max-w-48 truncate">{tx.descripcion || tx.referencia || '—'}</TableCell>
+                <TableCell data-label="Proveedor" className="text-sm capitalize">{tx.proveedor}</TableCell>
+                <TableCell data-label="Estado"><TransactionStatusBadge estado={tx.estado} /></TableCell>
+                <TableCell data-label="Monto" className="text-right font-semibold text-sm">{formatMoney(tx.monto, tx.moneda)}</TableCell>
+                <TableCell data-label="Fecha" className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(tx.createdAt)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -140,16 +140,9 @@ export function TransactionsTable() {
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-border">
           <p className="text-xs text-muted-foreground">{meta.total} transacciones — Pagina {meta.page} de {meta.totalPages}</p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={!meta.hasPrevPage} onClick={() => setFilters((prev) => ({ ...prev, page: (prev.page ?? 1) - 1 }))}>
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={!meta.hasNextPage} onClick={() => setFilters((prev) => ({ ...prev, page: (prev.page ?? 1) + 1 }))}>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <Pagination page={meta.page} pageCount={meta.totalPages} onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))} label="Paginación de transacciones" />
         </div>
       )}
-    </div>
+    </Card>
   );
 }

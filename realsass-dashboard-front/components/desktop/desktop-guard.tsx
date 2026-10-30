@@ -9,7 +9,9 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { CircleAlert } from 'lucide-react'
-import { Button } from '@real/ui'
+import {
+  AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, Button, Card,
+} from '@real/ui'
 import { trpc } from '@/lib/trpc/client'
 import {
   detectOs, evaluateVersion, getDesktopBridge, readConsent, writeConsent,
@@ -58,43 +60,45 @@ export function DesktopGuard() {
   const verdict = evaluateVersion(bridge.version, policy.data)
   if (verdict !== 'ok') {
     return (
-      <div role="alertdialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center bg-background p-4">
-        <div className="max-w-sm text-center space-y-4">
-          <CircleAlert className="h-10 w-10 text-destructive mx-auto" />
-          <h1 className="text-lg font-semibold">
-            {verdict === 'blocked' ? 'Esta versión tiene un problema' : 'Hay una versión nueva'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {verdict === 'blocked'
-              ? 'Corregimos un error en una versión más nueva. Instalala para seguir usando el panel.'
-              : 'Esta versión de la aplicación ya no es compatible. Instalá la nueva para seguir usando el panel.'}
-          </p>
+      <AlertDialog open>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <CircleAlert className="mx-auto h-10 w-10 text-destructive" aria-hidden="true" />
+            <AlertDialogTitle>
+              {verdict === 'blocked' ? 'Esta versión tiene un problema' : 'Hay una versión nueva'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {verdict === 'blocked'
+                ? 'Corregimos un error en una versión más nueva. Instalala para seguir usando el panel.'
+                : 'Esta versión de la aplicación ya no es compatible. Instalá la nueva para seguir usando el panel.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           {policy.data?.downloadUrl && (
-            <Button asChild className="min-h-11">
+            <Button asChild>
               <a href={policy.data.downloadUrl} target="_blank" rel="noreferrer">Descargar la versión nueva</a>
             </Button>
           )}
-          <p className="text-xs text-muted-foreground">Versión instalada: {bridge.version}</p>
-        </div>
-      </div>
+          <p className="text-center text-xs text-muted-foreground">Versión instalada: {bridge.version}</p>
+        </AlertDialogContent>
+      </AlertDialog>
     )
   }
 
   if (consent === null) {
     const answer = (value: 'granted' | 'denied') => { writeConsent(window.localStorage, value); setConsent(value) }
     return (
-      <div role="dialog" aria-label="Ayudanos a mejorar la aplicación"
-        className="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-sm z-[90] rounded-lg border bg-card p-4 shadow-lg space-y-3">
+      <Card role="dialog" aria-label="Ayudanos a mejorar la aplicación"
+        className="fixed bottom-4 right-4 left-4 z-[90] space-y-3 p-4 shadow-lg medium:left-auto medium:max-w-sm">
         <p className="text-sm font-medium">¿Nos ayudás a mejorar la aplicación?</p>
         <p className="text-xs text-muted-foreground">
           Si aceptás, enviamos la versión instalada, tu sistema operativo y los errores que ocurran en el panel.
           Nunca enviamos datos tuyos ni de tu negocio. Podés cambiarlo cuando quieras.
         </p>
         <div className="flex gap-2">
-          <Button className="min-h-11 flex-1" onClick={() => answer('granted')}>Aceptar</Button>
-          <Button className="min-h-11 flex-1" variant="outline" onClick={() => answer('denied')}>No, gracias</Button>
+          <Button className="flex-1" onClick={() => answer('granted')}>Aceptar</Button>
+          <Button className="flex-1" variant="outline" onClick={() => answer('denied')}>No, gracias</Button>
         </div>
-      </div>
+      </Card>
     )
   }
 

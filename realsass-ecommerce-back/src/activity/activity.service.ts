@@ -16,7 +16,7 @@ export class ActivityService {
     customerId?: string,
     payload: Record<string, unknown> = {},
   ) {
-    return this.prisma.customerActivityEvent.create({
+    return this.prisma.forTenant(organizationId).customerActivityEvent.create({
       data: {
         organizationId,
         sessionId,

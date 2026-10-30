@@ -14,8 +14,19 @@ export class ConfigCacheService {
     return raw ? (JSON.parse(raw) as T) : null;
   }
 
-  async set(orgId: string, tipo: string, k: string, value: unknown, ttl: number): Promise<void> {
-    await this.redis.set(this.key(orgId, tipo, k), JSON.stringify(value), 'EX', ttl);
+  async set(
+    orgId: string,
+    tipo: string,
+    k: string,
+    value: unknown,
+    ttl: number,
+  ): Promise<void> {
+    await this.redis.set(
+      this.key(orgId, tipo, k),
+      JSON.stringify(value),
+      'EX',
+      ttl,
+    );
   }
 
   async del(orgId: string, tipo: string, k?: string): Promise<void> {
@@ -23,7 +34,7 @@ export class ConfigCacheService {
       await this.redis.del(this.key(orgId, tipo, k));
     } else {
       const pattern = `config:${orgId}:${tipo}:*`;
-      const keys    = await this.redis.keys(pattern);
+      const keys = await this.redis.keys(pattern);
       if (keys.length) await this.redis.del(...keys);
     }
   }

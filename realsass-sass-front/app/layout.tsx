@@ -1,13 +1,19 @@
 import { TrpcProvider } from '@/lib/trpc/provider';
 import type { Metadata, Viewport } from 'next'
-import { DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { Inter, Source_Serif_4, JetBrains_Mono } from 'next/font/google'
 
 import { AuthProvider } from '@/components/auth-provider-wrapper'
-import { Toaster } from '@real/ui'
+import { ThemeProvider, ToastViewport, THEME_COLOR } from '@real/ui'
+import { I18nProvider, localeDir } from '@real/i18n'
+import { getRequestLocale } from '@real/i18n/server'
+import { getDictionary } from '@/lib/i18n'
 import './globals.css'
 
-const dmSans  = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' })
-const dmSerif = DM_Serif_Display({ weight: '400', subsets: ['latin'], variable: '--font-dm-serif' })
+// Tipografía Welver (.claude/domain/welver.html): Inter (texto), Source Serif 4 (títulos), JetBrains Mono (código)
+const inter         = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
+const sourceSerif   = Source_Serif_4({ subsets: ['latin'], variable: '--font-source-serif', display: 'swap' })
+const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains-mono', display: 'swap' })
+const fontVars      = `${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable}`
 
 export const metadata: Metadata = {
   title: 'Propiedad - The Real Estate Platform for Modern Agencies',
@@ -17,23 +23,26 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#f5f0eb',
+  themeColor: [...THEME_COLOR],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getRequestLocale()
   return (
-    <html lang="en" suppressHydrationWarning className={`${dmSans.variable} ${dmSerif.variable}`}>
+    <html lang={locale} dir={localeDir(locale)} suppressHydrationWarning className={fontVars}>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <I18nProvider locale={locale} messages={getDictionary(locale)}>
+        <ThemeProvider>
         <AuthProvider>
           <TrpcProvider>{children}</TrpcProvider>
         </AuthProvider>
-        <Toaster />
+        <ToastViewport />
+        </ThemeProvider>
+        </I18nProvider>
 
       </body>
     </html>

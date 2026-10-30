@@ -104,19 +104,25 @@ async function trpcSyncUser(token: string, affiliateCode?: string): Promise<void
 
 /** Con `token` va como Bearer; sin token autentica la cookie HttpOnly (sesión iniciada en otro front). */
 async function trpcGetMe(token: string | null): Promise<UserProfile | null> {
-  try {
-    const url = `${getSassBackUrl()}/api/v1/trpc/auth.me`
-    const res = await fetch(url, {
-      credentials: 'include',
-      headers:     token ? { 'Authorization': `Bearer ${token}` } : {},
-    })
-    if (!res.ok) return null
-    // Sin transformer en el router: el resultado viene en result.data (antes se leía .json y daba siempre null)
-    const json = await res.json()
-    return (json?.result?.data as UserProfile | undefined) ?? null
-  } catch {
-    return null
+  const url = `${getSassBackUrl()}/api/v1/trpc/auth.me`
+  // 401/403 = sin sesión. Red caída / 5xx / back arrancando son transitorios: se reintenta antes de rendirse, o el
+  // login quedaba a la vista hasta el próximo auth.ping (~30 s) aunque la sesión fuera válida.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers:     token ? { 'Authorization': `Bearer ${token}` } : {},
+      })
+      if (res.status === 401 || res.status === 403) return null
+      if (res.ok) {
+        // Sin transformer en el router: el resultado viene en result.data (antes se leía .json y daba siempre null)
+        const json = await res.json()
+        return (json?.result?.data as UserProfile | undefined) ?? null
+      }
+    } catch { /* transitorio: se reintenta */ }
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 800 * (attempt + 1)))
   }
+  return null
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────

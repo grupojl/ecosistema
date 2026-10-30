@@ -12,88 +12,92 @@ import {
   type NestModule,
   type MiddlewareConsumer,
 } from '@nestjs/common';
-import { createExpressMiddleware }  from '@trpc/server/adapters/express';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { createTrpcAuthMiddleware } from '@real/auth-server';
 
-import { createAppRouter }          from '@/trpc/app-router';
-import { createTrpcContext }        from '@/trpc/trpc';
+import { createAppRouter } from '@/trpc/app-router';
+import { createTrpcContext } from '@/trpc/trpc';
 
-import { UsersService }             from '@/users/users.service';
-import { AuthService }              from '@/auth/auth.service';
-import { DesktopLoginService }     from '@/auth/desktop-login.service';
-import { OrganizationsService }     from '@/organizations/organizations.service';
-import { CollaboratorsService }     from '@/collaborators/collaborators.service';
-import { ConfigFlagsService }       from '@/config-flags/config-flags.service';
-import { ConfigQuotasService }      from '@/config-quotas/config-quotas.service';
-import { ConfigThemesService }      from '@/config-themes/config-themes.service';
-import { ConfigWebhooksService }    from '@/config-webhooks/config-webhooks.service';
-import { ConfigAuditService }       from '@/config-audit/config-audit.service';
-import { ConfigTemplatesService }    from '@/config-templates/config-templates.service';
-import { AffiliatesService }          from '@/affiliate/affiliate.service';
-import { ConfigTemplatesModule }      from '@/config-templates/config-templates.module';
-import { AffiliatesModule }            from '@/affiliate/affiliate.module';
-import { ConfigSecretsService }     from '@/config-secrets/config-secrets.service';
+import { UsersService } from '@/users/users.service';
+import { AuthService } from '@/auth/auth.service';
+import { DesktopLoginService } from '@/auth/desktop-login.service';
+import { OrganizationsService } from '@/organizations/organizations.service';
+import { CollaboratorsService } from '@/collaborators/collaborators.service';
+import { ConfigFlagsService } from '@/config-flags/config-flags.service';
+import { ConfigQuotasService } from '@/config-quotas/config-quotas.service';
+import { ConfigThemesService } from '@/config-themes/config-themes.service';
+import { ConfigWebhooksService } from '@/config-webhooks/config-webhooks.service';
+import { ConfigAuditService } from '@/config-audit/config-audit.service';
+import { ConfigTemplatesService } from '@/config-templates/config-templates.service';
+import { AffiliatesService } from '@/affiliate/affiliate.service';
+import { ConfigTemplatesModule } from '@/config-templates/config-templates.module';
+import { AffiliatesModule } from '@/affiliate/affiliate.module';
+import { ConfigSecretsService } from '@/config-secrets/config-secrets.service';
 
-import { UsersModule }              from '@/users/users.module';
-import { AuthModule }               from '@/auth/auth.module';
-import { OrganizationsModule }      from '@/organizations/organizations.module';
-import { CollaboratorsModule }      from '@/collaborators/collaborators.module';
-import { ConfigFlagsModule }        from '@/config-flags/config-flags.module';
-import { ConfigQuotasModule }       from '@/config-quotas/config-quotas.module';
-import { ConfigThemesModule }       from '@/config-themes/config-themes.module';
-import { ConfigWebhooksModule }     from '@/config-webhooks/config-webhooks.module';
-import { ConfigAuditModule }        from '@/config-audit/config-audit.module';
-import { ConfigSecretsModule }      from '@/config-secrets/config-secrets.module';
-import { MarketsService }             from '@/markets/markets.service';
-import { MarketsModule }               from '@/markets/markets.module';
-import { SessionsService }             from '@/sessions/sessions.service';
-import { SessionsModule }              from '@/sessions/sessions.module';
-import { WhatsappService }             from '@/whatsapp/whatsapp.service';
-import { WhatsappModule }              from '@/whatsapp/whatsapp.module';
-import { DesktopService }              from '@/desktop/desktop.service';
-import { DesktopModule }               from '@/desktop/desktop.module';
+import { UsersModule } from '@/users/users.module';
+import { AuthModule } from '@/auth/auth.module';
+import { OrganizationsModule } from '@/organizations/organizations.module';
+import { CollaboratorsModule } from '@/collaborators/collaborators.module';
+import { ConfigFlagsModule } from '@/config-flags/config-flags.module';
+import { ConfigQuotasModule } from '@/config-quotas/config-quotas.module';
+import { ConfigThemesModule } from '@/config-themes/config-themes.module';
+import { ConfigWebhooksModule } from '@/config-webhooks/config-webhooks.module';
+import { ConfigAuditModule } from '@/config-audit/config-audit.module';
+import { ConfigSecretsModule } from '@/config-secrets/config-secrets.module';
+import { MarketsService } from '@/markets/markets.service';
+import { MarketsModule } from '@/markets/markets.module';
+import { SessionsService } from '@/sessions/sessions.service';
+import { SessionsModule } from '@/sessions/sessions.module';
+import { WhatsappService } from '@/whatsapp/whatsapp.service';
+import { WhatsappModule } from '@/whatsapp/whatsapp.module';
+import { FeedbackService } from '@/feedback/feedback.service';
+import { FeedbackModule } from '@/feedback/feedback.module';
+import { DesktopService } from '@/desktop/desktop.service';
+import { DesktopModule } from '@/desktop/desktop.module';
 
 @Injectable()
 export class TrpcService {
   constructor(
-    private readonly users:         UsersService,
-    private readonly auth:          AuthService,
-    private readonly desktopLogin:  DesktopLoginService,
-    private readonly orgs:          OrganizationsService,
+    private readonly users: UsersService,
+    private readonly auth: AuthService,
+    private readonly desktopLogin: DesktopLoginService,
+    private readonly orgs: OrganizationsService,
     private readonly collaborators: CollaboratorsService,
-    private readonly flags:         ConfigFlagsService,
-    private readonly quotas:        ConfigQuotasService,
-    private readonly themes:        ConfigThemesService,
-    private readonly webhooks:      ConfigWebhooksService,
-    private readonly audit:         ConfigAuditService,
-    private readonly secrets:       ConfigSecretsService,
-    private readonly templates:     ConfigTemplatesService,
-    private readonly affiliates:    AffiliatesService,
-    private readonly markets:       MarketsService,
-    private readonly sessions:      SessionsService,
-    private readonly whatsapp:      WhatsappService,
-    private readonly desktop:       DesktopService,
+    private readonly flags: ConfigFlagsService,
+    private readonly quotas: ConfigQuotasService,
+    private readonly themes: ConfigThemesService,
+    private readonly webhooks: ConfigWebhooksService,
+    private readonly audit: ConfigAuditService,
+    private readonly secrets: ConfigSecretsService,
+    private readonly templates: ConfigTemplatesService,
+    private readonly affiliates: AffiliatesService,
+    private readonly markets: MarketsService,
+    private readonly sessions: SessionsService,
+    private readonly whatsapp: WhatsappService,
+    private readonly feedback: FeedbackService,
+    private readonly desktop: DesktopService,
   ) {}
 
   get handler() {
     const router = createAppRouter({
-      usersService:         this.users,
-      authService:          this.auth,
-      desktopLoginService:  this.desktopLogin,
-      orgsService:          this.orgs,
+      usersService: this.users,
+      authService: this.auth,
+      desktopLoginService: this.desktopLogin,
+      orgsService: this.orgs,
       collaboratorsService: this.collaborators,
-      flagsService:         this.flags,
-      quotasService:        this.quotas,
-      themesService:        this.themes,
-      webhooksService:      this.webhooks,
-      auditService:         this.audit,
-      secretsService:       this.secrets,
-      marketsService:     this.markets,
-      templatesService:   this.templates,
-      affiliatesService:  this.affiliates,
-      sessionsService:    this.sessions,
-      whatsappService:    this.whatsapp,
-      desktopService:     this.desktop,
+      flagsService: this.flags,
+      quotasService: this.quotas,
+      themesService: this.themes,
+      webhooksService: this.webhooks,
+      auditService: this.audit,
+      secretsService: this.secrets,
+      marketsService: this.markets,
+      templatesService: this.templates,
+      affiliatesService: this.affiliates,
+      sessionsService: this.sessions,
+      whatsappService: this.whatsapp,
+      feedbackService: this.feedback,
+      desktopService: this.desktop,
     });
 
     return createExpressMiddleware({
@@ -130,6 +134,7 @@ export class TrpcService {
     MarketsModule,
     SessionsModule,
     WhatsappModule,
+    FeedbackModule,
     DesktopModule,
   ],
   providers: [TrpcService],

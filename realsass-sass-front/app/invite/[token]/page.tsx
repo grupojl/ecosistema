@@ -9,8 +9,8 @@
  */
 import { useParams, useRouter }  from 'next/navigation'
 import { motion }                from 'framer-motion'
-import { Building2, Check, X, Loader2, ShieldCheck, CircleAlert, LogIn } from 'lucide-react'
-import { Button }                from '@real/ui'
+import { Building2, Check, Loader2, ShieldCheck, LogIn } from 'lucide-react'
+import { Alert, Button, EmptyState, Spinner, Card, PageHeader } from '@real/ui'
 import { useAuth }               from '@/context/auth-context'
 import { useInvitationInfo, useAcceptInvitation } from '@/hooks/use-collaborators'
 import { getErrorMessage }       from '@/lib/errors'
@@ -33,18 +33,19 @@ export default function InvitePage() {
 
   if (isLoading || authLoading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <Spinner />
     </div>
   )
 
   if (error) return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-sm w-full text-center space-y-4">
-        <X className="h-12 w-12 text-destructive mx-auto" />
-        <h2 className="font-semibold text-lg">Invitación inválida</h2>
-        <p className="text-sm text-muted-foreground">{getErrorMessage(error)}</p>
-        <Button variant="outline" onClick={() => router.push('/')}>Ir al inicio</Button>
-      </div>
+      <EmptyState
+        kind="error"
+        className="max-w-sm w-full"
+        title="Invitación inválida"
+        description={getErrorMessage(error)}
+        action={<Button variant="outline" onClick={() => router.push('/')}>Ir al inicio</Button>}
+      />
     </div>
   )
 
@@ -60,18 +61,17 @@ export default function InvitePage() {
         animate={{ opacity: 1,  y: 0  }}
         className="max-w-sm w-full space-y-6"
       >
-        <div className="text-center space-y-2">
-          <Building2 className="h-12 w-12 text-primary mx-auto" />
-          <h1 className="text-xl font-semibold">Invitación a colaborar</h1>
-          {org?.name && (
-            <p className="text-muted-foreground text-sm">
-              Fuiste invitado a <strong>{org.name}</strong>
-            </p>
-          )}
+        <div className="space-y-2 text-center">
+          <Building2 className="mx-auto h-12 w-12 text-primary" aria-hidden="true" />
+          <PageHeader
+            className="text-center"
+            title="Invitación a colaborar"
+            description={org?.name ? <>Fuiste invitado a <strong>{org.name}</strong></> : undefined}
+          />
         </div>
 
         {!isAuthenticated ? (
-          <div className="rounded-xl border p-4 space-y-3 text-center">
+          <Card className="p-4 space-y-3 text-center">
             <ShieldCheck className="h-6 w-6 text-muted-foreground mx-auto" />
             <p className="text-sm text-muted-foreground">
               Necesitás iniciar sesión con <strong>{email}</strong> para aceptar la invitación
@@ -79,22 +79,19 @@ export default function InvitePage() {
             <Button className="w-full" onClick={() => router.push(`/?invite=${token}`)}>
               <LogIn className="h-4 w-4 mr-2" /> Iniciar sesión
             </Button>
-          </div>
+          </Card>
         ) : accept.isSuccess ? (
-          <div className="rounded-xl border p-6 text-center space-y-3">
-            <Check className="h-8 w-8 text-green-500 mx-auto" />
+          <Card className="p-6 text-center space-y-3">
+            <Check className="h-8 w-8 text-success-ink mx-auto" />
             <p className="font-medium">¡Invitación aceptada!</p>
             <Button className="w-full" onClick={() => router.push('/profile')}>
               Ir al perfil
             </Button>
-          </div>
+          </Card>
         ) : (
           <div className="space-y-3">
             {accept.error && (
-              <div className="flex items-center gap-2 text-destructive text-sm p-3 rounded-lg border border-destructive/20">
-                <CircleAlert className="h-4 w-4 shrink-0" />
-                {getErrorMessage(accept.error)}
-              </div>
+              <Alert variant="destructive">{getErrorMessage(accept.error)}</Alert>
             )}
             <Button
               className="w-full"

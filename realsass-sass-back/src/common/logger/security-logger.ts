@@ -18,35 +18,35 @@ import { Logger } from '@nestjs/common';
 
 export interface SecurityEventBase {
   securityEvent: true;
-  service:       'realsass-sass-back';
-  timestamp:     string;
+  service: 'realsass-sass-back';
+  timestamp: string;
 }
 
 export interface AuthFailureEvent extends SecurityEventBase {
-  event:       'auth.failure';
-  uid?:        string;
-  reason:      string;
-  ip?:         string;
-  path?:       string;
+  event: 'auth.failure';
+  uid?: string;
+  reason: string;
+  ip?: string;
+  path?: string;
 }
 
 export interface CrossTenantAttemptEvent extends SecurityEventBase {
-  event:          'auth.cross_tenant';
-  uid:            string;
+  event: 'auth.cross_tenant';
+  uid: string;
   organizationId: string;
-  reason:         string;
+  reason: string;
 }
 
 export interface RateLimitHitEvent extends SecurityEventBase {
-  event:  'rate_limit.hit';
-  ip?:    string;
-  path:   string;
-  limit:  number;
+  event: 'rate_limit.hit';
+  ip?: string;
+  path: string;
+  limit: number;
 }
 
 export interface SessionRevokedEvent extends SecurityEventBase {
-  event:  'auth.session_revoked';
-  uid:    string;
+  event: 'auth.session_revoked';
+  uid: string;
   reason: 'logout' | 'admin' | 'security';
 }
 
@@ -59,8 +59,8 @@ type SecurityEvent =
 function base(): SecurityEventBase {
   return {
     securityEvent: true,
-    service:       'realsass-sass-back',
-    timestamp:     new Date().toISOString(),
+    service: 'realsass-sass-back',
+    timestamp: new Date().toISOString(),
   };
 }
 
@@ -69,7 +69,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<AuthFailureEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: AuthFailureEvent = { ...base(), event: 'auth.failure', ...data };
+    const event: AuthFailureEvent = {
+      ...base(),
+      event: 'auth.failure',
+      ...data,
+    };
     logger.warn(event);
   }
 
@@ -77,7 +81,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<CrossTenantAttemptEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: CrossTenantAttemptEvent = { ...base(), event: 'auth.cross_tenant', ...data };
+    const event: CrossTenantAttemptEvent = {
+      ...base(),
+      event: 'auth.cross_tenant',
+      ...data,
+    };
     logger.warn(event);
   }
 
@@ -85,7 +93,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<RateLimitHitEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: RateLimitHitEvent = { ...base(), event: 'rate_limit.hit', ...data };
+    const event: RateLimitHitEvent = {
+      ...base(),
+      event: 'rate_limit.hit',
+      ...data,
+    };
     logger.warn(event);
   }
 
@@ -93,7 +105,11 @@ export class SecurityLogger {
     logger: Logger,
     data: Omit<SessionRevokedEvent, keyof SecurityEventBase | 'event'>,
   ): void {
-    const event: SessionRevokedEvent = { ...base(), event: 'auth.session_revoked', ...data };
+    const event: SessionRevokedEvent = {
+      ...base(),
+      event: 'auth.session_revoked',
+      ...data,
+    };
     logger.log(event);
   }
 }

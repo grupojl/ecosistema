@@ -3,8 +3,8 @@
 // Client Component — toda la lógica interactiva de productos.
 // La page.tsx (Server Component) hace el prefetch y pasa el estado hidratado aquí.
 import { useState } from 'react';
-import { Archive, CircleAlert, Loader2, Pencil, Plus } from 'lucide-react';
-import { toast } from 'sonner';
+import { Archive, CircleAlert, EllipsisVertical, Loader2, Pencil, Plus } from 'lucide-react';
+import { toast } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useProducts, useDeleteProduct } from '@/features/store/hooks';
 import {
@@ -13,7 +13,7 @@ import {
 import type { Product, ProductStatus } from '@/features/store/types';
 import { ProductSheet } from '@/components/dashboard/product-sheet';
 import { ArchiveProductDialog } from '@/components/dashboard/delete-product-dialog';
-import { Badge } from '@real/ui';
+import { ActionMenu, Badge } from '@real/ui';
 import { Button } from '@real/ui';
 import { Input } from '@real/ui';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@real/ui';
@@ -104,7 +104,7 @@ export function ProductosView() {
         </Button>
       </div>
 
-      <Table>
+      <Table stack>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
@@ -125,28 +125,30 @@ export function ProductosView() {
           )}
           {filtered.map((product) => (
             <TableRow key={product.id}>
-              <TableCell>
+              <TableCell data-label="Nombre">
                 <p className="font-medium">{product.name}</p>
                 <p className="font-mono text-xs text-muted-foreground">{product.handle}</p>
               </TableCell>
-              <TableCell>
+              <TableCell data-label="Estado">
                 <Badge variant={PRODUCT_STATUS_BADGE[product.status]}>{PRODUCT_STATUS_LABEL[product.status]}</Badge>
               </TableCell>
-              <TableCell className="text-right">{product.variants.length}</TableCell>
-              <TableCell className="text-right font-mono">{stockOf(product)}</TableCell>
-              <TableCell className="text-right font-mono text-sm">{priceRange(product)}</TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" title="Editar"
-                    onClick={() => setSheet({ open: true, product })}>
-                    <Pencil className="h-4 w-4" />
+              <TableCell data-label="Variantes" className="text-right">{product.variants.length}</TableCell>
+              <TableCell data-label="Stock" className="text-right font-mono">{stockOf(product)}</TableCell>
+              <TableCell data-label="Precio" className="text-right font-mono text-sm">{priceRange(product)}</TableCell>
+              <TableCell data-label="Acciones">
+                <ActionMenu
+                  title={`Acciones de ${product.name}`}
+                  items={[
+                    { label: 'Editar', icon: <Pencil />, onSelect: () => setSheet({ open: true, product }) },
+                    ...(product.status !== 'ARCHIVED'
+                      ? [{ label: 'Archivar', icon: <Archive />, destructive: true, onSelect: () => setArchiving(product) }]
+                      : []),
+                  ]}
+                >
+                  <Button variant="ghost" size="icon" aria-label={`Acciones de ${product.name}`}>
+                    <EllipsisVertical className="h-4 w-4" />
                   </Button>
-                  {product.status !== 'ARCHIVED' && (
-                    <Button variant="ghost" size="icon" title="Archivar" onClick={() => setArchiving(product)}>
-                      <Archive className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                </ActionMenu>
               </TableCell>
             </TableRow>
           ))}

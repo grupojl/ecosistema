@@ -9,33 +9,37 @@
  *
  * El tema público del storefront NO sale de acá (getPublicTheme es del flujo público).
  */
-import { z }                                      from 'zod';
-import { TRPCError }                            from '@trpc/server';
-import { router, publicProcedure, tenantProcedure, ownerProcedure } from '@/trpc';
-import type { ConfigThemesService }               from '@/config-themes/config-themes.service';
-import type { OrganizationsService }              from '@/organizations/organizations.service';
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import {
+  router,
+  publicProcedure,
+  tenantProcedure,
+  ownerProcedure,
+} from '@/trpc';
+import type { ConfigThemesService } from '@/config-themes/config-themes.service';
+import type { OrganizationsService } from '@/organizations/organizations.service';
 
 const HexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
 
 const ThemeCreateInput = z.object({
-  name:           z.string().min(1).max(100),
-  primaryColor:   HexColor.optional(),
+  name: z.string().min(1).max(100),
+  primaryColor: HexColor.optional(),
   secondaryColor: HexColor.optional(),
-  accentColor:    HexColor.optional(),
-  fontFamily:     z.string().max(100).optional(),
-  borderRadius:   z.string().max(20).optional(),
-  logoUrl:        z.string().url().optional(),
-  faviconUrl:     z.string().url().optional(),
-  darkMode:       z.boolean().optional(),
-  customCSS:      z.string().max(50_000).optional(),
+  accentColor: HexColor.optional(),
+  fontFamily: z.string().max(100).optional(),
+  borderRadius: z.string().max(20).optional(),
+  logoUrl: z.string().url().optional(),
+  faviconUrl: z.string().url().optional(),
+  darkMode: z.boolean().optional(),
+  customCSS: z.string().max(50_000).optional(),
 });
 
 export function createConfigThemesRouter(
   themesService: ConfigThemesService,
-  orgsService:   OrganizationsService,
+  orgsService: OrganizationsService,
 ) {
   return router({
-
     /**
      * configThemes.getPublicTheme
      * Tema activo de una org por slug — PÚBLICO (lo consume el storefront y el layout de sass-front).
@@ -45,7 +49,11 @@ export function createConfigThemesRouter(
       .input(z.object({ orgSlug: z.string().min(1).max(100) }))
       .query(async ({ input }) => {
         const org = await orgsService.findBySlugPublic(input.orgSlug);
-        if (!org) throw new TRPCError({ code: 'NOT_FOUND', message: 'Organización no encontrada' });
+        if (!org)
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Organización no encontrada',
+          });
         return themesService.getPublicTheme(org.organizationId);
       }),
 
@@ -74,7 +82,11 @@ export function createConfigThemesRouter(
     activate: tenantProcedure
       .input(z.object({ themeId: z.string().uuid() }))
       .mutation(async ({ ctx, input }) => {
-        return themesService.activate(ctx.organizationId, ctx.uid, input.themeId);
+        return themesService.activate(
+          ctx.organizationId,
+          ctx.uid,
+          input.themeId,
+        );
       }),
 
     /**

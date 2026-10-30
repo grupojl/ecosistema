@@ -26,3 +26,7 @@ url,env.txt
 # Respaldos locales
 *.bak
 *.bak2
+
+# Respaldos de pnpm ui:migrate
+.ui-backup/
+realsass-design-front/snapshots/__nuevo__/

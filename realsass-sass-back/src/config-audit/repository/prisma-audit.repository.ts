@@ -1,9 +1,13 @@
-import { Injectable }    from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { z }             from 'zod';
-import type { Prisma }   from '@/generated/prisma';
+import { z } from 'zod';
+import type { Prisma } from '@/generated/prisma';
 import type { IAuditRepository } from '@/config-audit/repository/audit.repository.interface';
-import type { AuditLog, CreateAuditLogInput, AuditLogFilters } from '@/domain/audit-log.entity';
+import type {
+  AuditLog,
+  CreateAuditLogInput,
+  AuditLogFilters,
+} from '@/domain/audit-log.entity';
 
 type PrismaAuditLog = Prisma.ConfigAuditLogGetPayload<Record<string, never>>;
 
@@ -16,18 +20,18 @@ export class PrismaAuditRepository implements IAuditRepository {
 
   private toEntity(row: PrismaAuditLog): AuditLog {
     return {
-      id:             row.id,
+      id: row.id,
       organizationId: row.organizationId,
-      userId:         row.userId,
-      configType:     row.configType,
-      configKey:      row.configKey,
-      action:         row.action,
-      previousValue:  row.previousValue,
-      newValue:       row.newValue,
-      diff:           DiffSchema.parse(row.diff),
-      reason:         row.reason,
-      ipAddress:      row.ipAddress,
-      createdAt:      row.createdAt,
+      userId: row.userId,
+      configType: row.configType,
+      configKey: row.configKey,
+      action: row.action,
+      previousValue: row.previousValue,
+      newValue: row.newValue,
+      diff: DiffSchema.parse(row.diff),
+      reason: row.reason,
+      ipAddress: row.ipAddress,
+      createdAt: row.createdAt,
     };
   }
 
@@ -45,18 +49,20 @@ export class PrismaAuditRepository implements IAuditRepository {
       where: {
         organizationId,
         ...(filters.configType ? { configType: filters.configType } : {}),
-        ...(filters.userId     ? { userId:     filters.userId     } : {}),
-        ...(filters.from || filters.to ? {
-          createdAt: {
-            ...(filters.from ? { gte: filters.from } : {}),
-            ...(filters.to   ? { lte: filters.to   } : {}),
-          },
-        } : {}),
+        ...(filters.userId ? { userId: filters.userId } : {}),
+        ...(filters.from || filters.to
+          ? {
+              createdAt: {
+                ...(filters.from ? { gte: filters.from } : {}),
+                ...(filters.to ? { lte: filters.to } : {}),
+              },
+            }
+          : {}),
       },
       orderBy: { createdAt: 'desc' },
       take,
       skip,
     });
-    return rows.map(r => this.toEntity(r));
+    return rows.map((r) => this.toEntity(r));
   }
 }

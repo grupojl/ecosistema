@@ -6,11 +6,11 @@ import { z } from 'zod';
 // ── GET /internal/organizations ───────────────────────────────────────────────
 export const InternalListOrgsSchema = z.object({
   ecosystemId: z.string().optional(),
-  status:      z.enum(['ACTIVE', 'SUSPENDED', 'BLOCKED']).optional(),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'BLOCKED']).optional(),
   storeStatus: z.enum(['ACTIVE', 'PAUSED']).optional(),
-  page:        z.coerce.number().int().positive().default(1),
-  limit:       z.coerce.number().int().min(1).max(100).default(50),
-  search:      z.string().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  search: z.string().optional(),
 });
 export type InternalListOrgsDto = z.infer<typeof InternalListOrgsSchema>;
 

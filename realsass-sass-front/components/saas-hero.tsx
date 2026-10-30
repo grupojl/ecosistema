@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from '@real/ui'
 import { motion } from "framer-motion"
 import Image from "next/image"
 import { ArrowRight, Play } from "lucide-react"
@@ -28,7 +29,7 @@ export function SaasHero() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...spring, delay: 0.2 }}
-            className="mt-6 max-w-4xl font-serif text-4xl leading-tight tracking-tight text-foreground text-balance md:text-5xl lg:text-7xl lg:leading-[1.1]"
+            className="mt-6 max-w-4xl font-display text-4xl leading-tight tracking-tight text-foreground text-balance md:text-5xl lg:text-7xl lg:leading-[1.1]"
           >
             The platform that modern agencies trust
           </motion.h1>
@@ -50,17 +51,14 @@ export function SaasHero() {
             transition={{ ...spring, delay: 0.4 }}
             className="mt-8 flex flex-col items-center gap-3 sm:flex-row"
           >
-            <a
-              href="#pricing"
-              className="flex h-12 items-center gap-2 rounded-xl bg-primary px-7 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
-            >
+            <Button asChild size="lg"><a href="#pricing">
               Start free trial
               <ArrowRight className="size-4" />
-            </a>
-            <button className="flex h-12 items-center gap-2 rounded-xl border border-border bg-card px-7 text-sm font-semibold text-foreground transition-all hover:bg-secondary active:scale-[0.98]">
+            </a></Button>
+            <Button variant="outline" size="lg">
               <Play className="size-4 fill-current" />
               Watch demo
-            </button>
+            </Button>
           </motion.div>
 
           {/* Social proof line */}
@@ -80,7 +78,7 @@ export function SaasHero() {
             transition={{ ...spring, delay: 0.5 }}
             className="relative mt-12 w-full max-w-5xl md:mt-16"
           >
-            {/* <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-2xl shadow-foreground/5 md:rounded-2xl">
+            {/* <div className="overflow-hidden rounded-lg border border-border/60 bg-card shadow-2xl shadow-foreground/5 md:rounded-lg">
               <Image
                 src="/images/dashboard-preview.jpg"
                 alt="Propiedad dashboard showing property management interface"
@@ -91,7 +89,7 @@ export function SaasHero() {
               />
             </div> */}
             {/* Decorative glow */}
-            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-primary/5 blur-3xl" />
+            <div className="pointer-events-none absolute -inset-4 -z-10 rounded-lg bg-primary/5 blur-3xl" />
           </motion.div>
         </div>
       </div>

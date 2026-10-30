@@ -21,16 +21,19 @@ export class CryptoService {
   }
 
   encrypt(plaintext: string): EncryptedPayload {
-    const key     = this.masterKey();
-    const iv      = crypto.randomBytes(12);
-    const cipher  = crypto.createCipheriv(ALGORITHM, key, iv);
-    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-    const tag     = cipher.getAuthTag();
+    const key = this.masterKey();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([
+      cipher.update(plaintext, 'utf8'),
+      cipher.final(),
+    ]);
+    const tag = cipher.getAuthTag();
     return {
       encrypted: encrypted.toString('base64'),
-      iv:        iv.toString('base64'),
-      tag:       tag.toString('base64'),
-      prefix:    plaintext.substring(0, 4),
+      iv: iv.toString('base64'),
+      tag: tag.toString('base64'),
+      prefix: plaintext.substring(0, 4),
     };
   }
 
@@ -43,16 +46,17 @@ export class CryptoService {
   /** Inverso de seal(). */
   open(sealed: string): string {
     const [iv, tag, encrypted] = sealed.split('.');
-    if (!iv || !tag || !encrypted) throw new Error('Valor cifrado con formato inválido');
+    if (!iv || !tag || !encrypted)
+      throw new Error('Valor cifrado con formato inválido');
     return this.decrypt(encrypted, iv, tag);
   }
 
   decrypt(encryptedB64: string, ivB64: string, tagB64: string): string {
-    const key       = this.masterKey();
-    const iv        = Buffer.from(ivB64, 'base64');
-    const tag       = Buffer.from(tagB64, 'base64');
+    const key = this.masterKey();
+    const iv = Buffer.from(ivB64, 'base64');
+    const tag = Buffer.from(tagB64, 'base64');
     const encrypted = Buffer.from(encryptedB64, 'base64');
-    const decipher  = crypto.createDecipheriv(ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
     return decipher.update(encrypted) + decipher.final('utf8');
   }

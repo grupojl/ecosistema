@@ -85,7 +85,7 @@ USER nestjs
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3001/health || exit 1
+  CMD wget -qO- http://localhost:${PORT:-3001}/api/v1/health || exit 1
 
 # entrypoint.sh se invoca con sh: en git no tiene bit ejecutable (modo 100644)
 CMD ["dumb-init", "sh", "/app/realsass-ecommerce-back/entrypoint.sh"]

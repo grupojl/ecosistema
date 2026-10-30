@@ -4,34 +4,34 @@
  */
 
 export interface Organization {
-  id:               string;
-  firebaseUid:      string;
-  slug:             string | null;
-  name:             string | null;
-  description:      string | null;
-  logoUrl:          string | null;
-  website:          string | null;
-  enabledProducts:  Record<string, unknown>;
-  plan:             string;
-  createdAt:        Date;
-  updatedAt:        Date;
+  id: string;
+  firebaseUid: string;
+  slug: string | null;
+  name: string | null;
+  description: string | null;
+  logoUrl: string | null;
+  website: string | null;
+  enabledProducts: Record<string, unknown>;
+  plan: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface UpdateOrganizationInput {
-  name?:        string;
+  name?: string;
   description?: string;
-  logoUrl?:     string;
-  website?:     string;
-  slug?:        string;
+  logoUrl?: string;
+  website?: string;
+  slug?: string;
 }
 
 export interface CreateOrganizationInput {
-  userId:       string;
-  firebaseUid:  string;
+  userId: string;
+  firebaseUid: string;
   /** D1: nombre inicial, p. ej. "Tienda de Ana". Editable después. */
-  name?:        string;
+  name?: string;
   /** Slug inicial; si falta, el repositorio genera uno no adivinable. */
-  slug?:        string;
+  slug?: string;
   countryCode?: string;
 }
 
@@ -46,24 +46,24 @@ export type StoreStatusValue = 'ACTIVE' | 'PAUSED';
  * Cambio ADITIVO del contrato — consumidores viejos lo ignoran.
  */
 export interface StoreInfo {
-  organizationId:   string;
-  slug:             string;
-  name:             string | null;
-  description:      string | null;
-  logoUrl:          string | null;
-  website:          string | null;
-  countryCode:      string;   // ISO 3166-1 alpha-2, UPPERCASE
+  organizationId: string;
+  slug: string;
+  name: string | null;
+  description: string | null;
+  logoUrl: string | null;
+  website: string | null;
+  countryCode: string; // ISO 3166-1 alpha-2, UPPERCASE
   ecommerceEnabled: boolean;
 }
 
 /** Fila mínima necesaria para construir el StoreInfo público. */
 export interface PublicStoreRow {
-  id:          string;
-  slug:        string | null;
-  name:        string | null;
+  id: string;
+  slug: string | null;
+  name: string | null;
   description: string | null;
-  logoUrl:     string | null;
-  website:     string | null;
+  logoUrl: string | null;
+  website: string | null;
   countryCode: string;
   storeStatus: StoreStatusValue;
 }
@@ -83,13 +83,15 @@ export function toPublicStoreInfo(row: PublicStoreRow): StoreInfo | null {
   const normalizedCountry = row.countryCode.trim().toUpperCase();
 
   return {
-    organizationId:   row.id,
-    slug:             row.slug,
-    name:             row.name,
-    description:      row.description,
-    logoUrl:          row.logoUrl,
-    website:          row.website,
-    countryCode:      ISO_ALPHA2.test(normalizedCountry) ? normalizedCountry : DEFAULT_ORGANIZATION_COUNTRY,
+    organizationId: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    logoUrl: row.logoUrl,
+    website: row.website,
+    countryCode: ISO_ALPHA2.test(normalizedCountry)
+      ? normalizedCountry
+      : DEFAULT_ORGANIZATION_COUNTRY,
     ecommerceEnabled: row.storeStatus === 'ACTIVE',
   };
 }

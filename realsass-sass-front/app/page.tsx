@@ -7,7 +7,7 @@ import { PricingSection } from "@/components/pricing-section"
 import { ReviewsSection } from "@/components/reviews-section"
 import { CtaBand } from "@/components/cta-band"
 import { Footer } from "@/components/footer"
-import { BottomTabBar } from "@/components/bottom-tab-bar"
+import { SectionTabBar } from "@/components/section-tab-bar"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/[/]+$/, '')
 
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <main className="min-h-screen bg-background">
+    <main id="top" className="min-h-dvh bg-background pb-[calc(3.5rem+env(safe-area-inset-bottom))] medium:pb-0">
       <Navbar />
       <SaasHero />
       <StatsSection />
@@ -34,7 +34,7 @@ export default function Page() {
       <ReviewsSection />
       <CtaBand />
       <Footer />
-      <BottomTabBar />
+      <SectionTabBar />
     </main>
   )
 }

@@ -9,56 +9,73 @@
  *   collaborators.acceptInvitation  → acepta la invitación (autenticado)
  *   collaborators.getInvitationInfo → info de invitación por token (@Public)
  */
-import { z }                                        from 'zod';
-import { router, authProcedure, publicProcedure }   from '@/trpc';
-import type { CollaboratorsService }                from '@/collaborators/collaborators.service';
+import { z } from 'zod';
+import { router, authProcedure, publicProcedure } from '@/trpc';
+import type { CollaboratorsService } from '@/collaborators/collaborators.service';
 
 const permissionsSchema = z.object({
-  canViewListings:        z.boolean().optional(),
-  canCreateListings:      z.boolean().optional(),
-  canEditListings:        z.boolean().optional(),
-  canDeleteListings:      z.boolean().optional(),
-  canViewStats:           z.boolean().optional(),
-  canManageLeads:         z.boolean().optional(),
+  canViewListings: z.boolean().optional(),
+  canCreateListings: z.boolean().optional(),
+  canEditListings: z.boolean().optional(),
+  canDeleteListings: z.boolean().optional(),
+  canViewStats: z.boolean().optional(),
+  canManageLeads: z.boolean().optional(),
   canManageCollaborators: z.boolean().optional(),
 });
 
-export function createCollaboratorsRouter(collaboratorsService: CollaboratorsService) {
+export function createCollaboratorsRouter(
+  collaboratorsService: CollaboratorsService,
+) {
   return router({
-
-    list: authProcedure
-      .query(({ ctx }) =>
-        collaboratorsService.listCollaborators(ctx.uid!, ctx.organizationId),
-      ),
+    list: authProcedure.query(({ ctx }) =>
+      collaboratorsService.listCollaborators(ctx.uid, ctx.organizationId),
+    ),
 
     invite: authProcedure
-      .input(z.object({
-        email: z.string().email(),
-        permissions: permissionsSchema.optional(),
-      }))
+      .input(
+        z.object({
+          email: z.string().email(),
+          permissions: permissionsSchema.optional(),
+        }),
+      )
       .mutation(({ ctx, input }) =>
-        collaboratorsService.inviteCollaborator(ctx.uid!, input, ctx.organizationId),
+        collaboratorsService.inviteCollaborator(
+          ctx.uid,
+          input,
+          ctx.organizationId,
+        ),
       ),
 
     update: authProcedure
-      .input(z.object({
-        collaboratorId: z.string().uuid(),
-        permissions:    permissionsSchema,
-      }))
+      .input(
+        z.object({
+          collaboratorId: z.string().uuid(),
+          permissions: permissionsSchema,
+        }),
+      )
       .mutation(({ ctx, input }) =>
-        collaboratorsService.updateCollaborator(ctx.uid!, input.collaboratorId, input.permissions, ctx.organizationId),
+        collaboratorsService.updateCollaborator(
+          ctx.uid,
+          input.collaboratorId,
+          input.permissions,
+          ctx.organizationId,
+        ),
       ),
 
     remove: authProcedure
       .input(z.object({ collaboratorId: z.string().uuid() }))
       .mutation(({ ctx, input }) =>
-        collaboratorsService.removeCollaborator(ctx.uid!, input.collaboratorId, ctx.organizationId),
+        collaboratorsService.removeCollaborator(
+          ctx.uid,
+          input.collaboratorId,
+          ctx.organizationId,
+        ),
       ),
 
     acceptInvitation: authProcedure
       .input(z.object({ token: z.string() }))
       .mutation(({ ctx, input }) =>
-        collaboratorsService.acceptInvitation(input.token, ctx.uid!),
+        collaboratorsService.acceptInvitation(input.token, ctx.uid),
       ),
 
     /**
@@ -71,7 +88,6 @@ export function createCollaboratorsRouter(collaboratorsService: CollaboratorsSer
       .query(({ input }) =>
         collaboratorsService.getInvitationInfo(input.token),
       ),
-
   });
 }
 

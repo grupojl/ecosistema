@@ -2,6 +2,7 @@
 //
 // Mismo lenguaje visual que la home base (secciones hero a pantalla completa, oscuro/claro alternado),
 // pero con los datos REALES de la organización: marca + hasta 4 productos destacados + resto del catálogo.
+import { SectionHeader } from '@real/ui'
 import Link from 'next/link'
 import { getProducts, getCategories } from '@/lib/store'
 import { toProductView, formatPrice } from '@/lib/catalog/product-view'
@@ -82,7 +83,7 @@ export default async function StorePage({ params }: Props) {
 
         {categories.length > 0 && (
           <section>
-            <h2 className="text-xl font-semibold mb-4">{dict.store.categories}</h2>
+            <SectionHeader title={dict.store.categories} className="mb-4" />
             <div className="flex flex-wrap gap-2">
               {categories.map((cat) => (
                 <Link
@@ -100,12 +101,12 @@ export default async function StorePage({ params }: Props) {
         {rest.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">{dict.store.products}</h2>
+              <SectionHeader title={dict.store.products} />
               <Link href={`${base}/productos`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {dict.store.seeAll}
               </Link>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid medium:grid-cols-2 expanded:grid-cols-4 gap-6">
               {rest.map((p) => (
                 <ProductCard
                   key={p.id}

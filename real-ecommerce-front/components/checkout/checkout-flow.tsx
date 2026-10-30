@@ -69,8 +69,8 @@ export function CheckoutFlow() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid medium:grid-cols-3 gap-6">
+          <div className="medium:col-span-2 space-y-6">
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -95,10 +95,12 @@ export function CheckoutFlow() {
 
                     <div className="space-y-3">
                       {authMethods.map((method) => (
-                        <button
+                        <Button
                           key={method.id}
+                          type="button"
+                          variant="outline"
                           onClick={() => handleAuthenticate(method.id)}
-                          className="w-full p-4 border rounded-lg hover:bg-accent transition-colors text-left group"
+                          className="group h-auto w-full justify-start whitespace-normal p-4 text-left font-normal"
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -109,7 +111,7 @@ export function CheckoutFlow() {
                               <p className="text-sm text-muted-foreground">{method.description}</p>
                             </div>
                           </div>
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -139,8 +141,8 @@ export function CheckoutFlow() {
                 {authStep === "success" && (
                   <div className="space-y-6 py-8">
                     <div className="flex flex-col items-center text-center">
-                      <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                        <CircleCheckBig className="w-10 h-10 text-green-500" />
+                      <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-4">
+                        <CircleCheckBig className="w-10 h-10 text-success-ink" />
                       </div>
                       <h3 className="text-lg font-medium mb-2">Verificación exitosa</h3>
                       <p className="text-sm text-muted-foreground mb-6">
@@ -215,7 +217,7 @@ export function CheckoutFlow() {
                   </div>
                 </div>
                 {authStep === "success" && (
-                  <Badge className="w-full justify-center bg-green-500 hover:bg-green-600 text-white">
+                  <Badge className="w-full justify-center bg-success hover:bg-success/90 text-success-foreground">
                     <CircleCheckBig className="w-4 h-4 mr-2" />
                     Verificado
                   </Badge>

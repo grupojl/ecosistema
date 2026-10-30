@@ -16,7 +16,7 @@ export class InvalidHandleError extends DomainError {
   constructor(handle: string) {
     super(
       `El handle "${handle}" no es válido. Debe contener solo minúsculas, ` +
-      `números y guiones, sin espacios ni caracteres especiales.`,
+        `números y guiones, sin espacios ni caracteres especiales.`,
     );
   }
 }
@@ -25,7 +25,9 @@ export class InvalidVariantPriceError extends DomainError {
   readonly code = 'INVALID_VARIANT_PRICE';
 
   constructor(priceCents: number) {
-    super(`El precio de la variante debe ser mayor a 0. Recibido: ${priceCents}`);
+    super(
+      `El precio de la variante debe ser mayor a 0. Recibido: ${priceCents}`,
+    );
   }
 }
 
@@ -51,7 +53,7 @@ export class CannotPublishWithoutStockError extends DomainError {
   constructor(productId: string) {
     super(
       `El producto ${productId} no puede publicarse porque ninguna de sus ` +
-      `variantes tiene stock disponible.`,
+        `variantes tiene stock disponible.`,
     );
   }
 }

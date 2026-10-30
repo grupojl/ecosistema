@@ -7,7 +7,7 @@
  * Conectar y desconectar piden confirmar la identidad (step-up), como los secretos.
  */
 import { CircleAlert, Loader2, MessageCircle } from 'lucide-react'
-import { Badge, Button, Skeleton } from '@real/ui'
+import { Badge, Button, EmptyState, SectionHeader, Skeleton, Card } from '@real/ui'
 import {
   useWhatsappConnection, useConnectWhatsapp, useDisconnectWhatsapp,
 } from '@/features/whatsapp'
@@ -26,23 +26,18 @@ export function WhatsappSection() {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-medium flex items-center gap-2">
-        <MessageCircle className="h-5 w-5" /> WhatsApp
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Conectá el WhatsApp de tu negocio para que el asistente atienda a tus clientes. La cuenta y el gasto en Meta son tuyos.
-      </p>
+      <SectionHeader
+        icon={<MessageCircle />}
+        title="WhatsApp"
+        description="Conectá el WhatsApp de tu negocio para que el asistente atienda a tus clientes. La cuenta y el gasto en Meta son tuyos."
+      />
 
       {isLoading ? (
         <Skeleton className="h-20 rounded-lg" />
       ) : error ? (
-        <div role="alert" className="flex items-center gap-2 text-destructive p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-          <CircleAlert className="h-4 w-4 shrink-0" />
-          <p className="text-sm flex-1">{getErrorMessage(error)}</p>
-          <Button variant="outline" size="sm" className="min-h-11" onClick={() => refetch()}>Reintentar</Button>
-        </div>
+        <EmptyState kind="error" description={getErrorMessage(error)} onRetry={() => void refetch()} />
       ) : conn ? (
-        <div className="p-4 rounded-lg border space-y-3">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center gap-3">
             <span className="font-medium text-sm">{conn.displayPhone ?? 'Número sin identificar'}</span>
             <Badge variant={STATUS_VARIANT[conn.status]}>{STATUS_LABEL[conn.status]}</Badge>
@@ -50,16 +45,16 @@ export function WhatsappSection() {
           {conn.status === 'ERROR' && conn.errorMessage && (
             <p className="text-sm text-destructive">{conn.errorMessage}</p>
           )}
-          <Button variant="outline" className="min-h-11" disabled={disconnect.isPending}
+          <Button variant="outline" disabled={disconnect.isPending}
             onClick={() => void disconnect.start(conn.accountId)}>
             {disconnect.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Desconectar
           </Button>
-        </div>
+        </Card>
       ) : (
-        <div className="p-4 rounded-lg border border-dashed space-y-3">
+        <Card className="p-4 border-dashed space-y-3">
           <p className="text-sm">Todavía no conectaste un WhatsApp.</p>
-          <Button className="min-h-11" disabled={!configured || connect.isPending}
+          <Button disabled={!configured || connect.isPending}
             onClick={() => void connect.start()}>
             {connect.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Conectar WhatsApp
@@ -69,7 +64,7 @@ export function WhatsappSection() {
               Falta configurar la app de Meta (NEXT_PUBLIC_META_APP_ID / NEXT_PUBLIC_META_CONFIG_ID).
             </p>
           )}
-        </div>
+        </Card>
       )}
 
       {actionError != null && (

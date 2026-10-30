@@ -2,7 +2,9 @@
 
 // ISR: catálogo de productos revalida cada 30 min (stock puede cambiar más seguido)
 export const revalidate = 1800;
+import { PageContainer, PageHeader } from '@real/ui'
 import Link from 'next/link'
+import { Button } from '@real/ui'
 import { notFound } from 'next/navigation'
 import { getProducts } from '@/lib/store'
 import { toProductView, formatPrice, paginate, parsePageParam } from '@/lib/catalog/product-view'
@@ -40,18 +42,13 @@ export default async function ProductosPage({ params, searchParams }: Props) {
   const intlTag = intlLocale(locale, store.countryCode)
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{dict.catalog.allProducts}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {plural(locale, paged.total, dict.catalog.productCount)}
-        </p>
-      </div>
+    <PageContainer size="xl" className="space-y-8">
+      <PageHeader title={dict.catalog.allProducts} description={plural(locale, paged.total, dict.catalog.productCount)} />
 
       {paged.items.length === 0 ? (
         <div className="text-center py-24 text-muted-foreground"><p>{dict.catalog.empty}</p></div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid medium:grid-cols-2 expanded:grid-cols-4 gap-6">
           {paged.items.map((p) => (
             <ProductCard
               key={p.id}
@@ -67,21 +64,21 @@ export default async function ProductosPage({ params, searchParams }: Props) {
       {paged.totalPages > 1 && (
         <div className="flex justify-center gap-2 pt-4">
           {paged.page > 1 && (
-            <Link href={`/${locale}/${slug}/productos?page=${paged.page - 1}`} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-accent transition-colors">
+            <Button asChild variant="outline" size="sm"><Link href={`/${locale}/${slug}/productos?page=${paged.page - 1}`}>
               {dict.catalog.previous}
-            </Link>
+            </Link></Button>
           )}
           <span className="px-4 py-2 text-sm text-muted-foreground">
             {t(dict.catalog.pageOf, { page: paged.page, total: paged.totalPages })}
           </span>
           {paged.page < paged.totalPages && (
-            <Link href={`/${locale}/${slug}/productos?page=${paged.page + 1}`} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-accent transition-colors">
+            <Button asChild variant="outline" size="sm"><Link href={`/${locale}/${slug}/productos?page=${paged.page + 1}`}>
               {dict.catalog.next}
-            </Link>
+            </Link></Button>
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }
 

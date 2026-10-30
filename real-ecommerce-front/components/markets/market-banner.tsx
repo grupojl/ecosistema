@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Alert, AlertDescription, Button } from '@real/ui'
 import { useMarketStore }      from '@/stores/use-market-store'
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -40,28 +41,23 @@ export function MarketBanner({ organizationDefaultCountry, availableCountries }:
   if (dismissed || !detectedCountry || detectedCountry === activeCountry) return null
 
   return (
-    <div
-      role="alert"
-      className="w-full bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 flex items-center justify-between text-sm"
-    >
-      <span>
-        Parece que estás en <strong>{COUNTRY_NAMES[detectedCountry] ?? detectedCountry}</strong>.
-        ¿Querés ver envíos desde nuestro proveedor local?
-      </span>
-      <div className="flex gap-3 ml-4 shrink-0">
-        <button
-          onClick={() => { setCountry(detectedCountry); setDismissed(true) }}
-          className="font-medium underline underline-offset-2 hover:text-blue-600"
-        >
-          Sí, cambiar
-        </button>
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-blue-600/60 hover:text-blue-600"
-        >
-          No, gracias
-        </button>
-      </div>
+    <div className="mx-auto w-full max-w-7xl px-4 pt-4 medium:px-6 expanded:px-8">
+      <Alert variant="info">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+        <AlertDescription className="min-w-0 flex-1 text-foreground">
+          Parece que estás en <strong>{COUNTRY_NAMES[detectedCountry] ?? detectedCountry}</strong>.
+          ¿Querés ver envíos desde nuestro proveedor local?
+        </AlertDescription>
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" onClick={() => { setCountry(detectedCountry); setDismissed(true) }}>
+            Sí, cambiar
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDismissed(true)}>
+            No, gracias
+          </Button>
+        </div>
+        </div>
+      </Alert>
     </div>
   )
 }

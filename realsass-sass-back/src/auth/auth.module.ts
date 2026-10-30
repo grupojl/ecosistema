@@ -9,22 +9,22 @@
  *   POST   /auth/sync          → sincroniza usuario con Prisma al login
  *   POST   /auth/refresh-claims → reemite custom claims (cambio de org activa)
  */
-import { Module }                                       from '@nestjs/common';
-import { SessionService, AuthSessionController }        from '@real/auth-server';
-import { AuthSessionThrottledController }               from '@/auth/auth-session-throttled.controller';
-import { AuthService }                                  from '@/auth/auth.service';
-import { AuthController }                               from '@/auth/auth.controller';
-import { ClaimsService }                                from '@/auth/claims.service';
-import { DesktopLoginService }                      from '@/auth/desktop-login.service';
-import { UsersModule }                                  from '@/users/users.module';
-import { AffiliatesModule }                             from '@/affiliate/affiliate.module';
-import { OrganizationsModule }                          from '@/organizations/organizations.module';
-import { SessionsModule }                               from '@/sessions/sessions.module';
+import { Module } from '@nestjs/common';
+import { SessionService, AuthSessionController } from '@real/auth-server';
+import { AuthSessionThrottledController } from '@/auth/auth-session-throttled.controller';
+import { AuthService } from '@/auth/auth.service';
+import { AuthController } from '@/auth/auth.controller';
+import { ClaimsService } from '@/auth/claims.service';
+import { DesktopLoginService } from '@/auth/desktop-login.service';
+import { UsersModule } from '@/users/users.module';
+import { AffiliatesModule } from '@/affiliate/affiliate.module';
+import { OrganizationsModule } from '@/organizations/organizations.module';
+import { SessionsModule } from '@/sessions/sessions.module';
 
 @Module({
-  imports:     [UsersModule, AffiliatesModule, OrganizationsModule, SessionsModule],
-  providers:   [AuthService, ClaimsService, SessionService, DesktopLoginService],
+  imports: [UsersModule, AffiliatesModule, OrganizationsModule, SessionsModule],
+  providers: [AuthService, ClaimsService, SessionService, DesktopLoginService],
   controllers: [AuthController, AuthSessionThrottledController],
-  exports:     [AuthService, ClaimsService, SessionService, DesktopLoginService],
+  exports: [AuthService, ClaimsService, SessionService, DesktopLoginService],
 })
 export class AuthModule {}

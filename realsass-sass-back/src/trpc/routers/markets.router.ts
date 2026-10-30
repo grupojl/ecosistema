@@ -1,14 +1,19 @@
-import { z }              from 'zod'
-import { TRPCError }      from '@trpc/server'
-import { router, tenantProcedure, ownerProcedure, internalProcedure } from '@/trpc/trpc'
-import { MarketsService }          from '@/markets/markets.service'
+import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
+import {
+  router,
+  tenantProcedure,
+  ownerProcedure,
+  internalProcedure,
+} from '@/trpc/trpc';
+import { MarketsService } from '@/markets/markets.service';
 
 const FulfillmentConfigInput = z.object({
-  provider:     z.string().optional(),
+  provider: z.string().optional(),
   contactEmail: z.string().email().optional(),
-  notes:        z.string().optional(),
-  priority:     z.number().int().min(1).default(1),
-})
+  notes: z.string().optional(),
+  priority: z.number().int().min(1).default(1),
+});
 
 /**
  * Markets (ADR-014). Antes TODAS las operaciones eran `publicProcedure`: cualquiera, sin sesión, podía crear, cambiar o
@@ -23,61 +28,88 @@ const FulfillmentConfigInput = z.object({
  */
 function assertSameOrg(ctxOrg: string, inputOrg: string | undefined): void {
   if (inputOrg !== undefined && inputOrg !== ctxOrg) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'La organización no coincide con la activa' })
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'La organización no coincide con la activa',
+    });
   }
 }
 
 export function createMarketsRouter(marketsService: MarketsService) {
   return router({
     list: tenantProcedure
-      .input(z.object({ organizationId: z.string().uuid().optional() }).optional())
+      .input(
+        z.object({ organizationId: z.string().uuid().optional() }).optional(),
+      )
       .query(({ ctx, input }) => {
-        assertSameOrg(ctx.organizationId, input?.organizationId)
-        return marketsService.list(ctx.organizationId)
+        assertSameOrg(ctx.organizationId, input?.organizationId);
+        return marketsService.list(ctx.organizationId);
       }),
 
     create: ownerProcedure
-      .input(z.object({
-        organizationId:    z.string().uuid().optional(),
-        countryCode:       z.string().length(2).transform(v => v.toUpperCase()),
-        fulfillmentConfig: FulfillmentConfigInput.optional(),
-      }))
+      .input(
+        z.object({
+          organizationId: z.string().uuid().optional(),
+          countryCode: z
+            .string()
+            .length(2)
+            .transform((v) => v.toUpperCase()),
+          fulfillmentConfig: FulfillmentConfigInput.optional(),
+        }),
+      )
       .mutation(({ ctx, input }) => {
-        assertSameOrg(ctx.organizationId, input.organizationId)
+        assertSameOrg(ctx.organizationId, input.organizationId);
         return marketsService.create({
-          organizationId:    ctx.organizationId,
-          countryCode:       input.countryCode,
+          organizationId: ctx.organizationId,
+          countryCode: input.countryCode,
           fulfillmentConfig: input.fulfillmentConfig,
-        })
+        });
       }),
 
     update: ownerProcedure
-      .input(z.object({
-        id:                z.string().uuid(),
-        isActive:          z.boolean().optional(),
-        fulfillmentConfig: FulfillmentConfigInput.optional(),
-      }))
-      .mutation(({ ctx, input }) => marketsService.update(input.id, {
-        isActive:          input.isActive,
-        fulfillmentConfig: input.fulfillmentConfig,
-      }, ctx.organizationId)),
+      .input(
+        z.object({
+          id: z.string().uuid(),
+          isActive: z.boolean().optional(),
+          fulfillmentConfig: FulfillmentConfigInput.optional(),
+        }),
+      )
+      .mutation(({ ctx, input }) =>
+        marketsService.update(
+          input.id,
+          {
+            isActive: input.isActive,
+            fulfillmentConfig: input.fulfillmentConfig,
+          },
+          ctx.organizationId,
+        ),
+      ),
 
     setDefault: ownerProcedure
       .input(z.object({ id: z.string().uuid() }))
-      .mutation(({ ctx, input }) => marketsService.setDefault(input.id, ctx.organizationId)),
+      .mutation(({ ctx, input }) =>
+        marketsService.setDefault(input.id, ctx.organizationId),
+      ),
 
     delete: ownerProcedure
       .input(z.object({ id: z.string().uuid() }))
-      .mutation(({ ctx, input }) => marketsService.delete(input.id, ctx.organizationId)),
+      .mutation(({ ctx, input }) =>
+        marketsService.delete(input.id, ctx.organizationId),
+      ),
 
     // Servicio-a-servicio: ecommerce-back manda x-internal-api-key (ver OrganizationsClientService.resolveMarket)
     resolve: internalProcedure
-      .input(z.object({
-        organizationId: z.string().uuid(),
-        countryCode:    z.string().length(2).transform(v => v.toUpperCase()),
-      }))
+      .input(
+        z.object({
+          organizationId: z.string().uuid(),
+          countryCode: z
+            .string()
+            .length(2)
+            .transform((v) => v.toUpperCase()),
+        }),
+      )
       .query(({ input }) =>
-        marketsService.resolveMarket(input.organizationId, input.countryCode)
+        marketsService.resolveMarket(input.organizationId, input.countryCode),
       ),
-  })
+  });
 }

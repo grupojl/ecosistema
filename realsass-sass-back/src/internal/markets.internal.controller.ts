@@ -1,7 +1,7 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { Public }              from '@real/auth-server';
-import { InternalApiKeyGuard }  from '@/internal/internal-api-key.guard';
-import { MarketsService }       from '@/markets/markets.service';
+import { Public } from '@real/auth-server';
+import { InternalApiKeyGuard } from '@/internal/internal-api-key.guard';
+import { MarketsService } from '@/markets/markets.service';
 
 @Public()
 @Controller('internal/organizations')

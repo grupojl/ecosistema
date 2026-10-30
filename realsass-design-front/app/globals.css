@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../ui/styles/welver.css';
+@source '../ui';
+
+/* ===== Motion del sistema de diseño (welver.html → «Motion»). Solo transform y opacity; todo se apaga con reduced-motion. ===== */
+@keyframes ds-row-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ds-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+@keyframes ds-draw { to { stroke-dashoffset: 0; } }
+@keyframes ds-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ds-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.ds-row-in { animation: ds-row-in .32s cubic-bezier(.22, 1, .36, 1) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.ds-shake { animation: ds-shake .38s cubic-bezier(.2, 0, 0, 1); }
+.ds-fade { animation: ds-fade .45s cubic-bezier(.22, 1, .36, 1) both; }
+.ds-check circle { stroke-dasharray: 151; stroke-dashoffset: 151; animation: ds-draw .5s cubic-bezier(.22, 1, .36, 1) forwards; }
+.ds-check path { stroke-dasharray: 40; stroke-dashoffset: 40; animation: ds-draw .35s cubic-bezier(.22, 1, .36, 1) .35s forwards; }
+.ds-timebar { transform-origin: left; animation: ds-bar var(--tt, 4500ms) linear forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-row-in, .ds-shake, .ds-fade, .ds-timebar { animation: none; }
+  .ds-check circle, .ds-check path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* Toast: entra desde el borde (abajo) o desde arriba y sale más rápido de lo que entró. */
+@keyframes ds-toast-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes ds-toast-in-down { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
+@keyframes ds-toast-out { to { opacity: 0; transform: translateY(14px); } }
+@keyframes ds-toast-out-up { to { opacity: 0; transform: translateY(-14px); } }
+.ds-toast-in { animation: ds-toast-in 460ms cubic-bezier(.25, .8, .3, 1); }
+.ds-toast-in-down { animation: ds-toast-in-down 460ms cubic-bezier(.25, .8, .3, 1); }
+.ds-toast-out { animation: ds-toast-out 220ms cubic-bezier(.4, 0, 1, 1) forwards; }
+.ds-toast-out-up { animation: ds-toast-out-up 220ms cubic-bezier(.4, 0, 1, 1) forwards; }
+@media (prefers-reduced-motion: reduce) { .ds-toast-in, .ds-toast-in-down, .ds-toast-out, .ds-toast-out-up { animation: none; } }
+
+/* Barras horizontales: crecen desde la izquierda, escalonadas. */
+@keyframes ds-right { from { transform: scaleX(0); } to { transform: none; } }
+.ds-hbar { transform-origin: left; animation: ds-right .7s cubic-bezier(.22, 1, .36, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+@media (prefers-reduced-motion: reduce) { .ds-hbar { animation: none; } }

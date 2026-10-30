@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { Card, SectionIntro, CardContent, CardDescription, CardHeader, CardTitle } from "@real/ui"
 import { LayoutGrid, ChartColumn, Zap, Shield, Bell, Repeat } from "lucide-react"
 
 const features = [
@@ -47,6 +48,8 @@ const container = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
 
+const MotionCard = motion.create(Card)
+
 const item = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -66,15 +69,12 @@ export function FeaturesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ type: "spring" as const, stiffness: 300, damping: 30 }}
-          className="mx-auto max-w-2xl text-center"
         >
-          <span className="text-xs font-semibold tracking-widest text-primary uppercase">Features</span>
-          <h2 className="mt-3 font-serif text-3xl text-foreground text-balance md:text-4xl lg:text-5xl">
-            Everything your agency needs
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            One platform to manage your entire pipeline, from listing creation to contract signing.
-          </p>
+          <SectionIntro
+            eyebrow="Features"
+            title="Everything your agency needs"
+            description="One platform to manage your entire pipeline, from listing creation to contract signing."
+          />
         </motion.div>
 
         {/* Grid */}
@@ -86,17 +86,21 @@ export function FeaturesSection() {
           className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
         >
           {features.map((feature) => (
-            <motion.article
+            <MotionCard
               key={feature.title}
               variants={item}
-              className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 md:p-8"
+              className="group flex flex-col transition-colors hover:border-primary/40"
             >
-              <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15">
-                <feature.icon className="size-5 text-primary" />
-              </div>
-              <h3 className="mt-5 text-base font-semibold text-foreground">{feature.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
-            </motion.article>
+              <CardHeader className="space-y-4">
+                <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
+                  <feature.icon className="size-5 text-primary" />
+                </div>
+                <CardTitle className="text-lg">{feature.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <CardDescription className="leading-relaxed">{feature.description}</CardDescription>
+              </CardContent>
+            </MotionCard>
           ))}
         </motion.div>
       </div>

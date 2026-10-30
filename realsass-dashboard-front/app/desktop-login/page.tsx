@@ -62,7 +62,7 @@ export default function DesktopLoginPage() {
         )}
         {status === 'done' && (
           <>
-            <CircleCheck className="h-10 w-10 text-green-600 mx-auto" />
+            <CircleCheck className="h-10 w-10 text-success-ink mx-auto" />
             <p className="text-sm">Listo. Volvé a la aplicación: ya podés cerrar esta pestaña.</p>
           </>
         )}

@@ -2,19 +2,19 @@
 
 /** Historial de pedidos del cliente de esta tienda (customer.orders). */
 import Link from 'next/link'
-import { Button } from '@real/ui'
+import { Badge, Button, Card, EmptyState, LoadingState, PageContainer, PageHeader } from '@real/ui'
 import { trpc } from '@/lib/trpc/client'
 import { useCommerce } from '@/components/commerce/commerce-provider'
 import { formatPrice } from '@/lib/catalog/product-view'
 
-const STATUS_STYLE: Record<string, string> = {
-  PENDING_PAYMENT: 'bg-amber-100 text-amber-800',
-  PAID:            'bg-green-100 text-green-800',
-  FULFILLING:      'bg-blue-100 text-blue-800',
-  SHIPPED:         'bg-blue-100 text-blue-800',
-  DELIVERED:       'bg-green-100 text-green-800',
-  CANCELLED:       'bg-gray-200 text-gray-700',
-  REFUNDED:        'bg-gray-200 text-gray-700',
+const STATUS_VARIANT: Record<string, 'warning' | 'success' | 'secondary' | 'outline'> = {
+  PENDING_PAYMENT: 'warning',
+  PAID:            'success',
+  FULFILLING:      'secondary',
+  SHIPPED:         'secondary',
+  DELIVERED:       'success',
+  CANCELLED:       'outline',
+  REFUNDED:        'outline',
 }
 
 function addressLine(address: Record<string, unknown> | null): string {
@@ -33,45 +33,40 @@ export function OrdersView() {
   const date = (d: Date | string) => new Intl.DateTimeFormat(intlTag, { dateStyle: 'medium' }).format(new Date(d))
   const statusLabel = (s: string) => (c.status as Record<string, string>)[s] ?? s
 
-  if (!ready) return <p className="text-sm text-muted-foreground">{c.loading}</p>
+  if (!ready) return <LoadingState label={c.loading} />
 
   if (!customer) {
     return (
-      <div className="max-w-md mx-auto text-center space-y-4 py-16">
-        <h1 className="text-2xl font-bold tracking-tight">{c.ordersTitle}</h1>
-        <p className="text-muted-foreground">{c.needSignIn}</p>
-        <Button onClick={openAuth}>{c.signIn}</Button>
-      </div>
+      <PageContainer size="sm">
+        <PageHeader title={c.ordersTitle} />
+        <EmptyState kind="forbidden" description={c.needSignIn} action={<Button onClick={openAuth}>{c.signIn}</Button>} />
+      </PageContainer>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">{c.ordersTitle}</h1>
+    <PageContainer size="md">
+      <PageHeader title={c.ordersTitle} />
 
-      {orders.isLoading && <p className="text-sm text-muted-foreground">{c.loading}</p>}
-      {orders.error && <p role="alert" className="text-sm text-destructive">{c.genericError}</p>}
+      {orders.isLoading && <LoadingState label={c.loading} />}
+      {orders.error && <EmptyState kind="error" description={c.genericError} />}
 
       {orders.data?.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <p className="text-muted-foreground">{c.ordersEmpty}</p>
-          <Link href={`${basePath}/productos`} className="inline-block rounded-full bg-blue-500 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors">
-            {c.backToStore}
-          </Link>
-        </div>
+        <EmptyState
+          description={c.ordersEmpty}
+          action={<Button asChild><Link href={`${basePath}/productos`}>{c.backToStore}</Link></Button>}
+        />
       )}
 
       <ul className="space-y-4">
         {orders.data?.map((o) => (
-          <li key={o.id} className="rounded-xl border border-border p-5 space-y-3">
+          <li key={o.id}><Card className="space-y-3 p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-medium">{c.orderNumber} <span className="font-mono">#{o.id.slice(0, 8)}</span></p>
                 <p className="text-xs text-muted-foreground">{date(o.createdAt)}</p>
               </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLE[o.status] ?? 'bg-gray-200 text-gray-700'}`}>
-                {statusLabel(o.status)}
-              </span>
+              <Badge variant={STATUS_VARIANT[o.status] ?? 'outline'}>{statusLabel(o.status)}</Badge>
             </div>
 
             <ul className="space-y-1 text-sm">
@@ -89,9 +84,9 @@ export function OrdersView() {
               )}
               <p className="ml-auto font-semibold" lang={locale}>{c.total}: {money(o.totalCents, o.currency)}</p>
             </div>
-          </li>
+          </Card></li>
         ))}
       </ul>
-    </div>
+    </PageContainer>
   )
 }

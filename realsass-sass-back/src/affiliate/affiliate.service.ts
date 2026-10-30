@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException, Logger, Inject } from '@nestjs/common';
-import { AFFILIATE_REPOSITORY, type IAffiliateRepository } from '@/affiliate/repository/affiliate.repository.interface';
+import {
+  AFFILIATE_REPOSITORY,
+  type IAffiliateRepository,
+} from '@/affiliate/repository/affiliate.repository.interface';
 
 @Injectable()
 export class AffiliatesService {
@@ -26,7 +29,10 @@ export class AffiliatesService {
    * Registra un referido cuando un nuevo usuario se sincroniza con un código.
    * Llamado desde AuthService.syncUser().
    */
-  async registerReferral(affiliateCode: string, newUserId: string): Promise<void> {
+  async registerReferral(
+    affiliateCode: string,
+    newUserId: string,
+  ): Promise<void> {
     const affiliate = await this.repo.findByCode(affiliateCode);
     if (!affiliate) {
       this.logger.warn(`Affiliate code not found: ${affiliateCode}`);
@@ -35,7 +41,9 @@ export class AffiliatesService {
     if (affiliate.userId === newUserId) return; // no auto-referidos
     try {
       await this.repo.incrementReferralCount(affiliate.userId);
-      this.logger.log(`Referral registered: code=${affiliateCode} newUser=${newUserId}`);
+      this.logger.log(
+        `Referral registered: code=${affiliateCode} newUser=${newUserId}`,
+      );
     } catch (err) {
       this.logger.error('Failed to register referral', err);
     }

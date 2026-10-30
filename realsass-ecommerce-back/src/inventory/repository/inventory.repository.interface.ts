@@ -8,15 +8,15 @@
  * Este interface lo complementa con el contrato de persistencia.
  */
 
-export const INVENTORY_REPOSITORY = Symbol("INVENTORY_REPOSITORY");
+export const INVENTORY_REPOSITORY = Symbol('INVENTORY_REPOSITORY');
 
 export interface InventoryRecord {
-  id:                string;
-  variantId:         string;
-  organizationId:    string;
+  id: string;
+  variantId: string;
+  organizationId: string;
   quantityAvailable: number;
-  quantityReserved:  number;
-  updatedAt:         Date;
+  quantityReserved: number;
+  updatedAt: Date;
 }
 
 export interface IInventoryRepository {
@@ -25,7 +25,7 @@ export interface IInventoryRepository {
    */
   findByVariant(
     organizationId: string,
-    variantId:      string,
+    variantId: string,
   ): Promise<InventoryRecord | null>;
 
   /**
@@ -35,8 +35,8 @@ export interface IInventoryRepository {
    */
   reserve(
     organizationId: string,
-    variantId:      string,
-    quantity:       number,
+    variantId: string,
+    quantity: number,
   ): Promise<InventoryRecord>;
 
   /**
@@ -45,8 +45,8 @@ export interface IInventoryRepository {
    */
   release(
     organizationId: string,
-    variantId:      string,
-    quantity:       number,
+    variantId: string,
+    quantity: number,
   ): Promise<InventoryRecord>;
 
   /**
@@ -55,8 +55,8 @@ export interface IInventoryRepository {
    */
   setAvailable(
     organizationId: string,
-    variantId:      string,
-    quantity:       number,
+    variantId: string,
+    quantity: number,
   ): Promise<InventoryRecord>;
 
   /**
@@ -64,6 +64,6 @@ export interface IInventoryRepository {
    */
   findManyByVariants(
     organizationId: string,
-    variantIds:     string[],
+    variantIds: string[],
   ): Promise<InventoryRecord[]>;
 }

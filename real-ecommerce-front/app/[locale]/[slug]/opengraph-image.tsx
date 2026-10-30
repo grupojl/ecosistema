@@ -22,7 +22,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ loc
       <div
         style={{
           width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 36, background: 'linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)', color: '#f5f5f5', padding: 80,
+          gap: 36, background: 'linear-gradient(135deg, #0a0a0a 0%, #1f2937 100%)', color: '#f5f5f5', padding: 80, // ui-lint-ignore: ImageResponse (satori) no admite variables CSS
         }}
       >
         {store?.logoUrl && (
@@ -30,7 +30,7 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ loc
           <img src={store.logoUrl} alt="" width={140} height={140} style={{ borderRadius: 28, objectFit: 'cover' }} />
         )}
         <div style={{ fontSize: name.length > 34 ? 64 : 88, fontWeight: 700, textAlign: 'center', lineHeight: 1.1, display: 'flex' }}>{name}</div>
-        <div style={{ width: 120, height: 8, borderRadius: 4, background: '#3b82f6', display: 'flex' }} />
+        <div style={{ width: 120, height: 8, borderRadius: 4, background: '#3b82f6', display: 'flex' }} /> {/* ui-lint-ignore: ImageResponse (satori) no admite variables CSS */}
       </div>
     ),
     size,

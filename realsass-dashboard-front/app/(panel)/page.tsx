@@ -1,6 +1,7 @@
 'use client';
 
 import { Package, ShoppingBag, TrendingUp, Users } from 'lucide-react';
+import { PageContainer, PageHeader, StatCard } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useOrders, useProducts } from '@/features/store/hooks';
 
@@ -12,33 +13,16 @@ export default function DashboardPage() {
   const totalOrders   = ordersData?.length ?? 0;
   const totalProducts = productsData?.filter((p) => p.status !== 'ARCHIVED').length ?? 0;
 
-  const cards = [
-    { icon: Package,     label: 'Productos',    value: totalProducts, color: '#60a5fa' },
-    { icon: ShoppingBag, label: 'Pedidos',       value: totalOrders,   color: '#34d399' },
-    { icon: TrendingUp,  label: 'Campañas',      value: '—',           color: '#fbbf24' },
-    { icon: Users,       label: 'Clientes',      value: '—',           color: '#a78bfa' },
-  ];
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Resumen</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Vista general de tu organización
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader title="Resumen" description="Vista general de tu organización" />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map(({ icon: Icon, label, value, color }) => (
-          <div key={label} className="bg-card border border-border rounded-xl p-4 space-y-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Icon className="h-4 w-4" style={{ color }} />
-              <span className="text-xs font-medium uppercase tracking-wider">{label}</span>
-            </div>
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-4 expanded:grid-cols-4">
+        <StatCard icon={<Package />}     label="Productos" value={totalProducts} />
+        <StatCard icon={<ShoppingBag />} label="Pedidos"   value={totalOrders} />
+        <StatCard icon={<TrendingUp />}  label="Campañas"  value="—" />
+        <StatCard icon={<Users />}       label="Clientes"  value="—" />
       </div>
-    </div>
+    </PageContainer>
   );
 }

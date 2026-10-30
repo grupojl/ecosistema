@@ -16,18 +16,25 @@
  *   como endpoint compartido en lugar de vivir en sass-back.
  */
 import {
-  Controller, Post, Get, Body, Query, Res, HttpCode, HttpStatus,
+  Controller,
+  Post,
+  Get,
+  Body,
+  Query,
+  Res,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Public, CurrentUser }   from '@real/auth-server';
+import { Public, CurrentUser } from '@real/auth-server';
 import type { CurrentUserPayload } from '@real/auth-server';
-import { UsersService }           from '@/users/users.service';
-import { AuthService }            from '@/auth/auth.service';
+import { UsersService } from '@/users/users.service';
+import { AuthService } from '@/auth/auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService:  AuthService,
+    private readonly authService: AuthService,
     private readonly usersService: UsersService,
   ) {}
 

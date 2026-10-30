@@ -1,23 +1,28 @@
-import { LoggerModule }    from 'nestjs-pino';
+import { LoggerModule } from 'nestjs-pino';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
-import { Module, type NestModule, type MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  type NestModule,
+  type MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { CorrelationIdMiddleware } from '@/common/middleware/correlation-id.middleware';
-import { APP_GUARD }                  from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ConfigModule }               from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 
-import { PrismaModule }              from '@/prisma/prisma.module';
-import { RedisModule }               from '@/redis/redis.module';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { RedisModule } from '@/redis/redis.module';
 import { OrganizationsClientModule } from '@/organizations-client/organizations-client.module';
-import { CatalogModule }             from '@/catalog/catalog.module';
-import { InventoryModule }           from '@/inventory/inventory.module';
-import { CustomersModule }           from '@/customers/customers.module';
-import { ActivityModule }            from '@/activity/activity.module';
-import { CartModule }                from '@/cart/cart.module';
-import { OrdersModule }              from '@/orders/orders.module';
-import { StoreModule }               from '@/store/store.module';
+import { CatalogModule } from '@/catalog/catalog.module';
+import { InventoryModule } from '@/inventory/inventory.module';
+import { CustomersModule } from '@/customers/customers.module';
+import { ActivityModule } from '@/activity/activity.module';
+import { CartModule } from '@/cart/cart.module';
+import { OrdersModule } from '@/orders/orders.module';
+import { StoreModule } from '@/store/store.module';
 import { HealthModule } from '@/health/health.module';
-import { TrpcModule }                from '@/trpc/trpc.module';
+import { TrpcModule } from '@/trpc/trpc.module';
 
 import {
   FirebaseModule,
@@ -37,8 +42,21 @@ import {
  */
 @Module({
   imports: [
-    PrometheusModule.register({ path: '/metrics', defaultMetrics: { enabled: true } }),
-    LoggerModule.forRoot({ pinoHttp: { level: process.env['LOG_LEVEL'] ?? (process.env['NODE_ENV'] !== 'production' ? 'debug' : 'info'), transport: process.env['NODE_ENV'] !== 'production' ? { target: 'pino-pretty', options: { colorize: true } } : undefined } }),
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: { enabled: true },
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level:
+          process.env['LOG_LEVEL'] ??
+          (process.env['NODE_ENV'] !== 'production' ? 'debug' : 'info'),
+        transport:
+          process.env['NODE_ENV'] !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+    }),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 30 }]),
     FirebaseModule,
@@ -56,15 +74,17 @@ import {
     TrpcModule,
   ],
   providers: [
-    { provide: APP_GUARD,  useClass: FirebaseAuthGuard },
-    { provide: APP_GUARD,  useClass: TenantGuard },
-    { provide: APP_GUARD,  useClass: RolesGuard },
-    { provide: APP_GUARD,  useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: FirebaseAuthGuard },
+    { provide: APP_GUARD, useClass: TenantGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: CACHE_PORT, useClass: MemoryCacheAdapter },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer
+      .apply(CorrelationIdMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

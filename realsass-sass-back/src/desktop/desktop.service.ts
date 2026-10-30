@@ -11,18 +11,18 @@ import { RedisService } from '@/redis/redis.service';
  *     No se guarda ningún dato personal ni identificador de usuario.
  */
 export interface DesktopPolicy {
-  minVersion:      string | null;
+  minVersion: string | null;
   blockedVersions: string[];
-  downloadUrl:     string | null;
+  downloadUrl: string | null;
 }
 
 export type TelemetryKind = 'ping' | 'error';
-export type TelemetryOs   = 'windows' | 'macos' | 'linux' | 'unknown';
+export type TelemetryOs = 'windows' | 'macos' | 'linux' | 'unknown';
 
 export interface TelemetryInput {
-  kind:    TelemetryKind;
+  kind: TelemetryKind;
   version: string;
-  os:      TelemetryOs;
+  os: TelemetryOs;
   message?: string;
 }
 
@@ -35,27 +35,47 @@ export class DesktopService {
 
   constructor(private readonly redis: RedisService) {}
 
-  getPolicy(env: Record<string, string | undefined> = process.env): DesktopPolicy {
+  getPolicy(
+    env: Record<string, string | undefined> = process.env,
+  ): DesktopPolicy {
     const list = (env['DESKTOP_BLOCKED_VERSIONS'] ?? '')
-      .split(',').map((v) => v.trim()).filter((v) => /^\d+\.\d+\.\d+$/.test(v));
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => /^\d+\.\d+\.\d+$/.test(v));
     const min = env['DESKTOP_MIN_VERSION']?.trim();
     return {
-      minVersion:      min && /^\d+\.\d+\.\d+$/.test(min) ? min : null,
+      minVersion: min && /^\d+\.\d+\.\d+$/.test(min) ? min : null,
       blockedVersions: list,
-      downloadUrl:     env['DESKTOP_DOWNLOAD_URL']?.trim() || null,
+      downloadUrl: env['DESKTOP_DOWNLOAD_URL']?.trim() || null,
     };
   }
 
   /** Devuelve false si el origen superó el límite (se descarta sin error: es telemetría, no debe romper nada). */
-  async record(input: TelemetryInput, ip: string | undefined): Promise<boolean> {
+  async record(
+    input: TelemetryInput,
+    ip: string | undefined,
+  ): Promise<boolean> {
     if (!(await this.allow(ip ?? 'unknown'))) return false;
 
     const day = new Date().toISOString().slice(0, 10);
     // El mensaje de un error viene del cliente: se recorta y se limpia de saltos de línea (log injection).
-    const message = (input.message ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, 300);
+    const message = (input.message ?? '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .slice(0, 300);
 
-    await this.redis.incr(`desktop:${input.kind}:${input.version}:${input.os}:${day}`, RETENTION_SECONDS);
-    this.logger.log(JSON.stringify({ event: 'desktop-telemetry', kind: input.kind, version: input.version, os: input.os, ...(message && { message }) }));
+    await this.redis.incr(
+      `desktop:${input.kind}:${input.version}:${input.os}:${day}`,
+      RETENTION_SECONDS,
+    );
+    this.logger.log(
+      JSON.stringify({
+        event: 'desktop-telemetry',
+        kind: input.kind,
+        version: input.version,
+        os: input.os,
+        ...(message && { message }),
+      }),
+    );
     return true;
   }
 

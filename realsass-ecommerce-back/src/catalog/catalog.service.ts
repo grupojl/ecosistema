@@ -19,7 +19,10 @@ import {
 } from '@nestjs/common';
 import { CreateProductDto } from '@/catalog/dto/create-product.dto';
 import { UpdateProductDto } from '@/catalog/dto/update-product.dto';
-import { validateProductDraft, canPublish } from '@/catalog/domain/product.entity';
+import {
+  validateProductDraft,
+  canPublish,
+} from '@/catalog/domain/product.entity';
 import { DomainError } from '@/catalog/domain/product.errors';
 import {
   CATALOG_REPOSITORY,
@@ -109,7 +112,9 @@ export class CatalogService {
       handle,
     );
     if (!product) {
-      throw new NotFoundException(`Producto "${handle}" no encontrado o no publicado.`);
+      throw new NotFoundException(
+        `Producto "${handle}" no encontrado o no publicado.`,
+      );
     }
     return product;
   }

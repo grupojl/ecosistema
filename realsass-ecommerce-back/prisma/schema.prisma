@@ -243,3 +243,23 @@ model OrderStatusEvent {
   @@index([orderId])
   @@map("order_status_events")
 }
+
+// ADR-029 — Transactional Outbox: el evento se escribe en la MISMA transacción que el cambio de negocio (p. ej. la orden),
+// y un relay lo publica después. Garantía at-least-once: los consumidores deben ser idempotentes (usar `id` como clave).
+model OutboxEvent {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  aggregateType  String    @map("aggregate_type") // 'Order'
+  aggregateId    String    @map("aggregate_id")
+  type           String                           // 'order.created'
+  payload        Json
+  createdAt      DateTime  @default(now()) @map("created_at")
+  availableAt    DateTime  @default(now()) @map("available_at") // reintentos con espera creciente
+  attempts       Int       @default(0)
+  lastError      String?   @map("last_error")
+  processedAt    DateTime? @map("processed_at")
+
+  @@index([processedAt, availableAt])
+  @@index([organizationId])
+  @@map("outbox_events")
+}

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Star } from "lucide-react"
-import { Avatar, AvatarFallback } from "@real/ui"
+import { Avatar, AvatarFallback, Card, SectionIntro } from "@real/ui"
 
 const reviews = [
   {
@@ -54,6 +54,8 @@ const container = {
   visible: { transition: { staggerChildren: 0.06 } },
 }
 
+const MotionCard = motion.create(Card)
+
 const item = {
   hidden: { opacity: 0, y: 30 },
   visible: {
@@ -65,7 +67,7 @@ const item = {
 
 export function ReviewsSection() {
   return (
-    <section id="reviews" className="py-20 md:py-28">
+    <section id="reviews" className="border-t border-border bg-muted/40 py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         {/* Header */}
         <motion.div
@@ -73,15 +75,12 @@ export function ReviewsSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ type: "spring" as const, stiffness: 300, damping: 30 }}
-          className="mx-auto max-w-2xl text-center"
         >
-          <span className="text-xs font-semibold tracking-widest text-primary uppercase">Reviews</span>
-          <h2 className="mt-3 font-serif text-3xl text-foreground text-balance md:text-4xl lg:text-5xl">
-            Loved by agencies worldwide
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            {"Don't take our word for it. Here's what our customers have to say."}
-          </p>
+          <SectionIntro
+            eyebrow="Reviews"
+            title="Loved by agencies worldwide"
+            description="Don't take our word for it. Here's what our customers have to say."
+          />
         </motion.div>
 
         {/* Masonry-ish Grid */}
@@ -93,10 +92,10 @@ export function ReviewsSection() {
           className="mt-14 columns-1 gap-5 md:columns-2 lg:columns-3"
         >
           {reviews.map((review) => (
-            <motion.article
+            <MotionCard
               key={review.name}
               variants={item}
-              className="mb-5 inline-block w-full break-inside-avoid rounded-2xl border border-border bg-card p-6 md:p-7"
+              className="mb-5 inline-block w-full break-inside-avoid p-6 md:p-7"
             >
               {/* Stars */}
               <div className="flex gap-0.5">
@@ -113,7 +112,7 @@ export function ReviewsSection() {
               {/* Author */}
               <div className="mt-5 flex items-center gap-3">
                 <Avatar className="size-9 border border-border">
-                  <AvatarFallback className="bg-secondary text-xs font-semibold text-secondary-foreground">
+                  <AvatarFallback className="bg-muted text-xs font-semibold text-secondary-foreground">
                     {review.initials}
                   </AvatarFallback>
                 </Avatar>
@@ -122,7 +121,7 @@ export function ReviewsSection() {
                   <p className="text-xs text-muted-foreground">{review.role}</p>
                 </div>
               </div>
-            </motion.article>
+            </MotionCard>
           ))}
         </motion.div>
       </div>

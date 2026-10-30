@@ -1,6 +1,6 @@
-import { Injectable }    from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import type { Prisma }   from '@/generated/prisma';
+import type { Prisma } from '@/generated/prisma';
 import type { IUsersRepository } from '@/users/repository/users.repository.interface';
 import type { OrganizationAccessResult } from '@real/auth-server';
 import type { User, UserProfile, UpsertUserInput } from '@/domain/user.entity';
@@ -9,13 +9,21 @@ type PrismaUser = Prisma.UserGetPayload<Record<string, never>>;
 type PrismaUserWithOrg = Prisma.UserGetPayload<{
   include: {
     organizations: true;
-    collaborations: { include: { organization: { select: { id: true; name: true; slug: true } } } };
+    collaborations: {
+      include: {
+        organization: { select: { id: true; name: true; slug: true } };
+      };
+    };
   };
 }>;
 
 const DEFAULT_PERMISSIONS: Record<string, boolean> = {
-  canViewListings: true, canCreateListings: false, canEditListings: false,
-  canDeleteListings: false, canViewStats: false, canManageLeads: false,
+  canViewListings: true,
+  canCreateListings: false,
+  canEditListings: false,
+  canDeleteListings: false,
+  canViewStats: false,
+  canManageLeads: false,
   canManageCollaborators: false,
 };
 
@@ -25,28 +33,35 @@ export class PrismaUsersRepository implements IUsersRepository {
 
   private toUser(row: PrismaUser): User {
     return {
-      id:             row.id,
-      firebaseUid:    row.firebaseUid,
-      email:          row.email,
-      displayName:    row.displayName,
-      photoUrl:       row.avatarUrl,
-      referralCode:   row.affiliateCode,
+      id: row.id,
+      firebaseUid: row.firebaseUid,
+      email: row.email,
+      displayName: row.displayName,
+      photoUrl: row.avatarUrl,
+      referralCode: row.affiliateCode,
       referredByCode: row.referredByCode,
-      createdAt:      row.createdAt,
-      updatedAt:      row.updatedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 
   private toProfile(row: PrismaUserWithOrg): UserProfile {
-    const owned = row.organizations.map(o => ({ id: o.id, name: o.name, slug: o.slug }));
+    const owned = row.organizations.map((o) => ({
+      id: o.id,
+      name: o.name,
+      slug: o.slug,
+    }));
     return {
       user: this.toUser(row),
-      organization:  owned[0] ?? null,
+      organization: owned[0] ?? null,
       organizations: owned,
-      collaborations: row.collaborations.map(c => ({
+      collaborations: row.collaborations.map((c) => ({
         organizationId: c.organizationId,
-        role:           'MEMBER' as import('@real/auth-server').TenantRole,
-        permissions: { ...DEFAULT_PERMISSIONS, ...(c.permissions as Record<string, boolean>) },
+        role: 'MEMBER',
+        permissions: {
+          ...DEFAULT_PERMISSIONS,
+          ...(c.permissions as Record<string, boolean>),
+        },
       })),
     };
   }
@@ -56,22 +71,25 @@ export class PrismaUsersRepository implements IUsersRepository {
     return row ? this.toUser(row) : null;
   }
 
-  async upsert(input: UpsertUserInput, tx?: Prisma.TransactionClient): Promise<User> {
+  async upsert(
+    input: UpsertUserInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<User> {
     const client = tx ?? this.prisma;
-    const row    = await client.user.upsert({
-      where:  { firebaseUid: input.firebaseUid },
+    const row = await client.user.upsert({
+      where: { firebaseUid: input.firebaseUid },
       update: {
-        ...(input.email       ? { email:       input.email }       : {}),
+        ...(input.email ? { email: input.email } : {}),
         ...(input.displayName ? { displayName: input.displayName } : {}),
-        ...(input.photoUrl    ? { avatarUrl:   input.photoUrl }    : {}),
+        ...(input.photoUrl ? { avatarUrl: input.photoUrl } : {}),
       },
       create: {
-        firebaseUid:   input.firebaseUid,
-        email:         input.email ?? '',
-        displayName:   input.displayName,
-        avatarUrl:     input.photoUrl,
+        firebaseUid: input.firebaseUid,
+        email: input.email ?? '',
+        displayName: input.displayName,
+        avatarUrl: input.photoUrl,
         referredByCode: input.referredByCode,
-        affiliateCode:  `ref-${input.firebaseUid.slice(0, 8)}`,
+        affiliateCode: `ref-${input.firebaseUid.slice(0, 8)}`,
       },
     });
     return this.toUser(row);
@@ -79,23 +97,28 @@ export class PrismaUsersRepository implements IUsersRepository {
 
   async buildProfile(firebaseUid: string): Promise<UserProfile | null> {
     const row = await this.prisma.user.findUnique({
-      where:   { firebaseUid },
+      where: { firebaseUid },
       include: {
-        organizations:  { orderBy: { createdAt: 'asc' } },
+        organizations: { orderBy: { createdAt: 'asc' } },
         collaborations: {
-          where:   { status: 'ACTIVE' },
-          include: { organization: { select: { id: true, name: true, slug: true } } },
+          where: { status: 'ACTIVE' },
+          include: {
+            organization: { select: { id: true, name: true, slug: true } },
+          },
         },
       },
     });
     return row ? this.toProfile(row) : null;
   }
 
-  async getOrganizationAccess(firebaseUid: string, organizationId: string): Promise<OrganizationAccessResult> {
+  async getOrganizationAccess(
+    firebaseUid: string,
+    organizationId: string,
+  ): Promise<OrganizationAccessResult> {
     const user = await this.prisma.user.findUnique({
-      where:   { firebaseUid },
+      where: { firebaseUid },
       include: {
-        organizations:  { where: { id: organizationId }, select: { id: true } },
+        organizations: { where: { id: organizationId }, select: { id: true } },
         collaborations: { where: { organizationId, status: 'ACTIVE' } },
       },
     });
@@ -105,18 +128,27 @@ export class PrismaUsersRepository implements IUsersRepository {
     // D4: el acceso se valida contra la base en cada request, no contra la cookie.
     if (user.organizations.length > 0) {
       return {
-        canAccess: true, userId: user.id, organizationId,
+        canAccess: true,
+        userId: user.id,
+        organizationId,
         role: 'OWNER' as import('@real/auth-server').TenantRole,
-        permissions: Object.fromEntries(Object.keys(DEFAULT_PERMISSIONS).map(k => [k, true])),
+        permissions: Object.fromEntries(
+          Object.keys(DEFAULT_PERMISSIONS).map((k) => [k, true]),
+        ),
       };
     }
 
     const collab = user.collaborations[0];
     if (collab) {
       return {
-        canAccess: true, userId: user.id, organizationId,
+        canAccess: true,
+        userId: user.id,
+        organizationId,
         role: 'MEMBER' as import('@real/auth-server').TenantRole,
-        permissions: { ...DEFAULT_PERMISSIONS, ...(collab.permissions as Record<string, boolean>) },
+        permissions: {
+          ...DEFAULT_PERMISSIONS,
+          ...(collab.permissions as Record<string, boolean>),
+        },
       };
     }
 

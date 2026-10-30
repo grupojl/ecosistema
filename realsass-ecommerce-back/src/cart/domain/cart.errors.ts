@@ -25,7 +25,9 @@ export class CartItemNotFoundError extends CartDomainError {
 
 export class InsufficientStockForCartError extends CartDomainError {
   constructor(variantId: string, requested: number, available: number) {
-    super(`Stock insuficiente para variante ${variantId}: solicitado ${requested}, disponible ${available}`);
+    super(
+      `Stock insuficiente para variante ${variantId}: solicitado ${requested}, disponible ${available}`,
+    );
   }
 }
 

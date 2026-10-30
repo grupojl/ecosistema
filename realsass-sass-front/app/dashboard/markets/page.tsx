@@ -1,15 +1,14 @@
+import { PageContainer, PageHeader } from '@real/ui'
 import { MarketsManager } from '@/features/markets/markets-manager'
 
 export default function MarketsPage() {
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Mercados activos</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Declaré en qué países operás. El sistema resuelve el fulfillment automáticamente.
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="Mercados activos"
+        description="Declaré en qué países operás. El sistema resuelve el fulfillment automáticamente."
+      />
       <MarketsManager />
-    </div>
+    </PageContainer>
   )
 }

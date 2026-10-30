@@ -25,21 +25,21 @@ import { PrismaService } from '@/prisma/prisma.service';
 import type { InternalListOrgsDto } from '@/internal/schemas';
 
 export interface InternalOrgItem {
-  id:           string;
-  ecosystemId:  string;
-  name:         string | null;
-  slug:         string | null;
-  status:       'ACTIVE' | 'SUSPENDED' | 'BLOCKED';
-  storeStatus:  'ACTIVE' | 'PAUSED';
-  plan:         string;
-  createdAt:    string;
+  id: string;
+  ecosystemId: string;
+  name: string | null;
+  slug: string | null;
+  status: 'ACTIVE' | 'SUSPENDED' | 'BLOCKED';
+  storeStatus: 'ACTIVE' | 'PAUSED';
+  plan: string;
+  createdAt: string;
   suspendedAt?: string;
 }
 
 export interface InternalOrgList {
-  data:  InternalOrgItem[];
+  data: InternalOrgItem[];
   total: number;
-  page:  number;
+  page: number;
   limit: number;
 }
 
@@ -51,39 +51,39 @@ export class InternalOrganizationsService {
 
   // ── Mapear Prisma → shape esperado por superadmin ──────────────────────────
   private toItem(org: {
-    id:          string;
+    id: string;
     ecosystemId: string | null;
-    name:        string | null;
-    slug:        string | null;
-    status:      string;
+    name: string | null;
+    slug: string | null;
+    status: string;
     storeStatus: string;
-    plan:        string | null;
-    createdAt:   Date;
+    plan: string | null;
+    createdAt: Date;
     suspendedAt: Date | null;
   }): InternalOrgItem {
     return {
-      id:           org.id,
-      ecosystemId:  org.ecosystemId ?? 'welver',
-      name:         org.name,
-      slug:         org.slug,
-      status:       org.status as 'ACTIVE' | 'SUSPENDED' | 'BLOCKED',
-      storeStatus:  org.storeStatus as 'ACTIVE' | 'PAUSED',
-      plan:         org.plan ?? 'free',
-      createdAt:    org.createdAt.toISOString(),
-      suspendedAt:  org.suspendedAt?.toISOString(),
+      id: org.id,
+      ecosystemId: org.ecosystemId ?? 'welver',
+      name: org.name,
+      slug: org.slug,
+      status: org.status as 'ACTIVE' | 'SUSPENDED' | 'BLOCKED',
+      storeStatus: org.storeStatus as 'ACTIVE' | 'PAUSED',
+      plan: org.plan ?? 'free',
+      createdAt: org.createdAt.toISOString(),
+      suspendedAt: org.suspendedAt?.toISOString(),
     };
   }
 
   private get select() {
     return {
-      id:          true,
+      id: true,
       ecosystemId: true,
-      name:        true,
-      slug:        true,
-      status:      true,
+      name: true,
+      slug: true,
+      status: true,
       storeStatus: true,
-      plan:        true,
-      createdAt:   true,
+      plan: true,
+      createdAt: true,
       suspendedAt: true,
     } as const;
   }
@@ -94,9 +94,9 @@ export class InternalOrganizationsService {
     const skip = (page - 1) * limit;
 
     const where = {
-      ...(ecosystemId  ? { ecosystemId }  : {}),
-      ...(status       ? { status }       : {}),
-      ...(storeStatus  ? { storeStatus }  : {}),
+      ...(ecosystemId ? { ecosystemId } : {}),
+      ...(status ? { status } : {}),
+      ...(storeStatus ? { storeStatus } : {}),
       ...(search
         ? {
             OR: [
@@ -112,7 +112,7 @@ export class InternalOrganizationsService {
         where,
         select: this.select,
         skip,
-        take:    limit,
+        take: limit,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.organization.count({ where }),
@@ -124,7 +124,7 @@ export class InternalOrganizationsService {
   // ── GET /internal/organizations/:id ────────────────────────────────────────
   async findById(id: string): Promise<InternalOrgItem> {
     const org = await this.prisma.organization.findUnique({
-      where:  { id },
+      where: { id },
       select: this.select,
     });
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
@@ -134,17 +134,20 @@ export class InternalOrganizationsService {
   // ── POST /internal/organizations/:id/suspend ───────────────────────────────
   async suspend(id: string, reason: string): Promise<InternalOrgItem> {
     const org = await this.prisma.organization.findUnique({
-      where: { id }, select: { id: true, status: true },
+      where: { id },
+      select: { id: true, status: true },
     });
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
-    if (org.status === 'SUSPENDED') throw new ConflictException('Organization is already suspended');
-    if (org.status === 'BLOCKED')   throw new ConflictException('Organization is blocked — cannot suspend');
+    if (org.status === 'SUSPENDED')
+      throw new ConflictException('Organization is already suspended');
+    if (org.status === 'BLOCKED')
+      throw new ConflictException('Organization is blocked — cannot suspend');
 
     this.logger.log(`[suspend] org=${id} reason="${reason}"`);
 
     const updated = await this.prisma.organization.update({
-      where:  { id },
-      data:   { status: 'SUSPENDED', suspendedAt: new Date() },
+      where: { id },
+      data: { status: 'SUSPENDED', suspendedAt: new Date() },
       select: this.select,
     });
     return this.toItem(updated);
@@ -153,16 +156,18 @@ export class InternalOrganizationsService {
   // ── POST /internal/organizations/:id/unsuspend ─────────────────────────────
   async unsuspend(id: string, reason: string): Promise<InternalOrgItem> {
     const org = await this.prisma.organization.findUnique({
-      where: { id }, select: { id: true, status: true },
+      where: { id },
+      select: { id: true, status: true },
     });
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
-    if (org.status !== 'SUSPENDED') throw new ConflictException('Organization is not suspended');
+    if (org.status !== 'SUSPENDED')
+      throw new ConflictException('Organization is not suspended');
 
     this.logger.log(`[unsuspend] org=${id} reason="${reason}"`);
 
     const updated = await this.prisma.organization.update({
-      where:  { id },
-      data:   { status: 'ACTIVE', suspendedAt: null },
+      where: { id },
+      data: { status: 'ACTIVE', suspendedAt: null },
       select: this.select,
     });
     return this.toItem(updated);
@@ -171,16 +176,18 @@ export class InternalOrganizationsService {
   // ── POST /internal/organizations/:id/pause-store ───────────────────────────
   async pauseStore(id: string, reason: string): Promise<InternalOrgItem> {
     const org = await this.prisma.organization.findUnique({
-      where: { id }, select: { id: true, storeStatus: true },
+      where: { id },
+      select: { id: true, storeStatus: true },
     });
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
-    if (org.storeStatus === 'PAUSED') throw new ConflictException('Store is already paused');
+    if (org.storeStatus === 'PAUSED')
+      throw new ConflictException('Store is already paused');
 
     this.logger.log(`[pause-store] org=${id} reason="${reason}"`);
 
     const updated = await this.prisma.organization.update({
-      where:  { id },
-      data:   { storeStatus: 'PAUSED' },
+      where: { id },
+      data: { storeStatus: 'PAUSED' },
       select: this.select,
     });
     return this.toItem(updated);
@@ -189,16 +196,18 @@ export class InternalOrganizationsService {
   // ── POST /internal/organizations/:id/resume-store ──────────────────────────
   async resumeStore(id: string, reason: string): Promise<InternalOrgItem> {
     const org = await this.prisma.organization.findUnique({
-      where: { id }, select: { id: true, storeStatus: true },
+      where: { id },
+      select: { id: true, storeStatus: true },
     });
     if (!org) throw new NotFoundException(`Organization ${id} not found`);
-    if (org.storeStatus === 'ACTIVE') throw new ConflictException('Store is already active');
+    if (org.storeStatus === 'ACTIVE')
+      throw new ConflictException('Store is already active');
 
     this.logger.log(`[resume-store] org=${id} reason="${reason}"`);
 
     const updated = await this.prisma.organization.update({
-      where:  { id },
-      data:   { storeStatus: 'ACTIVE' },
+      where: { id },
+      data: { storeStatus: 'ACTIVE' },
       select: this.select,
     });
     return this.toItem(updated);

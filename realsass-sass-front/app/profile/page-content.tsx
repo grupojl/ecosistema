@@ -16,17 +16,16 @@ import { useRouter }         from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, Users, Check, Loader2, LogOut, ArrowRight,
-  Copy, AlertCircle, ChevronLeft, Star, Settings, Link as LinkIcon, MonitorSmartphone,
+  Copy, AlertCircle, ChevronLeft, Star, Settings, Link as LinkIcon, MonitorSmartphone, LifeBuoy,
 } from 'lucide-react'
-import {
-  Button, Input, Badge, Skeleton, Avatar, AvatarFallback, AvatarImage,
-} from '@real/ui'
+import { Button, Input, Badge, Skeleton, Avatar, AvatarFallback, AvatarImage, ThemeToggle, LoadingState, SectionHeader, Card, EmptyState } from '@real/ui'
 import { useAuth }                 from '@/context/auth-context'
 import { useMe, useSelectRole, useRefreshClaims } from '@/hooks/use-auth-trpc'
 import { trpc }                    from '@/lib/trpc/client'
 import { CollaboratorsSection }    from '@/components/collaborators-section'
 import { OrganizationSwitcher }    from '@/components/organization-switcher'
 import { ConnectedDevicesDialog }  from '@/components/devices-dialog-connected'
+import { ConnectedFeedbackDialog }  from '@/components/feedback-dialog-connected'
 import { useDashboardSSO }         from '@/hooks/use-dashboard-sso'
 import { getErrorMessage }         from '@/lib/errors'
 
@@ -36,20 +35,14 @@ type View = 'overview' | 'add-role' | 'edit-org' | 'collaborators'
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+    <Button variant="ghost" size="sm" onClick={onClick} className="-ml-3 mb-4 text-muted-foreground">
       <ChevronLeft className="h-4 w-4" /> Volver
-    </button>
+    </Button>
   )
 }
 
 function ProfileSkeleton() {
-  return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-20 rounded-xl bg-muted" />
-      <div className="h-16 rounded-xl bg-muted" />
-      <div className="h-16 rounded-xl bg-muted" />
-    </div>
-  )
+  return <LoadingState rows={3} label="Cargando tu perfil…" />
 }
 
 // ── RoleSelector ──────────────────────────────────────────────────────────────
@@ -67,13 +60,14 @@ function RoleSelector({ onBack }: { onBack: () => void }) {
   return (
     <div className="space-y-4">
       <BackButton onClick={onBack} />
-      <h2 className="font-semibold text-lg">Seleccioná tu rol</h2>
+      <SectionHeader title="Seleccioná tu rol" />
       {(['owner', 'affiliate'] as const).map(role => (
-        <button
+        <Button
           key={role}
+          variant="outline"
           disabled={selectRole.isPending}
           onClick={() => handleSelect(role)}
-          className="flex w-full items-center justify-between p-4 rounded-xl border hover:bg-accent transition"
+          className="h-auto w-full justify-between p-4 font-normal"
         >
           <div className="flex items-center gap-3">
             {role === 'owner' ? <Building2 className="h-5 w-5" /> : <Star className="h-5 w-5" />}
@@ -87,7 +81,7 @@ function RoleSelector({ onBack }: { onBack: () => void }) {
           {selectRole.isPending
             ? <Loader2 className="h-4 w-4 animate-spin" />
             : <ArrowRight className="h-4 w-4 text-muted-foreground" />}
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -108,7 +102,7 @@ function OrgForm({ onBack }: { onBack: () => void }) {
   return (
     <div className="space-y-4">
       <BackButton onClick={onBack} />
-      <h2 className="font-semibold text-lg">Editar organización</h2>
+      <SectionHeader title="Editar organización" />
       <div className="space-y-3">
         <Input
           placeholder="Nombre de la organización"
@@ -146,6 +140,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
   const ssoLoading = ssoState === 'loading'
   const [copied, setCopied]  = useState(false)
   const [devicesOpen, setDevicesOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   // `window` no existe en el render del servidor (el perfil llega prefetcheado): el origen se resuelve al montar.
   const [origin, setOrigin] = useState<string | null>(null)
   useEffect(() => { setOrigin(window.location.origin) }, [])
@@ -153,10 +148,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
   // La consulta espera a la sesión (sessionReady): mientras tanto no hay datos, pero tampoco es un perfil vacío.
   if (isLoading || (!me && (authLoading || authBusy))) return <ProfileSkeleton />
   if (error) return (
-    <div className="flex items-center gap-2 text-destructive p-4 rounded-xl border border-destructive/20">
-      <AlertCircle className="h-4 w-4 shrink-0" />
-      <p className="text-sm">{getErrorMessage(error)}</p>
-    </div>
+    <EmptyState kind="error" description={getErrorMessage(error)} />
   )
 
   const profile        = me as any
@@ -180,7 +172,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
     <div className="space-y-4">
 
       {/* Avatar + info usuario */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border">
+      <Card className="flex items-center gap-3 p-4">
         <Avatar className="h-12 w-12">
           <AvatarImage src={user?.photoUrl ?? undefined} referrerPolicy="no-referrer" />
           <AvatarFallback>{(user?.displayName ?? 'U')[0].toUpperCase()}</AvatarFallback>
@@ -192,17 +184,22 @@ function Overview({ onView }: { onView: (v: View) => void }) {
         <Button variant="ghost" size="icon" onClick={() => setDevicesOpen(true)} title="Dispositivos" aria-label="Dispositivos">
           <MonitorSmartphone className="h-4 w-4" />
         </Button>
+        <ThemeToggle compact />
+        <Button variant="ghost" size="icon" onClick={() => setFeedbackOpen(true)} title="Informar un problema" aria-label="Informar un problema">
+          <LifeBuoy className="h-4 w-4" />
+        </Button>
         <Button variant="ghost" size="icon" onClick={logout} title="Cerrar sesión" aria-label="Cerrar sesión">
           <LogOut className="h-4 w-4" />
         </Button>
         <ConnectedDevicesDialog open={devicesOpen} onOpenChange={setDevicesOpen} />
-      </div>
+        <ConnectedFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} module="profile" />
+      </Card>
 
       <OrganizationSwitcher />
 
       {/* Org activa */}
       {org && (
-        <div className="rounded-xl border p-4 space-y-3">
+        <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -228,12 +225,12 @@ function Overview({ onView }: { onView: (v: View) => void }) {
             )}
           </div>
           {ssoError && <p role="alert" className="text-xs text-destructive">{ssoError}</p>}
-        </div>
+        </Card>
       )}
 
       {/* Colaboraciones */}
       {collaborations.length > 0 && (
-        <div className="rounded-xl border p-4 space-y-2">
+        <Card className="p-4 space-y-2">
           <p className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" /> Mis colaboraciones
           </p>
@@ -243,36 +240,37 @@ function Overview({ onView }: { onView: (v: View) => void }) {
               <Badge variant="secondary">Colaborador</Badge>
             </div>
           ))}
-        </div>
+        </Card>
       )}
 
       {/* Sin org — seleccionar rol */}
       {!org && (
-        <button
+        <Button
+          variant="outline"
           onClick={() => onView('add-role')}
-          className="flex w-full items-center justify-between p-4 rounded-xl border hover:bg-accent transition"
+          className="h-auto w-full justify-between p-4 font-normal"
         >
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Elegir mi rol</span>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
-        </button>
+        </Button>
       )}
 
       {/* Panel afiliado */}
       {referralLink && (
-        <div className="rounded-xl border p-4 space-y-2">
+        <Card className="p-4 space-y-2">
           <p className="text-sm font-medium flex items-center gap-2">
             <LinkIcon className="h-4 w-4 text-muted-foreground" /> Mi link de referido
           </p>
           <div className="flex items-center gap-2">
             <p className="text-xs text-muted-foreground truncate flex-1">{referralLink}</p>
             <Button size="sm" variant="outline" onClick={handleCopyReferral}>
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-success-ink" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
     </div>

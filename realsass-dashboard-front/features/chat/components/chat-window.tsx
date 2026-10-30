@@ -18,7 +18,7 @@ function MensajeSkeleton({ count = 3 }: MensajeSkeletonProps) {
     <div className="flex flex-col gap-3 p-4">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={cn('flex', i % 2 === 0 ? 'justify-end' : 'justify-start')}>
-          <Skeleton className={cn('h-10 rounded-2xl', i % 2 === 0 ? 'w-48' : 'w-64')} />
+          <Skeleton className={cn('h-10 rounded-lg', i % 2 === 0 ? 'w-48' : 'w-64')} />
         </div>
       ))}
     </div>
@@ -98,10 +98,10 @@ export function ChatWindow({ selected, mensajes, isLoading: msgLoading = false, 
                 <div key={msg.id} className={cn('flex', isAgente ? 'justify-end' : 'justify-start')}>
                   <div
                     className={cn(
-                      'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm',
+                      'max-w-[75%] rounded-lg px-4 py-2.5 text-sm',
                       isAgente
                         ? 'bg-primary text-primary-foreground rounded-br-sm'
-                        : 'bg-secondary text-foreground rounded-bl-sm',
+                        : 'bg-muted text-foreground rounded-bl-sm',
                     )}
                   >
                     {msg.origen === 'bot' && (
@@ -127,7 +127,7 @@ export function ChatWindow({ selected, mensajes, isLoading: msgLoading = false, 
             ref={inputRef}
             placeholder={selected ? 'Escribe un mensaje...' : 'Selecciona una conversacion'}
             disabled={!selected || isSending}
-            className="flex-1 bg-secondary border-border"
+            className="flex-1 bg-muted border-border"
           />
           <Button type="submit" size="icon" disabled={!selected || isSending}>
             <Send className="h-4 w-4" />

@@ -11,13 +11,12 @@
  * para el flujo anónimo. El checkout autenticado (cliente logueado) va en
  * customer.router.ts.
  */
-import { z }                     from 'zod';
+import { z } from 'zod';
 import { router, adminProcedure } from '@/trpc';
-import type { OrdersService }    from '@/orders/orders.service';
+import type { OrdersService } from '@/orders/orders.service';
 
 export function createAdminOrdersRouter(ordersService: OrdersService) {
   return router({
-
     /**
      * adminOrders.list
      * Todas las órdenes de la org. OWNER o COLLABORATOR.

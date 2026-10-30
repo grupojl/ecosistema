@@ -15,16 +15,24 @@ export function rethrowAsTrpcStoreError(err: unknown): never {
   if (err instanceof HttpException) {
     const status = err.getStatus();
     if (status === HttpStatus.NOT_FOUND) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: err.message, cause: err });
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: err.message,
+        cause: err,
+      });
     }
     if (status === HttpStatus.SERVICE_UNAVAILABLE) {
-      throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: err.message, cause: err });
+      throw new TRPCError({
+        code: 'SERVICE_UNAVAILABLE',
+        message: err.message,
+        cause: err,
+      });
     }
   }
 
   throw new TRPCError({
-    code:    'INTERNAL_SERVER_ERROR',
+    code: 'INTERNAL_SERVER_ERROR',
     message: 'Error inesperado resolviendo la tienda',
-    cause:   err instanceof Error ? err : undefined,
+    cause: err instanceof Error ? err : undefined,
   });
 }

@@ -20,10 +20,10 @@ import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
 
 export interface PlatformClaims {
-  organizationId:   string;
+  organizationId: string;
   organizationName: string;
   organizationSlug: string;
-  role:             string;
+  role: string;
   permissions: {
     chat?: { canRead: boolean; canWrite: boolean };
   };
@@ -34,8 +34,8 @@ export interface PlatformClaims {
 export interface ProfileForClaims {
   tenants: Array<{
     organizationId: string;
-    organization:   Record<string, unknown>;
-    role:           string;
+    organization: Record<string, unknown>;
+    role: string;
   }>;
 }
 
@@ -52,7 +52,9 @@ export class ClaimsService {
       );
     } catch (err) {
       // No rompemos el flujo de login si los claims fallan
-      this.logger.error(`Error emitiendo claims para ${uid}: ${(err as Error).message}`);
+      this.logger.error(
+        `Error emitiendo claims para ${uid}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -62,7 +64,9 @@ export class ClaimsService {
       await getAuth().revokeRefreshTokens(uid);
       this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
     } catch (err) {
-      this.logger.error(`Error revocando tokens para ${uid}: ${(err as Error).message}`);
+      this.logger.error(
+        `Error revocando tokens para ${uid}: ${(err as Error).message}`,
+      );
     }
   }
 
@@ -72,18 +76,18 @@ export class ClaimsService {
 
     // OWNER tiene prioridad, luego el primero disponible
     const tenant =
-      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0]!;
+      profile.tenants.find((t) => t.role === 'OWNER') ?? profile.tenants[0];
 
     const org = tenant.organization;
 
     return {
-      organizationId:   tenant.organizationId,
+      organizationId: tenant.organizationId,
       organizationName: (org['name'] as string | null) ?? tenant.organizationId,
       organizationSlug: (org['slug'] as string | null) ?? '',
-      role:             this.mapRole(tenant.role),
+      role: this.mapRole(tenant.role),
       permissions: {
         chat: {
-          canRead:  true,
+          canRead: true,
           canWrite: tenant.role !== 'VIEWER',
         },
       },
@@ -92,11 +96,11 @@ export class ClaimsService {
 
   private mapRole(ecosystemRole: string): string {
     const map: Record<string, string> = {
-      OWNER:        'OWNER',
+      OWNER: 'OWNER',
       COLLABORATOR: 'MEMBER',
-      ADMIN:        'ADMIN',
-      MEMBER:       'MEMBER',
-      VIEWER:       'VIEWER',
+      ADMIN: 'ADMIN',
+      MEMBER: 'MEMBER',
+      VIEWER: 'VIEWER',
     };
     return map[ecosystemRole] ?? 'VIEWER';
   }

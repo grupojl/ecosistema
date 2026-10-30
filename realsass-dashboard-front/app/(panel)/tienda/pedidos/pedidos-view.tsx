@@ -59,7 +59,7 @@ export function PedidosView() {
         </p>
       </div>
 
-      <Table>
+      <Table stack>
         <TableHeader>
           <TableRow>
             <TableHead>ID</TableHead>
@@ -84,14 +84,14 @@ export function PedidosView() {
               onClick={() => setSelectedId(order.id)}
               onKeyDown={(e) => { if (e.key === 'Enter') setSelectedId(order.id); }}
             >
-              <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}</TableCell>
-              <TableCell>
+              <TableCell data-label="ID" className="font-mono text-xs">{order.id.slice(0, 8)}</TableCell>
+              <TableCell data-label="Estado">
                 <Badge variant={ORDER_STATUS_BADGE[order.status]}>{ORDER_STATUS_LABEL[order.status]}</Badge>
               </TableCell>
-              <TableCell className="text-right font-mono text-sm">
+              <TableCell data-label="Total" className="text-right font-mono text-sm">
                 {formatMoney(order.totalCents, order.currency)}
               </TableCell>
-              <TableCell>{new Date(order.createdAt).toLocaleDateString('es-AR')}</TableCell>
+              <TableCell data-label="Fecha">{new Date(order.createdAt).toLocaleDateString('es-AR')}</TableCell>
             </TableRow>
           ))}
         </TableBody>

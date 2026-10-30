@@ -3,46 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Package, ClipboardList, Eye, Store } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { PageContainer, PageHeader, SectionTabs } from '@real/ui';
 
 const TIENDA_TABS = [
-  { name: 'Productos',    href: '/tienda/productos', Icon: Package       },
-  { name: 'Pedidos',      href: '/tienda/pedidos',    Icon: ClipboardList },
-  { name: 'Vista previa', href: '/tienda/preview',    Icon: Eye           },
-] as const;
+  { label: 'Productos',    href: '/tienda/productos', icon: <Package /> },
+  { label: 'Pedidos',      href: '/tienda/pedidos',   icon: <ClipboardList /> },
+  { label: 'Vista previa', href: '/tienda/preview',   icon: <Eye /> },
+];
 
 export default function TiendaLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <Store className="h-5 w-5 text-muted-foreground" />
-        <h1 className="text-xl font-semibold tracking-tight">Tienda</h1>
-      </div>
-
-      <div className="flex gap-1 border-b border-border overflow-x-auto">
-        {TIENDA_TABS.map(({ name, href, Icon }) => {
-          const active = pathname === href || pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors',
-                active
-                  ? 'border-primary text-foreground font-medium'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {name}
-            </Link>
-          );
-        })}
-      </div>
-
-      {children}
-    </div>
+    <PageContainer>
+      <PageHeader icon={<Store />} title="Tienda" />
+      <SectionTabs
+        label="Secciones de la tienda"
+        items={TIENDA_TABS}
+        linkAs={Link}
+        isActive={(href) => pathname === href || pathname.startsWith(href)}
+      />
+      <div>{children}</div>
+    </PageContainer>
   );
 }

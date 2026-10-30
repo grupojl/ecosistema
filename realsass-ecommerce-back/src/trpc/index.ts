@@ -1,1 +1,6 @@
-export { router, publicProcedure, adminProcedure, customerProcedure } from './trpc';
+export {
+  router,
+  publicProcedure,
+  adminProcedure,
+  customerProcedure,
+} from './trpc';

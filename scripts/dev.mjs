@@ -29,6 +29,8 @@ const SERVICES = [
   { key: 'sass-front',     pkg: 'realsass-sass-front',       port: 3021, kind: 'front', color: 32 },
   { key: 'dashboard',      pkg: 'realsass-dashboard-front',  port: 3022, kind: 'front', color: 35 },
   { key: 'storefront',     pkg: 'real-ecommerce-front',      port: 3023, kind: 'front', color: 33 },
+  { key: 'docs',           pkg: 'realsass-docs-front',       port: 3024, kind: 'front', color: 31 },
+  { key: 'design',         pkg: 'realsass-design-front',      port: 3026, kind: 'front', color: 35 },
 ];
 
 const only = process.env.DEV_ONLY?.split(',').map((s) => s.trim()).filter(Boolean);

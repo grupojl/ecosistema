@@ -1,7 +1,7 @@
 'use client';
 
 import { CircleAlert, ChartColumnBig, InfinityIcon } from 'lucide-react';
-import { Skeleton } from '@real/ui';
+import { Alert, Skeleton, Card } from '@real/ui';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useQuotas } from '@/features/config-quotas/hooks';
 import { QUOTA_RESOURCE_LABELS } from '@/features/config/types';
@@ -20,15 +20,15 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
   const label       = QUOTA_RESOURCE_LABELS[quota.resource] ?? quota.resource;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <Card className="border-border p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <p className="font-medium text-sm">{label}</p>
         <p className={cn(
           'text-sm font-mono',
-          isCritical ? 'text-destructive' : isAlert ? 'text-amber-500' : 'text-muted-foreground',
+          isCritical ? 'text-destructive' : isAlert ? 'text-warning-ink' : 'text-muted-foreground',
         )}>
           {isUnlimited ? (
-            <span className="flex items-center gap-1 text-green-500">
+            <span className="flex items-center gap-1 text-success-ink">
               <InfinityIcon className="h-4 w-4" />
               Ilimitado
             </span>
@@ -44,7 +44,7 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
             <div
               className={cn(
                 'h-full rounded-full transition-all',
-                isCritical ? 'bg-destructive' : isAlert ? 'bg-amber-500' : 'bg-primary',
+                isCritical ? 'bg-destructive' : isAlert ? 'bg-warning' : 'bg-primary',
               )}
               style={{ width: `${pct}%` }}
             />
@@ -54,14 +54,14 @@ function QuotaBar({ quota }: { quota: QuotaConfig }) {
             <span>{limit - quota.currentUsage} restante{limit - quota.currentUsage !== 1 ? 's' : ''}</span>
           </div>
           {isAlert && (
-            <p className={cn('text-xs flex items-center gap-1', isCritical ? 'text-destructive' : 'text-amber-500')}>
+            <p className={cn('text-xs flex items-center gap-1', isCritical ? 'text-destructive' : 'text-warning-ink')}>
               <CircleAlert className="h-3 w-3" />
               {isCritical ? 'Límite casi alcanzado' : `Alerta al ${ALERT_AT_PERCENT}%`}
             </p>
           )}
         </>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -72,15 +72,12 @@ export default function QuotasPage() {
 
   if (isLoading) return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      {[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-28 rounded-lg" />)}
     </div>
   );
 
   if (error) return (
-    <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-      <CircleAlert className="h-4 w-4" />
-      Error al cargar quotas.
-    </div>
+    <Alert variant="destructive">Error al cargar quotas.</Alert>
   );
 
   if (quotas.length === 0) return (
