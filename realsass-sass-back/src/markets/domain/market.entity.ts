@@ -21,6 +21,9 @@ export interface MarketProps {
   updatedAt: Date;
 }
 
+/** Fila tal como la devuelve la base: `fulfillmentConfig` es una columna Json (desconocida hasta validarla). */
+export type MarketRow = Omit<MarketProps, 'fulfillmentConfig'> & { fulfillmentConfig: unknown };
+
 export class Market {
   readonly id: string;
   readonly organizationId: string;
@@ -42,7 +45,7 @@ export class Market {
     this.updatedAt = props.updatedAt;
   }
 
-  static fromPrisma(raw: MarketProps): Market {
+  static fromPrisma(raw: MarketRow): Market {
     // Validar fulfillmentConfig con Zod al hidratar desde DB
     const config = FulfillmentConfigSchema.parse(
       typeof raw.fulfillmentConfig === 'string'

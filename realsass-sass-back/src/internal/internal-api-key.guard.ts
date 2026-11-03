@@ -7,6 +7,7 @@
 // Sin header              → 401
 // Header incorrecto       → 401
 // Header correcto         → pasa al controller
+import { headerOf } from '@real/auth-server';
 import {
   CanActivate,
   ExecutionContext,
@@ -26,7 +27,7 @@ export class InternalApiKeyGuard implements CanActivate {
 
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest<Request>();
-    const key = req.headers['x-internal-api-key'] as string | undefined;
+    const key = headerOf(req, 'x-internal-api-key');
     const expected = this.config.getOrThrow<string>('INTERNAL_API_KEY');
 
     if (!safeEqual(key, expected)) {

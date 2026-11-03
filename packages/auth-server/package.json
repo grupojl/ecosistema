@@ -8,7 +8,8 @@
   "scripts": {
     "build": "echo \"@real/auth-server ok\"",
     "typecheck": "echo \"@real/auth-server ok\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
   },
   "dependencies": {
     "@nestjs/common": "catalog:",
@@ -17,10 +18,11 @@
     "reflect-metadata": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:",
+    "@types/express": "catalog:",
     "@types/node": "catalog:",
-    "vitest": "catalog:",
-    "@types/express": "catalog:"
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@nestjs/common": ">=11.0.0",

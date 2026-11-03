@@ -6,6 +6,7 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common';
+import { toJsonObject } from '@/common/prisma/json';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CollaboratorStatus, Prisma } from '@/generated/prisma';
 import {
@@ -111,7 +112,7 @@ export class CollaboratorsService {
           where: { id: existing.id },
           data: {
             status: 'PENDING',
-            permissions: permissions as unknown as Prisma.InputJsonValue,
+            permissions: toJsonObject({ ...permissions }),
           },
         }),
         this.prisma.invitation.upsert({
@@ -136,7 +137,7 @@ export class CollaboratorsService {
           organizationId: org.id,
           email: dto.email,
           status: 'PENDING',
-          permissions: permissions as unknown as Prisma.InputJsonValue,
+          permissions: toJsonObject({ ...permissions }),
         },
       }),
       this.prisma.invitation.create({

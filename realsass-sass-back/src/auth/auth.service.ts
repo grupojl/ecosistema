@@ -14,7 +14,7 @@ import { AffiliatesService } from '@/affiliate/affiliate.service';
 import { ClaimsService } from '@/auth/claims.service';
 import { OrganizationsService } from '@/organizations/organizations.service';
 import { randomBytes } from 'node:crypto';
-import type { CurrentUserPayload } from '@real/auth-server';
+import { errorMessage, type CurrentUserPayload } from '@real/auth-server';
 
 /**
  * AuthService — tres responsabilidades:
@@ -81,12 +81,17 @@ export class AuthService {
     isOwner: boolean;
     affiliateCode: string | null;
   }) {
-    if (!user.affiliateCode) {
+    let affiliateCode = user.affiliateCode;
+    if (!affiliateCode) {
+      affiliateCode = generateAffiliateCode();
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { affiliateCode: generateAffiliateCode() },
+        data: { affiliateCode },
       });
     }
+    // Sin la fila AffiliateData el perfil de afiliado no existía: affiliates.me daba siempre 404 y registerReferral
+    // nunca encontraba al dueño del código (los referidos no se contaban).
+    await this.affiliates.ensureProfile(user.id, affiliateCode);
     const { created } = await this.orgs.ensureDefaultOrganization(user);
     if (created || !user.isOwner) {
       await this.prisma.user.update({
@@ -151,7 +156,7 @@ export class AuthService {
         await this.affiliates.registerReferral(affiliateCode, newUser.id);
       } catch (err) {
         this.logger.warn(
-          `Error referido ${affiliateCode}: ${(err as Error).message}`,
+          `Error referido ${affiliateCode}: ${errorMessage(err)}`,
         );
       }
     }

@@ -1,4 +1,5 @@
 // realsass-ecommerce-back/src/orders/orders.service.ts
+import { toJsonObject } from '@/common/prisma/json';
 import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
 import {
   BadRequestException,
@@ -146,14 +147,15 @@ export class OrdersService {
           status: 'PENDING_PAYMENT',
           totalCents: total,
           currency: cart.items[0]?.variant.currency ?? 'ARS',
-          shippingAddress: shippingAddress as Prisma.InputJsonValue,
+          shippingAddress: toJsonObject(shippingAddress),
           locale: input.locale ?? null,
           // Snapshot del Market (ADR-014): inmutable. Si el dueño cambia la config del Market después, esta orden no cambia.
           // 'default' es el fallback cuando sass-back no responde: no es un Market real, no se referencia.
           marketId: market.id === 'default' ? null : market.id,
           visitorCountryCode: visitorCountry,
           fulfillmentSnapshot:
-            market.fulfillmentConfig as Prisma.InputJsonValue,
+            toJsonObject({ ...market.fulfillmentConfig }),
+          statusHistory: { create: { toStatus: 'PENDING_PAYMENT' } },
           items: {
             create: cart.items.map((i) => ({
               variantId: i.variantId,

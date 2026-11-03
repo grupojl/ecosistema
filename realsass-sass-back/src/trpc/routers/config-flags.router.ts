@@ -13,6 +13,7 @@
  *   conditions?: Record<string, unknown>
  */
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, tenantProcedure } from '@/trpc';
 import type { ConfigFlagsService } from '@/config-flags/config-flags.service';
 
@@ -43,6 +44,12 @@ export function createConfigFlagsRouter(flagsService: ConfigFlagsService) {
       )
       .mutation(async ({ ctx, input }) => {
         const { flagId, ...dto } = input;
+        // Documentado arriba: el rollout lo cambia solo el dueño (un colaborador sí puede hacer toggle).
+        if (dto.rolloutPercentage !== undefined && ctx.role !== 'OWNER')
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Solo el dueño puede cambiar el porcentaje de rollout',
+          });
         return flagsService.update(ctx.organizationId, ctx.uid, flagId, dto);
       }),
   });

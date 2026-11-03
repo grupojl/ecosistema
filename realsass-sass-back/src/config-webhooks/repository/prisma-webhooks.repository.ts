@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventsSchema } from '@/config-webhooks/webhook-delivery.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma } from '@/generated/prisma';
 import type { IWebhooksRepository } from '@/config-webhooks/repository/webhooks.repository.interface';
@@ -21,7 +22,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
       id: row.id,
       organizationId: row.organizationId,
       url: row.url,
-      events: Array.isArray(row.events) ? (row.events as string[]) : [],
+      events: EventsSchema.parse(row.events),
       description: row.description,
       isActive: row.isActive,
       secretHint: row.secretPrefix,

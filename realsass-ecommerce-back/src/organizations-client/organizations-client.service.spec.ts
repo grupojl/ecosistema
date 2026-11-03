@@ -1,4 +1,4 @@
-import { ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { OrganizationsClientService } from './organizations-client.service';
 
 type Redis = { get: jest.Mock; set: jest.Mock };
@@ -15,6 +15,12 @@ const json = (body: unknown, status = 200) =>
 
 describe('OrganizationsClientService', () => {
   const fetchMock = jest.fn();
+  // Los errores de red se provocan a propósito: sin esto el Logger de Nest vuelca el stack en la salida de Jest (DT-TEST-10).
+  beforeAll(() => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  });
+  afterAll(() => jest.restoreAllMocks());
   beforeEach(() => {
     fetchMock.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;

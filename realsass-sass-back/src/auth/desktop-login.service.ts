@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { z } from 'zod';
 import {
   Injectable,
   ServiceUnavailableException,
@@ -22,10 +23,8 @@ const CODE_TTL_SECONDS = 60;
 const KEY_PREFIX = 'desktop-login:';
 const HEX_64 = /^[a-f0-9]{64}$/;
 
-interface Stored {
-  uid: string;
-  challenge: string;
-}
+const StoredSchema = z.object({ uid: z.string(), challenge: z.string() });
+type Stored = z.infer<typeof StoredSchema>;
 
 @Injectable()
 export class DesktopLoginService {
@@ -60,7 +59,7 @@ export class DesktopLoginService {
 
     const raw = await this.take(code);
     if (!raw) throw invalid;
-    const { uid, challenge } = JSON.parse(raw) as Stored;
+    const { uid, challenge } = StoredSchema.parse(JSON.parse(raw)); // lo guardó este mismo servicio: se valida igual al leerlo de Redis
 
     const actual = Buffer.from(
       createHash('sha256').update(verifier).digest('hex'),

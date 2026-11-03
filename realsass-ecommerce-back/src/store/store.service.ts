@@ -95,11 +95,7 @@ export class StoreService {
       const rows = Array.isArray(body) ? body : [];
       const value = rows.flatMap((r: unknown) => {
         if (typeof r !== 'object' || r === null) return [];
-        const o = r as {
-          slug?: unknown;
-          countryCode?: unknown;
-          updatedAt?: unknown;
-        };
+        const o: { slug?: unknown; countryCode?: unknown; updatedAt?: unknown } = r;
         return typeof o.slug === 'string' &&
           typeof o.countryCode === 'string' &&
           typeof o.updatedAt === 'string'

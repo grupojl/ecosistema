@@ -58,6 +58,8 @@ export class PrismaCatalogRepository implements CatalogRepository {
             title: v.title,
             priceCents: v.priceCents,
             currency: v.currency ?? 'USD',
+            // Sin esta fila adminInventory.setStock respondía 404 para todo producto creado desde el panel.
+            inventory: { create: { organizationId, quantityAvailable: 0 } },
           })),
         },
       },

@@ -78,8 +78,11 @@ export class CustomersService {
     return customer;
   }
 
-  async findBySession(organizationId: string, sessionId: string) {
-    return this.customersRepository.findBySessionId(organizationId, sessionId);
+  /** Derecho al borrado del propio cliente (se anonimiza; las órdenes se conservan como registro contable). */
+  async anonymize(organizationId: string, customerId: string) {
+    const ok = await this.customersRepository.anonymize(organizationId, customerId);
+    if (!ok) throw new NotFoundException(new CustomerNotFoundError(customerId).message);
+    return { ok: true as const, anonymizedAt: new Date().toISOString() };
   }
 
   async update(

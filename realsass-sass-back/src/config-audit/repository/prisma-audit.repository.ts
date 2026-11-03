@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { toJsonObject } from '@/common/prisma/json';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z } from 'zod';
 import type { Prisma } from '@/generated/prisma';
@@ -36,7 +37,10 @@ export class PrismaAuditRepository implements IAuditRepository {
   }
 
   async create(input: CreateAuditLogInput): Promise<void> {
-    await this.prisma.configAuditLog.create({ data: input as any });
+    const { diff, ...rest } = input;
+    await this.prisma.configAuditLog.create({
+      data: { ...rest, ...(diff !== undefined && { diff: toJsonObject(diff) }) },
+    });
   }
 
   async findByOrg(

@@ -19,7 +19,13 @@ jobs:
       - name: Contratos tRPC (ADR-019)
         run: pnpm contracts
       - run: pnpm --filter "@real/trpc" typecheck
+      - name: Test de contrato de @real/trpc (dist al día y sin any)
+        run: pnpm --filter "@real/trpc" test
       - run: pnpm --filter "@real/auth-client" typecheck
       - run: pnpm --filter "@real/auth-server" typecheck
       - name: Variables de entorno documentadas (todo lo que el código lee está en su .env.example)
         run: node scripts/check-env.mjs
+      - name: Norte de tipos (sin any / as any / as unknown as; casts nuevos justificados) — ADR-030
+        run: node scripts/check-type-safety.mjs --check
+      - name: Auditoría de dependencias (todo el workspace, severidad alta)
+        run: pnpm audit --audit-level=high

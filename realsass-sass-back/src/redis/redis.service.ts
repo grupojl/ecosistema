@@ -109,7 +109,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const raw = await this.get(key);
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as T;
+      return JSON.parse(raw) as T; // @real/cast:cache lo que se guardó con setJson<T>: el llamador declara T
     } catch {
       return null;
     }

@@ -22,7 +22,7 @@ export function stripSecrets(value: unknown, depth = 0): unknown {
       .map((v) => stripSecrets(v, depth + 1));
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    for (const [k, v] of Object.entries(value)) {
       if (SECRET_KEY.test(k)) continue;
       const clean = stripSecrets(v, depth + 1);
       if (clean !== undefined) out[k] = clean;

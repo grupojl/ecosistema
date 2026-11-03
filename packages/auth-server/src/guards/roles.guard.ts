@@ -20,7 +20,7 @@ export class RolesGuard implements CanActivate {
     ]);
     if (!required?.length) return true;
 
-    const { tenant } = ctx.switchToHttp().getRequest() as { tenant?: TenantContext };
+    const { tenant } = ctx.switchToHttp().getRequest<{ tenant?: TenantContext }>();
     if (!tenant) {
       throw new ForbiddenException('TenantContext no disponible. Registra TenantGuard antes de RolesGuard.');
     }

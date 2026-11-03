@@ -9,14 +9,12 @@
  */
 import { z } from 'zod';
 import { router, authProcedure } from '@/trpc';
-import { SESSION_ID_COOKIE_NAME } from '@real/auth-server';
+import { cookieOf, SESSION_ID_COOKIE_NAME } from '@real/auth-server';
 import type { SessionsService } from '@/sessions/sessions.service';
 import type { Request } from 'express';
 
 function currentSid(req: Request): string | undefined {
-  return (req.cookies as Record<string, string | undefined> | undefined)?.[
-    SESSION_ID_COOKIE_NAME
-  ];
+  return cookieOf(req, SESSION_ID_COOKIE_NAME);
 }
 
 export function createSessionsRouter(sessionsService: SessionsService) {

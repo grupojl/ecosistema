@@ -29,3 +29,5 @@ jobs:
       - name: Contratos tRPC (ADR-019)
         run: pnpm contracts
       - run: pnpm --filter ${{ matrix.front }} typecheck
+      - name: Test de contrato de @real/trpc (dist al día y sin any)
+        run: pnpm --filter "@real/trpc" test

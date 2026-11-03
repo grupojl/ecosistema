@@ -19,4 +19,6 @@ jobs:
         run: pnpm contracts
       - run: pnpm --filter "@real/*" typecheck
       - run: pnpm --filter "@real/*" test
+      - name: Cobertura con umbral (guards 100%, auth-client, auth-server, ui)
+        run: pnpm --filter "@real/*" --if-present test:cov
       - run: pnpm --filter "@real/*" build

@@ -15,6 +15,7 @@
 //     chat: { canRead: boolean, canWrite: boolean }
 //   }
 // }
+import { errorMessage } from '@real/auth-server';
 import { Injectable, Logger } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth'; // @real/firebase-auth
@@ -39,6 +40,9 @@ export interface ProfileForClaims {
   }>;
 }
 
+/** Un campo de la organización solo vale si es texto (viene de un objeto suelto, no de un tipo). */
+const textOrNull = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+
 @Injectable()
 export class ClaimsService {
   private readonly logger = new Logger(ClaimsService.name);
@@ -53,7 +57,7 @@ export class ClaimsService {
     } catch (err) {
       // No rompemos el flujo de login si los claims fallan
       this.logger.error(
-        `Error emitiendo claims para ${uid}: ${(err as Error).message}`,
+        `Error emitiendo claims para ${uid}: ${errorMessage(err)}`,
       );
     }
   }
@@ -65,7 +69,7 @@ export class ClaimsService {
       this.logger.warn(`Refresh tokens revocados → uid: ${uid}`);
     } catch (err) {
       this.logger.error(
-        `Error revocando tokens para ${uid}: ${(err as Error).message}`,
+        `Error revocando tokens para ${uid}: ${errorMessage(err)}`,
       );
     }
   }
@@ -82,8 +86,8 @@ export class ClaimsService {
 
     return {
       organizationId: tenant.organizationId,
-      organizationName: (org['name'] as string | null) ?? tenant.organizationId,
-      organizationSlug: (org['slug'] as string | null) ?? '',
+      organizationName: textOrNull(org['name']) ?? tenant.organizationId,
+      organizationSlug: textOrNull(org['slug']) ?? '',
       role: this.mapRole(tenant.role),
       permissions: {
         chat: {

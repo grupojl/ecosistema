@@ -1,3 +1,4 @@
+import { toJsonObject } from '@/common/prisma/json';
 import { Prisma, ActivityEventType } from '@/generated/prisma';
 
 import { Injectable } from '@nestjs/common';
@@ -22,7 +23,7 @@ export class ActivityService {
         sessionId,
         eventType,
         customerId,
-        payload: payload as Prisma.InputJsonValue,
+        payload: toJsonObject(payload),
       },
     });
   }

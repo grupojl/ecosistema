@@ -1,16 +1,14 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-10-30
+Última actualización: 2026-11-03
 
 
-## ⏸ Diferido a propósito (decisión del 2026-10-16: se deja marcado, no se toca ahora)
+## ✅ Antes diferido, resuelto el 2026-11-03 (confirmado por el dueño del proyecto)
 
-- [ ] **Docker (DT-DOCKER-01)**: ningún `docker build` real de los 3 fronts ni de los 2 backs. Hallazgos al revisar los Dockerfile, sin corregir:
-  - el `HEALTHCHECK` del **ecommerce-back** apunta a `http://localhost:3001/health`, pero la ruta real es `/api/v1/health` (hoy da 404) y el puerto está fijo;
-  - el `HEALTHCHECK` del **sass-back** usa el puerto 3000 y la app corre en 3020;
-  - **DT-ENV-04**: la imagen del ecommerce-back fija `PORT=3001` y local es `3025`.
-- [ ] **Despliegue en Railway (WEL-01 a WEL-03)**: migraciones de Prisma (el doc marca la migración como **bloqueante**), `INTERNAL_API_KEY` en ambos servicios y `prisma generate`. Nota: la migración `user_sessions` (ADR-020) ya se aplicó en la base de Railway; las demás siguen pendientes.
-- [ ] **Pago en línea**: no existe (depende de `pagos-back`). El checkout crea el pedido en `PENDING_PAYMENT` y el texto le avisa al cliente que la tienda coordina el cobro.
+- [x] **Docker (DT-DOCKER-01)**: el build con Docker y el despliegue en Railway funcionan. Los hallazgos de healthcheck y puertos (ecommerce-back `/api/v1/health` y `3001` vs `3025`; sass-back `3000` vs `3020`; DT-ENV-04) quedaron superados por el despliegue. Si se tocó algún `HEALTHCHECK`, anotar cuál.
+- [x] **Despliegue en Railway (WEL-01 a WEL-03)**: el despliegue corre. Detalle de migraciones, `INTERNAL_API_KEY` y `prisma generate` sin desglosar; la migración `user_sessions` (ADR-020) ya estaba aplicada.
+- [x] **Pago en línea / microservicios**: el cobro funciona con `pasarelapagos-backend` (ecosistema-ms). Ya no aplica "la tienda coordina el cobro" salvo para pedidos sin pasarela.
+- [~] **DT-IDEM-3**: hecha toda la parte de este repo (webhooks salientes + base de pagos entrantes en el ecommerce-back, 2026-11-03). Falta **conectar** `PaymentConfirmationService` y un `Idempotency-Key` de cobro a `pagos-back` (ecosistema-ms), que hoy no existe.
 
 ## Cierre de deuda — 2026-10-16
 
@@ -56,38 +54,79 @@ Resuelto en esta tanda (todo con tests; sass-back 18/18 suites, ecommerce-back 1
 - [x] DT-WA-02: canal elegido = **B** (tRPC `whatsapp.*` en sass-back → HTTP interno a chatia). Implementado: `realsass-sass-back/src/whatsapp/`, `trpc/routers/whatsapp.router.ts` (+6 tests), `CHATIA_BACK_URL`.
 - [x] DT-WA-05: chatia (ecosistema-ms): endpoints internos, desconexión, estado de la organización, webhook único de plataforma (`/webhooks/whatsapp`) y rechazo de cuentas inactivas. 621 tests en verde. **Sin commitear en ese repo.**
 - [ ] DT-WA-06: **crear/configurar la app de Meta** (Tech Provider, App Review, `config_id`, webhook, dominios del SDK) y cargar las variables: `checklists/meta-whatsapp-app.md`. Lo hace una persona con acceso al negocio; bloquea la prueba real.
-- [ ] DT-WA-07: prueba de punta a punta con un número real (checklist, paso 5), e2e automático del flujo y tests del router `whatsapp` y de la sección del front (el front no tiene runner).
+- [ ] DT-WA-07: prueba de punta a punta con un número real de Meta. Hecho: la sección del front (8 tests de render), el router `whatsapp` (contrato de acceso) y la lógica del Embedded Signup (10 tests, incluida la validación de origen de los mensajes).
 - [ ] DT-WA-03: migrar `lib/chat-ia-client.ts` (fetch manual del dashboard) a tRPC; ya no depende de esta feature.
 - [ ] DT-WA-04: decisiones de producto abiertas: ¿varios números por organización?, plan ante suspensión de la app compartida, normalización de más países y plantillas de mensaje (ecosistema-ms).
 
 ## Robustez multi-tenant e idempotencia — ADR-029 (2026-10-30)
 
 - [x] DT-IDEM-1: checkout idempotente (bloqueo del carrito + reintento devuelve la orden existente). Tests de unidad en verde.
-- [ ] DT-IDEM-2: prueba del checkout concurrente contra Postgres real (el mock no ejercita `FOR UPDATE`).
+- [x] DT-IDEM-2: **hecho (2026-11-03)** — `checkout.concurrency.integration.spec.ts` contra Postgres real: 5 checkouts simultáneos del mismo carrito → UNA orden y stock reservado una vez; dos compradores por la última unidad → uno gana, sin sobreventa; el perdedor no deja reserva ni orden. Verificado que falla si se quita el `FOR UPDATE`.
 - [~] DT-TENANT-1: `prisma.forTenant()` **adoptado** en los repositorios del ecommerce-back (catálogo, carrito, inventario, clientes, órdenes) y `ActivityService`; el carrito, `orders.updateStatus/setPaymentIntent` y `customers.update` ya reciben `organizationId` (antes actualizaban solo por id). **Falta:** sass-back, y el SQL crudo / transacciones interactivas (checkout, `reserveWithinTransaction`), que filtran a mano.
-- [ ] DT-IDEM-3: tabla `IdempotencyKey` + webhooks de pago deduplicados + `Idempotency-Key` en cobros (con `pagos-back`).
+- [~] DT-IDEM-3: **hecho (2026-11-03)** en la entrega de webhooks salientes de sass-back: el id (`eventId`) y el `timestamp` se fijan al encolar, viajan en el cuerpo firmado y en `X-Webhook-Id`/`X-Webhook-Timestamp`, los reintentos reenvían el MISMO id y el `jobId` (`webhook:eventId`) evita encolar dos veces. **Falta** (en `pagos-back`): tabla `IdempotencyKey`, dedupe de webhooks de pago entrantes e `Idempotency-Key` en cobros.
+- [x] DT-IDEM-3 (pagos entrantes, ecommerce-back): tabla `idempotency_keys` (migración `20261103140000`, con RLS), `IdempotencyService` (claim atómico por organización+ámbito+clave, réplica de la respuesta, 422 si la clave cambia de contenido, 409 si está en curso, libera el claim si falla, retoma claims huérfanos a los 60 s) y `PaymentConfirmationService.confirm()`: transición `PENDING_PAYMENT→PAID` por UPDATE condicional, rechaza monto distinto y un segundo pago sobre orden ya pagada (cobro duplicado), historial y evento `order.paid`. 13 tests contra Postgres real. **Aún sin ruta**: exponerlo requiere el contrato con `pagos-back` y su autenticación (clave interna) — decisión pendiente, no se expuso a ciegas. **Aplicar la migración en Railway antes de usarlo.**
 - [~] DT-EVT-1: Outbox implementado y **migración aplicada** (2026-10-30); escritura y relay apagados. Falta: activar `OUTBOX_ENABLED`/`OUTBOX_RELAY_ENABLED` y escribir un publisher real.
 - [~] DT-TENANT-2: `prisma/rls/enable-rls.sql` + `runAsTenant` listos y **sin aplicar**. Falta: rol de aplicación no superusuario, todas las queries bajo `runAsTenant`, prueba en staging.
 - [~] DT-OUTBOX-2: probados contra Postgres real (solo lectura): migración, `forTenant`, `set_config`, SQL del claim. **Falta:** relay con eventos reales, aislamiento entre ≥2 organizaciones con datos, y las políticas RLS en staging.
 
-## Tests — estado y pendientes (2026-10-30)
+## Tests — estado y pendientes (2026-11-03, cierre)
 
-Foto de `pnpm test` en cada workspace: **todo en verde, 0 fallos**. sass-back 30/30 suites (150 tests, 34 `todo`) · ecommerce-back 22 suites (198 tests, 8 saltados, 4 `todo`, 1 suite saltada) · storefront 156 · dashboard-front 19 · sass-front 16 · `@real/ui` 10 · `@real/auth-client` 28 · `@real/auth-server` 51 · `@real/i18n` 11 · `@real/trpc` sin tests. Todo corre con mocks. Pendiente para la próxima sesión:
+`pnpm -r test` y `pnpm -r typecheck` en verde. Suites por workspace: sass-back 430 unitarios + 23 de integración · ecommerce-back 288 + 33 de integración · storefront 210 · sass-front 115 · dashboard-front 62 · `@real/ui` 87 · `@real/auth-server` 72 · `@real/auth-client` 59 · `@real/i18n` 11 · `@real/trpc` 4 (contrato). Aparte, **31 e2e en navegador real** (escritorio y celular) contra el stack completo: sass-back, ecommerce-back, los 3 fronts, Postgres y el **emulador de Firebase Auth** (corre en Node, no necesita Java).
 
-- [ ] DT-TEST-03: **tests contra infraestructura real** (Postgres, Redis; Firebase con emulador). Hoy nada ejercita el `FOR UPDATE` del checkout, RLS ni el aislamiento entre ≥2 organizaciones con datos. Cubre DT-IDEM-2 y DT-OUTBOX-2.
-- [ ] DT-TEST-04: **e2e (Playwright)** de login, sesión compartida entre fronts, checkout y cerrar sesión desde «Dispositivos». Incluye los tests de integración de sesión (DT-SES-06) y el smoke del storefront (DT-TEST-02).
-- [ ] DT-TEST-05: **fronts poco cubiertos**: dashboard-front tiene 1 archivo de test y sass-front 2; faltan tests de render de sus páginas (con ambos providers, ver DT-DASH-CTX). `@real/ui` tiene 33 componentes y 1 archivo de test.
-- [ ] DT-TEST-06: **medir la cobertura real** (el objetivo es 85% en paths críticos, S4-E) y fijar el umbral en CI; hoy no se mide.
-- [ ] DT-TEST-07: **revisar los `todo` y los tests saltados** (34 en sass-back; 4 `todo`, 8 saltados y 1 suite saltada en ecommerce-back) por si esconden algo importante; cerrarlos o borrarlos.
-- [ ] DT-TEST-08: **`@real/trpc` sin tests**: al menos un test de contrato que detecte un `dist` desfasado o un procedure con `any`.
-- [ ] DT-TEST-09: **el CI nunca corrió**: ninguno de estos tests se verificó fuera de la máquina local (ver DT-CI-01 y DT-CI-02).
-- [ ] DT-TEST-10: en la corrida del ecommerce-back apareció un stack trace de jest-circus en la salida; no se identificó qué test lo causa (el back terminó con 0 fallos, probablemente sea un error provocado a propósito). Revisarlo.
+**Cobertura medida (honesta: cuenta el código sin tests, no solo el que algún test importa)**
+
+| Workspace | Líneas | Piso de CI |
+|---|---|---|
+| sass-back (con Postgres / sin) | 92 % / 83 % | `test:cov:full` 90 % · `test:cov` 82 % |
+| ecommerce-back (con Postgres / sin) | 93 % / 82 % | `test:cov:full` 90 % · `test:cov` 82 % |
+| dashboard-front | 92 % | 90 % |
+| sass-front | 82 % | 80 % |
+| `@real/auth-server` | 87 % (**guards 100 %**) | 80 % y guards 100 % |
+| `@real/auth-client` | 81 % | 78 % |
+| storefront | 58 % (la lógica pura i18n/seo/catálogo ≥ 85 %) | 56 % |
+| `@real/ui` | 36 % | 30 % |
+
+Antes de esta sesión: sass-back 29,7 %, ecommerce-back 59,8 %, y los fronts/packages no se medían. Los pisos son de **no retroceso**: subirlos al cubrir más, nunca bajarlos.
+
+### Hecho (todo verificado en esta máquina)
+
+- [x] **DT-TEST-03** — Postgres real (`db-integration.spec.ts`, `repositories.integration.spec.ts` en ambos backs): RLS con un rol que no es superusuario, aislamiento entre organizaciones en CADA repositorio Prisma, checkout con `FOR UPDATE` bajo 12 llamadas simultáneas (verificado por mutación), sin sobreventa, outbox con `SKIP LOCKED`, sesiones de dispositivo. `pnpm --filter <back> test:db:setup` y luego `test:integration` / `test:cov:full`.
+- [x] **DT-TEST-04** — e2e Playwright en `e2e/` (`pnpm e2e`, ver `e2e/README.md`): storefront público; **login del cliente (Google vía emulador) → compra → pedido, con efectos reales en la base**; aislamiento entre dos clientes (UI y llamando al back con su propio token); cerrar sesión; **login del dueño → sesión compartida con el dashboard → «Dispositivos» → cerrar sesión / cerrar OTRA sesión**; referidos. Cierra DT-SES-06 y DT-TEST-02.
+- [x] **DT-TEST-05** — render con DOM en los 4 fronts y 3 packages (`@real/ui` 87, `AuthProvider` 28, hooks de datos, secciones de claves/webhooks/WhatsApp, flujo de compra del storefront, `TrpcProvider`, hooks optimistas con rollback —verificado por mutación—).
+- [x] **DT-TEST-06** — cobertura medida en todo el monorepo y pisos en CI (`ci-integration.yml`, `ci-*-front.yml`, `ci-packages.yml`).
+- [x] **DT-TEST-07** — `todo` borrados o convertidos en tests reales. **DT-TEST-08** — contrato de `@real/trpc` (verificado por mutación). **DT-TEST-10** — stack de jest silenciado. **DT-TEST-11** — el aviso de React por el `<script>` del JSON-LD es solo de desarrollo (patrón que recomienda Next para JSON-LD): no es un bug. **DT-TEST-12** — era diseño (la cola de webhooks siempre necesita Redis): el job e2e de CI levanta un Redis de servicio. **DT-TEST-13** — repositorios Prisma de sass-back cubiertos.
+- [x] **Contratos de acceso** (`access-matrix.spec.ts`, ambos backs): clasifica TODOS los procedures por llamante; un procedure nuevo sin clasificar o con otra protección rompe el test.
+- [x] **Guards al 100 %** (`FirebaseAuthGuard` no tenía ningún test; ahora cubre Bearer, cookie con revocación, Bearer inválido que no cae a la cookie, `@Public`).
+- [ ] **DT-TEST-09** — el CI sigue **sin haberse corrido en GitHub Actions** (no hay forma de verificarlo desde acá). Workflows listos: `ci-integration.yml` (Postgres + Redis de servicio, integración, cobertura completa de ambos backs, e2e), test de contrato de `@real/trpc` y cobertura con umbral en los fronts y packages.
+
+### Bugs reales que encontraron los tests (corregidos, cada uno con su test)
+
+1. **SSRF**: `https://[::ffff:127.0.0.1]` pasaba el filtro de webhooks (Node lo normaliza a `::ffff:7f00:1`).
+2. **ecommerce-back respondía 500 en vez de 404/409** (sus procedures no traducían las excepciones de Nest): un producto inexistente daba 500 en el storefront.
+3. **Página de categoría del storefront daba 500** (`Link` a un componente de cliente) y **el 404 de tienda inexistente** era el genérico de Next (`not-found` inalcanzable).
+4. **`configFlags.update`**: un colaborador podía cambiar el rollout aunque la documentación dice que solo el dueño.
+5. **Los productos nuevos no tenían fila de stock** → `adminInventory.setStock` daba 404 para todo producto creado desde el panel. Ahora `createProduct` la crea y una migración (`20261103120000_backfill_inventory_items`) rellena las faltantes.
+6. **El historial de estados de la orden nunca se escribía** (`order_status_events`). Ahora lo escriben el checkout, `create` y `updateStatus`.
+7. **DT-ORDER-STATE**: la máquina de estados usaba `PENDING/CONFIRMED` y la base `PENDING_PAYMENT/FULFILLING`; una orden nueva no tenía transiciones válidas. Alineada con el enum real (`PENDING_PAYMENT→PAID/CANCELLED`, `PAID→FULFILLING/REFUNDED`, …) y un test exige que cada valor del enum tenga entrada. El dashboard también etiquetaba con los estados viejos (una orden nueva se veía sin etiqueta): corregido, y el contrato de `@real/trpc` ahora lo detecta.
+8. **Dispositivo cerrado desde «Dispositivos» volvía a entrar solo** (Firebase solo revoca por usuario y el dispositivo re-creaba su cookie). Ahora `POST /auth/session` rechaza (401) un login cuyo `auth_time` es anterior a la revocación de ese dispositivo; un login nuevo sí pasa; el cliente cierra su Firebase local. Verificado en navegador (dos dispositivos).
+9. **Programa de referidos muerto**: nunca se creaba `AffiliateData` (`affiliates.me` siempre 404 y el contador nunca sumaba) y el usuario nuevo no guardaba `referredByCode` (la lista salía vacía). Ahora todo usuario tiene su perfil y el referido queda asentado. Verificado en e2e.
+10. **`customer.deleteAccount` era un procedure público** que anonimizaba a cualquier cliente con solo su id (y no estaba montado, así que el derecho al borrado no existía). Reemplazado por uno que solo opera sobre el propio cliente autenticado y borra también direcciones y actividad; las órdenes se conservan (registro contable).
+11. `buildThemeCSS` (sass-front) inyectaría HTML del dueño tal cual (`</style><script>…`): endurecido. `useSessionWatch` dejaba una promesa rechazada sin manejar.
+12. Código muerto `findBySession*` (buscaba un email `guest_…@guest.local` de cuando había invitados): eliminado.
+
+### Abierto (con motivo)
+
+- [ ] **DT-ORDER-STOCK**: cancelar una orden `PENDING_PAYMENT` no libera el stock reservado (`updateStatus` solo cambia el estado). Hay que decidir cuándo se libera (¿al cancelar? ¿al vencer el pago?) y hacerlo en la misma transacción.
+- [ ] **UI de «Eliminar mi cuenta»** en el storefront (el endpoint ya existe y está probado).
+- [ ] Cobertura del storefront (58 %: faltan `store-header`, `auth-dialog`, el layout, los adaptadores de envío y las rutas legacy `(site)`) y de `@real/ui` (36 %: la mayoría son envoltorios de Radix).
+- [ ] Redis real y Firebase real fuera del emulador solo se ejercitan en CI (no hay Redis en esta máquina).
+- [ ] DT-WA-07: prueba con un número real de Meta. DT-DESK-12/13: e2e del escritorio (necesita el Rust compilado).
 
 ## Sigue abierto (sin decisión o sin tiempo, ver cada línea)
 
 - **DT-SES-04** mail de dispositivo nuevo: necesita elegir un proveedor de mail (checklist R4 de ADR-018) y un dueño.
 - **DT-SES-09** unificar el `AuthContext` de `sass-front` con el `AuthProvider` compartido: refactor grande de auth sin pruebas en navegador; no se hizo a ciegas.
-- **DT-CI-02 / DT-CI-01** workflows duplicados y lint de los fronts: no se pueden probar sin GitHub Actions; se dejan para cuando se pueda correr el CI.
+- **DT-CI-01** lint de los fronts: no se puede probar sin GitHub Actions. (**DT-CI-02** resuelto 2026-11-03.)
 
 ---
 
@@ -98,7 +137,7 @@ Foto de `pnpm test` en cada workspace: **todo en verde, 0 fallos**. sass-back 30
 - [x] DT-SES-03: modal en `realsass-sass-front` (`/profile`) y en dashboard-front
 - [ ] DT-SES-04: F3 mail de dispositivo nuevo — necesita proveedor de mail (checklist R4 de ADR-018) y dueño
 - [x] DT-SES-05: `realsass-ecommerce-back` no chequea `__sid`: una sesión cerrada sigue válida contra ese back
-- [ ] DT-SES-06: tests de integración del flujo (`POST /auth/session` → `__sid` → revoke → 401); hoy hay unit tests
+- [x] DT-SES-06: tests del flujo `POST /auth/session` → `__sid` → revoke → 401 (e2e en navegador y contra Postgres real; ver «Tests»)
 - [x] DT-SES-07: sesión compartida entre fronts — `@real/auth-client` (AuthProvider) y `sass-front/context/auth-context.tsx` autentican por cookie si no hay usuario de Firebase en el origen
 - [x] DT-SES-10: sesión en vivo entre fronts (`auth.ping` + `useSessionWatch`); límite: entre orígenes distintos se ve al volver a la pestaña o en ≤30 s
 - [ ] DT-SES-11: cada pestaña visible hace un `auth.ping` cada 30 s al sass-back; si la carga molesta, subir el intervalo o pasar a SSE
@@ -236,13 +275,13 @@ emulando el runtime del Dockerfile (`node_modules` un nivel arriba) y se verific
   tiene `jest.config.js` **y** la clave `jest` en `package.json` ("Multiple configurations found"); con
   `--config jest.config.js` las 16 suites (8 por back) fallan sin correr un solo test por TS5011 (TypeScript 6 exige
   `rootDir` en ts-jest). Es previo a la sesión del ADR-019. Prerrequisito de S4-E (tests de backend).
-- [ ] **[DT-DOCKER-01] `docker build` real** de los 3 fronts y de los 2 backs. Lo verificado hasta ahora son los
+- [x] **[DT-DOCKER-01] `docker build` real** (resuelto 2026-11-03) de los 3 fronts y de los 2 backs. Lo verificado hasta ahora son los
   comandos de cada stage y el arranque del runtime emulado, sin Docker. Railway valida la sintaxis (ya mostró un error).
 
 ### Pendiente — P1
 
 - [ ] [DT-CI-01] `ci-*-front.yml` corren `lint` y `build`; el lint de los fronts no se verificó.
-- [ ] [DT-CI-02] Hay 15 workflows con jobs duplicados (`ci-*` y `realsass-*`/`trpc-contract`): unificar en los 7 documentados.
+- [x] [DT-CI-02] Workflows unificados (2026-11-03): se borraron los 7 duplicados (`packages`, `real-ecommerce-front`, `realsass-*`, `trpc-contract`); quedan 11 (`ci-*` + `desktop-release`). Lo único que aportaban, `pnpm audit`, pasó a `ci-global`. Sin verificar en Actions (DT-TEST-09).
 - [ ] [DT-SF-01] `sass-front`: `UserProfile.isOwner` no existe en el contrato; "dueño" se deriva de
   `profile.organization !== null`. Confirmar la regla.
 - [ ] [DT-DASH-01] ecommerce-back: procedure para editar variantes (SKU/precio) y para cambiar el estado de un
@@ -321,7 +360,7 @@ D4  @real/jsonb-cast fuera repo → ✅ 0
 
 ## Pendiente activo — P0 para producción
 
-### [WEL-01] Migración Prisma — BLOQUEANTE
+### [WEL-01] Migración Prisma — ✅ resuelto 2026-11-03
 ```bash
 cd realsass-sass-back
 pnpm prisma migrate dev --name add-superadmin-org-fields
@@ -330,11 +369,11 @@ pnpm prisma migrate dev --name add_market_fields_to_order
 ```
 Sin esta migración, el deploy en Railway falla al arrancar.
 
-### [WEL-02] INTERNAL_API_KEY en Railway
+### [WEL-02] INTERNAL_API_KEY en Railway — ✅ resuelto 2026-11-03
 Variable de entorno en realsass-sass-back.
 Sin esto, grupojl-control recibe 403 en /internal/organizations.
 
-### [WEL-03] pnpm prisma generate en ambos backs
+### [WEL-03] pnpm prisma generate en ambos backs — ✅ resuelto 2026-11-03
 ```bash
 cd realsass-ecommerce-back && pnpm prisma generate && cd ..
 cd realsass-sass-back && pnpm prisma generate && cd ..
@@ -378,7 +417,7 @@ Trigger: antes de onboardear al primer colaborador externo.
 
 ### Pendiente siguiente sprint
 - [ ] MKT-D-01..04: UI gestión Markets en dashboard-front
-- [ ] Migraciones Prisma en sass-back + ecommerce-back (requiere DB) — ver WEL-01
+- [x] Migraciones Prisma en sass-back + ecommerce-back — ver WEL-01 (resuelto 2026-11-03)
 
 ---
 
@@ -427,3 +466,11 @@ Norte definido en `architecture/12-ui-norte.md`. **Aún no se auditó ningún fr
 - [ ] DT-UI-03: **auditar los 3 fronts** contra los 6 pilares (storefront primero): navegación por tamaño, objetivos táctiles ≥44 px, dependencia de hover, estados cargando/vacío/error/sin permisos, valores hardcodeados.
 - [ ] DT-UI-04: Core Web Vitals del storefront: medir LCP/INP/CLS (hoy sin medición) y fijar umbral en CI.
 - [ ] DT-UI-05: accesibilidad: pasar axe/Lighthouse sobre las pantallas principales (contraste AA, foco, `prefers-reduced-motion`).
+
+## Norte de tipos (ADR-030, 2026-11-03)
+
+- [x] Cero `any`, `as any`, `as never`, `as unknown as` y `@ts-ignore` en producción (comprobado por `scripts/check-type-safety.mjs --check`, en `ci-global`). Bordes resueltos con Zod (`toJsonObject`, esquemas de jobs/respuestas/caché), helpers de request de `@real/auth-server` (`headerOf`, `cookieOf`, `bearerOf`, `messageOf`, `errorMessage`) y mapeadores Prisma→dominio. Bug real hallado y corregido: `OrgForm` borraba la descripción al guardar.
+- [~] Quedan **80 `as Tipo`** y **30 `!`** sin marcar (casi todos en fronts: eventos del DOM, refs). Línea base en `scripts/type-safety.baseline.json`: solo puede bajar; los casts legítimos llevan `// @real/cast:<tipo> motivo`.
+- [x] Cross-tenant: `realsass-sass-back/src/prisma/cross-tenant.spec.ts` exige que todo repositorio Prisma tenga su caso de aislamiento en `repositories.integration.spec.ts`; el ecommerce lo cubre `tenant-scope.integration.spec.ts` + `access-matrix.spec.ts`.
+- [x] `@real/trpc`: `test/surface.test.mjs` (exports, hoja de markets, access-matrix ↔ dist). 11 tests.
+- [ ] Sin cambio: Tauri sin compilar y app de Meta sin crear (requieren entorno/cuenta que no hay acá).

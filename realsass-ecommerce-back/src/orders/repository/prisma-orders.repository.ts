@@ -4,6 +4,7 @@
  * Adaptador concreto de IOrdersRepository usando Prisma.
  * ÚNICO archivo del módulo orders que puede importar PrismaService.
  */
+import { isRecord, toJsonObject } from '@/common/prisma/json';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import type {
@@ -24,6 +25,17 @@ const ORDER_WITH_ITEMS = {
   },
 } as const;
 
+type OrderRow = Prisma.OrderGetPayload<{ include: typeof ORDER_WITH_ITEMS }>;
+
+/**
+ * Fila de Prisma → registro de dominio. `shippingAddress` es una columna Json (desconocida): solo se expone si es un
+ * objeto. Antes todo el registro se forzaba con `as OrderRecord`, que escondía este hueco.
+ */
+function toOrderRecord(row: OrderRow): OrderRecord {
+  const { shippingAddress, ...rest } = row;
+  return { ...rest, shippingAddress: isRecord(shippingAddress) ? shippingAddress : null };
+}
+
 @Injectable()
 export class PrismaOrdersRepository implements IOrdersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -36,7 +48,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
       where: { id: orderId, organizationId },
       include: ORDER_WITH_ITEMS,
     });
-    return order as OrderRecord | null;
+    return order ? toOrderRecord(order) : null;
   }
 
   async findByCustomer(
@@ -48,7 +60,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
       include: ORDER_WITH_ITEMS,
       orderBy: { createdAt: 'desc' },
     });
-    return orders as OrderRecord[];
+    return orders.map(toOrderRecord);
   }
 
   async findByCart(
@@ -60,7 +72,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
       include: ORDER_WITH_ITEMS,
       orderBy: { createdAt: 'desc' },
     });
-    return orders as OrderRecord[];
+    return orders.map(toOrderRecord);
   }
 
   async listByOrg(
@@ -73,7 +85,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
 
     const where = {
       organizationId,
-      ...(filters?.status && { status: filters.status as $Enums.OrderStatus }),
+      ...(filters?.status && { status: filters.status }),
     };
 
     const [orders, total] = await Promise.all([
@@ -87,7 +99,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
       this.prisma.forTenant(organizationId).order.count({ where }),
     ]);
 
-    return { items: orders as OrderRecord[], total };
+    return { items: orders.map(toOrderRecord), total };
   }
 
   async create(input: CreateOrderInput): Promise<OrderRecord> {
@@ -100,11 +112,12 @@ export class PrismaOrdersRepository implements IOrdersRepository {
           customerId: input.customerId,
           subtotalCents: input.subtotalCents,
           shippingCents: input.shippingCents,
-          status: 'PENDING_PAYMENT' as $Enums.OrderStatus,
+          status: 'PENDING_PAYMENT',
           totalCents: input.totalCents,
           currency: input.currency,
-          shippingAddress: (input.shippingAddress ??
-            null) as Prisma.InputJsonValue,
+          shippingAddress: toJsonObject(input.shippingAddress ?? {}),
+          // Primer evento del historial: la orden nace en PENDING_PAYMENT.
+          statusHistory: { create: { toStatus: 'PENDING_PAYMENT' } },
           items: {
             create: input.items.map((item) => ({
               variantId: item.variantId,
@@ -115,7 +128,7 @@ export class PrismaOrdersRepository implements IOrdersRepository {
         },
         include: ORDER_WITH_ITEMS,
       });
-    return order as OrderRecord;
+    return toOrderRecord(order);
   }
 
   async updateStatus(
@@ -123,12 +136,26 @@ export class PrismaOrdersRepository implements IOrdersRepository {
     orderId: string,
     status: OrderStatus,
   ): Promise<OrderRecord> {
-    const order = await this.prisma.forTenant(organizationId).order.update({
+    const tenant = this.prisma.forTenant(organizationId);
+    const current = await tenant.order.findFirst({
       where: { id: orderId },
-      data: { status: status as $Enums.OrderStatus },
+      select: { status: true },
+    });
+    // El cambio y su evento de historial se escriben juntos (una sola sentencia de Prisma = una transacción).
+    const order = await tenant.order.update({
+      where: { id: orderId },
+      data: {
+        status,
+        statusHistory: {
+          create: {
+            fromStatus: current?.status ?? null,
+            toStatus: status,
+          },
+        },
+      },
       include: ORDER_WITH_ITEMS,
     });
-    return order as OrderRecord;
+    return toOrderRecord(order);
   }
 
   async setPaymentIntent(

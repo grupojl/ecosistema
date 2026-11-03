@@ -30,3 +30,7 @@ url,env.txt
 # Respaldos de pnpm ui:migrate
 .ui-backup/
 realsass-design-front/snapshots/__nuevo__/
+
+# e2e (Playwright) y cobertura
+test-results/
+playwright-report/

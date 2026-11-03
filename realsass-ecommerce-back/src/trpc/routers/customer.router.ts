@@ -112,6 +112,15 @@ export function createCustomerRouter(
     ),
 
     /**
+     * customer.deleteAccount — derecho al borrado. Solo el PROPIO cliente autenticado (el id sale de la sesión, nunca del
+     * input). Antes existía un router con un procedure público que anonimizaba a cualquiera conociendo su id (y no
+     * estaba montado, así que el borrado no existía).
+     */
+    deleteAccount: customerProcedure.mutation(({ ctx }) =>
+      customersService.anonymize(ctx.organizationId, ctx.customerId),
+    ),
+
+    /**
      * customer.orders — historial de órdenes del cliente
      */
     orders: customerProcedure.query(({ ctx }) =>

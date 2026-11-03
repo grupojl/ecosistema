@@ -17,9 +17,20 @@ export interface CarrierQuote {
   service: string
 }
 
+export interface TrackingEvent {
+  timestamp: string
+  location: string
+  status: string
+}
+
+export interface TrackingInfo {
+  status: string
+  events: TrackingEvent[]
+}
+
 export interface ShippingAdapter {
   name: string
   calculateShipping(details: ShipmentDetails): Promise<CarrierQuote>
   createShipment(details: ShipmentDetails): Promise<{ trackingNumber: string; label: string }>
-  getTracking(trackingNumber: string): Promise<any>
+  getTracking(trackingNumber: string): Promise<TrackingInfo>
 }

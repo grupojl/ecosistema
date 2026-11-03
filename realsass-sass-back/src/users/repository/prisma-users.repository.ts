@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { z } from 'zod';
 import { PrismaService } from '@/prisma/prisma.service';
 import type { Prisma } from '@/generated/prisma';
 import type { IUsersRepository } from '@/users/repository/users.repository.interface';
@@ -26,6 +27,10 @@ const DEFAULT_PERMISSIONS: Record<string, boolean> = {
   canManageLeads: false,
   canManageCollaborators: false,
 };
+
+/** Los permisos de un colaborador son una columna Json: se validan al leerlos (lo que no sea booleano se descarta). */
+const PermissionsSchema = z.record(z.string(), z.boolean()).catch({});
+const parsePermissions = (json: unknown): Record<string, boolean> => PermissionsSchema.parse(json);
 
 @Injectable()
 export class PrismaUsersRepository implements IUsersRepository {
@@ -60,7 +65,7 @@ export class PrismaUsersRepository implements IUsersRepository {
         role: 'MEMBER',
         permissions: {
           ...DEFAULT_PERMISSIONS,
-          ...(c.permissions as Record<string, boolean>),
+          ...parsePermissions(c.permissions),
         },
       })),
     };
@@ -131,7 +136,7 @@ export class PrismaUsersRepository implements IUsersRepository {
         canAccess: true,
         userId: user.id,
         organizationId,
-        role: 'OWNER' as import('@real/auth-server').TenantRole,
+        role: 'OWNER',
         permissions: Object.fromEntries(
           Object.keys(DEFAULT_PERMISSIONS).map((k) => [k, true]),
         ),
@@ -144,10 +149,10 @@ export class PrismaUsersRepository implements IUsersRepository {
         canAccess: true,
         userId: user.id,
         organizationId,
-        role: 'MEMBER' as import('@real/auth-server').TenantRole,
+        role: 'MEMBER',
         permissions: {
           ...DEFAULT_PERMISSIONS,
-          ...(collab.permissions as Record<string, boolean>),
+          ...parsePermissions(collab.permissions),
         },
       };
     }

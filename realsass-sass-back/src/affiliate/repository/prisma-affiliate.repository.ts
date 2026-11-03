@@ -77,6 +77,13 @@ export class PrismaAffiliateRepository implements IAffiliateRepository {
     });
   }
 
+  async setReferredBy(userId: string, referralCode: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { referredByCode: referralCode },
+    });
+  }
+
   async ensureProfile(
     userId: string,
     referralCode: string,

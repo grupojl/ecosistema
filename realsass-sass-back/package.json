@@ -18,7 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db:setup": "node scripts/test-db-setup.mjs",
+    "test:integration": "jest src/prisma/repositories.integration.spec.ts --runInBand --forceExit",
+    "test:cov:full": "jest --config jest.full.config.js --coverage --runInBand --forceExit"
   },
   "dependencies": {
     "@nestjs/bullmq": "catalog:",

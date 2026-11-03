@@ -1,5 +1,6 @@
 // src/config-webhooks/webhook-delivery.service.ts
 // La queue es opcional: cuando REDIS_ENABLED=false dispatch() es no-op.
+import { z } from 'zod';
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -8,6 +9,9 @@ import { PrismaService } from '@/prisma/prisma.service';
 import * as crypto from 'crypto';
 
 export const WEBHOOK_QUEUE = 'webhook-delivery';
+
+/** Los eventos de un webhook son una columna Json: se validan al leerla. */
+export const EventsSchema = z.array(z.string()).catch([]);
 
 @Injectable()
 export class WebhookDeliveryService {
@@ -50,7 +54,7 @@ export class WebhookDeliveryService {
     });
 
     for (const wh of webhooks) {
-      const events = wh.events as string[];
+      const events = EventsSchema.parse(wh.events);
       if (!events.includes(event) && !events.includes('*')) continue;
 
       await this.enqueue(wh.id, event, payload);
@@ -78,11 +82,16 @@ export class WebhookDeliveryService {
     webhookId: string,
     event: string,
     payload: unknown,
+    eventKey?: string,
   ): Promise<void> {
+    // Idempotencia (DT-IDEM-3): el id y la hora se fijan UNA vez, al encolar. Los reintentos reenvían el mismo id,
+    // así el receptor puede deduplicar; y el jobId evita que un mismo evento se encole dos veces para el mismo webhook.
+    const eventId = eventKey ?? crypto.randomUUID();
     await this.queue!.add(
       'deliver',
-      { webhookId, event, payload },
+      { webhookId, event, payload, eventId, timestamp: new Date().toISOString() },
       {
+        jobId: `${webhookId}:${eventId}`,
         attempts: Number(process.env['WEBHOOK_MAX_RETRIES'] ?? 3),
         backoff: { type: 'exponential', delay: 1000 },
         removeOnComplete: 100,

@@ -49,7 +49,7 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
         key: input.key,
         content: input.content,
         name: input.key,
-      } as any,
+      },
     });
     return this.toEntity(row);
   }

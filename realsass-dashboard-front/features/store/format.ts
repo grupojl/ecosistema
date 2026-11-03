@@ -14,31 +14,32 @@ export const PRODUCT_STATUS_BADGE: Record<ProductStatus, 'default' | 'secondary'
   ARCHIVED:  'outline',
 };
 
+// Los estados son los del enum OrderStatus de la base (el tipo sale del contrato @real/trpc). Antes eran PENDING/CONFIRMED,
+// que la base nunca guarda: una orden nueva (PENDING_PAYMENT) se veía sin etiqueta ni color.
 export const ORDER_STATUSES: OrderStatus[] = [
-  'PENDING', 'CONFIRMED', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
+  'PENDING_PAYMENT', 'PAID', 'FULFILLING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED',
 ];
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  PENDING:   'Pendiente',
-  CONFIRMED: 'Confirmado',
-  PAID:      'Pagado',
-  SHIPPED:   'Enviado',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-  REFUNDED:  'Reembolsado',
+  PENDING_PAYMENT: 'Pendiente de pago',
+  PAID:            'Pagado',
+  FULFILLING:      'En preparación',
+  SHIPPED:         'Enviado',
+  DELIVERED:       'Entregado',
+  CANCELLED:       'Cancelado',
+  REFUNDED:        'Reembolsado',
 };
 
 export const ORDER_STATUS_BADGE: Record<OrderStatus, 'default' | 'secondary' | 'destructive'> = {
-  PENDING:   'secondary',
-  CONFIRMED: 'default',
-  PAID:      'default',
-  SHIPPED:   'default',
-  DELIVERED: 'default',
-  CANCELLED: 'destructive',
-  REFUNDED:  'destructive',
+  PENDING_PAYMENT: 'secondary',
+  PAID:            'default',
+  FULFILLING:      'default',
+  SHIPPED:         'default',
+  DELIVERED:       'default',
+  CANCELLED:       'destructive',
+  REFUNDED:        'destructive',
 };
 
-/** Los precios viajan en centavos (entero). */
 export function formatMoney(cents: number, currency: string): string {
   try {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(cents / 100);

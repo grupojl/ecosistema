@@ -1,3 +1,4 @@
+import { messageOf } from '@/http/request';
 import {
   ArgumentsHost,
   Catch,
@@ -25,20 +26,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const body =
       exception instanceof HttpException ? exception.getResponse() : null;
 
+    const raw = messageOf(body);
     const message =
-      typeof body === 'object' && body !== null && 'message' in body
-        ? (body as { message: string | string[] }).message
+      raw !== undefined
+        ? raw
         : exception instanceof Error
           ? exception.message
           : 'Error interno';
 
-    const bodyWithMessage = body as { message?: unknown };
-    const errors =
-      typeof body === 'object' &&
-      body !== null &&
-      Array.isArray(bodyWithMessage.message)
-        ? (bodyWithMessage.message as string[])
-        : undefined;
+    const errors = Array.isArray(raw)
+      ? raw.filter((m): m is string => typeof m === 'string')
+      : undefined;
 
     if (status >= 500) {
       this.logger.error(

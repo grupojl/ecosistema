@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "Ecosistema Real — pnpm workspaces",
   "scripts": {
+    "check:types-safety": "node scripts/check-type-safety.mjs --check",
     "contracts": "pnpm --filter realsass-sass-back exec prisma generate && pnpm --filter realsass-ecommerce-back exec prisma generate && pnpm --filter @real/trpc build",
     "build": "pnpm --filter \"./packages/*\" build && pnpm --recursive --filter \"./realsass-*\" --filter \"./real-*\" build",
     "build:packages": "pnpm --filter \"./packages/*\" build",
@@ -21,13 +22,16 @@
     "ui:snap": "node scripts/ui-snapshots.mjs update",
     "ui:snapcheck": "node scripts/ui-snapshots.mjs check",
     "ui:ci": "node scripts/ui-migrate.mjs guard && node scripts/ui-migrate.mjs check --strict",
-    "env:check": "node scripts/check-env.mjs"
+    "env:check": "node scripts/check-env.mjs",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=10.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
+    "firebase-tools": "catalog:",
     "typescript": "catalog:"
   }
 }

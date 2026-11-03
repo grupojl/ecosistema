@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { toJsonObject } from '@/common/prisma/json';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z } from 'zod';
 import type { Prisma } from '@/generated/prisma';
@@ -48,9 +49,10 @@ export class PrismaFeatureFlagsRepository implements IFeatureFlagsRepository {
     id: string,
     input: UpdateFeatureFlagInput,
   ): Promise<FeatureFlag> {
+    const { conditions, ...rest } = input;
     const row = await this.prisma.featureFlag.update({
       where: { id },
-      data: input as any,
+      data: { ...rest, ...(conditions !== undefined && { conditions: toJsonObject(conditions) }) },
     });
     return this.toEntity(row);
   }

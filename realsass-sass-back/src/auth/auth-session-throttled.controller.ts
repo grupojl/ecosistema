@@ -30,6 +30,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
+  cookieOf,
+  headerOf,
   SessionService,
   SESSION_COOKIE_NAME,
   SESSION_ID_COOKIE_NAME,
@@ -71,6 +73,30 @@ export class AuthSessionThrottledController {
 
     const sessionCookie =
       await this.sessionService.createSessionCookie(idToken);
+
+    // Un dispositivo cerrado desde «Dispositivos» no puede re-crear su cookie con el mismo login (ADR-020).
+    const current = cookieOf(req, SESSION_ID_COOKIE_NAME);
+    const decoded = await this.sessionService
+      .verifySessionCookie(sessionCookie)
+      .catch(() => null);
+    if (
+      decoded &&
+      (await this.sessionsService.wasRevokedAfterLogin(
+        current,
+        decoded.uid,
+        decoded.auth_time,
+      ))
+    ) {
+      res.cookie(SESSION_COOKIE_NAME, '', this.sessionService.getClearCookieOptions());
+      res.cookie(SESSION_ID_COOKIE_NAME, '', this.sessionService.getClearCookieOptions());
+      SecurityLogger.sessionRevoked(this.logger, {
+        uid: decoded.uid,
+        reason: 'security',
+      });
+      throw new UnauthorizedException(
+        'Esta sesión se cerró desde otro dispositivo. Iniciá sesión de nuevo.',
+      );
+    }
 
     res.cookie(
       SESSION_COOKIE_NAME,
@@ -130,15 +156,13 @@ export class AuthSessionThrottledController {
     try {
       const { uid } =
         await this.sessionService.verifySessionCookie(sessionCookie);
-      const current = (
-        req.cookies as Record<string, string | undefined> | undefined
-      )?.[SESSION_ID_COOKIE_NAME];
+      const current = cookieOf(req, SESSION_ID_COOKIE_NAME);
       const sid = await this.sessionsService.register(
         uid,
         {
           userAgent: req.headers['user-agent'],
           ip: req.ip,
-          countryHeader: req.headers['cf-ipcountry'] as string | undefined,
+          countryHeader: headerOf(req, 'cf-ipcountry'),
         },
         current,
       );

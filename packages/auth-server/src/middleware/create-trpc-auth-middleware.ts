@@ -22,6 +22,7 @@
  *   - Sin x-organization-id → req.tenant undefined (tenantProcedure lo rechaza)
  */
 
+import { cookieOf } from '@/http/request';
 import type { Request, Response, NextFunction } from 'express';
 import { getFirebaseAdmin }                      from '@/firebase/firebase.module';
 import { SESSION_COOKIE_NAME, SESSION_ID_COOKIE_NAME } from '@/session/session.service';
@@ -99,7 +100,7 @@ export function createTrpcAuthMiddleware(
     // ADR-004: sin Bearer, la sesión viaja en la cookie HttpOnly __session.
     const sessionCookie = bearer
       ? undefined
-      : (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_COOKIE_NAME];
+      : cookieOf(req, SESSION_COOKIE_NAME);
 
     if (!bearer && !sessionCookie) {
       return next();
@@ -108,10 +109,10 @@ export function createTrpcAuthMiddleware(
     try {
       const decoded = bearer
         ? await getFirebaseAdmin().verifyIdToken(bearer)
-        : await getFirebaseAdmin().verifySessionCookie(sessionCookie as string, true);
+        : await getFirebaseAdmin().verifySessionCookie(sessionCookie ?? '', true);
 
       if (!bearer && isSessionRevoked) {
-        const sid = (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_ID_COOKIE_NAME];
+        const sid = cookieOf(req, SESSION_ID_COOKIE_NAME);
         if (sid && await isSessionRevoked(sid, decoded.uid)) return next(); // sin req.user → UNAUTHORIZED
       }
 

@@ -18,14 +18,18 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
-  "dependencies": { "@real/ui": "workspace:*" },
+  "dependencies": {
+    "@real/ui": "workspace:*"
+  },
   "peerDependencies": {
     "next": ">=16.0.0",
     "react": ">=19.0.0"

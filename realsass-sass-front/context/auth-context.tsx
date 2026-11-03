@@ -53,7 +53,10 @@ function getSassBackUrl(): string {
   return process.env.NEXT_PUBLIC_SASS_BACK_URL ?? ''
 }
 
-/** Devuelve true solo si el back confirmó la cookie (antes un 401/500 se ignoraba en silencio). */
+/**
+ * Devuelve true solo si el back confirmó la cookie (antes un 401/500 se ignoraba en silencio). Un 401 significa que ESTE
+ * dispositivo fue cerrado desde «Dispositivos» (ADR-020): se lanza AUTH para cerrar también el usuario de Firebase local.
+ */
 async function createSessionCookie(idToken: string): Promise<boolean> {
   try {
     const res = await fetch(`${getSassBackUrl()}/auth/session`, {
@@ -62,9 +65,11 @@ async function createSessionCookie(idToken: string): Promise<boolean> {
       headers:     { 'Content-Type': 'application/json' },
       body:        JSON.stringify({ idToken }),
     })
+    if (res.status === 401) throw new AppError('Esta sesión se cerró desde otro dispositivo', 'AUTH', 401)
     if (!res.ok) console.warn('[auth] POST /auth/session respondió', res.status)
     return res.ok
   } catch (err) {
+    if (err instanceof AppError) throw err
     console.warn('[auth] createSessionCookie failed', err)
     return false
   }

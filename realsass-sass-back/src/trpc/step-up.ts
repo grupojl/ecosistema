@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { getAuth } from 'firebase-admin/auth';
 import type { Request } from 'express';
-import { SESSION_COOKIE_NAME } from '@real/auth-server';
+import { bearerOf, cookieOf, SESSION_COOKIE_NAME } from '@real/auth-server';
 import { AppCodeError } from '@/trpc/app-code-error';
 
 const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
@@ -14,11 +14,8 @@ const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
  * El front reconoce `error.data.appCode === 'REAUTH_REQUIRED'`, reautentica y reintenta.
  */
 export async function enforceStepUp(req: Request): Promise<void> {
-  const header = req.headers.authorization;
-  const bearer = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
-  const cookie = (
-    req.cookies as Record<string, string | undefined> | undefined
-  )?.[SESSION_COOKIE_NAME];
+  const bearer = bearerOf(req);
+  const cookie = cookieOf(req, SESSION_COOKIE_NAME);
 
   let authTimeSec: number | undefined;
   try {

@@ -1,3 +1,4 @@
+import { headerOf, type HeaderSource } from '@real/auth-server';
 import {
   CanActivate,
   ExecutionContext,
@@ -25,8 +26,8 @@ import { safeEqual } from '@/common/security/safe-equal';
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
-    const req = ctx.switchToHttp().getRequest();
-    const apiKey = req.headers['x-api-key'] as string | undefined;
+    const req = ctx.switchToHttp().getRequest<HeaderSource>();
+    const apiKey = headerOf(req, 'x-api-key');
 
     if (!apiKey) {
       throw new UnauthorizedException('Header x-api-key requerido');

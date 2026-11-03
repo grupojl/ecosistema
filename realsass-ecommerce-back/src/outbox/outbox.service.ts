@@ -1,3 +1,4 @@
+import { toJsonObject } from '@/common/prisma/json';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@/generated/prisma';
 import type { PrismaTransactionClient } from '@/prisma/prisma.service';
@@ -27,7 +28,7 @@ export class OutboxService {
         aggregateType: event.aggregateType,
         aggregateId: event.aggregateId,
         type: event.type,
-        payload: event.payload as Prisma.InputJsonValue,
+        payload: toJsonObject(event.payload),
       },
     });
   }

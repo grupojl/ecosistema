@@ -10,7 +10,8 @@ DECLARE
     'customer_activity_events',
     'carts',
     'orders',
-    'outbox_events'
+    'outbox_events',
+    'idempotency_keys'
   ];
   t text;
 BEGIN

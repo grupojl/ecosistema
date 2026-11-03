@@ -22,7 +22,10 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
-    "test:db": "RUN_DB_TESTS=1 jest src/prisma/tenant-scope.integration.spec.ts --runInBand --forceExit"
+    "test:db": "RUN_DB_TESTS=1 jest src/prisma/tenant-scope.integration.spec.ts --runInBand --forceExit",
+    "test:db:setup": "node scripts/test-db-setup.mjs",
+    "test:integration": "jest src/prisma/db-integration.spec.ts src/prisma/repositories.integration.spec.ts src/prisma/cross-tenant.spec.ts src/orders/checkout.concurrency.integration.spec.ts src/orders/payment-confirmation.integration.spec.ts --runInBand --forceExit",
+    "test:cov:full": "jest --config jest.full.config.js --coverage --runInBand --forceExit"
   },
   "dependencies": {
     "@nestjs/bullmq": "catalog:",

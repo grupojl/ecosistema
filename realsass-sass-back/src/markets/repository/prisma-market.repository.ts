@@ -16,7 +16,7 @@ export class PrismaMarketRepository implements IMarketRepository {
       where: { organizationId },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
-    return rows.map((r) => Market.fromPrisma(r as any));
+    return rows.map((r) => Market.fromPrisma(r));
   }
 
   async findActive(
@@ -30,19 +30,19 @@ export class PrismaMarketRepository implements IMarketRepository {
         isActive: true,
       },
     });
-    return row ? Market.fromPrisma(row as any) : null;
+    return row ? Market.fromPrisma(row) : null;
   }
 
   async findDefault(organizationId: string): Promise<Market | null> {
     const row = await this.prisma.market.findFirst({
       where: { organizationId, isDefault: true },
     });
-    return row ? Market.fromPrisma(row as any) : null;
+    return row ? Market.fromPrisma(row) : null;
   }
 
   async findById(id: string): Promise<Market | null> {
     const row = await this.prisma.market.findUnique({ where: { id } });
-    return row ? Market.fromPrisma(row as any) : null;
+    return row ? Market.fromPrisma(row) : null;
   }
 
   async create(data: {
@@ -62,7 +62,7 @@ export class PrismaMarketRepository implements IMarketRepository {
         fulfillmentConfig: config,
       },
     });
-    return Market.fromPrisma(row as any);
+    return Market.fromPrisma(row);
   }
 
   async update(
@@ -79,7 +79,7 @@ export class PrismaMarketRepository implements IMarketRepository {
       where: { id },
       data: updateData,
     });
-    return Market.fromPrisma(row as any);
+    return Market.fromPrisma(row);
   }
 
   async setDefault(id: string, organizationId: string): Promise<Market> {
@@ -93,7 +93,7 @@ export class PrismaMarketRepository implements IMarketRepository {
         data: { isDefault: true, isActive: true },
       }),
     ]);
-    return Market.fromPrisma(updated as any);
+    return Market.fromPrisma(updated);
   }
 
   async delete(id: string): Promise<void> {

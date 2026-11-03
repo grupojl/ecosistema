@@ -29,22 +29,28 @@ export class OrderAlreadyPaidError extends OrderDomainError {
 }
 
 // ── Estado de orden — máquina de estados ─────────────────────────────────────
-// PENDING → CONFIRMED → SHIPPED → DELIVERED
-//         → CANCELLED (desde PENDING o CONFIRMED)
+// Los estados son EXACTAMENTE los del enum OrderStatus de la base (prisma/schema.prisma). Antes el dominio usaba otros
+// nombres (PENDING, CONFIRMED) y una orden recién creada (PENDING_PAYMENT) no tenía ninguna transición válida.
+// Un test exige que cada valor del enum tenga su entrada aquí.
+//
+//   PENDING_PAYMENT → PAID → FULFILLING → SHIPPED → DELIVERED
+//   PENDING_PAYMENT → CANCELLED                      (sin pago no hay nada que devolver)
+//   PAID / FULFILLING / SHIPPED / DELIVERED → REFUNDED
+//   CANCELLED y REFUNDED son terminales.
 export type OrderStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
+  | 'PENDING_PAYMENT'
   | 'PAID'
+  | 'FULFILLING'
   | 'SHIPPED'
   | 'DELIVERED'
   | 'CANCELLED'
   | 'REFUNDED';
 
-const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PAID', 'CANCELLED'],
-  PAID: ['SHIPPED'],
-  SHIPPED: ['DELIVERED'],
+export const VALID_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  PENDING_PAYMENT: ['PAID', 'CANCELLED'],
+  PAID: ['FULFILLING', 'REFUNDED'],
+  FULFILLING: ['SHIPPED', 'REFUNDED'],
+  SHIPPED: ['DELIVERED', 'REFUNDED'],
   DELIVERED: ['REFUNDED'],
   CANCELLED: [],
   REFUNDED: [],

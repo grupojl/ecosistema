@@ -1,5 +1,7 @@
 export * from "@/lib/shipping/shipping-service"
 export * from "@/lib/shipping/carrier-selector"
+import type { TrackingInfo } from "@/types/shipping"
+
 
 export interface ShipmentDetails {
   weight: number // kg
@@ -24,7 +26,7 @@ export interface ShippingAdapter {
   name: string
   calculateShipping(details: ShipmentDetails): Promise<CarrierQuote>
   createShipment(details: ShipmentDetails): Promise<{ trackingNumber: string; label: string }>
-  getTracking(trackingNumber: string): Promise<any>
+  getTracking(trackingNumber: string): Promise<TrackingInfo>
 }
 
 export function selectCarrier(weight: number, value: number): "envia" | "welivery" | "correo" {

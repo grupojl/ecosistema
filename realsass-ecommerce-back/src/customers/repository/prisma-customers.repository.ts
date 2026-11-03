@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { runAsTenant } from '@/prisma/tenant-context';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import type {
@@ -89,16 +91,28 @@ export class PrismaCustomersRepository implements ICustomersRepository {
     return row ? this.toEntity(row) : null;
   }
 
-  async findBySessionId(
-    organizationId: string,
-    sessionId: string,
-  ): Promise<CustomerRecord | null> {
-    const row = await this.prisma
-      .forTenant(organizationId)
-      .storeCustomer.findFirst({
-        where: { organizationId, email: `guest_${sessionId}@guest.local` },
+  async anonymize(organizationId: string, customerId: string): Promise<boolean> {
+    return runAsTenant(this.prisma, organizationId, async (tx) => {
+      const customer = await tx.storeCustomer.findFirst({
+        where: { id: customerId, organizationId },
+        select: { id: true },
       });
-    return row ? this.toEntity(row) : null;
+      if (!customer) return false;
+      await tx.customerAddress.deleteMany({ where: { customerId } });
+      await tx.customerActivityEvent.deleteMany({
+        where: { customerId, organizationId },
+      });
+      await tx.storeCustomer.update({
+        where: { id: customerId },
+        data: {
+          email: `deleted_${randomUUID()}@deleted.invalid`,
+          displayName: null,
+          phone: null,
+          isGuest: true,
+        },
+      });
+      return true;
+    });
   }
 
   async update(

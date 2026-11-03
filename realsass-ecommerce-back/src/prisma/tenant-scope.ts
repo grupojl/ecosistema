@@ -21,6 +21,7 @@ export const TENANT_MODELS = [
   'Cart',
   'Order',
   'OutboxEvent',
+  'IdempotencyKey',
 ] as const;
 
 export class TenantScopeError extends Error {
@@ -31,6 +32,10 @@ export class TenantScopeError extends Error {
 }
 
 type Args = Record<string, unknown>;
+
+/** Los argumentos de una query de Prisma son un objeto (o nada): se estrecha con una comprobación, no con `as`. */
+const isArgs = (value: unknown): value is Args => typeof value === 'object' && value !== null && !Array.isArray(value);
+const toArgs = (value: unknown): Args => (isArgs(value) ? value : {});
 
 const WHERE_OPERATIONS = new Set([
   'findFirst',
@@ -48,7 +53,7 @@ const WHERE_OPERATIONS = new Set([
 ]);
 
 const isTenantModel = (model: string): boolean =>
-  (TENANT_MODELS as readonly string[]).includes(model);
+  TENANT_MODELS.some((m) => m === model);
 
 /** El `organizationId` que ya trae la query debe ser exactamente el del tenant (igualdad simple, sin filtros). */
 function assertSameTenant(
@@ -65,7 +70,7 @@ function assertSameTenant(
 }
 
 function scopeWhere(where: unknown, organizationId: string): Args {
-  const current = (where ?? {}) as Args;
+  const current = toArgs(where);
   assertSameTenant(current['organizationId'], organizationId, 'where');
   return { ...current, organizationId };
 }
@@ -75,7 +80,7 @@ function scopeData(
   organizationId: string,
   forCreate: boolean,
 ): Args {
-  const current = (data ?? {}) as Args;
+  const current = toArgs(data);
   assertSameTenant(current['organizationId'], organizationId, 'data'); // tampoco se puede mover una fila a otro tenant
   return forCreate ? { ...current, organizationId } : current;
 }
@@ -87,7 +92,7 @@ export function scopeArgs(
   args: unknown,
   organizationId: string,
 ): Args {
-  const input = (args ?? {}) as Args;
+  const input = toArgs(args);
   if (!isTenantModel(model)) return input;
 
   if (WHERE_OPERATIONS.has(operation)) {

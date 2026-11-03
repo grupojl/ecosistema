@@ -21,7 +21,9 @@ import {
 import { Button, Input, Badge, Skeleton, Avatar, AvatarFallback, AvatarImage, ThemeToggle, LoadingState, SectionHeader, Card, EmptyState } from '@real/ui'
 import { useAuth }                 from '@/context/auth-context'
 import { useMe, useSelectRole, useRefreshClaims } from '@/hooks/use-auth-trpc'
+import type { inferRouterOutputs } from '@trpc/server'
 import { trpc }                    from '@/lib/trpc/client'
+import type { AppRouter }          from '@/lib/trpc/router-type'
 import { CollaboratorsSection }    from '@/components/collaborators-section'
 import { OrganizationSwitcher }    from '@/components/organization-switcher'
 import { ConnectedDevicesDialog }  from '@/components/devices-dialog-connected'
@@ -89,15 +91,27 @@ function RoleSelector({ onBack }: { onBack: () => void }) {
 
 // ── OrgForm ───────────────────────────────────────────────────────────────────
 
-function OrgForm({ onBack }: { onBack: () => void }) {
-  const { data: me }      = useMe()
+type FullOrganization = inferRouterOutputs<AppRouter>['organizations']['me']
+
+/**
+ * El perfil (`auth.me`) solo trae {id, name, slug} de la organización: la descripción NO viene ahí. Antes el formulario
+ * la leía de ese perfil con `as any`, arrancaba siempre vacía y guardar (aunque solo cambiaras el nombre) la borraba.
+ * Ahora se pide la organización completa y el formulario se monta cuando ya está.
+ */
+export function OrgForm({ onBack }: { onBack: () => void }) {
+  const { data: org, isLoading, error } = trpc.organizations.me.useQuery()
+  if (isLoading) return <Skeleton className="h-40 rounded-lg" />
+  if (error || !org) return <EmptyState kind="error" description={getErrorMessage(error)} />
+  return <OrgFormFields org={org} onBack={onBack} />
+}
+
+function OrgFormFields({ org, onBack }: { org: FullOrganization; onBack: () => void }) {
   const updateOrg         = trpc.organizations.update.useMutation({
     onSuccess: () => onBack(),
   })
 
-  const org = (me as any)?.organization
-  const [name, setName]   = useState(org?.name ?? '')
-  const [desc, setDesc]   = useState(org?.description ?? '')
+  const [name, setName]   = useState(org.name ?? '')
+  const [desc, setDesc]   = useState(org.description ?? '')
 
   return (
     <div className="space-y-4">
@@ -151,12 +165,11 @@ function Overview({ onView }: { onView: (v: View) => void }) {
     <EmptyState kind="error" description={getErrorMessage(error)} />
   )
 
-  const profile        = me as any
   // D3/D4: la organización que se muestra es la activa; si no hay, la primera propia.
-  const orgs           = (profile?.organizations ?? []) as Array<{ id: string; name: string | null; slug: string | null }>
-  const org            = orgs.find(o => o.id === activeOrganizationId) ?? orgs[0] ?? profile?.organization
-  const collaborations = profile?.collaborations ?? []
-  const user           = profile?.user
+  const orgs           = me?.organizations ?? []
+  const org            = orgs.find(o => o.id === activeOrganizationId) ?? orgs[0] ?? me?.organization
+  const collaborations = me?.collaborations ?? []
+  const user           = me?.user
 
   const referralCode   = user?.referralCode
   const referralLink   = referralCode && origin ? `${origin}/?ref=${referralCode}` : null
@@ -234,7 +247,7 @@ function Overview({ onView }: { onView: (v: View) => void }) {
           <p className="text-sm font-medium flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" /> Mis colaboraciones
           </p>
-          {collaborations.map((c: any) => (
+          {collaborations.map((c) => (
             <div key={c.organizationId} className="flex items-center justify-between text-sm py-1">
               <span className="truncate text-muted-foreground">{c.organizationId}</span>
               <Badge variant="secondary">Colaborador</Badge>

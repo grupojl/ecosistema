@@ -6,7 +6,7 @@
  * otra request. Por eso toda query de un tenant debe correr dentro de `runAsTenant`.
  */
 import type { PrismaClient } from '@/generated/prisma';
-import type { PrismaTransactionClient } from '@/prisma/prisma.service';
+import { toTransactionClient, type PrismaTransactionClient } from '@/prisma/prisma.service';
 
 export async function setTenantContext(
   tx: PrismaTransactionClient,
@@ -34,7 +34,7 @@ export function runAsTenant<T>(
   fn: (tx: PrismaTransactionClient) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    const client = tx as unknown as PrismaTransactionClient;
+    const client = toTransactionClient(tx);
     await setTenantContext(client, organizationId);
     return fn(client);
   });

@@ -22,10 +22,11 @@ export interface ICustomersRepository {
     organizationId: string,
     customerId: string,
   ): Promise<CustomerRecord | null>;
-  findBySessionId(
-    organizationId: string,
-    sessionId: string,
-  ): Promise<CustomerRecord | null>;
+  /**
+   * Derecho al borrado: deja al cliente anonimizado (sin email, nombre, teléfono, direcciones ni actividad). Las órdenes
+   * se conservan (registro contable). false si el cliente no existe en esa organización.
+   */
+  anonymize(organizationId: string, customerId: string): Promise<boolean>;
   update(
     organizationId: string,
     customerId: string,

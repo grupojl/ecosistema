@@ -25,6 +25,13 @@ function isPrivateIp(ip: string): boolean {
     const l = ip.toLowerCase();
     const mapped = l.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
     if (mapped?.[1]) return isPrivateV4(mapped[1]);
+    // `new URL` normaliza ::ffff:127.0.0.1 a ::ffff:7f00:1 (forma hexadecimal): hay que decodificarla también.
+    const hex = l.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+    if (hex?.[1] && hex[2]) {
+      const hi = parseInt(hex[1], 16);
+      const lo = parseInt(hex[2], 16);
+      return isPrivateV4(`${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`);
+    }
     return (
       l === '::' ||
       l === '::1' ||

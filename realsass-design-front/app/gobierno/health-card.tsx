@@ -12,6 +12,11 @@ interface Check { name: string; st: St; detail: string }
 const fmtS = (ms: number) => `${(ms / 1000).toFixed(2).replace('.', ',')} s`
 
 /** Mide LCP y CLS con el buffer del navegador (si la métrica no está disponible, queda «Midiendo…»). */
+/** `LayoutShift` no está en el lib.dom de TypeScript: se reconoce por su forma. */
+interface LayoutShiftEntry extends PerformanceEntry { value: number; hadRecentInput: boolean }
+const layoutShifts = (entries: PerformanceEntryList): LayoutShiftEntry[] =>
+  entries.filter((e): e is LayoutShiftEntry => 'value' in e && 'hadRecentInput' in e)
+
 function readVitals(): Promise<{ lcp?: number; cls: number }> {
   return new Promise((resolve) => {
     const v: { lcp?: number; cls: number } = { cls: 0 }
@@ -20,7 +25,7 @@ function readVitals(): Promise<{ lcp?: number; cls: number }> {
       try { const o = new PerformanceObserver((l) => cb(l.getEntries())); o.observe({ type, buffered: true } as PerformanceObserverInit); obs.push(o) } catch { /* no soportado */ }
     }
     add('largest-contentful-paint', (e) => { v.lcp = e[e.length - 1].startTime })
-    add('layout-shift', (e) => { v.cls += (e as unknown as Array<{ value: number; hadRecentInput: boolean }>).filter((x) => !x.hadRecentInput).reduce((a, x) => a + x.value, 0) })
+    add('layout-shift', (e) => { v.cls += layoutShifts(e).filter((x) => !x.hadRecentInput).reduce((a, x) => a + x.value, 0) })
     setTimeout(() => { obs.forEach((o) => o.disconnect()); resolve(v) }, 120)
   })
 }

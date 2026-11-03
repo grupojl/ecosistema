@@ -17,6 +17,10 @@ const nextConfig = {
       try { return new URL(url).origin } catch { return url }
     }
 
+    // Emulador de Firebase Auth (solo e2e): nunca en producción. El SDK abre un iframe y llama por XHR a su host.
+    const emulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST
+    const emulatorOrigin = emulatorHost && process.env.NODE_ENV !== 'production' ? `http://${emulatorHost}` : ''
+
     const connectOrigins = [
       "'self'",
       'https://identitytoolkit.googleapis.com',
@@ -30,6 +34,7 @@ const nextConfig = {
       origin(sassBackUrl),
       origin(apiUrl),
       origin(dashFrontUrl),
+      emulatorOrigin,
     ].filter(Boolean)
 
     const seen = {}
@@ -56,6 +61,7 @@ const nextConfig = {
         'https://facebook.com',
         firebaseProject ? `https://${firebaseProject}.firebaseapp.com` : '',
         'https://*.iam.gserviceaccount.com',
+        emulatorOrigin,
       ].filter(Boolean).join(' '),
       `connect-src ${connectSrc}`,
       [

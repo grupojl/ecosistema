@@ -1,4 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { z } from 'zod';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -8,6 +9,15 @@ import { assertPublicHttpUrl } from '@/common/security/assert-public-url';
 import * as crypto from 'crypto';
 
 const TIMEOUT = Number(process.env['WEBHOOK_DELIVERY_TIMEOUT'] ?? 5000);
+
+const JobDataSchema = z.object({
+  webhookId: z.string(),
+  event: z.string(),
+  payload: z.unknown(),
+  // Jobs encolados antes de DT-IDEM-3 no los traen: se cae al id del job (estable entre reintentos).
+  eventId: z.string().optional(),
+  timestamp: z.string().optional(),
+});
 
 @Processor(WEBHOOK_QUEUE)
 export class WebhookDeliveryProcessor extends WorkerHost {
@@ -21,11 +31,11 @@ export class WebhookDeliveryProcessor extends WorkerHost {
   }
 
   async process(job: Job): Promise<void> {
-    const { webhookId, event, payload } = job.data as {
-      webhookId: string;
-      event: string;
-      payload: unknown;
-    };
+    // El job lo escribe WebhookDeliveryService, pero viaja por Redis: se valida al leerlo.
+    const data = JobDataSchema.parse(job.data);
+    const { webhookId, event, payload } = data;
+    const eventId = data.eventId ?? String(job.id ?? `${webhookId}:${job.timestamp}`);
+    const timestamp = data.timestamp ?? new Date(job.timestamp ?? Date.now()).toISOString();
     const start = Date.now();
     let statusCode: number | null = null;
     let success = false;
@@ -48,11 +58,8 @@ export class WebhookDeliveryProcessor extends WorkerHost {
       // Se revalida en cada entrega: el DNS pudo cambiar desde que se creó el webhook.
       await assertPublicHttpUrl(endpoint.url);
 
-      const body = JSON.stringify({
-        event,
-        payload,
-        timestamp: new Date().toISOString(),
-      });
+      // id y timestamp van en el cuerpo firmado y NO cambian entre reintentos: el receptor deduplica por id.
+      const body = JSON.stringify({ id: eventId, event, payload, timestamp });
       const signature =
         'sha256=' +
         crypto.createHmac('sha256', secret).update(body).digest('hex');
@@ -66,6 +73,8 @@ export class WebhookDeliveryProcessor extends WorkerHost {
             'Content-Type': 'application/json',
             'X-Webhook-Signature': signature,
             'X-Webhook-Event': event,
+            'X-Webhook-Id': eventId,
+            'X-Webhook-Timestamp': timestamp,
           },
           body,
           signal: controller.signal,

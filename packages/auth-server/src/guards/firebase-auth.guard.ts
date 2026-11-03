@@ -6,7 +6,16 @@ import { Reflector }     from '@nestjs/core';
 import { getAuth }       from 'firebase-admin/auth';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { SESSION_COOKIE_NAME } from '@/session/session.service';
-import type { CurrentUserPayload } from '@/types/tenant-context';
+import type { CurrentUserPayload, TenantContext } from '@/types/tenant-context';
+import { bearerOf, cookieOf, errorMessage, type CookieSource, type HeaderSource } from '@/http/request';
+
+interface AuthRequest extends HeaderSource, CookieSource {
+  user?: CurrentUserPayload;
+  tenant?: TenantContext;
+}
+
+/** Un claim de Firebase solo vale si es texto. */
+const textClaim = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
@@ -21,10 +30,10 @@ export class FirebaseAuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const req   = ctx.switchToHttp().getRequest();
-    const token = this.extractToken(req);
+    const req   = ctx.switchToHttp().getRequest<AuthRequest>();
+    const token = bearerOf(req);
     // ADR-004: sin Bearer, la sesión viaja en la cookie HttpOnly __session.
-    const sessionCookie = token ? undefined : (req.cookies as Record<string, string | undefined> | undefined)?.[SESSION_COOKIE_NAME];
+    const sessionCookie = token ? undefined : cookieOf(req, SESSION_COOKIE_NAME);
 
     if (!token && !sessionCookie) {
       throw new UnauthorizedException('Token de autenticacion requerido');
@@ -33,25 +42,20 @@ export class FirebaseAuthGuard implements CanActivate {
     try {
       const decoded = token
         ? await getAuth().verifyIdToken(token)
-        : await getAuth().verifySessionCookie(sessionCookie as string, true);
+        : await getAuth().verifySessionCookie(sessionCookie ?? '', true);
 
       req.user = {
         uid:         decoded.uid,
         email:       decoded.email ?? '',
-        displayName: (decoded['name'] as string | undefined) ?? null,
-        avatarUrl:   (decoded['picture'] as string | undefined) ?? null,
+        displayName: textClaim(decoded['name']),
+        avatarUrl:   textClaim(decoded['picture']),
       } satisfies CurrentUserPayload;
 
       return true;
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'error desconocido';
-      this.logger.warn(`Token invalido: ${msg}`);
+      this.logger.warn(`Token invalido: ${errorMessage(error)}`);
       throw new UnauthorizedException('Token invalido o expirado');
     }
   }
 
-  private extractToken(req: { headers: Record<string, string | undefined> }): string | undefined {
-    const [type, token] = req.headers['authorization']?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
-  }
 }

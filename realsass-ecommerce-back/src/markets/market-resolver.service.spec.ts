@@ -1,6 +1,16 @@
+import type { MarketDTO } from '@real/trpc/markets';
 import { MarketResolverService } from './market-resolver.service';
 
-const market = { id: 'm1', countryCode: 'AR', isDefault: true } as never;
+const market: MarketDTO = {
+  id: 'm1',
+  organizationId: 'org-1',
+  countryCode: 'AR',
+  isDefault: true,
+  isActive: true,
+  fulfillmentConfig: { priority: 1 },
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
 
 function build() {
   const redis = { get: jest.fn().mockResolvedValue(null), set: jest.fn().mockResolvedValue(undefined) };

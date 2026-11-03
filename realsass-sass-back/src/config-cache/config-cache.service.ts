@@ -11,7 +11,7 @@ export class ConfigCacheService {
 
   async get<T>(orgId: string, tipo: string, k: string): Promise<T | null> {
     const raw = await this.redis.get(this.key(orgId, tipo, k));
-    return raw ? (JSON.parse(raw) as T) : null;
+    return raw ? (JSON.parse(raw) as T) : null; // @real/cast:cache lo que se guardó con set<T>: el llamador declara T
   }
 
   async set(

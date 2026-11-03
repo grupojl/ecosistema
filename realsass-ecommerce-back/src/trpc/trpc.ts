@@ -1,3 +1,4 @@
+import { headerOf, messageOf } from '@/http/request';
 import type { TenantRole } from '@real/auth-server';
 /**
  * src/trpc/trpc.ts — realsass-ecommerce-back
@@ -21,26 +22,11 @@ import type { TenantRole } from '@real/auth-server';
  *   customerProcedure  → requiere customerId + organizationId
  */
 import { initTRPC, TRPCError } from '@trpc/server';
+import { HttpException } from '@nestjs/common';
 import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
-
-// Extiende Request con los campos que inyectan los middlewares de auth
-interface AuthenticatedRequest extends Request {
-  user?: {
-    uid: string;
-    email: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  };
-  tenant?: {
-    userId: string;
-    organizationId: string;
-    role: TenantRole;
-    permissions: Record<string, boolean>;
-  };
-}
 
 // ─── Context unificado ────────────────────────────────────────────────────────
 
@@ -101,19 +87,17 @@ export function createTrpcContext(
   { req }: CreateExpressContextOptions,
   resolveCustomer: CustomerResolver = noCustomer,
 ): TrpcContext {
-  const typedReq = req as AuthenticatedRequest;
-  const user = typedReq.user ?? null;
-  const tenant = typedReq.tenant ?? null;
+  const user = req.user ?? null;
+  const tenant = req.tenant ?? null;
   const organizationId =
-    tenant?.organizationId ??
-    (req.headers['x-organization-id'] as string | undefined) ??
-    null;
+    tenant?.organizationId ?? headerOf(req, 'x-organization-id') ?? null;
 
   return {
     req,
     uid: user?.uid ?? null,
     organizationId,
-    role: (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
+    // El panel distingue dueño de colaborador; ADMIN/MEMBER/VIEWER de la organización son colaboradores.
+    role: tenant ? (tenant.role === 'OWNER' ? 'OWNER' : 'COLLABORATOR') : null,
     userId: tenant?.userId ?? null,
     customerId: null,
     resolveCustomerId: memoizeOnce(() => resolveCustomer(req, organizationId)),
@@ -140,6 +124,49 @@ const t = initTRPC.context<TrpcContext>().create({
 });
 
 // ─── Middlewares ──────────────────────────────────────────────────────────────
+
+function statusToTrpcCode(status: number): TRPCError['code'] {
+  switch (status) {
+    case 400:
+      return 'BAD_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    case 429:
+      return 'TOO_MANY_REQUESTS';
+    default:
+      return 'INTERNAL_SERVER_ERROR';
+  }
+}
+
+/**
+ * Las excepciones de Nest que lanzan los services (NotFound, Conflict, InsufficientStock…) llegaban al front como
+ * INTERNAL_SERVER_ERROR (HTTP 500). El storefront depende de NOT_FOUND para responder 404 (SEO: un 5xx no desindexa
+ * pero tampoco es una página inexistente) y de CONFLICT para avisar «sin stock». Misma traducción que sass-back.
+ */
+const mapNestErrors = t.middleware(async ({ next }) => {
+  const result = await next();
+  if (
+    !result.ok &&
+    result.error.code === 'INTERNAL_SERVER_ERROR' &&
+    result.error.cause instanceof HttpException
+  ) {
+    const cause = result.error.cause;
+    const body = cause.getResponse();
+    const raw = messageOf(body) ?? cause.message;
+    throw new TRPCError({
+      code: statusToTrpcCode(cause.getStatus()),
+      message: Array.isArray(raw) ? raw.join(', ') : String(raw ?? cause.message),
+      cause,
+    });
+  }
+  return result;
+});
 
 /** Admin autenticado (OWNER o COLLABORATOR) */
 const enforceAdmin = t.middleware(({ ctx, next }) => {
@@ -212,11 +239,12 @@ const enforceCustomer = t.middleware(async ({ ctx, next }) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-export const { router, procedure: publicProcedure } = t;
+export const { router } = t;
+export const publicProcedure = t.procedure.use(mapNestErrors);
 
 export const adminProcedure: ProcedureWith<AdminTrpcContext> =
-  t.procedure.use(enforceAdmin);
+  t.procedure.use(mapNestErrors).use(enforceAdmin);
 export const ownerOnlyProcedure: ProcedureWith<OwnerOnlyTrpcContext> =
-  t.procedure.use(enforceOwnerOnly);
+  t.procedure.use(mapNestErrors).use(enforceOwnerOnly);
 export const customerProcedure: ProcedureWith<CustomerTrpcContext> =
-  t.procedure.use(enforceCustomer);
+  t.procedure.use(mapNestErrors).use(enforceCustomer);

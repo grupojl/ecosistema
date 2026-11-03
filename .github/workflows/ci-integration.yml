@@ -1,0 +1,83 @@
+name: CI — integración (Postgres real) y e2e (Playwright)
+
+# DT-TEST-03 y DT-TEST-04. Estos tests necesitan un Postgres real: se levanta como servicio del job.
+# Las bases son descartables (test-db-setup.mjs / e2e/setup/prepare.mjs las crean desde cero) y nunca se toca una remota.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration:
+    name: integración (RLS, checkout concurrente, outbox, repositorios) y cobertura completa
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realsass_ecommerce_test
+      TEST_APP_DATABASE_URL: postgresql://rls_app:rls_app@localhost:5432/realsass_ecommerce_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+      - run: pnpm --filter realsass-ecommerce-back test:db:setup
+      - run: pnpm --filter realsass-ecommerce-back test:integration
+      - name: Cobertura completa de ecommerce-back (con Postgres): piso 90%
+        run: pnpm --filter realsass-ecommerce-back test:cov:full
+      - name: Base descartable de sass-back
+        run: pnpm --filter realsass-sass-back test:db:setup
+      - name: Integración y cobertura completa de sass-back: piso 90%
+        run: pnpm --filter realsass-sass-back test:cov:full
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realsass_sass_test
+
+  e2e:
+    name: e2e (stack real: backs, 3 fronts, Postgres, Redis y emulador de Firebase Auth)
+    runs-on: ubuntu-latest
+    env:
+      E2E_REDIS_URL: redis://localhost:6379
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: '10' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - name: Contratos tRPC (ADR-019)
+        run: pnpm contracts
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e
+        env: { CI: 'true' }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            test-results
+          retention-days: 7

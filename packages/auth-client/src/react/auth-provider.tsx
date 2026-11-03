@@ -145,18 +145,24 @@ async function trpcCall<T>(url: string, token: string | null, init: RequestInit 
   return body.result.data;
 }
 
-/** true solo si el back confirmó la cookie (ADR-004). */
+/**
+ * true solo si el back confirmó la cookie (ADR-004). Un 401 significa que ESTE dispositivo fue cerrado desde
+ * «Dispositivos» (ADR-020): se lanza AUTH para que el llamador cierre también el usuario de Firebase local; si no,
+ * el dispositivo volvería a intentarlo en cada carga con el mismo login.
+ */
 async function createSessionCookie(base: string, idToken: string): Promise<boolean> {
+  let res: Response;
   try {
-    const res = await fetch(`${base}/auth/session`, {
+    res = await fetch(`${base}/auth/session`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     });
-    return res.ok;
   } catch {
     return false;
   }
+  if (res.status === 401) throw new AppError('AUTH', 'Esta sesión se cerró desde otro dispositivo.');
+  return res.ok;
 }
 
 export function AuthProvider({ children, sassBackUrl }: AuthProviderProps) {

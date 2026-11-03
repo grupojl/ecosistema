@@ -98,6 +98,28 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return created.id;
   }
 
+  /**
+   * ¿El dispositivo con cookie `sid` fue cerrado DESPUÉS del login con el que ahora pide una cookie nueva?
+   *
+   * Firebase solo revoca por usuario, no por dispositivo (ADR-020): un dispositivo cerrado desde «Dispositivos» seguía
+   * teniendo su usuario de Firebase y re-creaba su cookie sola al recargar. El `auth_time` del token es el momento del
+   * login original y NO cambia al renovar el token: si es anterior a la revocación, es el mismo login que se cerró →
+   * se rechaza. Un login nuevo (auth_time posterior) pasa.
+   */
+  async wasRevokedAfterLogin(
+    sid: string | undefined,
+    firebaseUid: string,
+    authTimeSec: number | undefined,
+  ): Promise<boolean> {
+    if (!sid || typeof authTimeSec !== 'number') return false;
+    const row = await this.prisma.userSession.findUnique({
+      where: { id: sid },
+      select: { revokedAt: true, user: { select: { firebaseUid: true } } },
+    });
+    if (!row?.revokedAt || row.user.firebaseUid !== firebaseUid) return false;
+    return authTimeSec * 1000 < row.revokedAt.getTime();
+  }
+
   async list(firebaseUid: string, currentSid?: string): Promise<SessionView[]> {
     const rows = await this.prisma.userSession.findMany({
       where: {

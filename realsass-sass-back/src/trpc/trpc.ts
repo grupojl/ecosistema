@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
+import { headerOf, messageOf } from '@real/auth-server';
 import type { TRPCProcedureBuilder, TRPCUnsetMarker } from '@trpc/server';
 import { ZodError } from 'zod';
 import { HttpException } from '@nestjs/common';
@@ -6,21 +7,6 @@ import { timingSafeEqual } from 'node:crypto';
 import { AppCodeError, type AppCode } from '@/trpc/app-code-error';
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import type { Request } from 'express';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    uid: string;
-    email: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  };
-  tenant?: {
-    userId: string;
-    organizationId: string;
-    role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
-    permissions: Record<string, boolean>;
-  };
-}
 
 export interface TrpcContext {
   req: Request;
@@ -58,19 +44,17 @@ type ProcedureWith<TOverrides> = TRPCProcedureBuilder<
 export function createTrpcContext({
   req,
 }: CreateExpressContextOptions): TrpcContext {
-  const typedReq = req as AuthenticatedRequest;
-  const user = typedReq.user ?? null;
-  const tenant = typedReq.tenant ?? null;
+  const user = req.user ?? null;
+  const tenant = req.tenant ?? null;
   const organizationId =
-    tenant?.organizationId ??
-    (req.headers['x-organization-id'] as string | undefined) ??
-    null;
+    tenant?.organizationId ?? headerOf(req, 'x-organization-id') ?? null;
 
   return {
     req,
     uid: user?.uid ?? null,
     organizationId,
-    role: (tenant?.role as 'OWNER' | 'COLLABORATOR' | null) ?? null,
+    // El panel distingue dueño de colaborador; ADMIN/MEMBER/VIEWER de la organización son colaboradores.
+    role: tenant ? (tenant.role === 'OWNER' ? 'OWNER' : 'COLLABORATOR') : null,
   };
 }
 
@@ -127,8 +111,8 @@ const t = initTRPC.context<TrpcContext>().create({
           typeof body === 'object' && body !== null && 'resource' in body
             ? {
                 resource: String(body.resource),
-                limit: Number((body as { limit?: unknown }).limit ?? 0),
-                current: Number((body as { current?: unknown }).current ?? 0),
+                limit: Number('limit' in body ? body.limit : 0),
+                current: Number('current' in body ? body.current : 0),
               }
             : null,
       },
@@ -149,10 +133,7 @@ const mapNestErrors = t.middleware(async ({ next }) => {
   ) {
     const cause = result.error.cause;
     const body = cause.getResponse();
-    const raw =
-      typeof body === 'object' && body !== null && 'message' in body
-        ? (body as { message?: unknown }).message
-        : cause.message;
+    const raw = messageOf(body) ?? cause.message;
     throw new TRPCError({
       code: statusToTrpcCode(cause.getStatus()),
       message: Array.isArray(raw)

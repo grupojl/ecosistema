@@ -263,3 +263,21 @@ model OutboxEvent {
   @@index([organizationId])
   @@map("outbox_events")
 }
+
+// DT-IDEM-3 · Claves de idempotencia. Una operación con efectos (confirmar un pago, un cobro) se ejecuta UNA vez por
+// (organización, ámbito, clave): el reintento recibe la respuesta guardada, y la misma clave con otro contenido se rechaza.
+model IdempotencyKey {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  scope          String                                   // 'payment-event', 'charge'…
+  key            String                                   // Idempotency-Key del cliente o id del evento del proveedor
+  requestHash    String    @map("request_hash")           // huella del contenido: detecta clave reutilizada con otro cuerpo
+  status         String    @default("IN_PROGRESS")        // IN_PROGRESS | COMPLETED
+  response       Json?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  @@unique([organizationId, scope, key])
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}

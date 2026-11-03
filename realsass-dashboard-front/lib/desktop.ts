@@ -63,10 +63,17 @@ export function safeNextPath(raw: string | null | undefined): string {
   return raw
 }
 
+// La app de escritorio (Tauri) inyecta `__WELVER_DESKTOP__`; sus campos se validan antes de usarlos (por eso `unknown`).
+declare global {
+  interface Window {
+    __WELVER_DESKTOP__?: { loginPort?: unknown; version?: unknown }
+  }
+}
+
 /** Devuelve el puente solo si la app lo inyectó y es válido; null en un navegador común. */
 export function getDesktopBridge(): DesktopBridge | null {
   if (typeof window === 'undefined') return null
-  const bridge = (window as unknown as { __WELVER_DESKTOP__?: { loginPort?: unknown; version?: unknown } }).__WELVER_DESKTOP__
+  const bridge = window.__WELVER_DESKTOP__
   if (!bridge || !isValidLoopbackPort(bridge.loginPort)) return null
   return { loginPort: bridge.loginPort, version: typeof bridge.version === 'string' ? bridge.version : '' }
 }

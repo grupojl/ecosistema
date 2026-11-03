@@ -15,6 +15,7 @@
 //   → GET /auth/organization-by-slug devuelve ecommerceEnabled: false
 //   → StoreService (ecommerce-back) lanza NOT_FOUND
 //   → Storefront muestra 404 sin cambios en ecommerce-back
+import type { OrgStatus, StoreStatus } from '@/generated/prisma';
 import {
   Injectable,
   NotFoundException,
@@ -55,8 +56,8 @@ export class InternalOrganizationsService {
     ecosystemId: string | null;
     name: string | null;
     slug: string | null;
-    status: string;
-    storeStatus: string;
+    status: OrgStatus;
+    storeStatus: StoreStatus;
     plan: string | null;
     createdAt: Date;
     suspendedAt: Date | null;
@@ -66,8 +67,8 @@ export class InternalOrganizationsService {
       ecosystemId: org.ecosystemId ?? 'welver',
       name: org.name,
       slug: org.slug,
-      status: org.status as 'ACTIVE' | 'SUSPENDED' | 'BLOCKED',
-      storeStatus: org.storeStatus as 'ACTIVE' | 'PAUSED',
+      status: org.status,
+      storeStatus: org.storeStatus,
       plan: org.plan ?? 'free',
       createdAt: org.createdAt.toISOString(),
       suspendedAt: org.suspendedAt?.toISOString(),

@@ -5,7 +5,7 @@
 // home). Resultado: Google veía cada categoría como "duplicado de la home"
 // y la sacaba del índice. Cada página indexable necesita su propio canonical
 // self-referencial (ADR-016 D4).
-import { PageContainer, PageHeader } from '@real/ui'
+import { Breadcrumb, PageContainer, PageHeader } from '@real/ui'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProducts, getCategoryByHandle } from '@/lib/store'
@@ -43,11 +43,9 @@ export default async function CategoriaPage({ params }: Props) {
 
   return (
     <PageContainer size="xl" className="space-y-8">
-      <PageHeader
-        title={category.name}
-        breadcrumb={[{ label: storeName, href: `/${locale}/${slug}` }, { label: category.name }]}
-        breadcrumbLinkAs={Link}
-      />
+      {/* Breadcrumb aparte: PageHeader es un componente de cliente y no admite `Link` (una función) desde un Server Component. */}
+      <Breadcrumb linkAs={Link} items={[{ label: storeName, href: `/${locale}/${slug}` }, { label: category.name }]} />
+      <PageHeader title={category.name} />
 
       {products.length === 0 ? (
         <p className="text-center py-16 text-muted-foreground">{dict.catalog.emptyCategory}</p>

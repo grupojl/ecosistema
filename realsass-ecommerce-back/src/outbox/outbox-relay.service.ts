@@ -1,3 +1,5 @@
+import { errorMessage } from '@/http/request';
+import { isRecord } from '@/common/prisma/json';
 import {
   Inject,
   Injectable,
@@ -7,7 +9,7 @@ import {
 } from '@nestjs/common';
 import {
   PrismaService,
-  type PrismaTransactionClient,
+  toTransactionClient,
 } from '@/prisma/prisma.service';
 import { setSystemContext } from '@/prisma/tenant-context';
 import { MAX_ATTEMPTS, nextDelayMs } from '@/outbox/outbox-backoff';
@@ -63,7 +65,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
     try {
       await this.processBatch();
     } catch (error) {
-      this.logger.error(`Fallo del relay: ${(error as Error).message}`);
+      this.logger.error(`Fallo del relay: ${errorMessage(error)}`);
     } finally {
       this.running = false;
     }
@@ -72,7 +74,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
   async processBatch(limit = BATCH_SIZE): Promise<RelayResult> {
     return this.prisma.$transaction(
       async (raw) => {
-        const tx = raw as unknown as PrismaTransactionClient;
+        const tx = toTransactionClient(raw);
         await setSystemContext(tx); // el relay no pertenece a un tenant: con RLS activo necesita el contexto de sistema
         const claimed = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM outbox_events
@@ -96,7 +98,7 @@ export class OutboxRelayService implements OnModuleInit, OnModuleDestroy {
             aggregateType: row.aggregateType,
             aggregateId: row.aggregateId,
             type: row.type,
-            payload: row.payload as Record<string, unknown>,
+            payload: isRecord(row.payload) ? row.payload : {},
             attempts: row.attempts,
             createdAt: row.createdAt,
           };

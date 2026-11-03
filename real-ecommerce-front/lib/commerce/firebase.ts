@@ -6,7 +6,7 @@
  */
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app'
 import {
-  GoogleAuthProvider, getAuth, onAuthStateChanged, signInWithPopup, signOut as fbSignOut, type Auth, type User,
+  GoogleAuthProvider, connectAuthEmulator, getAuth, onAuthStateChanged, signInWithPopup, signOut as fbSignOut, type Auth, type User,
 } from 'firebase/auth'
 
 export type { User }
@@ -31,8 +31,18 @@ function app(): FirebaseApp {
   return getApps().length > 0 ? getApp() : initializeApp(config())
 }
 
+let emulatorConnected = false
+
+/** Emulador de Auth (solo e2e): NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=host:puerto; nunca en producción. */
 export function authOrNull(): Auth | null {
-  return isFirebaseConfigured() ? getAuth(app()) : null
+  if (!isFirebaseConfigured()) return null
+  const auth = getAuth(app())
+  const host = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST
+  if (host && !emulatorConnected && process.env.NODE_ENV !== 'production') {
+    connectAuthEmulator(auth, `http://${host}`, { disableWarnings: true })
+    emulatorConnected = true
+  }
+  return auth
 }
 
 /** Observa la sesión. Devuelve la función para dejar de observar. Sin Firebase configurado avisa "sin usuario" al instante. */

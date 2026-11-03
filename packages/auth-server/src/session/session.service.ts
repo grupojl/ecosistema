@@ -29,6 +29,8 @@ function cookieDomain(): { domain?: string } {
 export interface VerifiedSession {
   uid:   string;
   email: string | undefined;
+  /** Segundos desde epoch del login ORIGINAL (no cambia al renovar el token). */
+  auth_time?: number;
 }
 
 @Injectable()
@@ -51,7 +53,7 @@ export class SessionService {
   async verifySessionCookie(sessionCookie: string): Promise<VerifiedSession> {
     try {
       const decoded = await getFirebaseAdmin().verifySessionCookie(sessionCookie, true);
-      return { uid: decoded.uid, email: decoded.email };
+      return { uid: decoded.uid, email: decoded.email, auth_time: decoded.auth_time };
     } catch (err) {
       this.logger.warn('verifySessionCookie failed', { error: String(err) });
       throw new UnauthorizedException('Sesión inválida o expirada');

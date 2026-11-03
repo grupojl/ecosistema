@@ -6,9 +6,16 @@ import { Reflector }     from '@nestjs/core';
 import { CACHE_PORT }    from '@/ports/cache.port';
 import type { CachePort } from '@/ports/cache.port';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
+import { isOrganizationAccessResult } from '@/types/tenant-context';
 import type {
   TenantContext, CurrentUserPayload, OrganizationAccessResult,
 } from '@/types/tenant-context';
+import { bearerOf, errorMessage, headerOf, type HeaderSource } from '@/http/request';
+
+interface TenantRequest extends HeaderSource {
+  user?: CurrentUserPayload;
+  tenant?: TenantContext;
+}
 
 const CACHE_TTL = 90;
 
@@ -38,10 +45,10 @@ export class TenantGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const req            = ctx.switchToHttp().getRequest();
-    const user           = req.user as CurrentUserPayload | undefined;
-    const organizationId = req.headers['x-organization-id'] as string | undefined;
-    const token          = this.extractToken(req);
+    const req            = ctx.switchToHttp().getRequest<TenantRequest>();
+    const user           = req.user;
+    const organizationId = headerOf(req, 'x-organization-id');
+    const token          = bearerOf(req);
 
     // Sin organizationId — puede ser una ruta que no requiere tenant context
     // (ej: rutas de salud, rutas de store publico sin auth)
@@ -74,10 +81,12 @@ export class TenantGuard implements CanActivate {
         },
       });
       if (!res.ok) throw new ForbiddenException('Sin acceso a esta organizacion');
-      result = await res.json() as OrganizationAccessResult;
+      const body: unknown = await res.json();
+      if (!isOrganizationAccessResult(body)) throw new ForbiddenException('Respuesta inválida de organization-access');
+      result = body;
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
-      this.logger.error(`Error en organization-access: ${(error as Error).message}`);
+      this.logger.error(`Error en organization-access: ${errorMessage(error)}`);
       throw new ForbiddenException('Error al verificar permisos');
     }
 
@@ -97,8 +106,4 @@ export class TenantGuard implements CanActivate {
     return true;
   }
 
-  private extractToken(req: { headers: Record<string, string | undefined> }): string | undefined {
-    const [type, token] = req.headers['authorization']?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
-  }
 }

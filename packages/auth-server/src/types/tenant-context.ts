@@ -29,3 +29,14 @@ export interface OrganizationAccessResult {
   permissions?:    Record<string, boolean>;
   reason?:         string;
 }
+
+const ROLES: readonly string[] = ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'];
+
+/** Valida la respuesta (JSON de otro servicio) de organization-access: no se confía en su forma, se comprueba. */
+export function isOrganizationAccessResult(value: unknown): value is OrganizationAccessResult {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('canAccess' in value) || typeof value.canAccess !== 'boolean') return false;
+  if ('role' in value && value.role !== undefined && !(typeof value.role === 'string' && ROLES.includes(value.role))) return false;
+  if ('userId' in value && value.userId !== undefined && typeof value.userId !== 'string') return false;
+  return true;
+}

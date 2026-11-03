@@ -41,7 +41,8 @@ export function useSessionWatch(revalidate: () => Promise<void> | void, interval
       if (now - lastRun < MIN_GAP_MS) return;
       lastRun = now;
       running = true;
-      try { await latest.current(); } finally { running = false; }
+      // Es un sondeo en segundo plano: si falla se reintenta en la próxima vuelta (antes quedaba una promesa rechazada sin manejar).
+      try { await latest.current(); } catch { /* sin efecto: la próxima revalidación lo corrige */ } finally { running = false; }
     };
 
     const onVisible = () => { void run(); };

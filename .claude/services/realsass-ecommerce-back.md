@@ -49,6 +49,11 @@ Controllers REST a eliminar:
 - `public-catalog.controller.ts` → procedures en `customer.*` (pendiente agregar)
 - `activity.controller.ts` → evaluar si tiene consumidor activo
 
+## Idempotencia de pagos (DT-IDEM-3, 2026-11-03)
+
+- `src/idempotency/` — `IdempotencyService` + tabla `idempotency_keys` (tenant, RLS). `src/orders/payment-confirmation.service.ts` — `confirm(org, orderId, {eventId, paymentIntentId, amountCents})`. Sin ruta todavía (a la espera del contrato con `pagos-back`).
+- Tests contra Postgres real: `checkout.concurrency.integration.spec.ts`, `payment-confirmation.integration.spec.ts`, `prisma/cross-tenant.spec.ts`.
+
 ## Deuda consciente
 
 - `checkout.controller.ts` — `paymentIntentId` en null hasta que exista `pagos-back`

@@ -10,6 +10,7 @@
  * @prisma/client). Los backs importan solo `@real/trpc/markets` (paso 1), por eso
  * no hay ciclo aunque el paso 2 lea el código de los backs.
  */
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -105,6 +106,23 @@ function rewriteAliases(cfgPath, back, outDir) {
   console.log(`[@real/trpc] ${back.key}: ${rewritten} alias reescritos`);
 }
 
+/**
+ * Huella de las fuentes que definen el contrato (src/trpc de cada back). Se guarda en dist/build-info.json: el test
+ * de contrato la recalcula y falla si alguien cambió un router sin volver a correr este build (dist desfasado).
+ * La misma función vive en test/contract.test.mjs: si se cambia acá, cambiarla allá.
+ */
+function contractFingerprint() {
+  const h = createHash('sha256');
+  for (const back of BACKS) {
+    const dir = join(back.dir, 'src', 'trpc');
+    for (const f of walk(dir).filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts')).sort()) {
+      h.update(posix(relative(root, f)));
+      h.update(readFileSync(f, 'utf8').replace(/\r\n/g, '\n'));
+    }
+  }
+  return h.digest('hex');
+}
+
 rmSync(dist, { recursive: true, force: true });
 
 console.log('[@real/trpc] 1/3 core');
@@ -123,4 +141,5 @@ rmSync(join(dist, '.tmp'), { recursive: true, force: true });
 
 console.log('[@real/trpc] 3/3 paquete');
 runTsc(['-p', 'tsconfig.build.json']);
+writeFileSync(join(dist, 'build-info.json'), JSON.stringify({ contractFingerprint: contractFingerprint() }, null, 2));
 console.log('[@real/trpc] ok');

@@ -1,3 +1,4 @@
+import { messageOf } from '@real/auth-server';
 import {
   HttpException,
   Injectable,
@@ -138,13 +139,14 @@ export class WhatsappService {
       );
     }
 
-    const json = (await res.json().catch(() => ({}))) as { message?: unknown };
+    const json: unknown = await res.json().catch(() => ({}));
+    const message = messageOf(json);
     if (!res.ok) {
       // Los 4xx de chatia traen un mensaje pensado para el usuario; un 5xx no se reenvía tal cual.
       if (res.status >= 400 && res.status < 500) {
-        const msg = Array.isArray(json.message)
-          ? json.message.join(', ')
-          : String(json.message ?? 'Solicitud rechazada');
+        const msg = Array.isArray(message)
+          ? message.join(', ')
+          : String(message ?? 'Solicitud rechazada');
         throw new HttpException(msg, res.status === 403 ? 502 : res.status);
       }
       this.logger.error(
@@ -154,6 +156,6 @@ export class WhatsappService {
         'El chat IA no pudo completar la operación',
       );
     }
-    return json as T;
+    return json as T; // @real/cast:external respuesta de chatia: cada método de esta clase declara T y su consumidor la usa tal cual
   }
 }

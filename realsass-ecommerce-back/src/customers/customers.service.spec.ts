@@ -28,7 +28,6 @@ function fakeRepo(): ICustomersRepository & { rows: CustomerRecord[] } {
       return { customer, created: true };
     },
     async findById(organizationId, id) { return rows.find((r) => r.id === id && r.organizationId === organizationId) ?? null; },
-    async findBySessionId() { return null; },
     async update() { throw new Error('no usado'); },
     async listByOrg() { return { items: rows, total: rows.length }; },
   };

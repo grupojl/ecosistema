@@ -5,6 +5,11 @@ export type {
   CurrentUserPayload,
   OrganizationAccessResult,
 } from '@/types/tenant-context';
+export { isOrganizationAccessResult } from '@/types/tenant-context';
+
+// Lectura tipada de la request (sin `as`)
+export { headerOf, cookieOf, bearerOf, errorMessage, messageOf } from '@/http/request';
+export type { HeaderSource, CookieSource } from '@/http/request';
 
 // Ports
 export { CACHE_PORT }           from '@/ports/cache.port';

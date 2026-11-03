@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import {
+  connectAuthEmulator,
   getAuth,
   GoogleAuthProvider,
   FacebookAuthProvider,
@@ -82,8 +83,23 @@ function getOrInitApp(): FirebaseApp {
   return _app;
 }
 
+let _emulatorConnected = false;
+
+/**
+ * Emulador de Firebase Auth (solo tests e2e): se activa con NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=host:puerto y
+ * NUNCA en un build de producción, aunque la variable estuviera puesta.
+ */
+function maybeConnectEmulator(auth: ReturnType<typeof getAuth>) {
+  const host = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+  if (!host || _emulatorConnected || process.env.NODE_ENV === 'production') return;
+  connectAuthEmulator(auth, `http://${host}`, { disableWarnings: true });
+  _emulatorConnected = true;
+}
+
 export function getFirebaseAuth() {
-  return getAuth(getOrInitApp());
+  const auth = getAuth(getOrInitApp());
+  maybeConnectEmulator(auth);
+  return auth;
 }
 
 /**

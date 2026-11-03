@@ -72,6 +72,9 @@
       "@/types/tenant-context": [
         "../packages/auth-server/src/types/tenant-context.ts"
       ],
+      "@/http/request": [
+        "../packages/auth-server/src/http/request.ts"
+      ],
       "@/ports/cache.port": [
         "../packages/auth-server/src/ports/cache.port.ts"
       ],

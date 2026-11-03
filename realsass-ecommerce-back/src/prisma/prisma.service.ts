@@ -44,3 +44,14 @@ export type PrismaTransactionClient = Omit<
   PrismaClient,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >;
+
+/**
+ * ÚNICO punto donde el cliente interactivo de `$transaction` se convierte en `PrismaTransactionClient`.
+ *
+ * Con `@prisma/adapter-pg` el callback de `$transaction` recibe, en runtime, un cliente con todos los modelos, pero su
+ * tipo generado (`Prisma.TransactionClient`) no los expone (ver el comentario de `PrismaTransactionClient`). Antes
+ * había un `as unknown as` repetido en cada llamador; ahora hay uno solo, acá, justificado.
+ */
+export function toTransactionClient(raw: unknown): PrismaTransactionClient {
+  return raw as PrismaTransactionClient; // @real/cast:sdk el tipo generado por Prisma omite los modelos que el adaptador sí provee
+}

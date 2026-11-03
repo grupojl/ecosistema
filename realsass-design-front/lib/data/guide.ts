@@ -1,7 +1,7 @@
 /** Guía 10/10 de welver.html: [grupo, ícono lucide, [[criterio, hecho(1)/pendiente(0)]]]. */
 export type GuideGroup = readonly [name: string, icon: string, items: ReadonlyArray<readonly [text: string, done: 0 | 1]>]
 
-export const GUIDE: readonly GuideGroup[] = [
+export const GUIDE = [
  [
   "1 · Mobile-first, 3 clases de tamaño",
   "smartphone",
@@ -388,4 +388,4 @@ export const GUIDE: readonly GuideGroup[] = [
    ]
   ]
  ]
-] as unknown as readonly GuideGroup[]
+] as const satisfies readonly GuideGroup[]

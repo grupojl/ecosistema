@@ -11,6 +11,11 @@ const LABEL: Record<Tone, string> = { success: 'Bueno', warning: 'Mejorable', de
 const seg = (v: number) => `${(v / 1000).toFixed(2).replace('.', ',')} s`
 
 /** Core Web Vitals de esta página con PerformanceObserver (LCP, CLS, INP aproximado, FCP). */
+/** `LayoutShift` no está en el lib.dom de TypeScript: se reconoce por su forma. */
+interface LayoutShiftEntry extends PerformanceEntry { value: number; hadRecentInput: boolean }
+const layoutShifts = (entries: PerformanceEntryList): LayoutShiftEntry[] =>
+  entries.filter((e): e is LayoutShiftEntry => 'value' in e && 'hadRecentInput' in e)
+
 export function Vitals() {
   const [v, setV] = useState<Vitals>({ cls: 0 })
 
@@ -26,7 +31,7 @@ export function Vitals() {
     watch('largest-contentful-paint', (e) => setV((p) => ({ ...p, lcp: e[e.length - 1].startTime })))
     watch('paint', (e) => { const f = e.find((x) => x.name === 'first-contentful-paint'); if (f) setV((p) => ({ ...p, fcp: f.startTime })) })
     watch('layout-shift', (e) => {
-      const add = (e as unknown as Array<{ value: number; hadRecentInput: boolean }>).filter((x) => !x.hadRecentInput).reduce((a, x) => a + x.value, 0)
+      const add = layoutShifts(e).filter((x) => !x.hadRecentInput).reduce((a, x) => a + x.value, 0)
       if (add) setV((p) => ({ ...p, cls: p.cls + add }))
     })
     watch('event', (e) => setV((p) => ({ ...p, inp: Math.max(p.inp ?? 0, ...e.map((x) => x.duration)) })), { durationThreshold: 40 })

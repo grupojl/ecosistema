@@ -1,3 +1,7 @@
+import { errorMessage } from '@/http/request';
+import { isOrganizationAccessResult } from '@/types/tenant-context';
+import { isRecord } from '@/common/prisma/json';
+import { z } from 'zod';
 import {
   ForbiddenException,
   Injectable,
@@ -16,6 +20,14 @@ const REQUEST_TIMEOUT_MS = 5000;
 const ORGANIZATIONS_SERVICE_PREFIX =
   process.env['ORGANIZATIONS_SERVICE_PREFIX'] ?? '/api/v1';
 const MARKET_CACHE_TTL = 300;
+
+const ResolvedMarketSchema = z.object({
+  id: z.string(),
+  countryCode: z.string(),
+  isDefault: z.boolean(),
+  fulfillmentConfig: z.record(z.string(), z.unknown()),
+});
+const MarketEnvelopeSchema = z.object({ result: z.object({ data: ResolvedMarketSchema }) });
 
 @Injectable()
 export class OrganizationsClientService {
@@ -41,7 +53,9 @@ export class OrganizationsClientService {
 
     const cached = await this.redis.get(key).catch(() => null);
     if (cached) {
-      return JSON.parse(cached) as OrganizationAccessResult;
+      const parsed: unknown = JSON.parse(cached);
+      if (isOrganizationAccessResult(parsed)) return parsed;
+      // caché dañada o de otra versión: se ignora y se consulta de nuevo
     }
 
     const result = await this.fetchFromOrganizationsService(
@@ -94,7 +108,11 @@ export class OrganizationsClientService {
         );
       }
 
-      return (await response.json()) as OrganizationAccessResult;
+      const body: unknown = await response.json();
+      if (!isOrganizationAccessResult(body)) {
+        throw new ForbiddenException('Respuesta inválida de real-back');
+      }
+      return body;
     } catch (error) {
       if (
         error instanceof UnauthorizedException ||
@@ -102,7 +120,7 @@ export class OrganizationsClientService {
         error instanceof ServiceUnavailableException
       )
         throw error;
-      this.logger.error('No se pudo contactar a real-back', error as Error);
+      this.logger.error('No se pudo contactar a real-back', errorMessage(error));
       throw new ServiceUnavailableException(
         'Servicio de identidad no disponible temporalmente',
       );
@@ -139,7 +157,8 @@ export class OrganizationsClientService {
         },
       );
       if (!res.ok) return false;
-      const { revoked } = (await res.json()) as { revoked?: boolean };
+      const body: unknown = await res.json();
+      const revoked = isRecord(body) ? body['revoked'] : undefined;
       if (this.sessionChecks.size >= 10_000) this.sessionChecks.clear();
       this.sessionChecks.set(sessionId, {
         revoked: revoked === true,
@@ -165,13 +184,10 @@ export class OrganizationsClientService {
     const cacheKey = `market:${organizationId}:${code}`;
 
     const cached = await this.redis.get(cacheKey).catch(() => null);
-    if (cached)
-      return JSON.parse(cached) as {
-        id: string;
-        countryCode: string;
-        isDefault: boolean;
-        fulfillmentConfig: Record<string, unknown>;
-      };
+    if (cached) {
+      const parsed = ResolvedMarketSchema.safeParse(JSON.parse(cached));
+      if (parsed.success) return parsed.data;
+    }
 
     const input = JSON.stringify({
       organizationId,
@@ -202,13 +218,9 @@ export class OrganizationsClientService {
         };
       }
 
-      const body = (await response.json()) as { result: { data: unknown } };
-      const market = body.result.data as {
-        id: string;
-        countryCode: string;
-        isDefault: boolean;
-        fulfillmentConfig: Record<string, unknown>;
-      };
+      // Lo que responde sass-back se valida: una respuesta con otra forma cae al mercado por defecto, no se propaga.
+      const { result } = MarketEnvelopeSchema.parse(await response.json());
+      const market = result.data;
 
       await this.redis
         .set(cacheKey, JSON.stringify(market), MARKET_CACHE_TTL)

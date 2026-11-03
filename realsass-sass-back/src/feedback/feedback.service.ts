@@ -5,6 +5,7 @@
  * `/internal/feedback*`. La organización sale siempre del contexto validado, nunca del input. El OWNER ve los
  * reportes de toda su organización; un colaborador, solo los suyos.
  */
+import { isRecord, toJsonObject } from '@/common/prisma/json';
 import {
   HttpException,
   HttpStatus,
@@ -65,7 +66,7 @@ export class FeedbackService {
       const v = req.headers[name];
       return typeof v === 'string' ? v.slice(0, 300) : undefined;
     };
-    const context = stripSecrets({
+    const cleaned = stripSecrets({
       release:
         process.env['RELEASE'] ?? process.env['RAILWAY_GIT_COMMIT_SHA'] ?? null,
       traceId: header('x-request-id') ?? header('traceparent') ?? null,
@@ -73,7 +74,8 @@ export class FeedbackService {
       consoleErrors: input.diagnostics?.consoleErrors
         ? sanitizeConsoleErrors(input.diagnostics.consoleErrors)
         : undefined,
-    }) as Prisma.InputJsonObject;
+    });
+    const context = toJsonObject(isRecord(cleaned) ? cleaned : {});
 
     return this.prisma.feedbackReport.create({
       data: {

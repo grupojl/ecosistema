@@ -1,3 +1,4 @@
+import { bearerOf, type HeaderSource } from '@real/auth-server';
 import {
   CanActivate,
   ExecutionContext,
@@ -22,10 +23,8 @@ export class StepUpGuard implements CanActivate {
   private readonly WINDOW_MS = 5 * 60 * 1_000; // 5 minutos
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
-    const req = ctx.switchToHttp().getRequest();
-    const token = (req.headers['authorization'] as string | undefined)?.split(
-      ' ',
-    )[1];
+    const req = ctx.switchToHttp().getRequest<HeaderSource>();
+    const token = bearerOf(req);
 
     if (!token)
       throw new ForbiddenException('Token requerido para esta accion');
