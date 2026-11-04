@@ -41,6 +41,12 @@ export const de = {
   notFound: { title: '404', body: 'Dieser Shop existiert nicht oder ist nicht verfügbar.', hint: 'Prüfen Sie, ob der Link korrekt ist.', back: 'Zur Startseite' },
   commerce: {
     signIn: 'Anmelden',
+    deleteAccount: 'Mein Konto löschen',
+    deleteAccountTitle: 'Konto löschen?',
+    deleteAccountBody: 'Wir löschen Ihre persönlichen Daten und Adressen in diesem Shop. Ihre Bestellungen bleiben als Buchungsbeleg ohne Ihre Daten erhalten. Das kann nicht rückgängig gemacht werden.',
+    deleteAccountConfirm: 'Ja, mein Konto löschen',
+    cancel: 'Abbrechen',
+    deleteAccountError: 'Ihr Konto konnte nicht gelöscht werden. Bitte versuchen Sie es später erneut.',
     signOut: 'Abmelden',
     account: 'Konto',
     myOrders: 'Meine Bestellungen',

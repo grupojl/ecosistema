@@ -56,7 +56,7 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
   }
 
   async findAllByOrganization(organizationId: string): Promise<Collaborator[]> {
-    const rows = await this.prisma.collaborator.findMany({
+    const rows = await this.prisma.forTenant(organizationId).collaborator.findMany({
       where: { organizationId, status: { not: 'REMOVED' } },
       orderBy: { invitedAt: 'asc' },
     });
@@ -67,7 +67,7 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
     id: string,
     organizationId: string,
   ): Promise<Collaborator | null> {
-    const row = await this.prisma.collaborator.findFirst({
+    const row = await this.prisma.forTenant(organizationId).collaborator.findFirst({
       where: { id, organizationId },
     });
     return row ? this.toEntity(row) : null;
@@ -77,14 +77,14 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
     email: string,
     organizationId: string,
   ): Promise<Collaborator | null> {
-    const row = await this.prisma.collaborator.findFirst({
+    const row = await this.prisma.forTenant(organizationId).collaborator.findFirst({
       where: { email, organizationId },
     });
     return row ? this.toEntity(row) : null;
   }
 
   async create(input: InviteCollaboratorInput): Promise<Collaborator> {
-    const row = await this.prisma.collaborator.create({
+    const row = await this.prisma.forTenant(input.organizationId).collaborator.create({
       data: {
         organizationId: input.organizationId,
         email: input.email,
@@ -97,9 +97,11 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
 
   async update(
     id: string,
+    organizationId: string,
     input: UpdateCollaboratorInput,
   ): Promise<Collaborator> {
-    const existing = await this.prisma.collaborator.findUniqueOrThrow({
+    const tenant = this.prisma.forTenant(organizationId);
+    const existing = await tenant.collaborator.findUniqueOrThrow({
       where: { id },
     });
     const parsedExisting = CollaboratorPermissionsSchema.parse(
@@ -110,15 +112,15 @@ export class PrismaCollaboratorsRepository implements ICollaboratorsRepository {
       ...parsedExisting,
       ...input.permissions,
     };
-    const row = await this.prisma.collaborator.update({
+    const row = await tenant.collaborator.update({
       where: { id },
       data: { permissions: merged },
     });
     return this.toEntity(row);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.prisma.collaborator.update({
+  async remove(id: string, organizationId: string): Promise<void> {
+    await this.prisma.forTenant(organizationId).collaborator.update({
       where: { id },
       data: { status: 'REMOVED' },
     });

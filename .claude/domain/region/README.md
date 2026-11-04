@@ -107,3 +107,59 @@ Cada ficha responde por las mismas capas, para que dos países se puedan compara
   estado por país **en código**, conviene un único registro tipado (`packages/`), con estas fichas como su documentación. Aún no se decidió.
 - Completar las fichas generadas (prefijo, logística, pagos, legal) país por país: hoy todo eso dice **a validar**.
 - Los países de África y Oceanía que figuraban en una primera versión se quitaron al dejar solo tres regiones; se recuperan creando sus carpetas.
+
+## Estrategia de crecimiento
+
+┌────────────────┬──────────────────────────────────────────┐
+│      VPS       │ Municipios de 10k (estimado conservador) │
+├────────────────┼──────────────────────────────────────────┤
+│ 2 vCPU / 4 GB  │ 5 a 10, con poco margen                  │
+├────────────────┼──────────────────────────────────────────┤
+│ 4 vCPU / 8 GB  │ 30 a 50                                  │
+├────────────────┼──────────────────────────────────────────┤
+│ 8 vCPU / 16 GB │ 80 a 150                                 │
+└────────────────┴──────────────────────────────────────────
+Dos cosas sí hay que dejar resueltas antes de cargar los 15:
+1. Aislamiento entre municipios: terminar el trabajo de tenant y RLS que quedó a medias. Es lo más serio, porque son datos de ciudadanos.
+2. Respaldo externo probado: una copia de la base fuera del servidor, con una restauración que hayas hecho al menos una vez.
+
+Exacto, diste en el clavo con la estrategia de dos carriles (Dual-Track B2G). Es la arquitectura comercial más sólida para escalar una startup GovTech desde Argentina hacia la región.
+
+Carril 1: Velocidad Local (Argentina)
+
+Usar a las UCP como canal principal es la jugada institucional correcta. Te permite hacer el trabajo de posicionamiento una sola vez a nivel provincial o nacional, en lugar de tener que educar y convencer técnicamente a cada intendente por separado.
+
+El objetivo: Tracción rápida, caja de corto plazo y validación de campo (Product-Market Fit).
+
+Cómo se ejecuta: Vía directa con fondos de presupuesto municipal corriente o programas provinciales.
+
+El valor estratégico: Cada municipio contratado no solo te deja facturación recurrente (SaaS), sino que genera los activos de prueba que exige el sector público:
+
+Certificados de conformidad técnica.
+
+Métricas reales de impacto (ej. tiempo de respuesta al ciudadano, eficiencia en la gestión).
+
+Casos de estudio en entornos operativamente complejos.
+
+Carril 2: Posicionamiento Regional / Catálogo (Largo Plazo)
+El objetivo: Apertura de mercado masivo con financiamiento garantizado y volumen regional.
+
+Cómo se ejecuta: Trabajar el posicionamiento institucional con la UCP (Unidades Ejecutoras) a nivel nacional/provincial y entablar relaciones con los especialistas técnicos de innovación pública en los bancos multilaterales (BID Lab, CAF, Banco Mundial).
+
+El valor estratégico: No vas a "venderles software" hoy, sino a validar tu solución frente a sus marcos técnicos. Cuando se aprueba un programa de modernización o un fondo de fortalecimiento subnacional, tu software entra como opción pre-homologada/elegible para que cualquier municipio de la región use su cupo del crédito para implementarte.
+
+El "Flywheel" de esta Estrategia
+   [ 10+ Municipios Locales ]  --->  Validan Métricas + Reducen Riesgo
+               │                                   │
+               ▼                                   ▼
+ [ Financiación Directa / SaaS ]     [ Homologación en Pliegos UCP/BID ]
+               │                                   │
+               └──────────────► ◄──────────────────┘
+                                 │
+                                 ▼
+                     [ Escala Regional B2G ]
+La caja de los municipios locales (Carril 1) financia el desarrollo, la tracción y la sustentabilidad de la empresa sin depender del tiempo del crédito internacional.
+
+La masa crítica de municipios elimina la desconfianza del auditor multilateral (Carril 2), convirtiendo a tu plataforma en la "opción segura y probada" para el menú del programa.
+
+El catálogo multilateral termina financiando la expansión masiva en otras provincias y países de América Latina con cero costo de adquisición comercial por municipio.

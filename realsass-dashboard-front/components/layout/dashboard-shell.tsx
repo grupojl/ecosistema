@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, ChartColumnBig,
+  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store,
   LogOut, MonitorSmartphone, LifeBuoy, EllipsisVertical,
 } from 'lucide-react';
 import {
@@ -28,7 +28,7 @@ import { NAV_GROUPS } from '@/config/navigation';
 const ICONS: Record<string, React.ElementType> = {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, ChartColumnBig,
+  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store,
 };
 
 const STORE_FRONT_URL = (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');

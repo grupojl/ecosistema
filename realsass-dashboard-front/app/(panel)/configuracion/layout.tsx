@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Palette, ToggleLeft, Webhook, ChartColumnBig, Settings2 } from 'lucide-react';
+import { Building2, Store, Palette, ToggleLeft, Webhook, ChartColumnBig, Settings2 } from 'lucide-react';
 import { PageContainer, PageHeader, SectionTabs } from '@real/ui';
 
 const CONFIG_TABS = [
+  { label: 'General',       href: '/configuracion/general',  icon: <Building2 /> },
+  { label: 'Storefront',    href: '/configuracion/tienda',   icon: <Store /> },
   { label: 'Tema visual',   href: '/configuracion/tema',     icon: <Palette /> },
   { label: 'Feature Flags', href: '/configuracion/flags',    icon: <ToggleLeft /> },
   { label: 'Webhooks',      href: '/configuracion/webhooks', icon: <Webhook /> },

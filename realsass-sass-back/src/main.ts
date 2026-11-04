@@ -1,3 +1,4 @@
+import 'dotenv/config'; // primero: los módulos leen process.env al definirse (p. ej. WEBHOOK_QUEUE_ENABLED)
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';

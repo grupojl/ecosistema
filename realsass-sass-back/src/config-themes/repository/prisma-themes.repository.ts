@@ -32,7 +32,7 @@ export class PrismaThemesRepository implements IThemesRepository {
   }
 
   async findAllByOrg(organizationId: string): Promise<ThemeConfig[]> {
-    const rows = await this.prisma.themeConfig.findMany({
+    const rows = await this.prisma.forTenant(organizationId).themeConfig.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'asc' },
     });
@@ -45,40 +45,41 @@ export class PrismaThemesRepository implements IThemesRepository {
   }
 
   async findActive(organizationId: string): Promise<ThemeConfig | null> {
-    const row = await this.prisma.themeConfig.findFirst({
+    const row = await this.prisma.forTenant(organizationId).themeConfig.findFirst({
       where: { organizationId, isActive: true },
     });
     return row ? this.toEntity(row) : null;
   }
 
   async findPublicByOrgId(organizationId: string): Promise<ThemeConfig | null> {
-    const row = await this.prisma.themeConfig.findFirst({
+    const row = await this.prisma.forTenant(organizationId).themeConfig.findFirst({
       where: { organizationId, isActive: true },
     });
     return row ? this.toEntity(row) : null;
   }
 
   async create(input: CreateThemeInput): Promise<ThemeConfig> {
-    const row = await this.prisma.themeConfig.create({
+    const row = await this.prisma.forTenant(input.organizationId).themeConfig.create({
       data: { ...input, isActive: false },
     });
     return this.toEntity(row);
   }
 
   async activate(id: string, organizationId: string): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.themeConfig.updateMany({
+    const tenant = this.prisma.forTenant(organizationId);
+    await tenant.$transaction([
+      tenant.themeConfig.updateMany({
         where: { organizationId },
         data: { isActive: false },
       }),
-      this.prisma.themeConfig.update({
+      tenant.themeConfig.update({
         where: { id },
         data: { isActive: true },
       }),
     ]);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.prisma.themeConfig.delete({ where: { id } });
+  async remove(id: string, organizationId: string): Promise<void> {
+    await this.prisma.forTenant(organizationId).themeConfig.delete({ where: { id } });
   }
 }

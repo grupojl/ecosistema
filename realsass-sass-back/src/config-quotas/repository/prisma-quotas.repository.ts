@@ -23,7 +23,7 @@ export class PrismaQuotasRepository implements IQuotasRepository {
   }
 
   async findAllByOrg(organizationId: string): Promise<QuotaConfig[]> {
-    const rows = await this.prisma.quotaConfig.findMany({
+    const rows = await this.prisma.forTenant(organizationId).quotaConfig.findMany({
       where: { organizationId },
     });
     return rows.map((r) => this.toEntity(r));
@@ -33,7 +33,7 @@ export class PrismaQuotasRepository implements IQuotasRepository {
     organizationId: string,
     resource: string,
   ): Promise<QuotaConfig | null> {
-    const row = await this.prisma.quotaConfig.findFirst({
+    const row = await this.prisma.forTenant(organizationId).quotaConfig.findFirst({
       where: { organizationId, resource },
     });
     return row ? this.toEntity(row) : null;
@@ -44,7 +44,7 @@ export class PrismaQuotasRepository implements IQuotasRepository {
     resource: string,
     delta: number,
   ): Promise<void> {
-    await this.prisma.quotaConfig.updateMany({
+    await this.prisma.forTenant(organizationId).quotaConfig.updateMany({
       where: { organizationId, resource },
       data: { currentUsage: { increment: delta } },
     });
@@ -55,7 +55,7 @@ export class PrismaQuotasRepository implements IQuotasRepository {
     resource: string,
     limit: number,
   ): Promise<QuotaConfig> {
-    const row = await this.prisma.quotaConfig.upsert({
+    const row = await this.prisma.forTenant(organizationId).quotaConfig.upsert({
       where: { organizationId_resource: { organizationId, resource } },
       update: { limit },
       create: { organizationId, resource, limit, currentUsage: 0 },

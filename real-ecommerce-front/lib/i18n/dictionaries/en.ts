@@ -41,6 +41,12 @@ export const en = {
   notFound: { title: '404', body: 'This store doesn\'t exist or isn\'t available.', hint: 'Check that the link is correct.', back: 'Back to home' },
   commerce: {
     signIn: 'Sign in',
+    deleteAccount: 'Delete my account',
+    deleteAccountTitle: 'Delete your account?',
+    deleteAccountBody: 'We will erase your personal data and addresses from this store. Your orders are kept as accounting records, without your data. This cannot be undone.',
+    deleteAccountConfirm: 'Yes, delete my account',
+    cancel: 'Cancel',
+    deleteAccountError: 'We could not delete your account. Please try again in a while.',
     signOut: 'Sign out',
     account: 'Account',
     myOrders: 'My orders',

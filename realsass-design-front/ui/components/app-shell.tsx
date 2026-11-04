@@ -124,7 +124,7 @@ export function AppShell({
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground [&_svg]:size-4">
             {brand.mark ?? brand.name.slice(0, 1)}
           </span>
-          <span className="hidden truncate font-display font-bold expanded:group-data-[collapsed=false]/sb:inline">{brand.name}</span>
+          <span className="hidden truncate font-display text-lg font-medium tracking-tight expanded:group-data-[collapsed=false]/sb:inline">{brand.name}</span>
         </div>
 
         <nav aria-label={navLabel} className="flex-1 space-y-4 overflow-y-auto p-2">
@@ -192,7 +192,7 @@ export function AppShell({
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground [&_svg]:size-4">
             {brand.mark ?? brand.name.slice(0, 1)}
           </span>
-          <span className="truncate font-display font-bold">{brand.name}</span>
+          <span className="truncate font-display text-lg font-medium tracking-tight">{brand.name}</span>
           <div className="ml-auto flex items-center gap-1">{topbarActions}</div>
         </header>
 

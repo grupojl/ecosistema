@@ -13,7 +13,7 @@ const make = () => {
     findUnique: jest.fn(),
     update: jest.fn(),
   };
-  return { svc: new FeedbackService({ feedbackReport: fr } as never), fr };
+  return { svc: new FeedbackService({ feedbackReport: fr, forTenant: () => ({ feedbackReport: fr }) } as never), fr };
 };
 const req = (headers: Record<string, unknown> = {}) => ({ headers }) as never;
 const input = { module: 'orders', route: '/orders', message: 'se rompe', expected: 'que ande' } as never;

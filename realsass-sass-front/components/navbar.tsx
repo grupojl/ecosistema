@@ -44,9 +44,11 @@ export function Navbar() {
   // El perfil llega antes (cookie, 1 request) que el usuario de Firebase: se prefiere su foto para no esperar a Firebase.
   const photoURL = profile?.user.photoUrl ?? firebaseUser?.photoURL ?? (resolving ? hint?.photoUrl : null) ?? undefined
 
-  // La foto se descarga antes de pintar el avatar: así aparece completo (foto o iniciales) y no "salta" de iniciales a foto.
+  // La foto se descarga en segundo plano: el avatar y su menú se pueden usar desde el primer cuadro (iniciales hasta que llega la foto).
   const imageReady = useImageReady(isAuthenticated || (resolving && hint) ? photoURL : undefined)
-  const avatarPending = (resolving && !hint) || ((isAuthenticated || resolving) && !imageReady)
+  const avatarPending = resolving && !hint
+  const shownPhoto = imageReady ? photoURL : undefined
+  const menuEmail = profile?.user.email ?? firebaseUser?.email ?? (resolving ? hint?.email : undefined)
 
   return (
     <>
@@ -64,37 +66,32 @@ export function Navbar() {
               <div className="flex h-11 w-11 items-center justify-center" aria-busy="true" aria-label={d.nav.loadingSession}>
                 <span className="size-8 animate-pulse rounded-full bg-primary/10" />
               </div>
-            ) : resolving ? (
-              // Hay pista del último usuario pero la sesión aún se verifica: se ve su avatar, sin menú hasta confirmarlo.
-              <div className="flex h-11 w-11 items-center justify-center" aria-busy="true">
-                <Avatar className="size-8 border-2 border-primary/20">
-                  {photoURL && <AvatarImage src={photoURL} alt={d.nav.avatarAlt} referrerPolicy="no-referrer" />}
-                  <AvatarFallback className="bg-primary/10 font-medium text-primary">{initials}</AvatarFallback>
-                </Avatar>
-              </div>
-            ) : isAuthenticated ? (
+            ) : isAuthenticated || resolving ? (
+              // Con pista del último usuario el menú ya abre mientras la sesión se verifica; "Cerrar sesión" espera a confirmarla.
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full" aria-label={d.nav.userMenu}>
                     <Avatar className="size-8 border-2 border-primary/20">
-                      {photoURL && <AvatarImage src={photoURL} alt="Avatar" referrerPolicy="no-referrer" />}
+                      {shownPhoto && <AvatarImage src={shownPhoto} alt={d.nav.avatarAlt} referrerPolicy="no-referrer" />}
                       <AvatarFallback className="bg-primary/10 font-medium text-primary">{initials}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5">
-                    <p className="truncate text-xs text-muted-foreground">
-                      {profile?.user.email ?? firebaseUser?.email}
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator />
+                  {menuEmail && (
+                    <>
+                      <div className="px-2 py-1.5">
+                        <p className="truncate text-xs text-muted-foreground">{menuEmail}</p>
+                      </div>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="size-4" />
                     {d.nav.profile}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive-ink focus:text-destructive-ink" onClick={logout}>
+                  <DropdownMenuItem className="text-destructive-ink focus:text-destructive-ink" disabled={!isAuthenticated} onClick={logout}>
                     <LogOut className="size-4" />
                     {d.nav.signOut}
                   </DropdownMenuItem>

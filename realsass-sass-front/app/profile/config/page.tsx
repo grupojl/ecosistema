@@ -24,6 +24,7 @@ import {
 import { WebhooksSection } from '@/components/config/webhooks-section'
 import { SecretsSection }  from '@/components/config/secrets-section'
 import { WhatsappSection } from '@/components/config/whatsapp-section'
+import { SettingsSection } from '@/components/config/settings-section'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,9 @@ export default function ConfigPage() {
       <BackButton onClick={() => router.back()} />
 
       <PageHeader title="Configuración de organización" />
+
+      {/* Configuración general y del storefront (municipio, contacto, horario, asistente, marca pública) */}
+      <SettingsSection />
 
       {/* Feature Flags */}
       {flags && flags.length > 0 && (

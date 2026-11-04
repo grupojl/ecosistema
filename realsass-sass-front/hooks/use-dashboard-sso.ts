@@ -3,7 +3,7 @@
 /**
  * SSO sass-front → dashboard-front (domain/flows/owner-organizacion.md, Paso 4).
  *
- * Pide al back un custom token Firebase (auth.createDashboardSso, tRPC) y abre el dashboard con él en una pestaña nueva.
+ * Pide al back un custom token Firebase (auth.createDashboardSso, tRPC) y navega al dashboard con él en esta misma pestaña (sin abrir una pestaña en blanco que espere).
  * La identidad sale de la cookie de sesión: ya no se reenvía un idToken ni se llama a un endpoint REST.
  * Los orígenes del sass-front y del dashboard son distintos, por eso no comparten la sesión de Firebase.
  */
@@ -37,12 +37,6 @@ export function useDashboardSSO() {
       fail('NEXT_PUBLIC_DASHBOARD_FRONT_URL no está configurada.')
       return
     }
-    // La pestaña se abre ACÁ, dentro del click: si se abriera después del await el navegador la bloquearía
-    // como popup. Se le carga la URL cuando llega el token. Sin `noopener` en el open (necesitamos la referencia);
-    // se corta el vínculo con `opener` a mano.
-    const tab = window.open('about:blank', '_blank')
-    if (tab) tab.opener = null
-
     setState('loading')
     setSsoError(null)
     try {
@@ -53,13 +47,10 @@ export function useDashboardSSO() {
       const { customToken } = await createSso.mutateAsync()
       const url = `${DASHBOARD_FRONT_URL}/auth/sso?token=${encodeURIComponent(customToken)}`
       setState('success')
-      setTimeout(() => {
-        if (tab && !tab.closed) tab.location.href = url
-        else window.location.href = url // popup bloqueado o cerrado: se navega en esta pestaña
-        setState('idle')
-      }, 300)
+      // Misma pestaña: el botón queda en "cargando" hasta que el navegador cambia de página. Sin popup, nada que bloquear.
+      window.location.href = url
+      setTimeout(() => setState('idle'), 4000) // por si el usuario vuelve atrás (bfcache) y la página se reanuda
     } catch (e: unknown) {
-      tab?.close()
       fail(getErrorMessage(e, 'Error al conectar con el dashboard'))
     }
   }, [createSso, fail])

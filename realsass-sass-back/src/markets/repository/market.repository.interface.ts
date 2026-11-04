@@ -18,11 +18,12 @@ export interface IMarketRepository {
   }): Promise<Market>;
   update(
     id: string,
+    organizationId: string,
     data: {
       isActive?: boolean;
       fulfillmentConfig?: FulfillmentConfig;
     },
   ): Promise<Market>;
   setDefault(id: string, organizationId: string): Promise<Market>;
-  delete(id: string): Promise<void>;
+  delete(id: string, organizationId: string): Promise<void>;
 }

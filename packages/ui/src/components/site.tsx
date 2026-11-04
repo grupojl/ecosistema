@@ -64,7 +64,7 @@ function SiteHeader({
               <li key={link.id}>
                 <As
                   href={link.href}
-                  className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="inline-flex min-h-11 items-center rounded-full px-3.5 text-xs font-semibold uppercase tracking-[.08em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   {link.label}
                 </As>
@@ -88,8 +88,9 @@ function SectionIntro({
 }) {
   return (
     <div className={cn("mx-auto max-w-2xl text-center", className)} {...props}>
-      {eyebrow && <span className="text-xs font-semibold uppercase tracking-widest text-primary">{eyebrow}</span>}
-      <h2 className="mt-3 font-display text-3xl text-foreground text-balance md:text-4xl lg:text-5xl">{title}</h2>
+      {eyebrow && <span className="text-xs font-semibold uppercase tracking-[.22em] text-muted-foreground">{eyebrow}</span>}
+      <h2 data-slot="section-title" className="mt-3 font-display text-3xl text-foreground text-balance md:text-4xl lg:text-5xl">{title}</h2>
+      <span className="mx-auto mt-5 block h-px w-10 bg-primary/60" aria-hidden="true" />
       {description && <p className="mt-4 text-base leading-relaxed text-muted-foreground">{description}</p>}
     </div>
   )
@@ -111,7 +112,7 @@ function SiteFooter({
   linkAs?: LinkAs
 }) {
   return (
-    <footer className={cn("border-t border-border bg-muted/50", className)} {...props}>
+    <footer className={cn("border-t border-border/60", className)} {...props}>
       <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
         <div className={cn("grid grid-cols-1 gap-8 md:grid-cols-4", columns.length > 3 && "expanded:grid-cols-5")}>
           <div>
@@ -120,7 +121,7 @@ function SiteFooter({
           </div>
           {columns.map((col) => (
             <div key={col.title}>
-              <h2 className="text-sm font-semibold text-foreground">{col.title}</h2>
+              <h2 className="font-display text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground">{col.title}</h2>
               <ul className="mt-3 flex flex-col gap-1">
                 {col.links.map((link) => (
                   <li key={link.label}>
@@ -211,7 +212,7 @@ function AuthPage({
       <div className={cn("w-full max-w-sm space-y-8", className)}>
         <div className="space-y-2 text-center">
           {logo && <div className="flex justify-center">{logo}</div>}
-          <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="font-display text-3xl tracking-tight">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
         {children}

@@ -3,6 +3,7 @@ import { toJsonObject } from '@/common/prisma/json';
 import { OrganizationsClientService } from '@/organizations-client/organizations-client.service';
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,6 +12,8 @@ import {
   PrismaService,
   type PrismaTransactionClient,
 } from '@/prisma/prisma.service';
+import { toTransactionClient } from '@/prisma/prisma.service';
+import { runAsTenant, setSystemContext } from '@/prisma/tenant-context';
 import { InventoryService } from '@/inventory/inventory.service';
 import { ActivityService } from '@/activity/activity.service';
 import {
@@ -91,7 +94,7 @@ export class OrdersService {
       visitorCountry ?? 'default',
     );
 
-    return this.prisma.$transaction(async (tx: PrismaTransactionClient) => {
+    return runAsTenant(this.prisma, organizationId, async (tx) => {
       // Idempotencia (ADR-029): se bloquea la fila del carrito hasta el final de la transacción. Dos checkouts
       // simultáneos (doble clic, reintento de red) se serializan: el segundo espera y, al ver el carrito ya
       // CONVERTED, devuelve la orden ya creada en vez de fallar por Order.cartId UNIQUE (que además revertía su reserva).
@@ -210,7 +213,85 @@ export class OrdersService {
       );
     }
 
+    if (to === 'CANCELLED' || to === 'PAID') {
+      return this.settlePending(organizationId, orderId, to);
+    }
+
     return this.ordersRepository.updateStatus(organizationId, orderId, to);
+  }
+
+  /**
+   * Salida de PENDING_PAYMENT con su efecto sobre el stock, en la MISMA transacción que el cambio de estado
+   * (DT-ORDER-STOCK):
+   *   · CANCELLED → devuelve lo reservado a lo vendible;
+   *   · PAID      → lo reservado pasa a vendido (baja `reserved`; `available` ya estaba descontado).
+   * El UPDATE condicional (status = PENDING_PAYMENT) hace que un pago y una cancelación/vencimiento simultáneos no
+   * puedan ganar los dos: el que pierde ve 0 filas, recibe Conflict y no toca el stock.
+   */
+  private async settlePending(
+    organizationId: string,
+    orderId: string,
+    to: 'CANCELLED' | 'PAID',
+    reason?: string,
+  ) {
+    await runAsTenant(this.prisma, organizationId, async (tx) => {
+      const moved = await tx.order.updateMany({
+        where: { id: orderId, organizationId, status: 'PENDING_PAYMENT' },
+        data: { status: to },
+      });
+      if (moved.count === 0) {
+        throw new ConflictException(
+          'La orden cambió de estado mientras se actualizaba; recargá e intentá de nuevo',
+        );
+      }
+      await tx.orderStatusEvent.create({
+        data: {
+          orderId,
+          fromStatus: 'PENDING_PAYMENT',
+          toStatus: to,
+          reason: reason ?? null,
+        },
+      });
+      const items = await tx.orderItem.findMany({ where: { orderId } });
+      for (const item of items) {
+        if (to === 'CANCELLED') {
+          await this.inventory.releaseWithinTransaction(tx, item.variantId, item.quantity);
+        } else {
+          await this.inventory.commitWithinTransaction(tx, item.variantId, item.quantity);
+        }
+      }
+    });
+    const updated = await this.ordersRepository.findById(organizationId, orderId);
+    if (!updated) throw new NotFoundException(`Orden ${orderId} no encontrada`);
+    return updated;
+  }
+
+  /**
+   * Vencimiento de pago: cancela las órdenes PENDING_PAYMENT creadas antes de `cutoff` y libera su stock.
+   * Corre como trabajo de sistema (ve todos los tenants solo para ELEGIR candidatas; cada cancelación es por tenant).
+   * Seguro con varias instancias y frente a un pago concurrente (ver settlePending). Devuelve cuántas canceló.
+   */
+  async expireUnpaid(cutoff: Date, limit = 50): Promise<number> {
+    const candidates = await this.prisma.$transaction(async (raw) => {
+      const tx = toTransactionClient(raw);
+      await setSystemContext(tx);
+      return tx.order.findMany({
+        where: { status: 'PENDING_PAYMENT', createdAt: { lt: cutoff } },
+        select: { id: true, organizationId: true },
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+      });
+    });
+    let expired = 0;
+    for (const c of candidates) {
+      try {
+        await this.settlePending(c.organizationId, c.id, 'CANCELLED', 'Vencido: sin pago a tiempo');
+        expired++;
+      } catch (err) {
+        if (!(err instanceof ConflictException)) throw err; // se pagó/canceló justo antes: nada que hacer
+      }
+    }
+    return expired;
   }
 
   async setPaymentIntent(

@@ -52,7 +52,7 @@ export class FeedbackService {
 
   async create(actor: FeedbackActor, input: CreateFeedbackInput, req: Request) {
     const since = new Date(Date.now() - HOUR_MS);
-    const recent = await this.prisma.feedbackReport.count({
+    const recent = await this.prisma.forTenant(actor.organizationId).feedbackReport.count({
       where: { userUid: actor.uid, createdAt: { gte: since } },
     });
     if (recent >= MAX_REPORTS_PER_HOUR) {
@@ -77,7 +77,7 @@ export class FeedbackService {
     });
     const context = toJsonObject(isRecord(cleaned) ? cleaned : {});
 
-    return this.prisma.feedbackReport.create({
+    return this.prisma.forTenant(actor.organizationId).feedbackReport.create({
       data: {
         organizationId: actor.organizationId,
         userUid: actor.uid,
@@ -94,21 +94,22 @@ export class FeedbackService {
 
   async listMine(actor: FeedbackActor, { page, limit }: ListFeedbackInput) {
     const where = this.scope(actor);
+    const tenant = this.prisma.forTenant(actor.organizationId);
     const [data, total] = await Promise.all([
-      this.prisma.feedbackReport.findMany({
+      tenant.feedbackReport.findMany({
         where,
         select: USER_SELECT,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.feedbackReport.count({ where }),
+      tenant.feedbackReport.count({ where }),
     ]);
     return { data, total };
   }
 
   async getById(actor: FeedbackActor, id: string) {
-    const report = await this.prisma.feedbackReport.findFirst({
+    const report = await this.prisma.forTenant(actor.organizationId).feedbackReport.findFirst({
       where: { id, ...this.scope(actor) },
       select: USER_SELECT,
     });
@@ -117,6 +118,8 @@ export class FeedbackService {
   }
 
   // ── Superadmin (/internal/feedback) ────────────────────────────────────────
+  // Operan SOBRE TODAS las organizaciones a propósito (consola de la plataforma): usan el cliente sin alcance de tenant.
+  // Con RLS activo deben correr en contexto de sistema (setSystemContext).
 
   async internalList(dto: InternalListFeedbackDto) {
     const where: Prisma.FeedbackReportWhereInput = {

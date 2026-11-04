@@ -41,6 +41,12 @@ export const pt = {
   notFound: { title: '404', body: 'Esta loja não existe ou não está disponível.', hint: 'Verifique se o link está correto.', back: 'Voltar ao início' },
   commerce: {
     signIn: 'Entrar',
+    deleteAccount: 'Excluir minha conta',
+    deleteAccountTitle: 'Excluir sua conta?',
+    deleteAccountBody: 'Vamos apagar seus dados pessoais e endereços desta loja. Seus pedidos são mantidos como registro contábil, sem seus dados. Isso não pode ser desfeito.',
+    deleteAccountConfirm: 'Sim, excluir minha conta',
+    cancel: 'Cancelar',
+    deleteAccountError: 'Não foi possível excluir sua conta. Tente novamente daqui a pouco.',
     signOut: 'Sair',
     account: 'Conta',
     myOrders: 'Meus pedidos',

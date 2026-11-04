@@ -9,5 +9,5 @@ export interface IThemesRepository {
   findPublicByOrgId(organizationId: string): Promise<ThemeConfig | null>;
   create(input: CreateThemeInput): Promise<ThemeConfig>;
   activate(id: string, organizationId: string): Promise<void>;
-  remove(id: string): Promise<void>;
+  remove(id: string, organizationId: string): Promise<void>;
 }

@@ -110,6 +110,7 @@ model Organization {
   webhooks      WebhookEndpoint[]
   configAudit   ConfigAuditLog[]
   feedback      FeedbackReport[]
+  settings      OrganizationSettings?
 
   @@index([userId])
   @@map("organizations")
@@ -354,6 +355,20 @@ enum FeedbackStatus {
   IN_PROGRESS
   RESOLVED
   WONT_FIX
+}
+
+/// Configuración general de la organización y de su storefront (documentos JSON validados con Zod en org-settings.schema.ts).
+model OrganizationSettings {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  general        Json         @default("{}")
+  storefront     Json         @default("{}")
+  updatedBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_settings")
 }
 
 model FeedbackReport {

@@ -347,6 +347,7 @@ export function AuthProvider({ children, refCode }: AuthProviderProps) {
       writeAuthHint(window.localStorage, {
         initials: initialsOf(profile.user.email),
         photoUrl: firebaseUser?.photoURL ?? profile.user.photoUrl ?? null,
+        email: profile.user.email ?? undefined,
       })
     } else if (!loading && !firebaseUser) {
       clearAuthHint(window.localStorage)

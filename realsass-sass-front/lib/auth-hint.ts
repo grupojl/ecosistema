@@ -1,13 +1,15 @@
 /**
  * Pista local del último usuario visto (iniciales y foto) para pintar el avatar en el primer cuadro, mientras la sesión real
  * se verifica con el back. NO es una sesión ni da acceso a nada: si la verificación dice que no hay sesión, se descarta.
- * Solo guarda lo que el navbar ya muestra; sin tokens ni ids.
+ * Solo guarda lo que el navbar ya muestra (iniciales, foto y el correo del menú); sin tokens ni ids.
  */
 const KEY = 'welver.sass.auth-hint'
 
 export interface AuthHint {
   initials: string
   photoUrl: string | null
+  /** Correo que muestra el menú de la cuenta; opcional (pistas anteriores no lo traen). */
+  email?: string
 }
 
 export function readAuthHint(storage: Pick<Storage, 'getItem'> | null | undefined): AuthHint | null {
@@ -18,7 +20,8 @@ export function readAuthHint(storage: Pick<Storage, 'getItem'> | null | undefine
     if (typeof v.initials !== 'string' || v.initials.length === 0 || v.initials.length > 4) return null
     // La foto solo se acepta si es https: viene de un almacenamiento que cualquier script del origen puede tocar.
     const photoUrl = typeof v.photoUrl === 'string' && v.photoUrl.startsWith('https://') ? v.photoUrl : null
-    return { initials: v.initials, photoUrl }
+    const email = typeof v.email === 'string' && v.email.length <= 254 && v.email.includes('@') ? v.email : undefined
+    return email ? { initials: v.initials, photoUrl, email } : { initials: v.initials, photoUrl }
   } catch { return null }
 }
 

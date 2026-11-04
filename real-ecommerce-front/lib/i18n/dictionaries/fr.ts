@@ -41,6 +41,12 @@ export const fr = {
   notFound: { title: '404', body: 'Cette boutique n\'existe pas ou n\'est pas disponible.', hint: 'Vérifiez que le lien est correct.', back: 'Retour à l\'accueil' },
   commerce: {
     signIn: 'Se connecter',
+    deleteAccount: 'Supprimer mon compte',
+    deleteAccountTitle: 'Supprimer votre compte ?',
+    deleteAccountBody: 'Nous allons effacer vos données personnelles et adresses de cette boutique. Vos commandes sont conservées comme pièces comptables, sans vos données. Action irréversible.',
+    deleteAccountConfirm: 'Oui, supprimer mon compte',
+    cancel: 'Annuler',
+    deleteAccountError: 'Impossible de supprimer votre compte. Réessayez dans un moment.',
     signOut: 'Se déconnecter',
     account: 'Compte',
     myOrders: 'Mes commandes',

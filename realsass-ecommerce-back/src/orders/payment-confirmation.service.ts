@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { IdempotencyService, requestHash } from '@/idempotency/idempotency.service';
+import { InventoryService } from '@/inventory/inventory.service';
 import { OutboxService } from '@/outbox/outbox.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { runAsTenant } from '@/prisma/tenant-context';
@@ -37,6 +38,7 @@ export class PaymentConfirmationService {
     private readonly prisma: PrismaService,
     private readonly idempotency: IdempotencyService,
     private readonly outbox: OutboxService,
+    private readonly inventory: InventoryService,
   ) {}
 
   async confirm(organizationId: string, orderId: string, input: PaymentConfirmation): Promise<PaymentConfirmationResult & { replayed: boolean }> {
@@ -75,6 +77,9 @@ export class PaymentConfirmationService {
       }
 
       await tx.orderStatusEvent.create({ data: { orderId, fromStatus: 'PENDING_PAYMENT', toStatus: 'PAID' } });
+      // Lo reservado por el checkout pasa a vendido (misma transacción que el cambio de estado).
+      const items = await tx.orderItem.findMany({ where: { orderId } });
+      for (const item of items) await this.inventory.commitWithinTransaction(tx, item.variantId, item.quantity);
       if (this.outbox.enabled) {
         await this.outbox.enqueue(tx, {
           organizationId,

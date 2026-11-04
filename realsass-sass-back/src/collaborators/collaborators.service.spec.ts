@@ -9,7 +9,9 @@ function build() {
     collaborator: { create: jest.fn((a: unknown) => a), update: jest.fn((a: unknown) => a) },
     invitation:   { create: jest.fn((a: unknown) => a), upsert: jest.fn((a: unknown) => a), findUnique: jest.fn(), update: jest.fn((a: unknown) => a) },
     $transaction: jest.fn().mockResolvedValue([]),
+    forTenant: jest.fn(),
   };
+  prisma.forTenant.mockReturnValue(prisma); // el cliente con alcance de tenant se comporta igual en estos tests
   const repo = {
     findAllByOrganization: jest.fn(),
     findByEmail: jest.fn(),
@@ -129,9 +131,9 @@ describe('CollaboratorsService — update / remove', () => {
     const { repo, service } = build();
     repo.findById.mockResolvedValue({ id: 'c1' });
     await service.updateCollaborator('uid', 'c1', { canViewStats: true });
-    expect(repo.update).toHaveBeenCalledWith('c1', { permissions: { canViewStats: true } });
+    expect(repo.update).toHaveBeenCalledWith('c1', 'org-1', { permissions: { canViewStats: true } });
     await service.removeCollaborator('uid', 'c1');
-    expect(repo.remove).toHaveBeenCalledWith('c1');
+    expect(repo.remove).toHaveBeenCalledWith('c1', 'org-1');
   });
 });
 

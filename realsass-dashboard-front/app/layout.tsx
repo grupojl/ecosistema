@@ -38,8 +38,8 @@ export default async function RootLayout({
 }>) {
   const locale = await getRequestLocale()
   return (
-    <html lang={locale} dir={localeDir(locale)} suppressHydrationWarning>
-      <body className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+    <html lang={locale} dir={localeDir(locale)} suppressHydrationWarning className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable}`}>
+      <body className="font-sans antialiased">
         <I18nProvider locale={locale} messages={getDictionary(locale)}>
         <ThemeProvider>
         <SwCleanup />

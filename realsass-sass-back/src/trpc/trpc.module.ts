@@ -40,6 +40,8 @@ import { OrganizationsModule } from '@/organizations/organizations.module';
 import { CollaboratorsModule } from '@/collaborators/collaborators.module';
 import { ConfigFlagsModule } from '@/config-flags/config-flags.module';
 import { ConfigQuotasModule } from '@/config-quotas/config-quotas.module';
+import { OrgSettingsModule } from '@/org-settings/org-settings.module';
+import { OrgSettingsService } from '@/org-settings/org-settings.service';
 import { ConfigThemesModule } from '@/config-themes/config-themes.module';
 import { ConfigWebhooksModule } from '@/config-webhooks/config-webhooks.module';
 import { ConfigAuditModule } from '@/config-audit/config-audit.module';
@@ -75,6 +77,7 @@ export class TrpcService {
     private readonly sessions: SessionsService,
     private readonly whatsapp: WhatsappService,
     private readonly feedback: FeedbackService,
+    private readonly settings: OrgSettingsService,
     private readonly desktop: DesktopService,
   ) {}
 
@@ -97,6 +100,7 @@ export class TrpcService {
       sessionsService: this.sessions,
       whatsappService: this.whatsapp,
       feedbackService: this.feedback,
+      settingsService: this.settings,
       desktopService: this.desktop,
     });
 
@@ -125,6 +129,7 @@ export class TrpcService {
     CollaboratorsModule,
     ConfigFlagsModule,
     ConfigQuotasModule,
+    OrgSettingsModule,
     ConfigThemesModule,
     ConfigWebhooksModule,
     ConfigAuditModule,

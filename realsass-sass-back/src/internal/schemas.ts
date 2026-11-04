@@ -20,3 +20,13 @@ export const InternalOrgActionSchema = z.object({
   reason: z.string().min(10, 'reason must be at least 10 characters'),
 });
 export type InternalOrgActionDto = z.infer<typeof InternalOrgActionSchema>;
+
+// ── POST /internal/organizations/:id/events ──────────────────────────────────
+// Evento de dominio de OTRO servicio (ecommerce-back, vía su outbox) para entregar a los webhooks salientes de la
+// organización. `eventId` es la clave de idempotencia: el mismo evento reenviado no se encola dos veces.
+export const InternalEventSchema = z.object({
+  eventId: z.string().min(1).max(128),
+  type: z.string().regex(/^[a-z]+(\.[a-z_]+)+$/, 'type debe ser tipo "order.created"'),
+  payload: z.record(z.string(), z.unknown()),
+});
+export type InternalEventDto = z.infer<typeof InternalEventSchema>;

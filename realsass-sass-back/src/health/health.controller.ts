@@ -1,3 +1,4 @@
+import { SkipThrottle } from '@nestjs/throttler';
 /**
  * health.controller.ts — realsass-sass-back
  *
@@ -45,6 +46,7 @@ function resolveStatus(db: HealthDetail, redis: HealthDetail): HealthStatus {
 }
 
 @Public()
+@SkipThrottle() // sondas de Railway y monitoreo: sin autenticación ni datos sensibles, no deben recibir 429
 @Controller('health')
 export class HealthController {
   constructor(

@@ -8,6 +8,11 @@
 > **Nivel actual de la especificación: 6,5/10.** Equivale a un concepto sólido de producto de IA para gobiernos, con calidad, privacidad, moneda, tope de costos y camino de contratación del piloto definidos. Lo que lo frena: faltan los montos, el piloto va en autoservicio puro con un municipio poco digitalizado, la voz se construye sin prueba técnica previa y el saludo libre choca con la regla de identificarse como IA.
 > **Escala de referencia:** Intercom 9 · Boti 7 (para una ciudad) · Welver 6,5.
 
+
+- Un municipio es un cliente (tenant). Dentro tiene un organigrama: secretarías, y dentro de ellas áreas o entidades (Salud, Obras Públicas, Rentas, Cultura y demás).
+- Cada secretaría o entidad carga su propio contenido: trámites, requisitos, horarios, direcciones, teléfonos, preguntas frecuentes.
+- El chat atiende al ciudadano con ese contenido. Si pregunta por un permiso de obra, responde con lo que cargó Obras Públicas, no con lo de Salud. Si no sabe o es un caso para una persona, deriva a la entidad correcta.
+
 ### Pilares
 
 | # | Pilar | Hoy | Para llegar al 10 |

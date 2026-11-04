@@ -5,7 +5,9 @@
  *
  * Welver tiene UNA identidad con DOS modos. El usuario elige Sistema (default), Claro u Oscuro; la elección se guarda
  * en localStorage bajo la clave `theme` y se aplica como clase `dark` en <html>, antes del primer pintado (sin parpadeo).
- * Es el mismo contrato que usa welver.html, así que el modo se comparte entre los fronts del mismo dominio.
+ * Es el mismo contrato que usa welver.html. localStorage no cruza orígenes (cada front tiene su puerto/subdominio), así que el modo
+ * también se publica en la cookie `welver-theme`: `ThemeSync` la lee y todos los fronts abiertos cambian a la vez, en vivo.
+ * En producción definir NEXT_PUBLIC_THEME_COOKIE_DOMAIN (p. ej. `.midominio.com`) en todos los fronts; en localhost se comparte sola.
  *
  *   // layout raíz de cada front
  *   <html lang="es" suppressHydrationWarning>
@@ -23,6 +25,60 @@ import { cn } from "@real/ui/utils"
 import { SegmentedControl } from "./segmented-control"
 
 export const THEME_STORAGE_KEY = "theme"
+/** Cookie que comparte el modo entre fronts (las cookies ignoran el puerto y, con Domain, cruzan subdominios). */
+export const THEME_COOKIE = "welver-theme"
+const THEME_SYNC_MS = 1000
+
+// NEXT_PUBLIC_* se incrusta al compilar cada front; la declaración evita depender de @types/node en este paquete.
+declare const process: { env: Record<string, string | undefined> }
+const COOKIE_DOMAIN = process.env.NEXT_PUBLIC_THEME_COOKIE_DOMAIN
+
+type ThemeMode = "system" | "light" | "dark"
+const isMode = (v: unknown): v is ThemeMode => v === "system" || v === "light" || v === "dark"
+
+function readThemeCookie(): ThemeMode | null {
+  try {
+    const m = document.cookie.match(new RegExp("(?:^|; )" + THEME_COOKIE + "=([^;]*)"))
+    const v = m ? decodeURIComponent(m[1]!) : null
+    return isMode(v) ? v : null
+  } catch { return null }
+}
+
+function writeThemeCookie(mode: ThemeMode) {
+  try {
+    const domain = COOKIE_DOMAIN ? "; Domain=" + COOKIE_DOMAIN : ""
+    const secure = window.location.protocol === "https:" ? "; Secure" : ""
+    document.cookie = THEME_COOKIE + "=" + mode + "; Path=/; Max-Age=31536000; SameSite=Lax" + domain + secure
+  } catch { /* cookies bloqueadas: el tema sigue funcionando por localStorage en este front */ }
+}
+
+/** Mantiene el modo igual en todos los fronts: publica el cambio propio y adopta el de los demás (al montar, al volver y cada segundo). */
+function ThemeSync() {
+  const { theme, setTheme } = useTheme()
+  const current = isMode(theme) ? theme : null
+  const currentRef = React.useRef(current)
+  currentRef.current = current
+
+  // Cambio hecho en ESTE front → se publica. (Si venía de la cookie, ya es igual y no se reescribe.)
+  React.useEffect(() => {
+    if (current && readThemeCookie() !== current) writeThemeCookie(current)
+  }, [current])
+
+  // Cambio hecho en OTRO front → se adopta.
+  React.useEffect(() => {
+    const pull = () => {
+      const fromCookie = readThemeCookie()
+      if (fromCookie && fromCookie !== currentRef.current) setTheme(fromCookie)
+    }
+    pull()
+    const id = window.setInterval(() => { if (document.visibilityState === "visible") pull() }, THEME_SYNC_MS)
+    document.addEventListener("visibilitychange", pull)
+    window.addEventListener("focus", pull)
+    return () => { window.clearInterval(id); document.removeEventListener("visibilitychange", pull); window.removeEventListener("focus", pull) }
+  }, [setTheme])
+
+  return null
+}
 
 
 type ThemeProviderProps = Omit<
@@ -41,6 +97,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       disableTransitionOnChange
       {...props}
     >
+      <ThemeSync />
       {children}
     </NextThemesProvider>
   )

@@ -90,4 +90,32 @@ export class InventoryService {
       throw new InsufficientStockError(sku, quantity, available);
     }
   }
+
+  // Inverso de reserveWithinTransaction: devuelve lo retenido a lo vendible (orden cancelada).
+  // Nunca deja `reserved` negativo (GREATEST) ni sube `available` por encima de lo realmente retenido.
+  async releaseWithinTransaction(
+    tx: PrismaTransactionClient,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE inventory_items
+      SET    quantity_available = quantity_available + LEAST(${quantity}, quantity_reserved),
+             quantity_reserved  = GREATEST(quantity_reserved - ${quantity}, 0)
+      WHERE  variant_id = ${variantId}
+    `;
+  }
+
+  // Orden pagada: lo retenido pasa a vendido. `available` ya se descontó al reservar; solo baja `reserved`.
+  async commitWithinTransaction(
+    tx: PrismaTransactionClient,
+    variantId: string,
+    quantity: number,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      UPDATE inventory_items
+      SET    quantity_reserved = GREATEST(quantity_reserved - ${quantity}, 0)
+      WHERE  variant_id = ${variantId}
+    `;
+  }
 }

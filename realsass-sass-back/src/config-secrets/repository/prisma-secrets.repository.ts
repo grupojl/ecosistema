@@ -48,7 +48,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
   }
 
   async findAllByOrg(organizationId: string): Promise<SecretConfig[]> {
-    const rows = await this.prisma.secretConfig.findMany({
+    const rows = await this.prisma.forTenant(organizationId).secretConfig.findMany({
       where: { organizationId, isActive: true },
       select: SELECT_PUBLIC,
       orderBy: { createdAt: 'asc' },
@@ -60,7 +60,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
     organizationId: string,
     key: string,
   ): Promise<SecretConfig | null> {
-    const row = await this.prisma.secretConfig.findFirst({
+    const row = await this.prisma.forTenant(organizationId).secretConfig.findFirst({
       where: { organizationId, key, isActive: true },
       select: SELECT_PUBLIC,
     });
@@ -71,7 +71,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
     id: string,
     organizationId: string,
   ): Promise<SecretConfig | null> {
-    const row = await this.prisma.secretConfig.findFirst({
+    const row = await this.prisma.forTenant(organizationId).secretConfig.findFirst({
       where: { id, organizationId },
       select: SELECT_PUBLIC,
     });
@@ -90,7 +90,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
       isActive: true,
     };
     // (organizationId, key) es único: si había una clave revocada con ese nombre, se reactiva con el valor nuevo.
-    const row = await this.prisma.secretConfig.upsert({
+    const row = await this.prisma.forTenant(input.organizationId).secretConfig.upsert({
       where: {
         organizationId_key: {
           organizationId: input.organizationId,
@@ -109,7 +109,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
     organizationId: string,
     input: RotateSecretInput,
   ): Promise<SecretConfig | null> {
-    const res = await this.prisma.secretConfig.updateMany({
+    const res = await this.prisma.forTenant(organizationId).secretConfig.updateMany({
       where: { id, organizationId, isActive: true },
       data: {
         valueEncrypted: input.valueEncrypted,
@@ -123,7 +123,7 @@ export class PrismaSecretsRepository implements ISecretsRepository {
   }
 
   async revoke(id: string, organizationId: string): Promise<boolean> {
-    const res = await this.prisma.secretConfig.updateMany({
+    const res = await this.prisma.forTenant(organizationId).secretConfig.updateMany({
       where: { id, organizationId, isActive: true },
       data: { isActive: false },
     });

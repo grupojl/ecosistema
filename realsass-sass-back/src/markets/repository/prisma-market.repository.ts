@@ -12,7 +12,7 @@ export class PrismaMarketRepository implements IMarketRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(organizationId: string): Promise<Market[]> {
-    const rows = await this.prisma.market.findMany({
+    const rows = await this.prisma.forTenant(organizationId).market.findMany({
       where: { organizationId },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
@@ -23,7 +23,7 @@ export class PrismaMarketRepository implements IMarketRepository {
     organizationId: string,
     countryCode: string,
   ): Promise<Market | null> {
-    const row = await this.prisma.market.findFirst({
+    const row = await this.prisma.forTenant(organizationId).market.findFirst({
       where: {
         organizationId,
         countryCode: countryCode.toUpperCase(),
@@ -34,7 +34,7 @@ export class PrismaMarketRepository implements IMarketRepository {
   }
 
   async findDefault(organizationId: string): Promise<Market | null> {
-    const row = await this.prisma.market.findFirst({
+    const row = await this.prisma.forTenant(organizationId).market.findFirst({
       where: { organizationId, isDefault: true },
     });
     return row ? Market.fromPrisma(row) : null;
@@ -53,7 +53,7 @@ export class PrismaMarketRepository implements IMarketRepository {
   }): Promise<Market> {
     // Validar fulfillmentConfig antes de persistir — nunca raw en DB
     const config = FulfillmentConfigSchema.parse(data.fulfillmentConfig);
-    const row = await this.prisma.market.create({
+    const row = await this.prisma.forTenant(data.organizationId).market.create({
       data: {
         organizationId: data.organizationId,
         countryCode: data.countryCode.toUpperCase(),
@@ -67,6 +67,7 @@ export class PrismaMarketRepository implements IMarketRepository {
 
   async update(
     id: string,
+    organizationId: string,
     data: { isActive?: boolean; fulfillmentConfig?: FulfillmentConfig },
   ): Promise<Market> {
     const updateData: Record<string, unknown> = {};
@@ -75,7 +76,7 @@ export class PrismaMarketRepository implements IMarketRepository {
       updateData['fulfillmentConfig'] = FulfillmentConfigSchema.parse(
         data.fulfillmentConfig,
       );
-    const row = await this.prisma.market.update({
+    const row = await this.prisma.forTenant(organizationId).market.update({
       where: { id },
       data: updateData,
     });
@@ -83,12 +84,13 @@ export class PrismaMarketRepository implements IMarketRepository {
   }
 
   async setDefault(id: string, organizationId: string): Promise<Market> {
-    const [, updated] = await this.prisma.$transaction([
-      this.prisma.market.updateMany({
+    const tenant = this.prisma.forTenant(organizationId);
+    const [, updated] = await tenant.$transaction([
+      tenant.market.updateMany({
         where: { organizationId, isDefault: true },
         data: { isDefault: false },
       }),
-      this.prisma.market.update({
+      tenant.market.update({
         where: { id },
         data: { isDefault: true, isActive: true },
       }),
@@ -96,7 +98,7 @@ export class PrismaMarketRepository implements IMarketRepository {
     return Market.fromPrisma(updated);
   }
 
-  async delete(id: string): Promise<void> {
-    await this.prisma.market.delete({ where: { id } });
+  async delete(id: string, organizationId: string): Promise<void> {
+    await this.prisma.forTenant(organizationId).market.delete({ where: { id } });
   }
 }

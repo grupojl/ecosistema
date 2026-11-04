@@ -43,7 +43,7 @@ export default function LoginPage() {
           <div className="space-y-6 text-center">
             <div className="flex justify-center"><Logo className="h-12 w-12 text-foreground" /></div>
             <div className="space-y-2">
-              <h1 className="font-display text-2xl font-semibold tracking-tight">Dashboard</h1>
+              <h1 className="font-display text-3xl tracking-tight">Dashboard</h1>
               <p className="text-sm text-muted-foreground">{d.auth.signInHint}</p>
             </div>
             <div className="space-y-3">

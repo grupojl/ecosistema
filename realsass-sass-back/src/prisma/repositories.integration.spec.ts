@@ -15,6 +15,7 @@ import { PrismaAuditRepository } from '@/config-audit/repository/prisma-audit.re
 import { PrismaCollaboratorsRepository } from '@/collaborators/repository/prisma-collaborators.repository';
 import { PrismaFeatureFlagsRepository } from '@/config-flags/repository/prisma-feature-flags.repository';
 import { PrismaMarketRepository } from '@/markets/repository/prisma-market.repository';
+import { PrismaOrgSettingsRepository } from '@/org-settings/repository/prisma-org-settings.repository';
 import { PrismaOrganizationsRepository } from '@/organizations/repository/prisma-organizations.repository';
 import { PrismaQuotasRepository } from '@/config-quotas/repository/prisma-quotas.repository';
 import { PrismaSecretsRepository } from '@/config-secrets/repository/prisma-secrets.repository';
@@ -111,17 +112,45 @@ suite('repositorios Prisma de sass-back contra Postgres real', () => {
     it('update, setDefault (deja UN solo default) y delete', async () => {
       const repo = new PrismaMarketRepository(prisma);
       const br = (await repo.findActive(orgA, 'BR'))!;
-      const off = await repo.update(br.id, { isActive: false });
+      const off = await repo.update(br.id, orgA, { isActive: false });
       expect(off.isActive).toBe(false);
       expect(await repo.findActive(orgA, 'BR')).toBeNull(); // un mercado inactivo no resuelve
-      await repo.update(br.id, { isActive: true });
+      await repo.update(br.id, orgA, { isActive: true });
+      // forTenant: con la organización equivocada no se puede tocar un mercado ajeno (aunque se conozca el id)
+      await expect(repo.update(br.id, orgB, { isActive: false })).rejects.toThrow();
+      await expect(repo.delete(br.id, orgB)).rejects.toThrow();
+      expect((await repo.findById(br.id))?.isActive).toBe(true);
 
       const nowDefault = await repo.setDefault(br.id, orgA);
       expect(nowDefault.isDefault).toBe(true);
       expect((await repo.findAll(orgA)).filter((m) => m.isDefault)).toHaveLength(1);
 
-      await repo.delete(br.id);
+      await repo.delete(br.id, orgA);
       expect(await repo.findById(br.id)).toBeNull();
+    });
+  });
+
+  describe('configuración general (org settings)', () => {
+    it('guarda por organización, hace upsert y nunca cruza organizaciones', async () => {
+      const repo = new PrismaOrgSettingsRepository(prisma);
+      expect(await repo.findByOrg(orgA)).toBeNull();
+
+      await repo.saveGeneral(orgA, { timezone: 'America/Argentina/Cordoba' }, 'uid-a');
+      await repo.saveStorefront(orgA, { brand: { publicName: 'Municipio A' } }, 'uid-a');
+      const a = await repo.findByOrg(orgA);
+      expect(a?.general).toEqual({ timezone: 'America/Argentina/Cordoba' });
+      expect(a?.storefront).toEqual({ brand: { publicName: 'Municipio A' } });
+
+      // upsert: guardar de nuevo reemplaza, no duplica la fila (organizationId es único)
+      await repo.saveGeneral(orgA, { timezone: 'America/Argentina/Salta' }, 'uid-a');
+      expect((await repo.findByOrg(orgA))?.general).toEqual({ timezone: 'America/Argentina/Salta' });
+      expect(await prisma.organizationSettings.count({ where: { organizationId: orgA } })).toBe(1);
+
+      // aislamiento: B no ve nada de A, y escribir en B no toca A
+      expect(await repo.findByOrg(orgB)).toBeNull();
+      await repo.saveStorefront(orgB, { brand: { publicName: 'Municipio B' } }, 'uid-b');
+      expect((await repo.findByOrg(orgB))?.storefront).toEqual({ brand: { publicName: 'Municipio B' } });
+      expect((await repo.findByOrg(orgA))?.storefront).toEqual({ brand: { publicName: 'Municipio A' } });
     });
   });
 
@@ -140,9 +169,12 @@ suite('repositorios Prisma de sass-back contra Postgres real', () => {
       expect((await repo.findById(created.id, orgA))?.id).toBe(created.id);
       expect(await repo.findById(created.id, orgB)).toBeNull(); // conocer el id no alcanza
 
-      const updated = await repo.update(created.id, { permissions: { canDeleteListings: true } });
+      await expect(repo.update(created.id, orgB, { permissions: { canDeleteListings: true } })).rejects.toThrow(); // otra organización
+      await expect(repo.remove(created.id, orgB)).rejects.toThrow();
+      expect((await repo.findById(created.id, orgA))?.status).toBe('PENDING');
+      const updated = await repo.update(created.id, orgA, { permissions: { canDeleteListings: true } });
       expect(updated.permissions.canDeleteListings).toBe(true);
-      await repo.remove(created.id);
+      await repo.remove(created.id, orgA);
       expect((await repo.findById(created.id, orgA))?.status).toBe('REMOVED');
     });
   });
@@ -233,7 +265,9 @@ suite('repositorios Prisma de sass-back contra Postgres real', () => {
       expect(await repo.findActive(orgB)).toBeNull(); // activar en A no toca B
       expect((await repo.findById(other.id))?.organizationId).toBe(orgB);
 
-      await repo.remove(t1.id);
+      await expect(repo.remove(t1.id, orgB)).rejects.toThrow(); // otra organización: no se toca
+      expect(await repo.findById(t1.id)).not.toBeNull();
+      await repo.remove(t1.id, orgA);
       expect(await repo.findById(t1.id)).toBeNull();
     });
   });

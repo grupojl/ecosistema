@@ -73,7 +73,7 @@ export class ConfigThemesService {
     if (theme.isSystemDefault)
       throw new ConflictException('Cannot remove system default theme');
 
-    await this.repo.remove(id);
+    await this.repo.remove(id, organizationId);
     this.audit.log({
       organizationId,
       userId,

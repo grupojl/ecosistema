@@ -25,7 +25,7 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
   }
 
   async findAllByOrg(organizationId: string): Promise<ContentTemplate[]> {
-    const rows = await this.prisma.contentTemplate.findMany({
+    const rows = await this.prisma.forTenant(organizationId).contentTemplate.findMany({
       where: { organizationId },
       orderBy: { key: 'asc' },
     });
@@ -36,14 +36,14 @@ export class PrismaTemplatesRepository implements ITemplatesRepository {
     organizationId: string,
     key: string,
   ): Promise<ContentTemplate | null> {
-    const row = await this.prisma.contentTemplate.findFirst({
+    const row = await this.prisma.forTenant(organizationId).contentTemplate.findFirst({
       where: { organizationId, key },
     });
     return row ? this.toEntity(row) : null;
   }
 
   async create(input: CreateTemplateInput): Promise<ContentTemplate> {
-    const row = await this.prisma.contentTemplate.create({
+    const row = await this.prisma.forTenant(input.organizationId).contentTemplate.create({
       data: {
         organizationId: input.organizationId,
         key: input.key,

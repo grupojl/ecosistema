@@ -17,6 +17,7 @@ import {
 } from '@real/ui'
 import { useCommerce } from '@/components/commerce/commerce-provider'
 import { useBag } from '@/components/commerce/use-bag'
+import { DeleteAccount } from '@/components/commerce/delete-account'
 import { formatPrice } from '@/lib/catalog/product-view'
 import { initialsOf } from '@/lib/commerce/storage'
 import { lineTotalCents } from '@/lib/commerce/cart-math'
@@ -133,6 +134,7 @@ export function StoreHeader({ storeName, logoUrl }: StoreHeaderProps) {
               <Button type="button" variant="ghost" onClick={() => void signOut()} className="w-full justify-start px-3 font-normal">
                 {c.signOut}
               </Button>
+              <DeleteAccount />
             </nav>
           </div>
         </DialogContent>

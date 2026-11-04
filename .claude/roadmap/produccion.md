@@ -24,7 +24,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⏳ pendiente · 🔒 bloqueado por algo e
 | 6 | **Tests e2e** de los flujos críticos. Hecho (31 e2e con el emulador de Firebase): storefront, login y compra del cliente, aislamiento entre clientes, login del dueño, sesión compartida, «Dispositivos», referidos. Falta correrlos en CI. | ✅ |
 | 7 | **Checkout completo con datos reales**: la base de desarrollo tiene 1 organización y 0 órdenes. | ⏳ |
 | 8 | **Prueba concurrente del checkout contra Postgres** (DT-IDEM-2). Hecha: `db-integration.spec.ts` y `checkout.concurrency.integration.spec.ts` (5 checkouts simultáneos → 1 orden; última unidad → un solo ganador). | ✅ |
-| 9 | **Tenant en `sass-back`** (DT-TENANT-1): `forTenant()` ya adoptado en el ecommerce-back; falta sass-back y el SQL crudo del checkout / `reserveWithinTransaction` (filtran a mano). | 🟡 |
+| 9 | **Tenant en `sass-back`** (DT-TENANT-1): `forTenant()` en ecommerce-back y en sass-back (colaboradores, claves, cuotas, webhooks, markets, temas, plantillas, reportes), con pruebas en Postgres real; el checkout corre bajo `runAsTenant`. Quedan `FeatureFlag`/`ConfigAuditLog` (filas globales + por organización) y el SQL crudo de inventario. | 🟡 |
 | 10 | **Sesión que tardaba en mostrarse**: corregida la causa probable; falta probarla en navegador. | 🟡 |
 | 11 | **Observabilidad**: alertas, logs centralizados, seguimiento de errores, panel; alerta de eventos del outbox sin entregar. | 🟡 |
 | 12 | **Backups y plan de recuperación** de la base de datos. | 🟡 |
@@ -33,14 +33,15 @@ Leyenda: ✅ hecho · 🟡 parcial · ⏳ pendiente · 🔒 bloqueado por algo e
 
 | # | Qué falta | Estado |
 |---|---|---|
-| 13 | **Outbox con un consumidor real** y activar `OUTBOX_ENABLED` / `OUTBOX_RELAY_ENABLED`. | ⏳ |
-| 14 | **RLS**: rol de aplicación no superusuario, todo bajo `runAsTenant`, prueba en staging, luego `enable-rls.sql`. | ⏳ |
+| 13 | **Outbox con un consumidor real**: hecho en código (2026-11-04, `WebhookOutboxPublisher`). Falta **activar** `OUTBOX_ENABLED` / `OUTBOX_RELAY_ENABLED` en Railway y probarlo con un webhook real. | 🟡 |
+| 14 | **RLS**: scripts listos para ambos backs (sass-back desde 2026-11-04), sin aplicar. Falta rol de aplicación no superusuario, todo bajo `runAsTenant` (en sass-back ninguna query todavía) y prueba en staging. | 🟡 |
 | 15 | **WhatsApp**: app de Meta (Tech Provider, App Review) y prueba end-to-end con un número real. | 🔒 |
 | 16 | **Proveedor de correo** (aviso de dispositivo nuevo, DT-SES-04). | 🔒 |
 | 17 | **Idioma**: textos fijos de `@real/ui`, resto de pantallas, preferencia en el perfil. | 🟡 |
 | 18 | **Landing de `sass-front`**: ¿idioma por cookie o `/{locale}`? (ADR-016). | ⏳ |
 | 19 | **Lint y revisión de dependencias** (`pnpm audit`). | 🟡 |
 | 20 | **Higiene del repo**: >200 cambios sin commitear, archivos `.bak`, scripts sueltos. | ⏳ |
+| 21 | **Configuración general/storefront** (módulo `settings`, 2026-11-04): hecho en back, `@real/ui`, dashboard y sass-front. Falta **aplicar la migración `20261104130000`** en Railway y que el storefront y el chat la consuman (DT-SET-1 a 3). | 🟡 |
 
 ## 🟢 Fuera del camino crítico
 
@@ -54,10 +55,11 @@ Leyenda: ✅ hecho · 🟡 parcial · ⏳ pendiente · 🔒 bloqueado por algo e
 2. **Commitear** (#20, >200 cambios) y **ejecutar el CI**, arreglar lo que salga (#5).
 3. Un pedido de prueba de punta a punta en Railway (#7).
 4. Backups (#12) y observabilidad (#11, WEL-07).
-5. Tenant en sass-back y RLS en staging (#9, #14); decidir DT-ORDER-STOCK (liberar stock al cancelar).
+5. Terminar tenant en sass-back y RLS en staging (#9, #14). Encender `ORDER_EXPIRY_ENABLED` en Railway cuando se decida el plazo (DT-ORDER-STOCK, hecho en código).
 6. Pagos online con `pagos-back` (#1, #2), después del MVP.
 
 ## Registro de avance
 
 - **2026-11-03:** Docker/Railway confirmados; idempotencia de entrada (ecommerce-back) y de webhooks salientes; prueba de concurrencia del checkout; cobertura medida y pisos en CI; 31 e2e; workflows unificados (11); cero `any`/`as unknown as` en producción (ADR-030). Detalle en `deuda-tecnica.md`.
-- **Pendiente de mañana:** commit, primer CI en GitHub, pedido de prueba, backups. Migración `20261103140000` (y `20261103120000` backfill de inventario) por aplicar en Railway.
+- **2026-11-04:** DT-ORDER-STOCK cerrado (cancelar libera, pagar convierte en vendido, vencimiento a las 48 h apagado por defecto: `ORDER_EXPIRY_ENABLED`); tenant en sass-back casi completo + scripts RLS; checkout bajo `runAsTenant`; publisher real del outbox (apagado hasta setear las variables); UI «Eliminar mi cuenta»; throttler de rutas internas; servicios REST legacy del dashboard borrados. El árbol ya estaba commiteado y empujado antes de estos cambios; el CI no se pudo consultar desde acá (sin `gh`).
+- **Pendiente de mañana (2026-11-03):** commit, primer CI en GitHub, pedido de prueba, backups. Migración `20261103140000` (y `20261103120000` backfill de inventario) por aplicar en Railway.

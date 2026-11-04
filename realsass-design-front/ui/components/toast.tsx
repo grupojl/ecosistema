@@ -101,13 +101,13 @@ export function useToastPosition(): ToastPosition { return useSyncExternalStore(
 const EMPTY: Item[] = []
 const useItems = () => useSyncExternalStore(subscribe, () => items, () => EMPTY)
 
-const ICON: Record<ToastKind, { Icon: typeof Info; cls: string; bar: string; label: string }> = {
-  default: { Icon: Info, cls: 'text-foreground', bar: 'bg-foreground', label: 'Aviso' },
-  success: { Icon: CircleCheck, cls: 'text-success-ink', bar: 'bg-success', label: 'Éxito' },
-  info: { Icon: Info, cls: 'text-primary', bar: 'bg-primary', label: 'Información' },
-  warning: { Icon: TriangleAlert, cls: 'text-warning-ink', bar: 'bg-warning', label: 'Atención' },
-  error: { Icon: OctagonX, cls: 'text-destructive-ink', bar: 'bg-destructive', label: 'Error' },
-  loading: { Icon: LoaderCircle, cls: 'text-muted-foreground', bar: 'bg-muted-foreground', label: 'Cargando' },
+const ICON: Record<ToastKind, { Icon: typeof Info; cls: string; bar: string; label: string; tint: string }> = {
+  default: { Icon: Info, cls: 'text-foreground', bar: 'bg-foreground', label: 'Aviso', tint: 'bg-foreground/10' },
+  success: { Icon: CircleCheck, cls: 'text-success-ink', bar: 'bg-success', label: 'Éxito', tint: 'bg-success/15' },
+  info: { Icon: Info, cls: 'text-primary', bar: 'bg-primary', label: 'Información', tint: 'bg-primary/15' },
+  warning: { Icon: TriangleAlert, cls: 'text-warning-ink', bar: 'bg-warning', label: 'Atención', tint: 'bg-warning/20' },
+  error: { Icon: OctagonX, cls: 'text-destructive-ink', bar: 'bg-destructive', label: 'Error', tint: 'bg-destructive/15' },
+  loading: { Icon: LoaderCircle, cls: 'text-muted-foreground', bar: 'bg-muted-foreground', label: 'Cargando', tint: 'bg-muted' },
 }
 
 function ToastCard({ item, top }: { item: Item; top: boolean }) {
@@ -116,7 +116,7 @@ function ToastCard({ item, top }: { item: Item; top: boolean }) {
   const drag = useRef<{ x: number } | null>(null)
   const remaining = useRef(item.duration)
   const started = useRef(0)
-  const { Icon, cls, bar, label } = ICON[item.kind]
+  const { Icon, cls, bar, label, tint } = ICON[item.kind]
   const timed = item.duration !== Infinity && item.kind !== 'loading'
 
   useEffect(() => { remaining.current = item.duration }, [item.stamp, item.duration])
@@ -145,24 +145,26 @@ function ToastCard({ item, top }: { item: Item; top: boolean }) {
       onPointerUp={onUp} onPointerCancel={onUp}
       style={{ transform: dx ? `translateX(${dx}px)` : undefined, opacity: dx ? Math.max(0.3, 1 - Math.abs(dx) / 240) : undefined, touchAction: 'pan-y' }}
       className={cn(
-        'pointer-events-auto relative overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg',
+        'pointer-events-auto relative overflow-hidden rounded-[1.75rem] border border-foreground/10 bg-popover/95 text-popover-foreground shadow-[0_10px_30px_-8px_hsl(0_0%_0%/.35)] backdrop-blur',
         item.leaving ? (top ? 'ds-toast-out-up' : 'ds-toast-out') : top ? 'ds-toast-in-down' : 'ds-toast-in',
       )}
     >
-      <div className="flex items-start gap-3 p-3 pr-2">
-        <Icon className={cn('mt-0.5 size-5 shrink-0', cls, item.kind === 'loading' && 'animate-spin')} aria-hidden="true" />
+      <div className="flex items-center gap-3 p-2.5">
+        <span className={cn('grid size-10 shrink-0 place-items-center rounded-full', tint)} aria-hidden="true">
+          <Icon className={cn('size-[18px]', cls, item.kind === 'loading' && 'animate-spin')} />
+        </span>
         <span className="sr-only">{label}: </span>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 text-sm font-medium leading-snug">
+          <p className="flex items-center gap-2 text-sm font-bold leading-snug">
             <span className="min-w-0 break-words">{item.title}</span>
             {item.count > 1 && <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs font-semibold tabular-nums text-muted-foreground" aria-label={`${item.count} veces`}>×{item.count}</span>}
           </p>
-          {item.description && <p className="mt-0.5 text-sm text-muted-foreground">{item.description}</p>}
+          {item.description && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{item.description}</p>}
           {item.action && (
             <button
               type="button"
               onClick={() => { item.action!.onClick(); dismiss(item.id) }}
-              className="mt-2 inline-flex min-h-9 items-center rounded-md px-2 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring -ml-2"
+              className="mt-2 inline-flex min-h-9 items-center rounded-full border border-foreground/15 bg-foreground/5 px-3.5 text-xs font-semibold text-foreground hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {item.action.label}
             </button>
@@ -170,7 +172,7 @@ function ToastCard({ item, top }: { item: Item; top: boolean }) {
         </div>
         <button
           type="button" aria-label="Cerrar aviso" onClick={() => dismiss(item.id)}
-          className="grid size-11 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          className="grid size-11 shrink-0 place-items-center self-start rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         >
           <X className="size-4" />
         </button>

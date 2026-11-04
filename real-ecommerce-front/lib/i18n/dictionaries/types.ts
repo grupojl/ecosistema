@@ -51,6 +51,12 @@ export interface Dictionary {
   notFound: { title: string; body: string; hint: string; back: string };
   commerce: {
     signIn: string;
+    deleteAccount: string;
+    deleteAccountTitle: string;
+    deleteAccountBody: string;
+    deleteAccountConfirm: string;
+    cancel: string;
+    deleteAccountError: string;
     signOut: string;
     account: string;
     myOrders: string;

@@ -48,7 +48,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
   }
 
   async findAllByOrg(organizationId: string): Promise<WebhookEndpoint[]> {
-    const rows = await this.prisma.webhookEndpoint.findMany({
+    const rows = await this.prisma.forTenant(organizationId).webhookEndpoint.findMany({
       where: { organizationId },
       orderBy: { createdAt: 'asc' },
     });
@@ -59,14 +59,14 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
     id: string,
     organizationId: string,
   ): Promise<WebhookEndpoint | null> {
-    const row = await this.prisma.webhookEndpoint.findFirst({
+    const row = await this.prisma.forTenant(organizationId).webhookEndpoint.findFirst({
       where: { id, organizationId },
     });
     return row ? this.toEndpoint(row) : null;
   }
 
   async create(input: PersistWebhookInput): Promise<WebhookEndpoint> {
-    const row = await this.prisma.webhookEndpoint.create({
+    const row = await this.prisma.forTenant(input.organizationId).webhookEndpoint.create({
       data: {
         organizationId: input.organizationId,
         url: input.url,
@@ -86,7 +86,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
     secretEncrypted: string,
     secretHint: string,
   ): Promise<boolean> {
-    const res = await this.prisma.webhookEndpoint.updateMany({
+    const res = await this.prisma.forTenant(organizationId).webhookEndpoint.updateMany({
       where: { id, organizationId },
       data: { secretEncrypted, secretPrefix: secretHint },
     });
@@ -94,7 +94,7 @@ export class PrismaWebhooksRepository implements IWebhooksRepository {
   }
 
   async remove(id: string, organizationId: string): Promise<boolean> {
-    const res = await this.prisma.webhookEndpoint.deleteMany({
+    const res = await this.prisma.forTenant(organizationId).webhookEndpoint.deleteMany({
       where: { id, organizationId },
     });
     return res.count > 0;

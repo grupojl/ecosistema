@@ -1,3 +1,4 @@
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 // realsass-sass-back/src/internal/internal-access.controller.ts
 //
 // Canal servicio-a-servicio para resolver "¿este usuario puede operar esta organización?".
@@ -14,6 +15,10 @@ import { UsersService } from '@/users/users.service';
 
 @Public() // el APP_GUARD de Firebase no aplica: acá manda InternalApiKeyGuard
 @UseGuards(InternalApiKeyGuard)
+// DT-STORE-1: servicio-a-servicio (INTERNAL_API_KEY). No cae en el limitador `auth` (pensado para login) y tiene un tope
+// propio holgado: todo el tráfico del storefront sale de pocas IPs y el 30/min global lo cortaría.
+@SkipThrottle({ auth: true })
+@Throttle({ default: { limit: 600, ttl: 60_000 } })
 @Controller('internal/access')
 export class InternalAccessController {
   constructor(private readonly users: UsersService) {}

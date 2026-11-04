@@ -107,6 +107,10 @@ const CONTRACT: Record<string, [string, string, string, string]> = {
   'sessions.list': [U, O, O, O],
   'sessions.revoke': [U, B, B, B],
   'sessions.revokeOthers': [U, O, O, O],
+  'settings.get': [U, B, O, O], // cualquier miembro lee
+  'settings.getPublicStorefront': [B, B, B, B], // público por slug
+  'settings.updateGeneral': [U, B, F, B], // solo el dueño escribe
+  'settings.updateStorefront': [U, B, F, B], // solo el dueño escribe
   'whatsapp.connect': [U, B, F, B],
   'whatsapp.disconnect': [U, B, F, B],
   'whatsapp.status': [U, B, F, O],

@@ -3,3 +3,6 @@
 @import '@real/ui/styles/welver.css';
 @source '../../packages/ui/src';
 @source '../../packages/auth-client/src';
+
+/* Dashboard: todos los títulos (páginas, secciones, tarjetas, diálogos) en Source Serif 4, la serif de Welver. */
+h1, h2, h3, h4 { font-family: var(--font-display); }

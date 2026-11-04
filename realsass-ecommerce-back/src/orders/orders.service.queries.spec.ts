@@ -54,10 +54,10 @@ describe('OrdersService: lecturas y estado', () => {
 
     it('aplica una transición válida', async () => {
       const { svc, repo } = make();
-      repo.findById.mockResolvedValue({ id: 'o1', status: 'PENDING_PAYMENT' });
-      repo.updateStatus.mockResolvedValue({ id: 'o1', status: 'PAID' });
-      expect(await svc.updateStatus('org', 'o1', 'PAID')).toEqual({ id: 'o1', status: 'PAID' });
-      expect(repo.updateStatus).toHaveBeenCalledWith('org', 'o1', 'PAID');
+      repo.findById.mockResolvedValue({ id: 'o1', status: 'PAID' });
+      repo.updateStatus.mockResolvedValue({ id: 'o1', status: 'FULFILLING' });
+      expect(await svc.updateStatus('org', 'o1', 'FULFILLING')).toEqual({ id: 'o1', status: 'FULFILLING' });
+      expect(repo.updateStatus).toHaveBeenCalledWith('org', 'o1', 'FULFILLING');
     });
 
     it.each([

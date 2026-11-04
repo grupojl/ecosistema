@@ -70,7 +70,7 @@ suite('idempotencia de pagos contra Postgres real', () => {
     idempotency = new IdempotencyService(prisma);
     const outbox = new OutboxService();
     Object.defineProperty(outbox, 'enabled', { value: true }); // se quiere ver el evento order.paid
-    payments = new PaymentConfirmationService(prisma, idempotency, outbox);
+    payments = new PaymentConfirmationService(prisma, idempotency, outbox, new InventoryService(prisma, inventory));
   });
 
   afterAll(async () => {

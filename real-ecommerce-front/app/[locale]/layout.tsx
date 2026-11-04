@@ -41,8 +41,8 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (!isLocale(locale)) notFound()
 
   return (
-    <html lang={locale} dir={isRtlLocale(locale) ? "rtl" : "ltr"} suppressHydrationWarning>
-      <body className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+    <html lang={locale} dir={isRtlLocale(locale) ? "rtl" : "ltr"} suppressHydrationWarning className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable}`}>
+      <body className="font-sans antialiased">
         <ThemeProvider>
         <CustomerProvider><TrpcProvider>{children}</TrpcProvider></CustomerProvider>
         </ThemeProvider>

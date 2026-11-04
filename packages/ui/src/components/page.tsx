@@ -61,11 +61,12 @@ function PageHeader({
       {breadcrumb && breadcrumb.length > 1 && <Breadcrumb items={breadcrumb} linkAs={breadcrumbLinkAs} />}
       <div className="flex flex-col gap-3 medium:flex-row medium:items-start medium:justify-between">
         <div className="min-w-0 space-y-1">
-          <h1 className="flex items-center gap-2 font-display text-2xl font-semibold tracking-tight text-balance">
+          <h1 className="flex items-center gap-2 font-display text-3xl tracking-tight text-balance expanded:text-4xl">
             {icon && <span className="text-muted-foreground [&_svg]:size-5" aria-hidden="true">{icon}</span>}
             {title}
           </h1>
-          {description && <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>}
+          <span className="block h-px w-10 bg-primary/60" aria-hidden="true" />
+          {description && <p className="max-w-2xl pt-1 text-sm text-muted-foreground">{description}</p>}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
@@ -142,7 +143,7 @@ function StatCard({
   className?: string
 }) {
   return (
-    <div data-slot="card" className={cn("rounded-lg border bg-card p-4 text-card-foreground", className)}>
+    <div data-slot="card" className={cn("rounded-2xl border border-transparent bg-card p-4 text-card-foreground", className)}>
       <p className="flex items-center gap-2 text-xs text-muted-foreground [&_svg]:size-4">
         {icon}
         {label}
@@ -183,8 +184,9 @@ function ComingSoon({
     <div className={cn("flex min-h-[60vh] flex-col items-center justify-center gap-4 p-8 text-center", className)}>
       <span className="grid size-16 place-items-center rounded-full bg-muted text-muted-foreground [&_svg]:size-7" aria-hidden="true">{icon}</span>
       <div className="space-y-2">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="mx-auto max-w-sm text-muted-foreground">{description}</p>}
+        <h1 className="font-display text-3xl tracking-tight expanded:text-4xl">{title}</h1>
+        <span className="mx-auto block h-px w-10 bg-primary/60" aria-hidden="true" />
+        {description && <p className="mx-auto max-w-sm pt-1 text-muted-foreground">{description}</p>}
       </div>
       <Badge variant="secondary">Próximamente disponible</Badge>
     </div>

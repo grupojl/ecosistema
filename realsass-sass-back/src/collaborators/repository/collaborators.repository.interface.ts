@@ -14,6 +14,10 @@ export interface ICollaboratorsRepository {
     organizationId: string,
   ): Promise<Collaborator | null>;
   create(input: InviteCollaboratorInput): Promise<Collaborator>;
-  update(id: string, input: UpdateCollaboratorInput): Promise<Collaborator>;
-  remove(id: string): Promise<void>;
+  update(
+    id: string,
+    organizationId: string,
+    input: UpdateCollaboratorInput,
+  ): Promise<Collaborator>;
+  remove(id: string, organizationId: string): Promise<void>;
 }

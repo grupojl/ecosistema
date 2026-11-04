@@ -83,8 +83,8 @@ describe('OrdersService.checkout', () => {
     await expect(
       service.checkout({ organizationId: 'org-1', cartId: 'cart-1', customerId: 'cust-1', shippingAddress: {} }),
     ).rejects.toThrow(BadRequestException);
-    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(mockPrisma.cart.findFirst.mock.invocationCallOrder[0]!);
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2); // set_config del tenant (RLS) + el bloqueo del carrito
+    expect(mockPrisma.$queryRaw.mock.invocationCallOrder[1]).toBeLessThan(mockPrisma.cart.findFirst.mock.invocationCallOrder[0]!);
   });
 
   it('idempotente: un carrito ya CONVERTED devuelve la orden existente sin reservar stock ni crear otra', async () => {

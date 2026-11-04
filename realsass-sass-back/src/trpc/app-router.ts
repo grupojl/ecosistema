@@ -19,6 +19,8 @@ import type { DesktopService } from '@/desktop/desktop.service';
 import { createWhatsappRouter } from '@/trpc/routers/whatsapp.router';
 import type { WhatsappService } from '@/whatsapp/whatsapp.service';
 import { createFeedbackRouter } from '@/trpc/routers/feedback.router';
+import { createOrgSettingsRouter } from '@/trpc/routers/org-settings.router';
+import type { OrgSettingsService } from '@/org-settings/org-settings.service';
 import type { FeedbackService } from '@/feedback/feedback.service';
 
 import type { UsersService } from '@/users/users.service';
@@ -53,6 +55,7 @@ export interface AppRouterDeps {
   sessionsService: SessionsService;
   whatsappService: WhatsappService;
   feedbackService: FeedbackService;
+  settingsService: OrgSettingsService;
   desktopService: DesktopService;
 }
 
@@ -80,6 +83,7 @@ export function createAppRouter(deps: AppRouterDeps) {
     sessions: createSessionsRouter(deps.sessionsService),
     whatsapp: createWhatsappRouter(deps.whatsappService),
     feedback: createFeedbackRouter(deps.feedbackService),
+    settings: createOrgSettingsRouter(deps.settingsService, deps.orgsService),
     desktop: createDesktopRouter(deps.desktopService),
   });
 }

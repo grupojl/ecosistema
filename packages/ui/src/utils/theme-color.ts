@@ -4,5 +4,5 @@
  */
 export const THEME_COLOR = [
   { media: "(prefers-color-scheme: light)", color: "#fbfbf8" },
-  { media: "(prefers-color-scheme: dark)", color: "#0a1511" },
+  { media: "(prefers-color-scheme: dark)", color: "#0b1411" },
 ] as const

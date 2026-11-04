@@ -185,8 +185,9 @@ function Overview({ onView }: { onView: (v: View) => void }) {
     <div className="space-y-4">
 
       {/* Avatar + info usuario */}
-      <Card className="flex items-center gap-3 p-4">
-        <Avatar className="h-12 w-12">
+      <Card className="space-y-4 p-4 medium:p-5">
+       <div className="flex items-center gap-3">
+        <Avatar className="h-14 w-14">
           <AvatarImage src={user?.photoUrl ?? undefined} referrerPolicy="no-referrer" />
           <AvatarFallback>{(user?.displayName ?? 'U')[0].toUpperCase()}</AvatarFallback>
         </Avatar>
@@ -194,6 +195,9 @@ function Overview({ onView }: { onView: (v: View) => void }) {
           <p className="font-medium truncate">{user?.displayName ?? 'Usuario'}</p>
           <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
         </div>
+       </div>
+       <div className="flex items-center justify-between gap-2 border-t pt-3">
+        <div className="flex items-center gap-1">
         <Button variant="ghost" size="icon" onClick={() => setDevicesOpen(true)} title="Dispositivos" aria-label="Dispositivos">
           <MonitorSmartphone className="h-4 w-4" />
         </Button>
@@ -201,9 +205,11 @@ function Overview({ onView }: { onView: (v: View) => void }) {
         <Button variant="ghost" size="icon" onClick={() => setFeedbackOpen(true)} title="Informar un problema" aria-label="Informar un problema">
           <LifeBuoy className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={logout} title="Cerrar sesión" aria-label="Cerrar sesión">
-          <LogOut className="h-4 w-4" />
+        </div>
+        <Button variant="outline" size="sm" onClick={logout}>
+          <LogOut className="h-4 w-4" /> Cerrar sesión
         </Button>
+       </div>
         <ConnectedDevicesDialog open={devicesOpen} onOpenChange={setDevicesOpen} />
         <ConnectedFeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} module="profile" />
       </Card>
@@ -218,20 +224,20 @@ function Overview({ onView }: { onView: (v: View) => void }) {
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-sm">Organización activa</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => onView('edit-org')}>
+            <Button variant="ghost" size="icon" onClick={() => onView('edit-org')} title="Editar organización" aria-label="Editar organización">
               <Settings className="h-4 w-4" />
             </Button>
           </div>
           <p className="text-sm truncate">{org.name ?? org.slug ?? 'Sin nombre'}</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => onView('collaborators')}>
+          <div className="grid gap-2 medium:grid-cols-2">
+            <Button size="sm" variant="outline" onClick={() => onView('collaborators')}>
               <Users className="h-4 w-4 mr-2" /> Colaboradores
             </Button>
-            <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push('/profile/config')}>
+            <Button size="sm" variant="outline" onClick={() => router.push('/profile/config')}>
               <Settings className="h-4 w-4 mr-2" /> Configuración
             </Button>
             {triggerSSO && (
-              <Button size="sm" className="flex-1" disabled={ssoLoading} onClick={triggerSSO}>
+              <Button size="sm" className="medium:col-span-2" disabled={ssoLoading} onClick={triggerSSO}>
                 {ssoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
                 Dashboard
               </Button>

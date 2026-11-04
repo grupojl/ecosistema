@@ -67,7 +67,7 @@ describe('ConfigThemesService', () => {
     const { svc, repo, audit } = make();
     repo.findById.mockResolvedValue({ organizationId: 'org-1', isActive: false, isSystemDefault: false });
     await svc.remove('org-1', 'u', 't1');
-    expect(repo.remove).toHaveBeenCalledWith('t1');
+    expect(repo.remove).toHaveBeenCalledWith('t1', 'org-1');
     expect(audit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'delete', previousValue: 't1' }));
   });
 

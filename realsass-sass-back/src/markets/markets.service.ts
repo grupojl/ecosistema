@@ -105,7 +105,7 @@ export class MarketsService {
         message: new CannotDeactivateDefaultMarketError(id).message,
       });
     }
-    const updated = await this.repo.update(id, data);
+    const updated = await this.repo.update(id, market.organizationId, data);
     return updated.toDTO();
   }
 
@@ -123,7 +123,7 @@ export class MarketsService {
         message: new CannotDeleteDefaultMarketError(id).message,
       });
     }
-    await this.repo.delete(id);
+    await this.repo.delete(id, market.organizationId);
   }
 
   // Llamado internamente al crear una Organization (seed del Market default)

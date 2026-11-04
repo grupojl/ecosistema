@@ -1,7 +1,8 @@
 import { WebhookDeliveryService } from './webhook-delivery.service';
 
 const make = (withQueue = true) => {
-  const prisma = { webhookEndpoint: { findMany: jest.fn() } };
+  const prisma = { webhookEndpoint: { findMany: jest.fn() }, forTenant: jest.fn() };
+  prisma.forTenant.mockReturnValue(prisma);
   const queue = { add: jest.fn() };
   const svc = new WebhookDeliveryService(prisma as never, (withQueue ? queue : null) as never);
   return { svc, prisma, queue };

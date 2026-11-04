@@ -170,6 +170,31 @@ export class OrganizationsClientService {
     }
   }
 
+  /**
+   * Entrega un evento de dominio a los webhooks salientes de la organización (outbox → sass-back). Lanza si no se
+   * pudo entregar: el relay del outbox reintenta con espera creciente. Idempotente por `eventId` en el sass-back.
+   */
+  async publishEvent(
+    organizationId: string,
+    event: { eventId: string; type: string; payload: Record<string, unknown> },
+  ): Promise<void> {
+    const res = await fetch(
+      `${this.baseUrl}${ORGANIZATIONS_SERVICE_PREFIX}/internal/organizations/${encodeURIComponent(organizationId)}/events`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-internal-api-key': process.env['INTERNAL_API_KEY'] ?? '',
+        },
+        body: JSON.stringify(event),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`sass-back rechazó el evento ${event.type} (HTTP ${res.status})`);
+    }
+  }
+
   // ── Markets resolution (MKT-E-01) — ADR-014 ─────────────────────────────────
   async resolveMarket(
     organizationId: string,

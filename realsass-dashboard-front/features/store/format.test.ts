@@ -78,7 +78,7 @@ describe('helpers de fecha y nombre', () => {
     expect(formatRelativeTime(ago(10_000))).toBe('ahora')
     expect(formatRelativeTime(ago(5 * 60_000))).toBe('5m')
     expect(formatRelativeTime(ago(3 * 3_600_000))).toBe('3h')
-    expect(formatRelativeTime(ago(3 * 86_400_000))).toMatch(/^\d{2}\/\d{2}$/)
+    expect(formatRelativeTime(ago(3 * 86_400_000))).toMatch(/^\d{1,2}\/\d{1,2}$/) // es-AR no rellena el día con cero ("1/11")
   })
 
   it('formatDate usa el formato local con hora', () => {

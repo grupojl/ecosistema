@@ -94,7 +94,6 @@ describe('useDashboardSSO', () => {
     vi.resetModules()
     return (await import('./use-dashboard-sso')).useDashboardSSO
   }
-  const fakeTab = () => ({ opener: 'x' as unknown, closed: false, close: vi.fn(), location: { href: '' } })
 
   it('sin NEXT_PUBLIC_DASHBOARD_FRONT_URL falla con un mensaje claro y vuelve a idle', async () => {
     vi.stubEnv('NEXT_PUBLIC_DASHBOARD_FRONT_URL', '')
@@ -109,58 +108,50 @@ describe('useDashboardSSO', () => {
     expect(result.current.ssoError).toBeNull()
   })
 
-  it('abre el dashboard en la pestaña ya abierta con el token codificado y sin dejar `opener`', async () => {
+  /** Reemplaza window.location por un objeto que registra las asignaciones a `href`. */
+  function spyHref() {
+    const assign = vi.fn()
+    const original = window.location
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, set href(v: string) { assign(v) }, get href() { return '' } } })
+    return { assign, restore: () => Object.defineProperty(window, 'location', { configurable: true, value: original }) }
+  }
+
+  it('navega en esta misma pestaña (sin abrir una en blanco), con el token escapado y sin barras dobles', async () => {
     vi.stubEnv('NEXT_PUBLIC_DASHBOARD_FRONT_URL', 'https://dash.example.com//')
     vi.useFakeTimers()
-    const tab = fakeTab()
-    vi.spyOn(window, 'open').mockReturnValue(tab as never)
+    const open = vi.spyOn(window, 'open')
+    const { assign, restore } = spyHref()
     sso.mutateAsync.mockResolvedValue({ customToken: 'a b+c/d' })
     const useDashboardSSO = await load()
     const { result } = renderHook(() => useDashboardSSO())
 
     await act(async () => { await result.current.openDashboard() })
-    expect(tab.opener).toBeNull() // la pestaña nueva no puede manipular a la que la abrió
+    expect(open).not.toHaveBeenCalled()
+    expect(assign).toHaveBeenCalledWith('https://dash.example.com/auth/sso?token=a%20b%2Bc%2Fd')
     expect(result.current.state).toBe('success')
-    await act(async () => { vi.advanceTimersByTime(400) })
-    expect(tab.location.href).toBe('https://dash.example.com/auth/sso?token=a%20b%2Bc%2Fd') // sin barras dobles, token escapado
+    await act(async () => { vi.advanceTimersByTime(4100) })
     expect(result.current.state).toBe('idle')
+    restore()
   })
 
-  it('si el popup fue bloqueado, navega en esta misma pestaña', async () => {
+  it('si falla el back, no navega y muestra el error', async () => {
     vi.stubEnv('NEXT_PUBLIC_DASHBOARD_FRONT_URL', 'https://dash.example.com')
     vi.useFakeTimers()
-    vi.spyOn(window, 'open').mockReturnValue(null)
-    const assign = vi.fn()
-    const original = window.location
-    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, set href(v: string) { assign(v) }, get href() { return '' } } })
-    sso.mutateAsync.mockResolvedValue({ customToken: 'T' })
-    const useDashboardSSO = await load()
-    const { result } = renderHook(() => useDashboardSSO())
-    await act(async () => { await result.current.openDashboard() })
-    await act(async () => { vi.advanceTimersByTime(400) })
-    expect(assign).toHaveBeenCalledWith('https://dash.example.com/auth/sso?token=T')
-    Object.defineProperty(window, 'location', { configurable: true, value: original })
-  })
-
-  it('si falla el back, cierra la pestaña en blanco y muestra el error', async () => {
-    vi.stubEnv('NEXT_PUBLIC_DASHBOARD_FRONT_URL', 'https://dash.example.com')
-    vi.useFakeTimers()
-    const tab = fakeTab()
-    vi.spyOn(window, 'open').mockReturnValue(tab as never)
+    const { assign, restore } = spyHref()
     sso.mutateAsync.mockRejectedValue(new Error('El usuario no tiene acceso al dashboard.'))
     const useDashboardSSO = await load()
     const { result } = renderHook(() => useDashboardSSO())
     await act(async () => { await result.current.openDashboard() })
-    expect(tab.close).toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
     expect(result.current.state).toBe('error')
     expect(result.current.ssoError).toContain('no tiene acceso')
+    restore()
   })
 
   it('espera a que la sesión esté lista antes de pedir el token (hasta 8 s) y falla si nunca lo está', async () => {
     vi.stubEnv('NEXT_PUBLIC_DASHBOARD_FRONT_URL', 'https://dash.example.com')
     vi.useFakeTimers()
     auth.sessionReady = false
-    vi.spyOn(window, 'open').mockReturnValue(fakeTab() as never)
     const useDashboardSSO = await load()
     const { result } = renderHook(() => useDashboardSSO())
     let done = false

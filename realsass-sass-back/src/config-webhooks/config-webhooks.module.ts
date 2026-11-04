@@ -12,18 +12,24 @@ import { PrismaModule } from '@/prisma/prisma.module';
 import { ConfigAuditModule } from '@/config-audit/config-audit.module';
 import { ConfigSecretsModule } from '@/config-secrets/config-secrets.module';
 
+/**
+ * WEBHOOK_QUEUE_ENABLED=false (solo desarrollo sin Redis): no se registra la cola ni el worker de BullMQ, así no intentan
+ * conectarse. Los webhooks no se entregan (dispatch queda en no-op). Por defecto está ENCENDIDA: producción no cambia.
+ */
+const queueEnabled = process.env['WEBHOOK_QUEUE_ENABLED'] !== 'false';
+
 @Module({
   imports: [
     PrismaModule,
     ConfigAuditModule,
     ConfigSecretsModule, // CryptoService: cifra/descifra el secreto de firma
-    BullModule.registerQueue({ name: WEBHOOK_QUEUE }),
+    ...(queueEnabled ? [BullModule.registerQueue({ name: WEBHOOK_QUEUE })] : []),
   ],
 
   providers: [
     ConfigWebhooksService,
     WebhookDeliveryService,
-    WebhookDeliveryProcessor,
+    ...(queueEnabled ? [WebhookDeliveryProcessor] : []),
     { provide: WEBHOOKS_REPOSITORY, useClass: PrismaWebhooksRepository },
   ],
   exports: [ConfigWebhooksService, WebhookDeliveryService],

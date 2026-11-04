@@ -11,7 +11,7 @@ import { cn } from "@real/ui/utils"
  * El ícono por defecto sale de la variante; el título usa las variantes `ink` (AA sobre fondo tintado).
  */
 const alertVariants = cva(
-  "relative flex w-full gap-3 rounded-lg border p-4 text-sm",
+  "relative flex w-full gap-3 rounded-2xl border p-4 text-sm",
   {
     variants: {
       variant: {
@@ -61,7 +61,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
           {...props}
         >
           {icon === null ? null : (
-            <span className={cn("mt-0.5 shrink-0 [&_svg]:size-4", iconColor)} aria-hidden="true">
+            <span className={cn("grid size-8 shrink-0 place-items-center rounded-full bg-current/10 [&_svg]:size-4", iconColor)} aria-hidden="true">
               {icon ?? <Icon />}
             </span>
           )}
@@ -78,7 +78,7 @@ const AlertTitle = React.forwardRef<
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => {
   const variant = React.useContext(AlertContext)
-  return <h5 ref={ref} className={cn("font-medium leading-snug", GLYPH[variant].title, className)} {...props} />
+  return <h5 ref={ref} className={cn("font-bold leading-snug", GLYPH[variant].title, className)} {...props} />
 })
 AlertTitle.displayName = "AlertTitle"
 

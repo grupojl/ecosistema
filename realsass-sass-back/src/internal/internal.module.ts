@@ -6,6 +6,8 @@ import { InternalSessionsController } from '@/internal/internal-sessions.control
 import { SessionsModule } from '@/sessions/sessions.module';
 import { FeedbackModule } from '@/feedback/feedback.module';
 import { FeedbackInternalController } from '@/internal/feedback.internal.controller';
+import { InternalEventsController } from '@/internal/internal-events.controller';
+import { ConfigWebhooksModule } from '@/config-webhooks/config-webhooks.module';
 // realsass-sass-back/src/internal/internal.module.ts
 //
 // Módulo REST para endpoints /internal/* consumidos por superadmin.
@@ -18,13 +20,14 @@ import { InternalOrganizationsController } from '@/internal/internal-organizatio
 import { InternalOrganizationsService } from '@/internal/internal-organizations.service';
 
 @Module({
-  imports: [MarketsModule, UsersModule, SessionsModule, FeedbackModule],
+  imports: [MarketsModule, UsersModule, SessionsModule, FeedbackModule, ConfigWebhooksModule],
   controllers: [
     InternalOrganizationsController,
     MarketsInternalController,
     InternalAccessController,
     InternalSessionsController,
     FeedbackInternalController,
+    InternalEventsController,
   ],
   providers: [InternalApiKeyGuard, InternalOrganizationsService],
 })

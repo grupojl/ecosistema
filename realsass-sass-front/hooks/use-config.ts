@@ -153,3 +153,31 @@ export function useRevokeSecret() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: [['configSecrets', 'list']] }); },
   });
 }
+
+// ── Configuración general y del storefront ────────────────────────────────────
+
+export function useOrgSettings() {
+  const { sessionReady } = useAuth();
+  return trpc.settings.get.useQuery(undefined, {
+    enabled:   sessionReady,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useUpdateGeneralSettings() {
+  const queryClient = useQueryClient();
+  return trpc.settings.updateGeneral.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['settings', 'get']] });
+    },
+  });
+}
+
+export function useUpdateStorefrontSettings() {
+  const queryClient = useQueryClient();
+  return trpc.settings.updateStorefront.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['settings', 'get']] });
+    },
+  });
+}

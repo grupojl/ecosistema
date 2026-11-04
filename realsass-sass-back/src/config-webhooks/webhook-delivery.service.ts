@@ -22,7 +22,13 @@ export class WebhookDeliveryService {
     @Optional()
     @InjectQueue(WEBHOOK_QUEUE)
     private readonly queue: Queue | null,
-  ) {}
+  ) {
+    if (!this.queue) {
+      this.logger.warn(
+        'Cola de webhooks desactivada (WEBHOOK_QUEUE_ENABLED=false): los webhooks salientes no se entregan',
+      );
+    }
+  }
 
   @OnEvent('config.theme.changed')
   @OnEvent('config.flag.changed')
@@ -41,6 +47,7 @@ export class WebhookDeliveryService {
     organizationId: string,
     event: string,
     payload: unknown,
+    eventKey?: string, // id estable del evento (idempotencia): el mismo evento reenviado no se encola dos veces
   ): Promise<void> {
     if (!this.queue) {
       this.logger.debug(
@@ -49,7 +56,7 @@ export class WebhookDeliveryService {
       return;
     }
 
-    const webhooks = await this.prisma.webhookEndpoint.findMany({
+    const webhooks = await this.prisma.forTenant(organizationId).webhookEndpoint.findMany({
       where: { organizationId, isActive: true },
     });
 
@@ -57,7 +64,7 @@ export class WebhookDeliveryService {
       const events = EventsSchema.parse(wh.events);
       if (!events.includes(event) && !events.includes('*')) continue;
 
-      await this.enqueue(wh.id, event, payload);
+      await this.enqueue(wh.id, event, payload, eventKey);
     }
   }
 

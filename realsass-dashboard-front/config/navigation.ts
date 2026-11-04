@@ -18,6 +18,8 @@ export const NAV_GROUPS = [
   {
     label: 'Configuración',
     items: [
+      { name: 'General',       href: '/configuracion/general',  icon: 'Building2',  active: true },
+      { name: 'Storefront',    href: '/configuracion/tienda',   icon: 'Store',      active: true },
       { name: 'Tema visual',   href: '/configuracion/tema',     icon: 'Palette',    active: true },
       { name: 'Feature Flags', href: '/configuracion/flags',    icon: 'ToggleLeft', active: true },
       { name: 'Webhooks',      href: '/configuracion/webhooks', icon: 'Webhook',    active: true },

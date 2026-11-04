@@ -107,15 +107,16 @@ export class CollaboratorsService {
     if (existing && existing.status === 'REMOVED') {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
-      await this.prisma.$transaction([
-        this.prisma.collaborator.update({
+      const tenant = this.prisma.forTenant(org.id);
+      await tenant.$transaction([
+        tenant.collaborator.update({
           where: { id: existing.id },
           data: {
             status: 'PENDING',
             permissions: toJsonObject({ ...permissions }),
           },
         }),
-        this.prisma.invitation.upsert({
+        tenant.invitation.upsert({
           where: { collaboratorId: existing.id },
           update: { token, expiresAt, usedAt: null },
           create: { collaboratorId: existing.id, token, expiresAt },
@@ -130,8 +131,9 @@ export class CollaboratorsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRY_DAYS);
 
-    await this.prisma.$transaction([
-      this.prisma.collaborator.create({
+    const tenant = this.prisma.forTenant(org.id);
+    await tenant.$transaction([
+      tenant.collaborator.create({
         data: {
           id: collaboratorId,
           organizationId: org.id,
@@ -140,7 +142,7 @@ export class CollaboratorsService {
           permissions: toJsonObject({ ...permissions }),
         },
       }),
-      this.prisma.invitation.create({
+      tenant.invitation.create({
         data: { collaboratorId, token, expiresAt },
       }),
     ]);
@@ -158,7 +160,7 @@ export class CollaboratorsService {
     const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     const col = await this.repo.findById(collaboratorId, org.id);
     if (!col) throw new NotFoundException('Collaborator not found');
-    return this.repo.update(collaboratorId, {
+    return this.repo.update(collaboratorId, org.id, {
       permissions: dto,
     });
   }
@@ -171,7 +173,7 @@ export class CollaboratorsService {
     const org = await this.getOrgForOwner(firebaseUid, activeOrganizationId);
     const col = await this.repo.findById(collaboratorId, org.id);
     if (!col) throw new NotFoundException('Collaborator not found');
-    await this.repo.remove(collaboratorId);
+    await this.repo.remove(collaboratorId, org.id);
   }
 
   async getInvitationInfo(token: string) {
@@ -193,12 +195,14 @@ export class CollaboratorsService {
     if (inv.collaborator.email !== user.email)
       throw new ForbiddenException('Email mismatch');
 
-    await this.prisma.$transaction([
-      this.prisma.collaborator.update({
+    // La organización sale de la invitación (el token es lo único que trae quien acepta).
+    const tenant = this.prisma.forTenant(inv.collaborator.organizationId);
+    await tenant.$transaction([
+      tenant.collaborator.update({
         where: { id: inv.collaboratorId },
         data: { status: 'ACTIVE', userId: user.id, acceptedAt: new Date() },
       }),
-      this.prisma.invitation.update({
+      tenant.invitation.update({
         where: { id: inv.id },
         data: { usedAt: new Date() },
       }),
