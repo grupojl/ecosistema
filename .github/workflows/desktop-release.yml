@@ -93,7 +93,7 @@ jobs:
           includeUpdaterJson: ${{ steps.keys.outputs.updater == 'true' }}
 
       - name: Subir el instalador como artefacto (para descargar y probar)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: welver-dashboard-desktop-windows
           path: |
