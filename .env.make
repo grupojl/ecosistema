@@ -12,7 +12,7 @@ NODE_ENV=development
 
 
 # -----------------------------------------------------------------
-# [realsass-ecommerce-back] + [realsass-sass-back]
+# [realsass-sass-back]
 # -----------------------------------------------------------------
 
 # PostgreSQL
@@ -20,7 +20,6 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-ECOMMERCE_DB_NAME=ecommerce_db
 SASS_DB_NAME=sass_db
 
 # Redis
@@ -37,18 +36,6 @@ JWT_REFRESH_EXPIRATION=7d
 FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
-
-
-# -----------------------------------------------------------------
-# [realsass-ecommerce-back]
-# -----------------------------------------------------------------
-
-PORT_ECOMMERCE_BACK=3023
-ECOMMERCE_BACK_ALLOWED_ORIGINS=http://localhost:3020,http://localhost:3021
-
-# Llamada inter-servicio → realsass-sass-back
-ORGANIZATIONS_SERVICE_PREFIX=/api/v1
-CONFIG_CACHE_TTL_ORG_ACCESS=30
 
 
 # -----------------------------------------------------------------
@@ -70,16 +57,6 @@ CONFIG_CACHE_TTL_QUOTAS=10
 # Webhooks
 WEBHOOK_DELIVERY_TIMEOUT=5000
 WEBHOOK_MAX_RETRIES=3
-
-
-# -----------------------------------------------------------------
-# [real-ecommerce-front]
-# -----------------------------------------------------------------
-
-PORT_ECOMMERCE_FRONT=3020
-
-# ID de la organización que sirve este storefront (1 front = 1 org)
-NEXT_PUBLIC_ECOMMERCE_ORGANIZATION_ID=
 
 
 # -----------------------------------------------------------------

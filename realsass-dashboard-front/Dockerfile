@@ -47,7 +47,6 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/auth-server/package.json     ./packages/auth-server/
 COPY packages/trpc/package.json            ./packages/trpc/
 COPY realsass-sass-back/package.json       ./realsass-sass-back/
-COPY realsass-ecommerce-back/package.json  ./realsass-ecommerce-back/
 
 RUN pnpm install --frozen-lockfile
 
@@ -55,11 +54,9 @@ COPY tsconfig.base.json                 ./
 COPY packages/auth-server/              ./packages/auth-server/
 COPY packages/trpc/                     ./packages/trpc/
 COPY realsass-sass-back/                ./realsass-sass-back/
-COPY realsass-ecommerce-back/           ./realsass-ecommerce-back/
 
 # Los services tipan con el cliente Prisma generado de cada back
-RUN pnpm --filter realsass-sass-back exec prisma generate \
- && pnpm --filter realsass-ecommerce-back exec prisma generate
+RUN pnpm --filter realsass-sass-back exec prisma generate
 RUN pnpm --filter @real/trpc build
 
 # ─── Stage 3: build ───────────────────────────────────────────────────────────
@@ -77,8 +74,6 @@ ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
 ARG NEXT_PUBLIC_SASS_BACK_URL
-ARG NEXT_PUBLIC_ECOMMERCE_API_URL
-ARG NEXT_PUBLIC_STORE_FRONT_URL
 ARG NEXT_PUBLIC_SASS_FRONT_URL
 ARG NEXT_PUBLIC_REAL_BACK_URL
 ARG NEXT_PUBLIC_CHAT_IA_URL
@@ -92,8 +87,6 @@ ENV NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ENV NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ENV NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 ENV NEXT_PUBLIC_SASS_BACK_URL=$NEXT_PUBLIC_SASS_BACK_URL
-ENV NEXT_PUBLIC_ECOMMERCE_API_URL=$NEXT_PUBLIC_ECOMMERCE_API_URL
-ENV NEXT_PUBLIC_STORE_FRONT_URL=$NEXT_PUBLIC_STORE_FRONT_URL
 ENV NEXT_PUBLIC_SASS_FRONT_URL=$NEXT_PUBLIC_SASS_FRONT_URL
 ENV NEXT_PUBLIC_REAL_BACK_URL=$NEXT_PUBLIC_REAL_BACK_URL
 ENV NEXT_PUBLIC_CHAT_IA_URL=$NEXT_PUBLIC_CHAT_IA_URL

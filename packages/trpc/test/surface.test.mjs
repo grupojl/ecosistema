@@ -63,7 +63,7 @@ function matrixProcedures(back) {
 }
 
 describe('access-matrix ↔ dist', () => {
-  for (const [back, contract] of [['realsass-sass-back', 'sass-back'], ['realsass-ecommerce-back', 'ecommerce-back']]) {
+  for (const [back, contract] of [['realsass-sass-back', 'sass-back']]) {
     it(`${contract}: todo procedure clasificado existe en el contrato publicado`, () => {
       const procedures = matrixProcedures(back);
       assert.ok(procedures.length > 10, `access-matrix de ${back} casi vacío (${procedures.length})`);

@@ -31,7 +31,7 @@ const walk = (dir) =>
 /** Misma huella que scripts/build.mjs (si se cambia allá, cambiarla acá). */
 function contractFingerprint() {
   const h = createHash('sha256');
-  for (const back of ['realsass-sass-back', 'realsass-ecommerce-back']) {
+  for (const back of ['realsass-sass-back']) {
     const dir = join(root, back, 'src', 'trpc');
     for (const f of walk(dir).filter((p) => p.endsWith('.ts') && !p.endsWith('.spec.ts')).sort()) {
       h.update(posix(relative(root, f)));
@@ -41,17 +41,16 @@ function contractFingerprint() {
   return h.digest('hex');
 }
 
-const HINT = 'Corré `pnpm contracts` (prisma generate de ambos backs + pnpm --filter @real/trpc build).';
+const HINT = 'Corré `pnpm contracts` (prisma generate del back + pnpm --filter @real/trpc build).';
 
 describe('dist de @real/trpc', () => {
-  it('existe y expone los dos contratos', () => {
+  it('existe y expone el contrato', () => {
     for (const f of ['index.d.ts', 'index.js', 'markets.d.ts', 'router-types.d.ts', 'build-info.json']) {
       assert.ok(existsSync(join(dist, f)), `Falta dist/${f}. ${HINT}`);
     }
     const types = readFileSync(join(dist, 'router-types.d.ts'), 'utf8');
     assert.match(types, /sass-back/);
-    assert.match(types, /ecommerce-back/);
-    for (const back of ['sass-back', 'ecommerce-back']) {
+    for (const back of ['sass-back']) {
       const entry = readdirSync(join(dist, 'contracts', back)).length;
       assert.ok(entry > 0, `dist/contracts/${back} está vacío`);
     }
@@ -77,7 +76,7 @@ describe('tipos del contrato (sin `any`)', () => {
 
   const PROBE = `
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
-import type { SassAppRouter, EcommerceAppRouter } from '../dist/index';
+import type { SassAppRouter } from '../dist/index';
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type Procs<R> = R extends { _def: { procedures: infer P } } ? P : never;
@@ -96,16 +95,12 @@ type LiteralKeys<R> = string extends keyof Procs<R> ? false : true;
 export const detectorWorks: AnyProcs<{ _def: { procedures: { x: any; y: 1 } } }> extends 'x' ? true : false = true;
 
 export const sassKeys: LiteralKeys<SassAppRouter> = true;
-export const ecomKeys: LiteralKeys<EcommerceAppRouter> = true;
 export const sassProcs: [AnyProcs<SassAppRouter>] extends [never] ? true : AnyProcs<SassAppRouter> = true;
-export const ecomProcs: [AnyProcs<EcommerceAppRouter>] extends [never] ? true : AnyProcs<EcommerceAppRouter> = true;
 export const sassIn: [AnyAt<inferRouterInputs<SassAppRouter>>] extends [never] ? true : AnyAt<inferRouterInputs<SassAppRouter>> = true;
 export const sassOut: [AnyAt<inferRouterOutputs<SassAppRouter>>] extends [never] ? true : AnyAt<inferRouterOutputs<SassAppRouter>> = true;
-export const ecomIn: [AnyAt<inferRouterInputs<EcommerceAppRouter>>] extends [never] ? true : AnyAt<inferRouterInputs<EcommerceAppRouter>> = true;
-export const ecomOut: [AnyAt<inferRouterOutputs<EcommerceAppRouter>>] extends [never] ? true : AnyAt<inferRouterOutputs<EcommerceAppRouter>> = true;
 `;
 
-  it('SassAppRouter y EcommerceAppRouter conservan procedures, inputs y outputs tipados', () => {
+  it('SassAppRouter conserva procedures, inputs y outputs tipados', () => {
     writeFileSync(probe, PROBE);
     const options = {
       noEmit: true,

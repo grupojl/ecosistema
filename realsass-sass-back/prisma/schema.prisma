@@ -75,35 +75,43 @@ model UserSession {
 }
 
 model Organization {
-  id          String  @id @default(uuid())
-  userId      String
-  name        String?
-  description String?
-  logoUrl     String?
-  website     String?
-  phone       String?
-  address     String?
-  slug        String? @unique
-  enabledProducts Json @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  countryCode  String   @default("AR") @map("country_code")
+  id              String   @id @default(uuid())
+  userId          String
+  name            String?
+  description     String?
+  logoUrl         String?
+  website         String?
+  phone           String?
+  address         String?
+  slug            String?  @unique
+  enabledProducts Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  countryCode     String   @default("AR") @map("country_code")
   // ADR-031: dónde viven físicamente los datos de la organización. Distinto de countryCode
   // (qué ley aplica) y de Market (a qué países vende). Se asigna al crear con regionDe(countryCode).
-  dataRegion   String   @default("us") @map("data_region") // 'ar' | 'us'
-  markets      Market[]
+  dataRegion      String   @default("us") @map("data_region") // 'ar' | 'us'
+  markets         Market[]
+
+  // ── Welver (municipio) ───────────────────────────────────────────────────
+  // Habitantes: de acá se deriva el tramo de precio (src/welver/domain/tiers.ts).
+  population        Int?
+  // Plantilla de organigrama elegida en el onboarding (src/welver/domain/org-chart-templates.ts).
+  orgChartTemplate  String? @map("org_chart_template")
+  // Retención de conversaciones y datos del ciudadano. 90 días por defecto, configurable por municipio.
+  dataRetentionDays Int     @default(90) @map("data_retention_days")
 
   // ── Integración superadmin (ADR-013) ──────────────────────────────────────
   // status      → controla acceso al panel administrativo (TenantGuard)
   // storeStatus → controla visibilidad del storefront público (StoreService)
   // Son independientes — dos dimensiones de control (norte Shopify Partners)
-  ecosystemId  String      @default("welver")
-  plan         String      @default("free")
-  status       OrgStatus   @default(ACTIVE)
-  suspendedAt  DateTime?
-  storeStatus  StoreStatus @default(ACTIVE)
+  ecosystemId String      @default("welver")
+  plan        String      @default("free")
+  status      OrgStatus   @default(ACTIVE)
+  suspendedAt DateTime?
+  storeStatus StoreStatus @default(ACTIVE)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   collaborators Collaborator[]
   themes        ThemeConfig[]
   secrets       SecretConfig[]
@@ -114,6 +122,21 @@ model Organization {
   configAudit   ConfigAuditLog[]
   feedback      FeedbackReport[]
   settings      OrganizationSettings?
+
+  subscription      Subscription?
+  invoices          SubscriptionInvoice[]
+  entities          MunicipalEntity[]
+  entityLinks       EntityLink[]
+  entityPermissions EntityPermission[]
+  knowledgeItems    KnowledgeItem[]
+  knowledgeVersions KnowledgeVersion[]
+  mandates          Mandate[]
+  entityChannels    EntityChannel[]
+  testQuestions     TestQuestion[]
+  qualityRuns       QualityRun[]
+  informationGaps   InformationGap[]
+  apiProfiles       ApiProfile[]
+  apiKeys           ApiKey[]
 
   @@index([userId])
   @@map("organizations")
@@ -130,9 +153,10 @@ model Collaborator {
   acceptedAt     DateTime?
   updatedAt      DateTime           @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  invitation   Invitation?
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invitation        Invitation?
+  entityPermissions EntityPermission[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -290,8 +314,8 @@ model WebhookEndpoint {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  deliveryLogs  WebhookDeliveryLog[]
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveryLogs WebhookDeliveryLog[]
 
   @@index([organizationId])
   @@map("webhook_endpoints")
@@ -340,7 +364,7 @@ model Market {
   organizationId    String   @map("organization_id")
   countryCode       String   @map("country_code")
   isDefault         Boolean  @default(false) @map("is_default")
-  isActive          Boolean  @default(true)  @map("is_active")
+  isActive          Boolean  @default(true) @map("is_active")
   fulfillmentConfig Json     @default("{}") @map("fulfillment_config")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -397,4 +421,409 @@ model FeedbackReport {
   @@index([userUid])
   @@index([status, createdAt])
   @@map("feedback_reports")
+}
+
+// =============================================================================
+// WELVER — atención al ciudadano con IA para municipios (.claude/domain/welver-domain.md)
+// Un municipio = una Organization (ecosystemId = "welver"). Todo modelo lleva organizationId (RLS, ADR-029).
+// =============================================================================
+
+enum SubscriptionStatus {
+  PENDING // creada, todavía sin primer pago verificado
+  ACTIVE
+  GRACE // vencida, dentro del período de gracia (7–14 días): el servicio sigue
+  SUSPENDED // la IA deja de responder, los canales se pausan, el panel queda en solo lectura
+}
+
+enum BillingPeriod {
+  MONTHLY
+  ANNUAL
+}
+
+/// MANUAL: transferencia verificada a mano (v1). ONLINE: pasarela (Stripe / Mercado Pago), más adelante.
+enum BillingMode {
+  MANUAL
+  ONLINE
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  VOID
+}
+
+enum KnowledgeKind {
+  TEXT
+  PDF
+}
+
+/// DRAFT: copia de trabajo con cambios sin publicar. PUBLISHED: la copia de trabajo es igual a la última versión publicada.
+enum KnowledgeStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum MandateStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ChannelProvider {
+  WHATSAPP
+  INSTAGRAM
+  MESSENGER
+  TIKTOK
+}
+
+enum ChannelStatus {
+  PENDING
+  CONNECTED
+  PAUSED
+  ERROR
+}
+
+enum TestQuestionKind {
+  QUALITY // meta: al menos 95% correctas y con fuente
+  SECURITY // preguntas trampa: deben pasar al 100% antes de publicar
+}
+
+enum GapStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+/// Paquete único del municipio. El precio sale del tramo (1–4, según población); los montos están pendientes.
+model Subscription {
+  id                 String             @id @default(uuid())
+  organizationId     String             @unique @map("organization_id")
+  tier               Int
+  period             BillingPeriod      @default(MONTHLY)
+  billingMode        BillingMode        @default(MANUAL)
+  status             SubscriptionStatus @default(PENDING)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  graceDays          Int                @default(10)
+  /// Tope contractual de mensajes por mes (3× el uso medio del piloto); null hasta que haya datos del piloto.
+  messageCap         Int?
+  /// Si el municipio paga con precio de piloto.
+  isPilot            Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     SubscriptionInvoice[]
+
+  @@map("subscriptions")
+}
+
+/// Factura del período. En v1 la plataforma la marca como pagada a mano al verificar la transferencia.
+model SubscriptionInvoice {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  subscriptionId String
+  periodStart    DateTime
+  periodEnd      DateTime
+  /// En centavos de dólar. Null mientras los montos de los tramos sigan pendientes.
+  amountCents    Int?
+  currency       String        @default("USD")
+  status         InvoiceStatus @default(PENDING)
+  reference      String?
+  paidAt         DateTime?
+  markedPaidBy   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([subscriptionId])
+  @@map("subscription_invoices")
+}
+
+/// Ente del organigrama (secretaría, área, entidad). Árbol con un solo padre; nunca se borra, se archiva.
+model MunicipalEntity {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  parentId         String?
+  name             String
+  description      String?
+  sortOrder        Int       @default(0)
+  /// Aprobación activable por ente: si está activa, publicar exige pasar por revisión.
+  requiresApproval Boolean   @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  organization  Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent        MunicipalEntity?   @relation("EntityTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children      MunicipalEntity[]  @relation("EntityTree")
+  knowledge     KnowledgeItem[]
+  channels      EntityChannel[]
+  permissions   EntityPermission[]
+  linksFrom     EntityLink[]       @relation("LinkFrom")
+  linksTo       EntityLink[]       @relation("LinkTo")
+  testQuestions TestQuestion[]
+  gaps          InformationGap[]
+
+  @@index([organizationId, parentId])
+  @@map("municipal_entities")
+}
+
+/// Vínculo transversal: un programa compartido entre áreas que no son padre/hijo.
+model EntityLink {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  fromEntityId   String
+  toEntityId     String
+  label          String?
+  createdAt      DateTime @default(now())
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  from         MunicipalEntity @relation("LinkFrom", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  to           MunicipalEntity @relation("LinkTo", fields: [toEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([fromEntityId, toEntityId])
+  @@index([organizationId])
+  @@map("entity_links")
+}
+
+/// Permisos de un colaborador sobre un ente (y, por herencia, sobre sus descendientes).
+model EntityPermission {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  collaboratorId String
+  entityId       String
+  canView        Boolean  @default(true)
+  canEdit        Boolean  @default(false)
+  canApprove     Boolean  @default(false)
+  canPublish     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  collaborator Collaborator    @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  entity       MunicipalEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([collaboratorId, entityId])
+  @@index([organizationId])
+  @@index([entityId])
+  @@map("entity_permissions")
+}
+
+/// Dato de conocimiento de un ente: la copia de trabajo (borrador). Lo que la IA usa son las KnowledgeVersion.
+model KnowledgeItem {
+  id               String          @id @default(uuid())
+  organizationId   String          @map("organization_id")
+  entityId         String
+  title            String
+  kind             KnowledgeKind   @default(TEXT)
+  /// Texto libre, o el texto extraído del PDF.
+  content          String          @default("")
+  fileName         String?
+  fileUrl          String?
+  fileSizeBytes    Int?
+  status           KnowledgeStatus @default(DRAFT)
+  /// Última versión publicada (0 = nunca se publicó).
+  publishedVersion Int             @default(0)
+  authorUid        String
+  reviewerUid      String?
+  reviewNote       String?
+  /// Marca de sincronización con el índice de la IA (chatia). Null = pendiente. Se completa en la integración.
+  indexedAt        DateTime?
+  archivedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity       MunicipalEntity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  versions     KnowledgeVersion[]
+
+  @@index([organizationId, entityId, status])
+  @@map("knowledge_items")
+}
+
+/// Foto inmutable de cada publicación. El historial permite restaurar; la IA siempre usa la última.
+model KnowledgeVersion {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  itemId         String
+  version        Int
+  title          String
+  kind           KnowledgeKind
+  content        String
+  fileName       String?
+  fileUrl        String?
+  publishedBy    String
+  publishedAt    DateTime      @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  item         KnowledgeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, version])
+  @@index([organizationId])
+  @@map("knowledge_versions")
+}
+
+/// Mandato: foto del organigrama y de los datos publicados. Se archiva, se restaura o se duplica.
+model Mandate {
+  id             String        @id @default(uuid())
+  organizationId String        @map("organization_id")
+  name           String
+  status         MandateStatus @default(ARCHIVED)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  /// Documento validado con Zod en mandate-snapshot.ts.
+  snapshot       Json
+  createdBy      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("mandates")
+}
+
+/// Cuenta de Meta o TikTok de un ente (una por ente y red). El secreto vive en SecretConfig, nunca acá.
+model EntityChannel {
+  id             String          @id @default(uuid())
+  organizationId String          @map("organization_id")
+  entityId       String
+  provider       ChannelProvider
+  /// Identificador externo de la cuenta (phone number id, page id, etc.).
+  accountRef     String
+  displayName    String?
+  status         ChannelStatus   @default(PENDING)
+  /// Clave en SecretConfig con las credenciales de esta cuenta.
+  secretKey      String?
+  lastError      String?
+  connectedAt    DateTime?
+  pausedAt       DateTime?
+  /// Por qué está en pausa: MANUAL (la pausó el dueño) o SUBSCRIPTION (suspensión por falta de pago; se reanuda sola al renovar).
+  pausedReason   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity       MunicipalEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, provider])
+  @@unique([organizationId, provider, accountRef])
+  @@map("entity_channels")
+}
+
+/// Pregunta de prueba del municipio: calidad (95%) o seguridad (100%).
+model TestQuestion {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  entityId       String?
+  kind           TestQuestionKind @default(QUALITY)
+  question       String
+  /// Calidad: la respuesta correcta esperada. Seguridad: el comportamiento esperado (p. ej. "se niega y deriva al canal oficial").
+  expected       String?
+  active         Boolean          @default(true)
+  /// De dónde salió: MANUAL, ONBOARDING o GAP (promovida desde un hueco de información).
+  source         String           @default("MANUAL")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity       MunicipalEntity? @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, kind, active])
+  @@map("test_questions")
+}
+
+/// Resultado de una corrida del set de pruebas. La IA la ejecuta (integración); acá se guarda y se evalúa.
+model QualityRun {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  kind           TestQuestionKind
+  total          Int
+  passed         Int
+  /// Preguntas de prueba que tienen respuesta cargada en la base (regla de cobertura mínima).
+  covered        Int
+  /// Detalle por pregunta, validado con Zod en quality-gates.ts.
+  results        Json
+  triggeredBy    String?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, kind, createdAt])
+  @@map("quality_runs")
+}
+
+/// Pregunta que la IA no supo responder. Una fila por pregunta normalizada, con conteo.
+model InformationGap {
+  id                 String    @id @default(uuid())
+  organizationId     String    @map("organization_id")
+  entityId           String?
+  questionNormalized String
+  sampleQuestion     String
+  occurrences        Int       @default(1)
+  status             GapStatus @default(OPEN)
+  firstSeenAt        DateTime  @default(now())
+  lastSeenAt         DateTime  @default(now())
+  resolvedAt         DateTime?
+  resolvedBy         String?
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entity       MunicipalEntity? @relation(fields: [entityId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, questionNormalized])
+  @@index([organizationId, status, lastSeenAt])
+  @@map("information_gaps")
+}
+
+// ── v2 — perfiles y claves de API ────────────────────────────────────────────
+
+/// Configuración de la IA para un uso: jerarquía municipio → secretaría que hereda y restringe los entes visibles.
+model ApiProfile {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  parentId           String?
+  name               String
+  instructions       String?
+  tone               String?
+  language           String?
+  /// Ids de entes visibles. Vacío = hereda todo lo que ve el perfil padre (o todo el organigrama en el perfil raíz).
+  visibleEntityIds   Json     @default("[]")
+  allowedChannels    Json     @default("[]")
+  rateLimitPerMinute Int?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       ApiProfile?  @relation("ProfileTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children     ApiProfile[] @relation("ProfileTree")
+  keys         ApiKey[]
+
+  @@index([organizationId, parentId])
+  @@map("api_profiles")
+}
+
+/// Clave de API de un perfil. Solo se guarda el hash; la clave en claro se muestra una sola vez al crearla.
+model ApiKey {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  profileId      String
+  name           String
+  prefix         String
+  keyHash        String    @unique
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile      ApiProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, profileId])
+  @@map("api_keys")
 }

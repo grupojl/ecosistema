@@ -27,10 +27,8 @@ const BASELINE = join(root, 'scripts', 'type-safety.baseline.json');
 
 const ROOTS = [
   'realsass-sass-back/src',
-  'realsass-ecommerce-back/src',
   'realsass-sass-front',
   'realsass-dashboard-front',
-  'real-ecommerce-front',
   'realsass-design-front',
   'realsass-docs-front',
   'packages/auth-client/src',

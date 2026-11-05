@@ -30,7 +30,7 @@ const BACKUPS = path.join(ROOT, '.ui-backup')
 const ENTRIES = ['components', 'hooks', 'utils', 'styles', 'index.ts']
 
 /** Fronts que consumen @real/ui (nombre de workspace). El taller se verifica siempre. */
-const CONSUMERS = ['realsass-sass-front', 'realsass-dashboard-front', 'real-ecommerce-front', 'realsass-docs-front']
+const CONSUMERS = ['realsass-sass-front', 'realsass-dashboard-front', 'realsass-docs-front']
 const WORKSHOP = 'realsass-design-front'
 
 const [, , mode = 'check', ...rest] = process.argv

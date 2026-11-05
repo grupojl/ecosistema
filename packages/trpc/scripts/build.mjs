@@ -26,7 +26,6 @@ const dist = join(here, 'dist');
 
 const BACKS = [
   { key: 'sass-back',      dir: join(root, 'realsass-sass-back') },
-  { key: 'ecommerce-back', dir: join(root, 'realsass-ecommerce-back') },
 ];
 
 const runTsc = (args, cwd = here) =>

@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Package, ShoppingBag, ExternalLink,
+  Package,
   MessageSquare, CreditCard, TrendingUp,
   Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store, MonitorDown,
   LogOut, MonitorSmartphone, LifeBuoy, EllipsisVertical,
@@ -21,25 +21,18 @@ import {
 import { ConnectedDevicesDialog } from '@/components/devices-dialog-connected';
 import { ConnectedFeedbackDialog } from '@/components/feedback-dialog-connected';
 import { useAuth } from '@/features/auth/hooks/use-auth';
-import { useActiveOrganization } from '@/features/auth/hooks/use-active-organization';
 import { siteConfig } from '@/config/site';
 import { NAV_GROUPS } from '@/config/navigation';
 
 const ICONS: Record<string, React.ElementType> = {
-  Package, ShoppingBag, ExternalLink,
+  Package,
   MessageSquare, CreditCard, TrendingUp,
   Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store, MonitorDown,
 };
 
-const STORE_FRONT_URL = (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');
-const STOREFRONT = '__storefront__';
-
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname                        = usePathname();
   const { user, logout }                = useAuth();
-  const { organization }                = useActiveOrganization();
-  const slug                            = organization?.slug ?? null;
-  const storeUrl                        = slug && STORE_FRONT_URL ? `${STORE_FRONT_URL}/${slug}` : null;
   const [devicesOpen, setDevicesOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
@@ -48,18 +41,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       label: group.label,
       items: group.items.map((item) => {
         const Icon = ICONS[item.icon] ?? Package;
-        const external = item.href === STOREFRONT;
         return {
-          href:     external ? (storeUrl ?? '#') : item.href,
+          href:     item.href,
           label:    item.name,
           icon:     <Icon />,
-          external,
-          disabled: external ? !storeUrl : !item.active,
-          hint:     !external && !item.active ? 'Pronto' : undefined,
+          disabled: !item.active,
+          hint:     !item.active ? 'Pronto' : undefined,
         };
       }),
     })),
-    [storeUrl],
+    [],
   );
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
@@ -68,11 +59,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const rows = (
     <>
-      {storeUrl && (
-        <a href={storeUrl} target="_blank" rel="noopener noreferrer" className={rowClass}>
-          <ExternalLink className="h-4 w-4" /> Ver tienda
-        </a>
-      )}
       <Button type="button" variant="ghost" onClick={() => setDevicesOpen(true)} className={buttonRowClass}>
         <MonitorSmartphone className="h-4 w-4" /> Dispositivos
       </Button>
@@ -118,11 +104,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent side={variant === 'sidebar' ? 'top' : 'right'} align="start" className="w-60">
               <div className="px-2 py-1.5"><ThemeToggle /></div>
               <DropdownMenuSeparator />
-              {storeUrl && (
-                <DropdownMenuItem asChild>
-                  <a href={storeUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-4 w-4" /> Ver tienda</a>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onSelect={() => setDevicesOpen(true)}><MonitorSmartphone className="h-4 w-4" /> Dispositivos</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setFeedbackOpen(true)}><LifeBuoy className="h-4 w-4" /> Informar un problema</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -138,7 +119,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <AppShell
         brand={{ name: siteConfig.name }}
         groups={groups}
-        tabs={['/tienda/productos', '/tienda/pedidos', '/chat']}
+        tabs={['/', '/chat', '/configuracion/general']}
         isActive={isActive}
         linkAs={Link}
         account={account}
@@ -153,5 +134,3 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 }
 
 const buttonRowClass = 'w-full justify-start gap-3 px-3 font-medium';
-const rowClass =
-  'flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground';

@@ -1,5 +1,0 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import '@real/ui/styles/welver.css';
-@source '../../packages/ui/src';
-@source '../../packages/auth-client/src';

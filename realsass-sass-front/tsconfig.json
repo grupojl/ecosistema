@@ -38,7 +38,6 @@
   "exclude": [
     "node_modules",
     "../realsass-sass-back",
-    "../realsass-ecommerce-back",
     "../chat-ia-back",
     "../pagos-back",
     "../realsass-sass-back/src/collaborators/dto",

@@ -1,12 +1,8 @@
 /**
- * Helpers de formato del dashboard y query keys de prefetch. Las keys NO pueden desviarse de las que genera
- * @trpc/react-query: si lo hacen, el HydrationBoundary no hidrata y cada pantalla vuelve a pedir lo que el servidor ya trajo.
+ * Helpers de formato del dashboard.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { formatDate, formatMoney, formatRelativeTime, getInitials } from '@/lib/helpers'
-import { getQueryKey } from '@trpc/react-query'
-import { ecommerceQueryKeys } from '@/lib/trpc/keys'
-import { ecommerceTrpc } from '@/lib/trpc/ecommerce-client'
 
 describe('formatRelativeTime', () => {
   beforeEach(() => {
@@ -47,12 +43,5 @@ describe('formatMoney / formatDate / getInitials', () => {
   it('getInitials toma hasta 2 iniciales en mayúscula', () => {
     expect(getInitials('ana maría pérez')).toBe('AM')
     expect(getInitials('juan')).toBe('J')
-  })
-})
-
-describe('ecommerceQueryKeys', () => {
-  it('coinciden con las keys reales de @trpc/react-query (si no, la hidratación falla en silencio)', () => {
-    expect(ecommerceQueryKeys.products).toEqual(getQueryKey(ecommerceTrpc.adminCatalog.list, undefined, 'query'))
-    expect(ecommerceQueryKeys.orders).toEqual(getQueryKey(ecommerceTrpc.adminOrders.list, undefined, 'query'))
   })
 })

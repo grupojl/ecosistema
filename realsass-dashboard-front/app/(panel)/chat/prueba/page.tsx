@@ -43,7 +43,7 @@ function genUserId(): string {
 }
 
 export default function PruebaAsistentePage() {
-  // La tienda activa define el organizationId; el back resuelve el asistente por
+  // El municipio activo define el organizationId; el back resuelve el asistente por
   // organización (sin projectSlug).
   const { organization } = useActiveOrganization();
   const organizationId = organization?.id ?? '';
@@ -59,7 +59,7 @@ export default function PruebaAsistentePage() {
     if (!text || sending) return;
 
     if (!organizationId) {
-      setError('Todavía no hay una tienda activa.');
+      setError('Todavía no hay un municipio activo.');
       return;
     }
 

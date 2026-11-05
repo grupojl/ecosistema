@@ -3,7 +3,6 @@
  *
  * Helpers de fetch HTTP para lo que NO está en el contrato tRPC de @real/trpc:
  *   - servicios fuera de este monorepo (campañas / pagos, ecosistema-ms)
- *   - services de dashboard que aún no migraron a trpc.* (store)
  * TODO ADR-005: migrar cada service a trpc.* y eliminar este archivo.
  *
  * Auth: cookie HttpOnly (ADR-004) → credentials: 'include'.
@@ -27,10 +26,6 @@ const trim = (url: string | undefined): string => (url ?? '').replace(/\/+$/, ''
 
 function sassBackUrl(): string {
   return trim(process.env['NEXT_PUBLIC_SASS_BACK_URL'] ?? process.env['NEXT_PUBLIC_REAL_BACK_URL']);
-}
-
-function ecommerceBackUrl(): string {
-  return trim(process.env['NEXT_PUBLIC_ECOMMERCE_BACK_URL'] ?? process.env['NEXT_PUBLIC_ECOMMERCE_API_URL']);
 }
 
 /** Servicios externos que todavía se consumen por HTTP (sin AppRouter en @real/trpc). */
@@ -80,9 +75,6 @@ function makeClient(baseUrl: () => string) {
 
 /** Fetch autenticado contra sass-back (cookie __session). */
 export const realBackFetch = makeClient(sassBackUrl);
-
-/** Fetch autenticado contra ecommerce-back. */
-export const ecommerceFetch = makeClient(ecommerceBackUrl);
 
 /** Fetch contra servicios externos: apiClient.get('pagos', '/balance'). */
 export const apiClient = {

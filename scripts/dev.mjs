@@ -3,8 +3,8 @@
  * pnpm dev — levanta todo el ecosistema en local, en orden.
  *
  *   0. Contratos: si falta packages/trpc/dist corre `pnpm contracts` (los backs y fronts lo necesitan).
- *   1. Backs (sass-back :3020, ecommerce-back :3025) y se espera a que cada uno abra su puerto.
- *   2. Fronts (sass-front :3021, dashboard :3022, storefront :3023), de a uno y con una pausa entre cada uno.
+ *   1. Backs (sass-back :3020) y se espera a que cada uno abra su puerto.
+ *   2. Fronts (sass-front :3021, dashboard :3022), de a uno y con una pausa entre cada uno.
  *
  * Por qué en orden: los fronts renderizan en el servidor y llaman a los backs; si arrancan antes de que
  * Nest termine de compilar (~15–20 s) fallan con `fetch failed` / ECONNREFUSED.
@@ -25,10 +25,8 @@ const isWin = process.platform === 'win32';
 
 const SERVICES = [
   { key: 'sass-back',      pkg: 'realsass-sass-back',        port: 3020, kind: 'back',  color: 34 },
-  { key: 'ecommerce-back', pkg: 'realsass-ecommerce-back',   port: 3025, kind: 'back',  color: 36 },
   { key: 'sass-front',     pkg: 'realsass-sass-front',       port: 3021, kind: 'front', color: 32 },
   { key: 'dashboard',      pkg: 'realsass-dashboard-front',  port: 3022, kind: 'front', color: 35 },
-  { key: 'storefront',     pkg: 'real-ecommerce-front',      port: 3023, kind: 'front', color: 33 },
   { key: 'docs',           pkg: 'realsass-docs-front',       port: 3024, kind: 'front', color: 31 },
   { key: 'design',         pkg: 'realsass-design-front',      port: 3026, kind: 'front', color: 35 },
 ];

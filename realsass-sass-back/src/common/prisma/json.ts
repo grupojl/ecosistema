@@ -18,3 +18,11 @@ export function toJsonObject(value: Record<string, unknown>): Prisma.InputJsonOb
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/** Un valor JSON que no es null en la raíz (Prisma pide JsonNull explícito para eso): array, objeto o escalar. */
+const JsonValue = z.union([z.string(), z.number(), z.boolean(), z.array(z.json()), z.record(z.string(), z.json())]);
+
+/** Cualquier valor serializable a JSON (no nulo), listo para una columna `Json` (mismo borde que `toJsonObject`, sin exigir un objeto). */
+export function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JsonValue.parse(value);
+}

@@ -9,16 +9,16 @@
  *   import { createDashboardCaller } from '@/lib/trpc/server';
  *   import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
  *
- *   export default async function ProductosPage() {
+ *   export default async function EntesPage() {
  *     const queryClient = new QueryClient();
  *     const caller = createDashboardCaller(organizationId);
  *     await queryClient.prefetchQuery({
- *       queryKey: ['adminCatalog', 'list', organizationId],
- *       queryFn: () => caller.adminCatalog.list(),
+ *       queryKey: [['organigrama', 'list'], { type: 'query' }],
+ *       queryFn: () => caller.organigrama.list.query(),
  *     });
  *     return (
  *       <HydrationBoundary state={dehydrate(queryClient)}>
- *         <ProductosView />
+ *         <EntesView />
  *       </HydrationBoundary>
  *     );
  *   }
@@ -29,14 +29,15 @@
  * S4-D — HydrationBoundary / Fase 4 Escalón 11
  */
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
-import type { EcommerceAppRouter }         from '@real/trpc';
+import type { SassAppRouter }              from '@real/trpc';
 
-function getEcommerceBackUrl(): string {
+function getSassBackUrl(): string {
   // En server-side usamos la URL interna (sin NEXT_PUBLIC_)
-  const url = process.env['ECOMMERCE_BACK_URL']
-    ?? process.env['NEXT_PUBLIC_ECOMMERCE_API_URL'];
-  if (!url) throw new Error('[trpc/server] ECOMMERCE_BACK_URL no está configurado');
-  return url.replace(/\/+$/, '');
+  const url = process.env['SASS_BACK_URL']
+    ?? process.env['NEXT_PUBLIC_SASS_BACK_URL']
+    ?? process.env['NEXT_PUBLIC_REAL_BACK_URL'];
+  if (!url) throw new Error('[trpc/server] SASS_BACK_URL no está configurado');
+  return url.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
 }
 
 /**
@@ -50,10 +51,10 @@ export function createDashboardCaller(
   organizationId: string,
   sessionCookie?: string,
 ) {
-  return createTRPCClient<EcommerceAppRouter>({
+  return createTRPCClient<SassAppRouter>({
     links: [
       httpBatchLink({
-        url: `${getEcommerceBackUrl()}/api/v1/trpc`,
+        url: `${getSassBackUrl()}/api/v1/trpc`,
         headers() {
           return {
             'x-organization-id': organizationId,

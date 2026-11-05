@@ -1,7 +1,7 @@
 /**
  * config.ts — idiomas ACTIVOS de los paneles (sass-front, dashboard-front, design, docs).
  *
- * Mismo conjunto y misma cookie que el storefront (real-ecommerce-front/lib/i18n/config.ts), así la elección
+ * Misma cookie (NEXT_LOCALE) que usaba el storefront del ecosistema, así la elección
  * del usuario lo sigue entre fronts del mismo dominio. A diferencia del storefront, el idioma NO va en la URL:
  * los paneles no se indexan y sus URLs limpias son contrato (ADR-022). Se decide por cookie.
  *

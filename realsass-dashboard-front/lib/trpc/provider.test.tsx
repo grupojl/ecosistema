@@ -1,24 +1,21 @@
 // @vitest-environment jsdom
 /**
- * DT-DASH-CTX: el dashboard habla con DOS backs (sass-back y ecommerce-back). Con un solo contexto compartido, el
- * provider interno pisaba al externo y todas las consultas `trpc.*` terminaban en el ecommerce-back (404 "No procedure
- * found"). Este test renderiza ambos providers anidados y verifica a QUÉ URL va cada consulta.
+ * El dashboard habla con UN back (sass-back, que también es el back de Welver). Este test renderiza el provider y
+ * verifica a QUÉ URL va cada consulta, que no se duplica /api/v1 y que viajan la sesión y la organización activa.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { setActiveOrganizationId } from '@real/auth-client'
 import { trpc } from '@/lib/trpc/client'
-import { ecommerceTrpc } from '@/lib/trpc/ecommerce-client'
 import { TrpcProvider } from '@/lib/trpc/provider'
 
 const SASS = 'http://sass.test'
-const ECOM = 'http://ecom.test'
 
 function Probe() {
-  // procedures reales de cada back: organizations.me (sass-back) y adminCatalog.list (ecommerce-back)
+  // procedures reales: organizations.me (identidad) y organigrama.list (Welver)
   trpc.organizations.me.useQuery(undefined, { retry: false })
-  ecommerceTrpc.adminCatalog.list.useQuery(undefined, { retry: false })
+  trpc.organigrama.list.useQuery(undefined, { retry: false })
   return null
 }
 
@@ -33,12 +30,11 @@ function mount() {
   )
 }
 
-describe('TrpcProvider (sass-back + ecommerce-back)', () => {
+describe('TrpcProvider (sass-back)', () => {
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_SASS_BACK_URL = SASS
-    process.env.NEXT_PUBLIC_ECOMMERCE_API_URL = `${ECOM}/api/v1` // tolera que la variable ya traiga /api/v1
+    process.env.NEXT_PUBLIC_SASS_BACK_URL = `${SASS}/api/v1` // tolera que la variable ya traiga /api/v1
     fetchMock.mockReset()
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -56,35 +52,28 @@ describe('TrpcProvider (sass-back + ecommerce-back)', () => {
     setActiveOrganizationId(null)
     vi.unstubAllGlobals()
     delete process.env.NEXT_PUBLIC_SASS_BACK_URL
-    delete process.env.NEXT_PUBLIC_ECOMMERCE_API_URL
   })
 
   const urls = () => fetchMock.mock.calls.map((c) => String(c[0]))
 
-  it('cada consulta va a SU back: trpc.* a sass-back y ecommerceTrpc.* a ecommerce-back', async () => {
+  it('las consultas de identidad y de Welver van a sass-back', async () => {
     mount()
-    await waitFor(() => expect(urls().length).toBeGreaterThanOrEqual(2))
-
+    await waitFor(() => expect(urls().length).toBeGreaterThanOrEqual(1))
     const sass = urls().filter((u) => u.startsWith(`${SASS}/api/v1/trpc/`))
-    const ecom = urls().filter((u) => u.startsWith(`${ECOM}/api/v1/trpc/`))
     expect(sass.some((u) => u.includes('organizations.me'))).toBe(true)
-    expect(ecom.some((u) => u.includes('adminCatalog.list'))).toBe(true)
-
-    // el bug original: una consulta de un back llegando al otro
-    expect(sass.some((u) => u.includes('adminCatalog'))).toBe(false)
-    expect(ecom.some((u) => u.includes('organizations.me'))).toBe(false)
+    expect(sass.some((u) => u.includes('organigrama.list'))).toBe(true)
   })
 
   it('no duplica /api/v1 aunque la variable de entorno ya lo traiga', async () => {
     mount()
-    await waitFor(() => expect(urls().length).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(urls().length).toBeGreaterThanOrEqual(1))
     expect(urls().some((u) => u.includes('/api/v1/api/v1'))).toBe(false)
   })
 
-  it('envía la cookie de sesión (credentials: include) y la organización activa a ambos backs', async () => {
+  it('envía la cookie de sesión (credentials: include) y la organización activa', async () => {
     setActiveOrganizationId('org-42')
     mount()
-    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(1))
     for (const [, init] of fetchMock.mock.calls) {
       const i = init as RequestInit
       expect(i.credentials).toBe('include')

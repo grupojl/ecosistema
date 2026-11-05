@@ -21,6 +21,21 @@ export const TENANT_MODELS = [
   'ThemeConfig',
   'ContentTemplate',
   'OrganizationSettings',
+  // Welver (municipio)
+  'Subscription',
+  'SubscriptionInvoice',
+  'MunicipalEntity',
+  'EntityLink',
+  'EntityPermission',
+  'KnowledgeItem',
+  'KnowledgeVersion',
+  'Mandate',
+  'EntityChannel',
+  'TestQuestion',
+  'QualityRun',
+  'InformationGap',
+  'ApiProfile',
+  'ApiKey',
 ] as const;
 
 /**

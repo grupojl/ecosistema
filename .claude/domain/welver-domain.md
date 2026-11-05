@@ -425,7 +425,7 @@ Esta sección baja Welver a la plataforma del ecosistema (`CLAUDE.md`, `services
 
 ### 15.3 Funciones por capa
 
-**Back [Propuesta]:** módulo nuevo para organigrama, conocimiento, perfiles y calidad, en un back propio (`welver-back`). `sass-back` queda solo con identidad y configuración, y `ecommerce-back` es de comercio. El back nuevo resuelve el tenant como `ecommerce-back` (`OrganizationsClientService` + caché) y se publica como tercer router en `@real/trpc`.
+**Back [Decidido 2026-11-06]:** NO hay `welver-back` aparte. Welver vive en `realsass-sass-back` (módulo `src/welver/`, sin hop de red para el tenant) y se publica en el mismo `SassAppRouter` de `@real/trpc`; `ecommerce-back` y el storefront se eliminaron. (Antes estaba propuesto un back propio.)
 - `organigrama.*`: crear, mover, vincular y archivar entes.
 - `conocimiento.*`: cargar texto o PDF, importar CSV, borrador → revisión → publicado, versiones, mandato.
 - `canales.*`: conectar, estado y pausa por ente.
@@ -466,6 +466,19 @@ Esta sección baja Welver a la plataforma del ecosistema (`CLAUDE.md`, `services
 - Validación legal de los datos en EE.UU. para municipios argentinos y redacción del contrato de transferencia internacional (ADR-031).
 - Tabla de políticas por país (retención, consentimiento, borrado, exportación): Welver es su primer consumidor.
 
-- Confirmar el back propio contra un módulo dentro de `sass-back`.
+- ~~Confirmar el back propio contra un módulo dentro de `sass-back`.~~ **Resuelto 2026-11-06:** módulo dentro de `sass-back` (ver 15.3).
 - Dónde guardar los datos de conocimiento: la fuente es el back nuevo y chatia recibe una copia indexada (a definir).
 - Cómo se reparten los entes y las cuentas de Meta cuando el WhatsApp de ADR-025 es único por organización.
+
+### 15.7 Estado de la implementación (2026-11-06)
+
+**Hecho en `realsass-sass-back`** (detalle y tabla de routers en `services/realsass-sass-back.md`): municipio y tramos, suscripción con
+ciclo de vida y facturación manual, organigrama con plantillas y vínculos, permisos por ente, conocimiento con versiones y CSV,
+mandatos, registro de canales, calidad/seguridad/cobertura, huecos de información, y perfiles y claves de API (v2).
+Todo con aislamiento por `organizationId` verificado contra Postgres real.
+
+**Pendiente (integraciones):** Meta/TikTok, índice de chatia, subida y lectura de PDFs, ejecución de las corridas de calidad por la IA,
+endpoint público de la API, cobro online, cron de vencimientos, cuotas de mensajes, voz (v3) y los fronts.
+
+**Preguntas de la sección 14 que siguen abiertas** y que el código deja parametrizadas: cobertura mínima del piloto (70% implementado
+como en la opción A recomendada), página de estado y saludo de voz.

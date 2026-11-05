@@ -7,6 +7,8 @@
 --
 -- ESTADO (sass-back): SIN APLICAR. Hoy las queries usan `prisma.forTenant()` (filtro en la app) pero ninguna corre dentro de
 -- `runAsTenant`, así que activar esto vaciaría estas tablas. Antes de aplicarlo, hay que pasar a `runAsTenant`/contexto de sistema:
+--   · TODA query de las tablas de Welver (subscriptions, municipal_entities, knowledge_items, mandates, etc.),
+--     que ya usan prisma.forTenant() pero tampoco corren dentro de runAsTenant todavía;
 --   · TODA query de collaborators, secret_configs, quota_configs, webhook_endpoints, markets, feedback_reports, theme_configs, content_templates y organization_settings;
 --   · el worker y el servicio de entrega de webhooks (leen webhook_endpoints de VARIAS organizaciones → `setSystemContext`);
 --   · los accesos internos/superadmin a feedback_reports y a markets por id (sin organización → `setSystemContext`);
@@ -45,7 +47,21 @@ DECLARE
     'feedback_reports',
     'theme_configs',
     'content_templates',
-    'organization_settings'
+    'organization_settings',
+    'subscriptions',
+    'subscription_invoices',
+    'municipal_entities',
+    'entity_links',
+    'entity_permissions',
+    'knowledge_items',
+    'knowledge_versions',
+    'mandates',
+    'entity_channels',
+    'test_questions',
+    'quality_runs',
+    'information_gaps',
+    'api_profiles',
+    'api_keys'
   ];
   t text;
 BEGIN

@@ -20,7 +20,7 @@ interface TenantRequest extends HeaderSource {
 const CACHE_TTL = 90;
 
 /**
- * TenantGuard — resuelve TenantContext para ecommerce-back.
+ * TenantGuard — resuelve TenantContext para los backs que delegan el acceso a sass-back.
  *
  * IMPORTANTE: registrar como APP_GUARD global en AppModule, NO con @UseGuards().
  * Si se registra con @UseGuards() NestJS intenta instanciarlo en el modulo

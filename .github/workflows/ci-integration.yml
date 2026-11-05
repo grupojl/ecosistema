@@ -22,8 +22,8 @@ jobs:
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realsass_ecommerce_test
-      TEST_APP_DATABASE_URL: postgresql://rls_app:rls_app@localhost:5432/realsass_ecommerce_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realsass_sass_test
+      TEST_APP_DATABASE_URL: postgresql://rls_app:rls_app@localhost:5432/realsass_sass_test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -33,10 +33,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Contratos tRPC (ADR-019)
         run: pnpm contracts
-      - run: pnpm --filter realsass-ecommerce-back test:db:setup
-      - run: pnpm --filter realsass-ecommerce-back test:integration
-      - name: Cobertura completa de ecommerce-back (con Postgres): piso 90%
-        run: pnpm --filter realsass-ecommerce-back test:cov:full
       - name: Base descartable de sass-back
         run: pnpm --filter realsass-sass-back test:db:setup
       - name: Integración y cobertura completa de sass-back: piso 90%

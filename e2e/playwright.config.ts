@@ -1,7 +1,7 @@
 /**
  * Playwright — e2e del ecosistema (DT-TEST-04). Levanta el stack REAL en local, sin mocks de backend:
- *   emulador de Firebase Auth (9099) + sass-back (3027) + ecommerce-back (3026) con bases Postgres descartables
- *   sembradas + storefront (3028) + sass-front (3024) + dashboard-front (3029).
+ *   emulador de Firebase Auth (9099) + sass-back (3027) con base Postgres descartable
+ *   sembradas + sass-front (3024) + dashboard-front (3029).
  * Firebase real nunca interviene: los backs y los fronts apuntan al emulador de Auth (no requiere Java).
  * Los backs reciben una clave RSA efímera solo para arrancar.
  *
@@ -38,19 +38,19 @@ const frontFirebase = {
   NEXT_PUBLIC_FIREBASE_APP_ID: '1:1:web:e2e',
   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: AUTH_EMULATOR,
 };
-const allowedOrigins = [PORTS.storefront, PORTS.sassFront, PORTS.dashboardFront].map(origin).join(',');
+const allowedOrigins = [PORTS.sassFront, PORTS.dashboardFront].map(origin).join(',');
 
 export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
   expect: { timeout: 15_000 },
-  // Los flujos con login comparten el emulador y las bases: se ejecutan de a uno. El storefront público es de solo lectura.
+  // Los flujos con login comparten el emulador y las bases: se ejecutan de a uno.
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: origin(PORTS.storefront),
+    baseURL: origin(PORTS.sassFront),
     locale: 'es-AR',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -91,43 +91,6 @@ export default defineConfig({
       },
     },
     {
-      name: 'ecommerce-back',
-      command: 'node e2e/setup/prepare.mjs ecommerce && pnpm --filter realsass-ecommerce-back exec nest build && node realsass-ecommerce-back/dist/main.js',
-      cwd: '..',
-      url: `${origin(PORTS.ecommerce)}/api/v1/health`,
-      reuseExistingServer: reuse,
-      timeout: 240_000,
-      env: {
-        NODE_ENV: 'test',
-        PORT: String(PORTS.ecommerce),
-        DATABASE_URL: dbUrl('welver_ecommerce_e2e'),
-        ALLOWED_ORIGINS: allowedOrigins,
-        SASS_BACK_URL: origin(PORTS.sass),
-        ORGANIZATIONS_SERVICE_URL: origin(PORTS.sass),
-        ORGANIZATIONS_SERVICE_PREFIX: '/api/v1',
-        INTERNAL_API_KEY,
-        REDIS_ENABLED: 'false',
-        OUTBOX_ENABLED: 'true',
-        LOG_LEVEL: 'warn',
-        ...backFirebase,
-      },
-    },
-    {
-      name: 'storefront',
-      command: `pnpm --filter real-ecommerce-front exec next dev -p ${PORTS.storefront}`,
-      cwd: '..',
-      url: `${origin(PORTS.storefront)}/robots.txt`,
-      reuseExistingServer: reuse,
-      timeout: 180_000,
-      env: {
-        ECOMMERCE_BACK_URL: origin(PORTS.ecommerce),
-        NEXT_PUBLIC_ECOMMERCE_BACK_URL: origin(PORTS.ecommerce),
-        NEXT_PUBLIC_ECOMMERCE_API_URL: origin(PORTS.ecommerce),
-        SITE_URL: origin(PORTS.storefront),
-        ...frontFirebase,
-      },
-    },
-    {
       name: 'sass-front',
       command: `pnpm --filter realsass-sass-front exec next dev -p ${PORTS.sassFront}`,
       cwd: '..',
@@ -152,9 +115,6 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_SASS_BACK_URL: origin(PORTS.sass),
         NEXT_PUBLIC_REAL_BACK_URL: origin(PORTS.sass),
-        NEXT_PUBLIC_ECOMMERCE_API_URL: origin(PORTS.ecommerce),
-        ECOMMERCE_BACK_URL: origin(PORTS.ecommerce),
-        NEXT_PUBLIC_STORE_FRONT_URL: origin(PORTS.storefront),
         NEXT_PUBLIC_SASS_FRONT_URL: origin(PORTS.sassFront),
         ...frontFirebase,
       },

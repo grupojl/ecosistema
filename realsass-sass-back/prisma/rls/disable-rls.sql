@@ -10,7 +10,21 @@ DECLARE
     'feedback_reports',
     'theme_configs',
     'content_templates',
-    'organization_settings'
+    'organization_settings',
+    'subscriptions',
+    'subscription_invoices',
+    'municipal_entities',
+    'entity_links',
+    'entity_permissions',
+    'knowledge_items',
+    'knowledge_versions',
+    'mandates',
+    'entity_channels',
+    'test_questions',
+    'quality_runs',
+    'information_gaps',
+    'api_profiles',
+    'api_keys'
   ];
   t text;
 BEGIN

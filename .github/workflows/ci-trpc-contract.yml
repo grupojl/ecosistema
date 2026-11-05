@@ -4,13 +4,11 @@ on:
   push:
     paths:
       - 'realsass-sass-back/src/trpc/**'
-      - 'realsass-ecommerce-back/src/trpc/**'
       - 'packages/trpc/**'
   pull_request:
     branches: [main]
     paths:
       - 'realsass-sass-back/src/trpc/**'
-      - 'realsass-ecommerce-back/src/trpc/**'
       - 'packages/trpc/**'
 
 jobs:
@@ -18,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        front: [realsass-sass-front, realsass-dashboard-front, real-ecommerce-front]
+        front: [realsass-sass-front, realsass-dashboard-front]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

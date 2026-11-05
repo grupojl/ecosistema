@@ -8,7 +8,7 @@ ifneq (,$(wildcard .env.make))
 endif
 
 .PHONY: \
-	1 2 3 4 5 \
+	2 4 5 \
 	r \
 	x \
 	g \
@@ -18,17 +18,9 @@ endif
 # -----------------------------------------------------------------
 # PROYECTOS — cd al directorio y levanta
 # -----------------------------------------------------------------
-1:
-	@echo "=== real-ecommerce-front (:$(PORT_ECOMMERCE_FRONT)) ==="
-	@cd real-ecommerce-front && pnpm run dev
-
 2:
 	@echo "=== realsass-dashboard-front (:$(PORT_DASHBOARD_FRONT)) ==="
 	@cd realsass-dashboard-front && pnpm run dev
-
-3:
-	@echo "=== realsass-ecommerce-back (:$(PORT_ECOMMERCE_BACK)) ==="
-	@cd realsass-ecommerce-back && pnpm run start:dev
 
 4:
 	@echo "=== realsass-sass-back (:$(PORT_SASS_BACK)) ==="
@@ -43,9 +35,7 @@ endif
 # -----------------------------------------------------------------
 dev:
 	@bash sh/dev.sh \
-		"realsass-ecommerce-back:back:$(PORT_ECOMMERCE_BACK)" \
 		"realsass-sass-back:back:$(PORT_SASS_BACK)" \
-		"real-ecommerce-front:front:$(PORT_ECOMMERCE_FRONT)" \
 		"realsass-dashboard-front:front:$(PORT_DASHBOARD_FRONT)" \
 		"realsass-sass-front:front:$(PORT_SASS_FRONT)"
 
@@ -117,9 +107,7 @@ help:
 	@echo "  ECOSISTEMA WELVER — comandos disponibles"
 	@echo "================================================="
 	@echo ""
-	@echo "  make 1     → real-ecommerce-front     :$(PORT_ECOMMERCE_FRONT)"
 	@echo "  make 2     → realsass-dashboard-front :$(PORT_DASHBOARD_FRONT)"
-	@echo "  make 3     → realsass-ecommerce-back  :$(PORT_ECOMMERCE_BACK)"
 	@echo "  make 4     → realsass-sass-back       :$(PORT_SASS_BACK)"
 	@echo "  make 5     → realsass-sass-front      :$(PORT_SASS_FRONT)"
 	@echo ""

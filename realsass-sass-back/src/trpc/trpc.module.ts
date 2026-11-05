@@ -56,6 +56,17 @@ import { FeedbackService } from '@/feedback/feedback.service';
 import { FeedbackModule } from '@/feedback/feedback.module';
 import { DesktopService } from '@/desktop/desktop.service';
 import { DesktopModule } from '@/desktop/desktop.module';
+import { WelverModule } from '@/welver/welver.module';
+import { MunicipalityService } from '@/welver/municipality/municipality.service';
+import { SubscriptionService } from '@/welver/subscription/subscription.service';
+import { EntityPermissionsService } from '@/welver/entity-access/entity-access.service';
+import { OrgChartService } from '@/welver/org-chart/org-chart.service';
+import { KnowledgeService } from '@/welver/knowledge/knowledge.service';
+import { MandatesService } from '@/welver/mandates/mandates.service';
+import { ChannelsService } from '@/welver/channels/channels.service';
+import { QualityService } from '@/welver/quality/quality.service';
+import { GapsService } from '@/welver/gaps/gaps.service';
+import { ApiAccessService } from '@/welver/api-access/api-access.service';
 
 @Injectable()
 export class TrpcService {
@@ -79,6 +90,16 @@ export class TrpcService {
     private readonly feedback: FeedbackService,
     private readonly settings: OrgSettingsService,
     private readonly desktop: DesktopService,
+    private readonly municipality: MunicipalityService,
+    private readonly subscription: SubscriptionService,
+    private readonly entityPermissions: EntityPermissionsService,
+    private readonly orgChart: OrgChartService,
+    private readonly knowledge: KnowledgeService,
+    private readonly mandates: MandatesService,
+    private readonly channels: ChannelsService,
+    private readonly quality: QualityService,
+    private readonly gaps: GapsService,
+    private readonly apiAccess: ApiAccessService,
   ) {}
 
   get handler() {
@@ -102,6 +123,16 @@ export class TrpcService {
       feedbackService: this.feedback,
       settingsService: this.settings,
       desktopService: this.desktop,
+      municipalityService: this.municipality,
+      subscriptionService: this.subscription,
+      entityPermissionsService: this.entityPermissions,
+      orgChartService: this.orgChart,
+      knowledgeService: this.knowledge,
+      mandatesService: this.mandates,
+      channelsService: this.channels,
+      qualityService: this.quality,
+      gapsService: this.gaps,
+      apiAccessService: this.apiAccess,
     });
 
     return createExpressMiddleware({
@@ -141,6 +172,7 @@ export class TrpcService {
     WhatsappModule,
     FeedbackModule,
     DesktopModule,
+    WelverModule,
   ],
   providers: [TrpcService],
 })

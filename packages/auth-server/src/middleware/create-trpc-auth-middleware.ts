@@ -12,7 +12,7 @@
  *     getOrganizationAccess: (token, uid, orgId) =>
  *       usersService.getOrganizationAccess(uid, orgId),         // sass-back
  *       // ó
- *       orgsClient.getAccess(token, uid, orgId),                // ecommerce-back
+ *       orgsClient.getAccess(token, uid, orgId),
  *   });
  *
  * Contratos:
@@ -41,7 +41,7 @@ export interface TrpcAuthMiddlewareOptions {
    * Firma unificada: recibe (firebaseToken, firebaseUid, organizationId)
    *
    * - sass-back:      (_, uid, orgId) => UsersService.getOrganizationAccess(uid, orgId)
-   * - ecommerce-back: (token, uid, orgId) => OrganizationsClientService.getAccess(token, uid, orgId)
+   * - back remoto: (token, uid, orgId) => OrganizationsClientService.getAccess(token, uid, orgId)
    *
    * El token es el Bearer raw (sin "Bearer ") — disponible porque
    * firebaseAuth corre primero y lo expone en req.firebaseToken.

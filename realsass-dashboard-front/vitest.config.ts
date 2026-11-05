@@ -12,7 +12,7 @@ export default defineConfig({
       provider: 'v8',
       // Declara QUÉ código cuenta: sin `include`, v8 solo mide los archivos que algún test llega a importar y un archivo
       // sin tests no resta (la cobertura se ve mejor de lo que es).
-      include: ["lib/**/*.{ts,tsx}","features/store/**/*.{ts,tsx}"],
+      include: ["lib/**/*.{ts,tsx}"],
       exclude: ["**/*.{test,spec}.{ts,tsx}","**/*.d.ts","**/types.ts","**/types/**","lib/i18n/**"],
       reporter: ['text-summary', 'json-summary'],
       // Piso de NO RETROCESO (medido el 2026-11-03: 92% de líneas). Subirlo, nunca bajarlo.

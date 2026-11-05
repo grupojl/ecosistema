@@ -69,14 +69,14 @@ describe('api-client', () => {
     ['put', 'PUT'],
     ['patch', 'PATCH'],
   ] as const)('%s envía el cuerpo como JSON con el método %s', async (method, verb) => {
-    vi.stubEnv('NEXT_PUBLIC_ECOMMERCE_API_URL', 'http://ecom.test')
+    vi.stubEnv('NEXT_PUBLIC_SASS_BACK_URL', 'http://sass.test')
     fetchMock.mockResolvedValue(json({ id: 1 }))
-    const { ecommerceFetch } = await import('./api-client')
-    await ecommerceFetch[method]('/products', { name: 'Zapato' }, 'org-9')
+    const { realBackFetch } = await import('./api-client')
+    await realBackFetch[method]('/entes', { name: 'Salud' }, 'org-9')
     const [url, init] = fetchMock.mock.calls[0]!
-    expect(url).toBe('http://ecom.test/products')
+    expect(url).toBe('http://sass.test/entes')
     expect(init.method).toBe(verb)
-    expect(JSON.parse(init.body)).toEqual({ name: 'Zapato' })
+    expect(JSON.parse(init.body)).toEqual({ name: 'Salud' })
   })
 
   it('delete no manda cuerpo', async () => {
@@ -160,30 +160,31 @@ describe('chat-ia-client', () => {
 })
 
 describe('createDashboardCaller (SSR)', () => {
-  it('exige la URL del ecommerce-back', async () => {
-    vi.stubEnv('ECOMMERCE_BACK_URL', '')
-    vi.stubEnv('NEXT_PUBLIC_ECOMMERCE_API_URL', '')
+  it('exige la URL de sass-back', async () => {
+    vi.stubEnv('SASS_BACK_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_SASS_BACK_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_REAL_BACK_URL', '')
     const { createDashboardCaller } = await import('./trpc/server')
-    expect(() => createDashboardCaller('org-1')).toThrow('ECOMMERCE_BACK_URL no está configurado')
+    expect(() => createDashboardCaller('org-1')).toThrow('SASS_BACK_URL no está configurado')
   })
 
   it('manda la organización y reenvía la cookie de sesión como __session', async () => {
-    vi.stubEnv('ECOMMERCE_BACK_URL', 'http://ecom.test///')
+    vi.stubEnv('SASS_BACK_URL', 'http://sass.test///')
     fetchMock.mockResolvedValue(new Response(JSON.stringify([{ result: { data: [] } }]), { status: 200, headers: { 'content-type': 'application/json' } }))
     const { createDashboardCaller } = await import('./trpc/server')
-    await createDashboardCaller('org-1', 'COOKIE-VALUE').adminCatalog.list.query()
+    await createDashboardCaller('org-1', 'COOKIE-VALUE').organigrama.list.query()
     const [url, init] = fetchMock.mock.calls[0]!
-    expect(String(url)).toContain('http://ecom.test/api/v1/trpc/adminCatalog.list')
+    expect(String(url)).toContain('http://sass.test/api/v1/trpc/organigrama.list')
     const headers = new Headers(init.headers)
     expect(headers.get('x-organization-id')).toBe('org-1')
     expect(headers.get('cookie')).toBe('__session=COOKIE-VALUE')
   })
 
   it('sin cookie no manda el header cookie', async () => {
-    vi.stubEnv('ECOMMERCE_BACK_URL', 'http://ecom.test')
+    vi.stubEnv('SASS_BACK_URL', 'http://sass.test')
     fetchMock.mockResolvedValue(new Response(JSON.stringify([{ result: { data: [] } }]), { status: 200, headers: { 'content-type': 'application/json' } }))
     const { createDashboardCaller } = await import('./trpc/server')
-    await createDashboardCaller('org-1').adminCatalog.list.query()
+    await createDashboardCaller('org-1').organigrama.list.query()
     expect(new Headers(fetchMock.mock.calls[0]![1].headers).has('cookie')).toBe(false)
   })
 })

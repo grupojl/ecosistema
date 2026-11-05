@@ -2,7 +2,6 @@
 
 // NEXT_PUBLIC_SASS_BACK_URL manda; NEXT_PUBLIC_REAL_BACK_URL queda como respaldo (el Dockerfile aún solo define esa).
 export const REAL_BACK_URL     = process.env.NEXT_PUBLIC_SASS_BACK_URL ?? process.env.NEXT_PUBLIC_REAL_BACK_URL ?? '';
-export const ECOMMERCE_API_URL = process.env.NEXT_PUBLIC_ECOMMERCE_API_URL ?? '';
 
 // ─── TanStack Query keys ──────────────────────────────────────────────────────
 
@@ -15,13 +14,6 @@ export const QUERY_KEYS = {
   configWebhooks:  ['config-webhooks']  as const,
   configWebhookLogs: ['config-wh-logs'] as const,
   configQuotas:    ['config-quotas']    as const,
-  // Ecommerce — real-ecommerce-back
-  products:        ['products']         as const,
-  product:         ['product']          as const,
-  categories:      ['categories']       as const,
-  orders:          ['orders']           as const,
-  order:           ['order']            as const,
-  inventory:       ['inventory']        as const,
   // Módulos futuros
   conversaciones:  ['conversaciones']   as const,
   mensajes:        ['mensajes']         as const,

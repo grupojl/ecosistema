@@ -1,13 +1,5 @@
 export const NAV_GROUPS = [
   {
-    label: 'Tienda',
-    items: [
-      { name: 'Productos',  href: '/tienda/productos', icon: 'Package',     active: true  },
-      { name: 'Pedidos',    href: '/tienda/pedidos',   icon: 'ShoppingBag', active: true  },
-      { name: 'Ver tienda', href: '__storefront__',              icon: 'ExternalLink', active: true },
-    ],
-  },
-  {
     label: 'Módulos',
     items: [
       { name: 'Chat IA',  href: '/chat',     icon: 'MessageSquare', active: true  },

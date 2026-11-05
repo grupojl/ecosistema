@@ -17,10 +17,8 @@ const ROOT = resolve(new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-
 
 const SERVICES = [
   'realsass-sass-back',
-  'realsass-ecommerce-back',
   'realsass-sass-front',
   'realsass-dashboard-front',
-  'real-ecommerce-front',
 ];
 
 /** Variables del sistema / de plataforma: no se documentan en el .env.example. */

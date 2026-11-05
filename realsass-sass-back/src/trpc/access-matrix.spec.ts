@@ -114,10 +114,79 @@ const CONTRACT: Record<string, [string, string, string, string]> = {
   'whatsapp.connect': [U, B, F, B],
   'whatsapp.disconnect': [U, B, F, B],
   'whatsapp.status': [U, B, F, O],
+  // ── Welver (welver-domain.md §15.3) ──
+  'municipio.get': [U, B, O, O], // cualquier miembro lee
+  'municipio.update': [U, B, F, B], // solo el dueño escribe
+  'suscripcion.get': [U, B, O, O], // cualquier miembro ve el estado (aviso de vencimiento)
+  'suscripcion.create': [U, B, F, B], // solo el dueño contrata
+  'suscripcion.invoices': [U, B, F, O], // solo el dueño ve las facturas
+  'organigrama.list': [U, B, O, O], // cada miembro ve los entes que puede ver
+  'organigrama.get': [U, B, B, B],
+  'organigrama.create': [U, B, B, B], // permiso por ente en el servicio
+  'organigrama.update': [U, B, B, B], // permiso por ente en el servicio
+  'organigrama.archive': [U, B, F, B], // estructura: solo el dueño
+  'organigrama.restore': [U, B, F, B], // estructura: solo el dueño
+  'organigrama.listLinks': [U, B, O, O],
+  'organigrama.link': [U, B, B, B], // permiso por ente en el servicio
+  'organigrama.unlink': [U, B, B, B], // permiso por ente en el servicio
+  'organigrama.templates': [U, B, O, O],
+  'organigrama.applyTemplate': [U, B, F, B], // solo el dueño
+  'permisosEnte.list': [U, B, F, O], // solo el dueño gestiona permisos
+  'permisosEnte.set': [U, B, F, B], // solo el dueño gestiona permisos
+  'permisosEnte.remove': [U, B, F, B], // solo el dueño gestiona permisos
+  'conocimiento.list': [U, B, O, O],
+  'conocimiento.get': [U, B, B, B],
+  'conocimiento.create': [U, B, B, B],
+  'conocimiento.update': [U, B, B, B],
+  'conocimiento.submit': [U, B, B, B],
+  'conocimiento.reject': [U, B, B, B],
+  'conocimiento.publish': [U, B, B, B],
+  'conocimiento.archive': [U, B, B, B],
+  'conocimiento.unarchive': [U, B, B, B],
+  'conocimiento.versions': [U, B, B, B],
+  'conocimiento.restoreVersion': [U, B, B, B],
+  'conocimiento.importCsv': [U, B, B, B],
+  'mandatos.list': [U, B, F, O],
+  'mandatos.create': [U, B, F, B],
+  'mandatos.duplicate': [U, B, F, B],
+  'mandatos.rename': [U, B, F, B],
+  'mandatos.restore': [U, B, F, B],
+  'mandatos.remove': [U, B, F, B],
+  'canales.list': [U, B, O, O],
+  'canales.register': [U, B, F, B], // conectar redes: solo el dueño
+  'canales.pause': [U, B, F, B],
+  'canales.resume': [U, B, F, B],
+  'canales.remove': [U, B, F, B],
+  'calidad.questions': [U, B, O, O],
+  'calidad.createQuestion': [U, B, B, B], // permiso por ente en el servicio
+  'calidad.updateQuestion': [U, B, B, B],
+  'calidad.removeQuestion': [U, B, B, B],
+  'calidad.history': [U, B, O, O],
+  'calidad.readiness': [U, B, O, O],
+  'huecos.weekly': [U, B, O, O],
+  'huecos.list': [U, B, O, O],
+  'huecos.setStatus': [U, B, B, B],
+  'huecos.promoteToQuestion': [U, B, B, B],
+  'perfiles.list': [U, B, F, O],
+  'perfiles.create': [U, B, F, B],
+  'perfiles.update': [U, B, F, B],
+  'perfiles.remove': [U, B, F, B],
+  'claves.list': [U, B, F, O],
+  'claves.create': [U, B, F, B],
+  'claves.rotate': [U, B, F, B],
+  'claves.revoke': [U, B, F, B],
 };
 
 // markets.resolve queda fuera: lo protege la clave interna (INTERNAL_API_KEY), no la sesión. Se prueba aparte abajo.
-const EXCLUDED = new Set(['markets.resolve']);
+const INTERNAL_PROCEDURES = [
+  'calidad.internalRecordRun',
+  'claves.internalVerify',
+  'huecos.internalRecord',
+  'suscripcion.internalMarkPaid',
+  'suscripcion.internalSetMessageCap',
+  'suscripcion.internalSync',
+];
+const EXCLUDED = new Set(['markets.resolve', ...INTERNAL_PROCEDURES]);
 
 async function probe(path: string, ctx: (typeof CALLERS)[keyof typeof CALLERS]): Promise<string> {
   const fn = procedureOf(appRouter.createCaller(ctx), path);
@@ -154,6 +223,26 @@ describe('matriz de acceso del appRouter', () => {
     const sensitive = paths.filter((p) => /^(configSecrets|configWebhooks|whatsapp|configAudit|configQuotas)\./.test(p) || /^markets\.(create|update|delete|setDefault)$/.test(p));
     expect(sensitive.length).toBeGreaterThan(10);
     for (const path of sensitive) expect(await probe(path, CALLERS.collab)).toBe('FORBIDDEN');
+  });
+
+  it('procedures de Welver servicio-a-servicio: sin la clave interna correcta nunca ejecutan (fail-closed)', async () => {
+    delete process.env['INTERNAL_API_KEY'];
+    for (const path of INTERNAL_PROCEDURES) {
+      for (const ctx of Object.values(CALLERS)) expect(await probe(path, ctx)).not.toBe('OK');
+    }
+    process.env['INTERNAL_API_KEY'] = 'clave-interna';
+    for (const path of INTERNAL_PROCEDURES) {
+      for (const ctx of Object.values(CALLERS)) expect(await probe(path, ctx)).not.toBe('OK');
+    }
+    delete process.env['INTERNAL_API_KEY'];
+  });
+
+  it('invariante: lo que cambia la estructura, los canales, los mandatos, las claves o los permisos nunca lo ejecuta un colaborador', async () => {
+    const ownerOnly = paths.filter((p) =>
+      /^(mandatos|canales|perfiles|claves|permisosEnte)\.(?!list$)/.test(p) || /^(organigrama\.(archive|restore|applyTemplate)|municipio\.update|suscripcion\.create)$/.test(p),
+    );
+    expect(ownerOnly.length).toBeGreaterThan(15);
+    for (const path of ownerOnly) expect(await probe(path, CALLERS.collab)).toBe('FORBIDDEN');
   });
 
   it('markets.resolve (clave interna): sin la clave correcta nunca ejecuta', async () => {
