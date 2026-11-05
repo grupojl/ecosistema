@@ -32,6 +32,7 @@
   "devDependencies": {
     "@playwright/test": "catalog:",
     "firebase-tools": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

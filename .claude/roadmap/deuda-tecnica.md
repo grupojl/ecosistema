@@ -1,7 +1,16 @@
 # Deuda técnica — welver
 
-Última actualización: 2026-11-03
+Última actualización: 2026-11-05
 
+## Región de datos — ADR-031 (2026-11-05)
+
+- [x] `Organization.dataRegion` + `regionDe(countryCode)` + migración `20261105120000_organization_data_region` (código y tests de `regionDe` en verde).
+- [ ] DT-REG-1: **aplicar la migración** en cada entorno (`prisma migrate deploy`).
+- [ ] DT-REG-2: tabla de políticas por país (retención, consentimiento, borrado, transferencia internacional), con el primer consumidor (retención de Welver). Sin valores legales inventados.
+- [ ] DT-REG-3: validación legal por un abogado local (Ley 25.326 con datos en EE.UU.) antes de firmar con un municipio.
+- [ ] DT-REG-4: sumar `dataRegion` (aditivo) a `OrganizationAccess` / `GET /internal/access/...` cuando otro back lo necesite.
+- [ ] DT-REG-6: `ar` es solo una etiqueta; no hay infraestructura en Argentina. No prometer residencia física en el país en contratos ni material comercial hasta que exista un despliegue real.
+- [ ] DT-REG-5: ADR de infraestructura (hosting, CI y backups) y, si un cliente exige residencia física, ADR de región por organización.
 
 ## ✅ Antes diferido, resuelto el 2026-11-03 (confirmado por el dueño del proyecto)
 
@@ -488,3 +497,11 @@ Norte definido en `architecture/12-ui-norte.md`. **Aún no se auditó ningún fr
 - [x] Cross-tenant: `realsass-sass-back/src/prisma/cross-tenant.spec.ts` exige que todo repositorio Prisma tenga su caso de aislamiento en `repositories.integration.spec.ts`; el ecommerce lo cubre `tenant-scope.integration.spec.ts` + `access-matrix.spec.ts`.
 - [x] `@real/trpc`: `test/surface.test.mjs` (exports, hoja de markets, access-matrix ↔ dist). 11 tests.
 - [ ] Sin cambio: Tauri sin compilar y app de Meta sin crear (requieren entorno/cuenta que no hay acá).
+
+## Auditoría de dependencias — 2026-11-05
+
+- [x] `pnpm audit`: de 71 vulnerabilidades (7 críticas, 20 altas) a 1 baja. `pnpm audit --prod` limpio. Todo se resolvió en el workspace (`pnpm-workspace.yaml`, ADR-018): catalog `next ^16.4.5`, `zod ^4.6.7`, `joi ^18.3.2`, `vitest`/`@vitest/ui` `^4.1.12`, `@vitest/coverage-v8 4.1.12`, `vite ^7.3.7`; más overrides para transitivas (`sharp`, `multer`, `handlebars`, `proxy-addr`, `body-parser`, `systeminformation`, `@grpc/grpc-js`, `qs`, `glob`, `minimatch`, `fast-uri`, `re2js`, `@fastify/busboy`…).
+- `vite` está declarado en las `devDependencies` de la **raíz** (`catalog:`): sin eso pnpm mantenía `vite@7.3.6` para todos los paquetes con vitest (peer resuelto desde la raíz del workspace).
+- `@vitest/mocker` se acota a `~4.1.12`: un override abierto (`>=`) instala la 5.x, incompatible con vitest 4.
+- [ ] DT-DEP-1: queda `deepmerge` (baja, **solo dev**: `@nestjs/cli` → `fork-ts-checker-webpack-plugin` en ecommerce-back). El aviso no tiene versión corregida; revisar al actualizar `@nestjs/cli`.
+- Los overrides son deuda a vigilar: al subir la dependencia directa que los trae, retirar el override que ya no haga falta.

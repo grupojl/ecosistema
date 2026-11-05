@@ -139,3 +139,21 @@ export function readConsent(storage: Pick<Storage, 'getItem'> | null | undefined
 export function writeConsent(storage: Pick<Storage, 'setItem'> | null | undefined, value: 'granted' | 'denied'): void {
   try { storage?.setItem(CONSENT_KEY, value) } catch { /* sin almacenamiento: se vuelve a preguntar */ }
 }
+
+// ─── Descarga de la app (página /configuracion/escritorio) ───────────────────────────────────────────────────────────
+
+/** Sistemas para los que el pipeline (`desktop-release.yml`) publica instalador hoy. Ampliar al sumar entradas a la matriz. */
+export const DESKTOP_SUPPORTED_OS: readonly DesktopOs[] = ['windows']
+
+export function isDesktopOsSupported(os: DesktopOs): boolean {
+  return DESKTOP_SUPPORTED_OS.includes(os)
+}
+
+/** Solo se ofrece una URL de descarga http(s): el valor viene de configuración del back, pero nunca debe poder ser `javascript:`. */
+export function safeDownloadUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  try {
+    const u = new URL(raw)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null
+  } catch { return null }
+}

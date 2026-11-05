@@ -24,6 +24,7 @@ export const NAV_GROUPS = [
       { name: 'Feature Flags', href: '/configuracion/flags',    icon: 'ToggleLeft', active: true },
       { name: 'Webhooks',      href: '/configuracion/webhooks', icon: 'Webhook',    active: true },
       { name: 'Quotas',        href: '/configuracion/quotas',   icon: 'ChartColumnBig',  active: true },
+      { name: 'App de escritorio', href: '/configuracion/escritorio', icon: 'MonitorDown', active: true },
     ],
   },
 ] as const;

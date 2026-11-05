@@ -88,6 +88,9 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   countryCode  String   @default("AR") @map("country_code")
+  // ADR-031: dónde viven físicamente los datos de la organización. Distinto de countryCode
+  // (qué ley aplica) y de Market (a qué países vende). Se asigna al crear con regionDe(countryCode).
+  dataRegion   String   @default("us") @map("data_region") // 'ar' | 'us'
   markets      Market[]
 
   // ── Integración superadmin (ADR-013) ──────────────────────────────────────

@@ -48,6 +48,12 @@ emitida en `POST /auth/session`. Requiere aplicar la migración `20261016120000_
 `Organization.slug` y `Organization.enabledProducts` tienen comentario
 `// ← AGREGAR` — verificar migraciones aplicadas en todos los entornos.
 
+## Región de datos (ADR-031, 2026-11-05)
+
+Campo `Organization.dataRegion` + `src/regions/data-region.ts` (`regionDe`, `toDataRegion`, `DATA_REGIONS`). `PrismaOrganizationsRepository.create`
+lo fija desde el país. Requiere aplicar la migración `20261105120000_organization_data_region`. Pendiente: tabla de políticas por país
+(con el primer consumidor, retención de Welver) y exponer `dataRegion` en `OrganizationAccess` cuando otro back lo necesite.
+
 ## WhatsApp (ADR-025, 2026-10-20)
 
 Router tRPC `whatsapp.{status,connect,disconnect}` (`src/trpc/routers/whatsapp.router.ts`, solo OWNER; conectar/desconectar con step-up) y

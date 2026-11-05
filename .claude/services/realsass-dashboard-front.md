@@ -95,3 +95,8 @@ Todos los componentes UI se importan desde `@real/ui`.
 `components/ui/` fue eliminado — no existe más en este front.
 `lib/utils.ts` re-exporta `cn` desde `@real/ui`.
 Cliente tRPC usa `credentials: 'include'` — cookie __session viaja automáticamente.
+
+## App de escritorio y avatar (2026-11-05)
+
+- `/configuracion/escritorio`: descarga de la app Tauri (ver `services/realsass-dashboard-desktop.md`, «Descarga desde el panel»).
+- El avatar del menú de cuenta (`DashboardShell`) muestra `user.avatarUrl` (foto de Google) con `referrerPolicy="no-referrer"`; sin foto, la inicial.

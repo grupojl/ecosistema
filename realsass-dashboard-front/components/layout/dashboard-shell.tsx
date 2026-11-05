@@ -10,11 +10,11 @@ import { usePathname } from 'next/navigation';
 import {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store,
+  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store, MonitorDown,
   LogOut, MonitorSmartphone, LifeBuoy, EllipsisVertical,
 } from 'lucide-react';
 import {
-  AppShell, Avatar, AvatarFallback, Button, ThemeToggle,
+  AppShell, Avatar, AvatarFallback, AvatarImage, Button, ThemeToggle,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
   type AccountVariant, type NavGroup,
 } from '@real/ui';
@@ -28,7 +28,7 @@ import { NAV_GROUPS } from '@/config/navigation';
 const ICONS: Record<string, React.ElementType> = {
   Package, ShoppingBag, ExternalLink,
   MessageSquare, CreditCard, TrendingUp,
-  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store,
+  Palette, ToggleLeft, Webhook, ChartColumnBig, Building2, Store, MonitorDown,
 };
 
 const STORE_FRONT_URL = (process.env.NEXT_PUBLIC_STORE_FRONT_URL ?? '').replace(/\/+$/, '');
@@ -101,6 +101,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="ghost" aria-label="Menú de cuenta" className={`${buttonRowClass} h-auto ${variant === 'sidebar' ? '' : 'justify-center px-0'}`}>
                 <Avatar className="size-7">
+                  {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
                   <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">{initial}</AvatarFallback>
                 </Avatar>
                 {variant === 'sidebar' && (

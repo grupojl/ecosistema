@@ -21,7 +21,7 @@
 | 2 | **Base de conocimiento y organigrama** | Definido (árbol, texto y PDFs, versiones); piloto en municipio chico, sin sitio web para importar y con carga en autoservicio; sin control de datos viejos (se usa la última versión) | Importación del sitio del municipio y control de datos desactualizados |
 | 3 | **Canales y voz** (Meta, WhatsApp) | Definido; voz por Meta que se construye sin prueba técnica previa de latencia ni de costo; sin límite de minutos | Todos los canales y la voz funcionando con latencia menor a 1 segundo |
 | 4 | **Modelo comercial** (paquete único, descuento anual) | 4 tramos en dólares y tope por tramo (3 veces el uso medio del piloto); faltan los montos | Precio cerrado, moneda de cobro y protección contra costos de uso ilimitado |
-| 5 | **Venta a gobierno y cumplimiento** | Parcial: región de nube, contrato de datos, retención configurable y convenio de prueba a los 60 días si el fondo no responde; sin camino de licitaciones | Camino de licitaciones y contratos, datos alojados en el país y política de privacidad |
+| 5 | **Venta a gobierno y cumplimiento** | Parcial: región de datos por municipio (ADR-031), contrato de datos, retención configurable y convenio de prueba a los 60 días si el fondo no responde; sin camino de licitaciones | Camino de licitaciones y contratos, datos alojados en el país y política de privacidad |
 | 6 | **Métricas e impacto** | Tablero definido (v2), con ahorro calculado con el costo de atención del municipio y casos de éxito con métricas agregadas autorizadas por contrato | Medición de consultas resueltas y satisfacción, con casos de éxito para vender al siguiente municipio |
 | 7 | **Operación y costos** | No definido | Costo por conversación medido y capacidad de atender muchos municipios a la vez |
 
@@ -38,7 +38,7 @@
 
 **Se pueden resolver en este documento (llevan a 8):**
 - Precio, moneda y protección de costos del paquete único. *(Decididos tramos, dólares y tope; faltan los montos.)*
-- Camino de venta a municipios (licitaciones, contratos, datos en el país). *(Datos en el país y convenio de prueba a los 60 días decididos; faltan las licitaciones.)*
+- Camino de venta a municipios (licitaciones, contratos, datos en el país). *(Convenio de prueba a los 60 días decidido. Datos en el país: el municipio argentino queda en la región lógica `ar`, pero hoy se sirve desde infraestructura en EE.UU., con contrato de transferencia internacional (ADR-031); no se puede prometer residencia física en Argentina y queda condicionado a la validación legal. Faltan las licitaciones.)*
 - ~~Método para medir la calidad de las respuestas de la IA.~~ *(Decidido, con definición de "resuelta" y pruebas de seguridad.)*
 - ~~Confirmación de la voz por Meta.~~ *(Decidida; se construye sin prueba técnica previa.)*
 - ~~Métricas de éxito por versión.~~ *(Definidas.)*
@@ -52,19 +52,16 @@
 
 Welver es una aplicación que provee a los municipios de **atención al ciudadano 24/7 con IA**.
 
-El municipio contrata una membresía, conecta sus redes sociales, arma su organigrama y carga la información de cada ente municipal. Esa base alimenta a un asistente de IA que informa al ciudadano en tiempo real por los canales del municipio.
+El municipio contrata el paquete completo (el precio depende de la población del municipio), conecta sus redes sociales, arma su organigrama y carga la información de cada ente municipal. Esa base alimenta a un asistente de IA que informa al ciudadano en tiempo real por los canales del municipio.
 
 ### Idea original (se conserva tal cual como base)
 
-- El municipio accede al sistema mediante el pago de 3 membresías: básica, intermedia y VIP.
+- El municipio accede al sistema mediante el pago del **paquete completo**, con precio según la población del municipio (reemplaza las 3 membresías originales: básica, intermedia y VIP).
 - Al ingresar, por defecto, el municipio puede configurar las credenciales de Meta y TikTok para conectar sus redes al sistema.
 - También puede ir al dashboard, donde puede crear un organigrama y cargar datos de cada ente municipal.
 - Esa base sirve para informar al ciudadano en tiempo real.
 - Hay dos roles: administrador (tiene acceso a la base de la organización y da acceso a los otros) y colaboradores (usuarios creados por el admin, que gestionan el municipio según los permisos que les dio).
-- Las membresías se dividen en:
-  - **Básica:** acceso al sistema y asistente IA con chat para todas las redes.
-  - **Intermedia:** básica + crear APIs para usar la IA en sistemas municipales, con perfiles para cada uso específico.
-  - **VIP:** intermedia + respuesta por llamada de voz con IA.
+- El paquete incluye todo: acceso al sistema, asistente IA con chat para todas las redes, APIs para usar la IA en sistemas municipales (con perfiles para cada uso específico) y respuesta por llamada de voz con IA.
 
 ## 2. Usuarios del sistema
 
@@ -74,8 +71,8 @@ El municipio contrata una membresía, conecta sus redes sociales, arma su organi
 | **Administrador** | Responsable del municipio en la plataforma. | Configurar el sistema y dar acceso al equipo. |
 | **Colaborador** | Empleado del municipio. | Mantener actualizada la información de su área. |
 | **Ciudadano** | Quien consulta por redes, web o teléfono. | Respuestas rápidas y correctas. No tiene cuenta en el sistema. |
-| **Sistema municipal** | Software del municipio que consume la API. | Usar la IA desde sus propias aplicaciones (plan intermedio y VIP). |
-| **Superadmin de la plataforma** | Equipo dueño de Welver. | Gestionar municipios, planes y estadísticas globales. |
+| **Sistema municipal** | Software del municipio que consume la API. | Usar la IA desde sus propias aplicaciones (API, v2). |
+| **Superadmin de la plataforma** | Equipo dueño de Welver. | Gestionar municipios, precios por tramo y estadísticas globales. |
 
 ## 3. Glosario
 
@@ -84,8 +81,9 @@ El municipio contrata una membresía, conecta sus redes sociales, arma su organi
 - **Organigrama:** árbol jerárquico de entes del municipio.
 - **Base de conocimiento:** información cargada por ente y usada por la IA para responder.
 - **Canal:** red por la que el ciudadano se comunica (WhatsApp, Instagram, Messenger, TikTok, web, voz).
-- **Perfil:** configuración de la IA para un uso específico, expuesta mediante una API (plan intermedio y VIP).
-- **Membresía:** plan contratado (básica, intermedia, VIP).
+- **Perfil:** configuración de la IA para un uso específico, expuesta mediante una API (v2).
+- **Paquete:** producto único que contrata el municipio, con todo incluido. Su precio depende del tramo de población.
+- **Tramo:** rango de población del municipio que fija el precio (hasta 20.000, 20.000–100.000, 100.000–500.000, más de 500.000).
 
 ## 4. Roles y permisos
 
@@ -100,7 +98,7 @@ El municipio contrata una membresía, conecta sus redes sociales, arma su organi
 | Crear y editar el organigrama | Sí | Según permiso |
 | Cargar y editar datos de un ente | Sí | Solo los entes asignados |
 | Crear colaboradores y asignar permisos | Sí | No |
-| Gestionar membresía y facturación | Sí | No |
+| Gestionar suscripción y facturación | Sí | No |
 | Crear perfiles y claves de API | Sí | Según permiso |
 | Ver métricas | Sí | Según permiso |
 
@@ -109,46 +107,37 @@ El municipio contrata una membresía, conecta sus redes sociales, arma su organi
 - Rol **auditor / solo lectura** para control interno. **[Decidido]** llega en la v2.
 - **[Decidido]** Los colaboradores no atienden conversaciones: gestionan el organigrama y alimentan la IA, que atiende al ciudadano.
 
-## 5. Membresías
+## 5. Modelo comercial: paquete único
 
-### Original
-| | Básica | Intermedia | VIP |
-|---|---|---|---|
-| Acceso al sistema (dashboard) | Sí | Sí | Sí |
-| Asistente IA con chat en todas las redes | Sí | Sí | Sí |
-| APIs para sistemas municipales, con perfiles | No | Sí | Sí |
-| Respuesta por llamada de voz con IA | No | No | Sí |
+### [Decidido] Se vende el paquete completo
+Ya no hay membresías ni planes. Todo municipio recibe lo mismo: chat con IA en todos los canales, APIs con perfiles y voz (según el alcance de cada versión). Lo único que cambia es el **precio, que depende de la población del municipio**.
 
-### [Decidido] Paquete único
-Se vende **un paquete con todo incluido** (chat en todos los canales, APIs con perfiles y voz), sin planes ni límites de uso por plan. Se paga mensual o anual, con descuento por pago anual, y el precio es escalonado según la población del municipio. Las tablas de arriba y de abajo quedan como idea original.
+| Tramo | Población |
+|---|---|
+| 1 | Hasta 20.000 habitantes |
+| 2 | De 20.000 a 100.000 |
+| 3 | De 100.000 a 500.000 |
+| 4 | Más de 500.000 |
 
-### [Propuesta] Cuotas por plan (superado por el paquete único)
-Además de las funciones, cada plan tendría límites medibles. Los valores quedan por definir.
+- Se paga **mensual o anual**, con descuento por pago anual (ver 13.1).
+- Moneda: dólares. Los montos finales de cada tramo siguen pendientes (ver 13.1).
+- No hay funciones bloqueadas por plan. La protección es el tope alto de mensajes por tramo y el request limit anti-abuso (ver 13.1 y 13.2).
 
-| Límite | Básica | Intermedia | VIP |
-|---|---|---|---|
-| Mensajes de IA por mes | por definir | por definir | por definir |
-| Canales conectados | por definir | por definir | por definir |
-| Colaboradores | por definir | por definir | por definir |
-| Perfiles de API | 0 | por definir | por definir |
-| Peticiones de API por minuto | — | por definir | por definir |
-| Minutos de voz por mes | — | — | por definir |
-
-Debe definirse qué pasa al superar un límite: corte, cobro extra o aviso. **[Decidido]** En v1 no hay límites por plan, pero sí un **límite de peticiones** (request limit).
+> **Superado:** la idea original de 3 membresías (básica, intermedia, VIP) y su tabla de cuotas por plan quedaron reemplazadas por el paquete único.
 
 ### [Propuesta] Cobro
 Muchos municipios pagan por factura, transferencia u orden de compra, no con tarjeta. Se contemplan dos modos:
 - **Pago online** (Stripe o Mercado Pago, mediante el servicio de pagos).
-- **Facturación manual:** un administrador de la plataforma activa o renueva el plan.
+- **Facturación manual:** un administrador de la plataforma activa o renueva la suscripción.
 
-**[Decidido]** La facturación es **mensual o anual**, con descuento por pago anual (ver sección 13.2).
+**[Decidido]** La facturación es **mensual o anual**, con descuento por pago anual (ver sección 13.1).
 
 ## 6. Entidades del dominio
 
 | Entidad | Descripción |
 |---|---|
-| **Municipio** | Tenant. Tiene plan, estado y configuración (marca, mercado, idioma). |
-| **Membresía** | Plan activo del municipio, con vigencia y cuotas. |
+| **Municipio** | Tenant. Tiene población, tramo de precio, estado y configuración (marca, mercado, idioma). |
+| **Suscripción** | Paquete activo del municipio: tramo, período (mensual o anual), vigencia y tope de mensajes. |
 | **Canal conectado** | Credenciales y estado de cada red (Meta, TikTok). |
 | **Ente** | Nodo del organigrama, con un ente padre opcional. |
 | **Dato de conocimiento** | Información de un ente. [Propuesta] Tiene estado (borrador, publicado), autor y versión. |
@@ -160,7 +149,7 @@ Muchos municipios pagan por factura, transferencia u orden de compra, no con tar
 ## 7. Flujos principales
 
 ### 7.1 Alta del municipio (original)
-1. El municipio elige una membresía y la paga.
+1. El municipio informa su población, se le asigna el tramo de precio y paga el paquete.
 2. Accede al sistema.
 3. Configura por defecto las credenciales de Meta y TikTok para conectar sus redes.
 
@@ -178,20 +167,20 @@ Muchos municipios pagan por factura, transferencia u orden de compra, no con tar
 2. La IA responde usando la base de conocimiento del municipio.
 3. **[Decidido]** Si no tiene la información, lo dice e indica el canal oficial del ente correspondiente. No hay derivación a personas.
 
-### 7.5 Uso de la API (plan intermedio y VIP)
+### 7.5 Uso de la API (v2)
 1. El admin crea un perfil para un uso específico.
 2. Obtiene una clave de API para ese perfil.
 3. El sistema municipal consume la IA con esa clave.
 
-### 7.6 Llamada de voz (plan VIP)
+### 7.6 Llamada de voz (v3)
 1. El ciudadano llama al número del municipio.
 2. La IA responde por voz con la misma base de conocimiento.
 
 ## 8. Reglas de negocio
 
 ### Originales
-- Un municipio solo accede al sistema con una membresía activa.
-- Las funciones disponibles dependen del plan contratado.
+- Un municipio solo accede al sistema con una suscripción activa.
+- Todos los municipios tienen las mismas funciones; el precio depende del tramo de población.
 - La IA informa según los datos cargados por el municipio.
 - Solo el admin da acceso a otros usuarios.
 
@@ -206,14 +195,14 @@ Muchos municipios pagan por factura, transferencia u orden de compra, no con tar
 
 ## 9. Integraciones
 
-| Integración | Uso | Plan |
+| Integración | Uso | Versión |
 |---|---|---|
-| Meta (WhatsApp, Instagram, Messenger) | Canales de atención | Todos |
-| TikTok | Canal de atención | Todos |
-| Widget web **[Decidido]** (v2) | Chat en el sitio del municipio, vía API | Todos |
-| Pasarela de pagos | Cobro de membresías | Todos |
-| API de Welver | Uso de la IA desde sistemas municipales | Intermedia y VIP |
-| Telefonía y voz | Llamadas atendidas por IA | VIP |
+| Meta (WhatsApp, Instagram, Messenger) | Canales de atención | v1 |
+| TikTok | Canal de atención | v1 |
+| Widget web **[Decidido]** | Chat en el sitio del municipio, vía API | v2 |
+| Pasarela de pagos | Cobro del paquete | v1 |
+| API de Welver | Uso de la IA desde sistemas municipales | v2 |
+| Telefonía y voz | Llamadas atendidas por IA | v3 |
 
 **[Propuesta]** La verificación de negocio y la revisión de app de Meta pueden tardar semanas. Se sugiere un asistente guiado de conexión, o que la plataforma conecte los canales en nombre del municipio.
 
@@ -225,13 +214,13 @@ Muchos municipios pagan por factura, transferencia u orden de compra, no con tar
 | Base de conocimiento | `KnowledgeBase`, `KbDocument` en chatia | Ligarla a entes, con publicación y vigencia |
 | Asistente IA | `AssistantConfig` y proveedores LLM | Guardrails y citas de fuente |
 | Roles y colaboradores | `Collaborator` e `Invitation` en el SaaS | Permisos por ente |
-| Membresías y cuotas | `QuotaConfig` y `FeatureFlag` | Definir los 3 planes |
+| Paquete único y precio por tramo | `QuotaConfig` y `FeatureFlag` | Tramos de población, tope de mensajes por tramo y request limit |
 | Cobro | pasarelapagos | Facturación manual |
 | API para sistemas municipales | — | Perfiles y claves con alcance |
 | Organigrama | — | Modelo de entes |
 | Voz | — | Servicio nuevo |
 | Métricas | analytics | Tablero de temas y huecos de información |
-| Gestión global de municipios | superadmin | Vista de planes y consumo |
+| Gestión global de municipios | superadmin | Vista de tramos, suscripciones y consumo |
 
 El tenant `welver` ya existe como módulo en los microservicios (chatia, notificaciones, analytics, pasarelapagos y marketing).
 
@@ -258,7 +247,7 @@ El tenant `welver` ya existe como módulo en los microservicios (chatia, notific
 | 7 | Atención sin personas | La IA atiende al ciudadano. Los colaboradores solo gestionan el organigrama y alimentan la IA. |
 | 8 | Cobro | Por transferencia bancaria, con Stripe en una LLC de EE.UU. como camino a un solo banco receptor. |
 | 9 | Vencimiento | Período de gracia, luego suspensión del servicio; los datos se conservan. |
-| 10 | Precio | Escalonado según la población del municipio. |
+| 10 | Precio | Escalonado según la población del municipio (4 tramos). Ya no hay membresías: se vende el paquete completo. |
 
 ## 13. Especificación por versión
 
@@ -273,7 +262,7 @@ Esta sección se arma con tus respuestas: cada pregunta respondida pasa acá y s
 - **[Decidido]** **Cobro por transferencia bancaria.** Se usa Stripe en una LLC de EE.UU., con facturas que incluyen los datos de transferencia (ACH, wire, SEPA) y conciliación automática. En v1 el admin marca la factura como pagada a mano. Así todos transfieren a un solo banco.
 - **[Decidido]** **Vencimiento:** período de gracia de 7 a 14 días con aviso; luego suspensión: la IA deja de responder, los canales se pausan y el panel queda en solo lectura. Los datos se conservan indefinidamente. La verificación del pago es manual en v1 y por webhook cuando haya pasarela.
 
-- **[Decidido]** **Datos de ciudadanos:** región de nube elegible por país y contrato de tratamiento de datos con cada municipio.
+- **[Decidido]** **Datos de ciudadanos:** cada municipio tiene una **región de datos** (`Organization.dataRegion`, ADR-031), distinta de su país (`countryCode`, que define la ley aplicable). Hoy hay dos regiones lógicas, `ar` y `us`, pero no hay infraestructura propia en Argentina: un municipio argentino queda en `ar` con sus datos alojados en EE.UU., y eso se cubre con **contrato de tratamiento de datos con transferencia internacional** firmado antes de activar. **[Pendiente]** validación legal por un abogado local (Ley 25.326). Si un municipio exige datos físicamente en el país, se habilita una región nueva (ADR propio); no se promete antes.
 - **[Decidido]** **Calidad de la IA:** un conjunto de preguntas de prueba por municipio, evaluado de forma continua, con meta de **al menos 95%** de respuestas correctas y con fuente. Las preguntas de prueba las arma **el equipo junto con el municipio en el onboarding** y se amplían con los huecos de información registrados.
 - **[Decidido]** **Primer municipio:** piloto de **3 a 6 meses** con precio reducido y métricas acordadas desde el inicio. Será un **municipio pequeño con poca digitalización**, en **Argentina** (Ley 25.326 como base legal y Mercado Pago como respaldo de cobro).
 - **[Decidido]** Si paga un fondo de desarrollo, **no se arma ninguna forma de contratación hasta recibir su propuesta** (posiblemente una licencia). Se espera **60 días**; si no hay propuesta, se ofrece al municipio piloto un **convenio de prueba de 3 a 6 meses** por la vía de compra de monto menor que permita su norma local.
@@ -393,3 +382,90 @@ respuesta:
    - [ ] A) **(Recomendada)** Alerta interna cuando un municipio supera 3 veces el promedio de minutos de su tramo, sin cortar el servicio. — *Ref: Stripe (revisión de cuentas con uso atípico).*
    - [ ] B) Sin alerta: se revisa el costo de voz en la factura mensual del proveedor. — *Ref: Twilio (facturación por uso).*
    - [ ] C) Propia: 
+
+
+## 15. Plataforma: base y construcción
+
+Esta sección baja Welver a la plataforma del ecosistema (`CLAUDE.md`, `services/`, `modules/`, `contracts/`). Dice qué se hereda tal cual, qué entidades y funciones hay que construir y en qué orden. Lo **[Propuesta]** hay que confirmarlo antes de implementar. Sirve de molde para Manzana y Mexus.
+
+**Particularidad de Welver:** no es comercio. No usa `realsass-ecommerce-back` ni el storefront. El "público" son los canales de chat, la API y la voz. Casi todo lo propio es **conocimiento + organigrama + canales**.
+
+### 15.1 Qué se hereda sin tocar
+
+| Capacidad | Dónde vive hoy | Uso en Welver |
+|---|---|---|
+| Identidad, sesión, dispositivos | `realsass-sass-back` (`User`, `UserSession`, cookies HttpOnly, ADR-004/020) | Login del admin y los colaboradores |
+| Organización = tenant | `Organization` (`ecosystemId`, `slug`, `status`, `enabledProducts`, `countryCode`, `dataRegion`) | Un municipio = una organización, con `ecosystemId = "welver"` |
+| Colaboradores e invitaciones | `Collaborator` (permisos JSONB, ADR-001), `Invitation` | Equipo del municipio |
+| Flags, cuotas, secretos, auditoría, webhooks | `FeatureFlag`, `QuotaConfig`, `SecretConfig`, `ConfigAuditLog`, `WebhookEndpoint` | Activar API/voz/widget, tope de mensajes, credenciales de Meta y TikTok, registro de acciones |
+| Idioma y país | `Market`, `@real/i18n`, ADR-016/017/028 | Idioma por país del municipio |
+| Reportes de usuario | `FeedbackReport` (ADR-027) | Problemas informados desde el panel |
+| WhatsApp por organización | ADR-025, `whatsapp.*` en sass-back → chatia | Base del alta de canales (hoy es una sola cuenta por organización) |
+| IA, base de conocimiento, canales | chatia en ecosistema-ms (`KnowledgeBase`, `KbDocument`, `AssistantConfig`) | Motor del asistente |
+| Avisos, métricas, cobro, gestión global | notificaciones, analytics, pasarelapagos, superadmin (ecosistema-ms) | Avisos al admin, tablero, cobro del paquete, vista de municipios |
+| UI | `@real/ui` (`AppShell`, `PageHeader`, `StatCard`, `Table stack`, los 4 estados) | Todo el panel, sin UI propia |
+
+### 15.2 Entidades que hay que construir
+
+| Entidad | Origen | Notas |
+|---|---|---|
+| **Municipio** | Extiende `Organization` | Agregar población (el tramo se deriva), plantilla de organigrama elegida y retención de datos. |
+| **Suscripción** | Nueva | Tramo, período, vigencia, estado (activa, gracia, suspendida) y tope de mensajes. `Organization.plan` queda como espejo. |
+| **Ente** | Nueva | Árbol con padre único; hasta 5 niveles sugeridos. |
+| **Vínculo transversal** | Nueva | Relación entre entes para programas compartidos. |
+| **Dato de conocimiento** | Nueva (liga con `KbDocument` de chatia) | Texto o PDF por ente; borrador, revisión, publicado; autor y versión. |
+| **Mandato (foto)** | Nueva | Snapshot de organigrama y datos; archivar, restaurar, duplicar. |
+| **Canal por ente** | Extiende `SecretConfig` / ADR-025 | Una cuenta de Meta o TikTok por ente. |
+| **Permiso por ente** | Extiende los permisos JSONB de `Collaborator` | Lista de entes asignados por colaborador. |
+| **Perfil de API** (v2) | Nueva | Instrucciones, entes visibles, idioma, canales; jerarquía municipio → secretaría. |
+| **Clave de API** (v2) | Nueva | Visible una sola vez; rotación, alcance, límite por minuto, registro de uso. Hoy `/settings/api-keys` es un placeholder. |
+| **Pregunta de prueba** | Nueva | Set de calidad (meta 95%) y de seguridad (100%) por municipio. |
+| **Hueco de información** | Nueva | Pregunta sin respuesta, con conteo y lista semanal. |
+| **Conversación** | chatia | Se consulta, no se duplica. |
+
+### 15.3 Funciones por capa
+
+**Back [Propuesta]:** módulo nuevo para organigrama, conocimiento, perfiles y calidad, en un back propio (`welver-back`). `sass-back` queda solo con identidad y configuración, y `ecommerce-back` es de comercio. El back nuevo resuelve el tenant como `ecommerce-back` (`OrganizationsClientService` + caché) y se publica como tercer router en `@real/trpc`.
+- `organigrama.*`: crear, mover, vincular y archivar entes.
+- `conocimiento.*`: cargar texto o PDF, importar CSV, borrador → revisión → publicado, versiones, mandato.
+- `canales.*`: conectar, estado y pausa por ente.
+- `calidad.*`: preguntas de prueba, corrida y resultado (95% / 100%).
+- `huecos.*`: lista semanal.
+- `perfiles.*` y `claves.*` (v2); `suscripcion.*` (estado, tramo, factura).
+- Pública por REST (única excepción permitida): API de consulta de Welver (v2) y webhooks inbound de Meta.
+
+**Front:**
+- `realsass-sass-front` (admin): alta del municipio, pago, conexión de redes, claves de API, facturación.
+- `realsass-dashboard-front` (colaboradores): organigrama, carga de datos, huecos, métricas, conversaciones, equipo y permisos por ente.
+- `realsass-docs-front`: documentación pública de la API y guías de conexión a Meta (v1/v2).
+- Sin `real-ecommerce-front` ni app de escritorio.
+
+**Reglas que aplican:** tRPC para todo lo interno (REST solo para la API pública y los webhooks), `organizationId` en cada modelo con RLS, vistas con cargando / vacío / error / sin permisos, y contratos tipados desde `@real/trpc/dist` (ADR-019).
+
+### 15.4 Configuración por tenant
+
+| Mecanismo | Valores para Welver |
+|---|---|
+| `ecosystemId` | `welver` |
+| `FeatureFlag` | `welver.api` (v2), `welver.widget` (v2), `welver.voice` (v3), `welver.auditor` (v2), `welver.approval` (aprobación por ente) |
+| `QuotaConfig` | Tope mensual de mensajes por tramo (3× el uso medio del piloto, aviso al 80%) y request limit por ciudadano |
+| Permisos de colaborador | Por ente: ver, editar, aprobar y publicar |
+| Retención | 90 días por defecto, configurable por municipio. Primer consumidor de la tabla de políticas por país (ADR-031) |
+| Región de datos | `Organization.dataRegion` (`ar` para Argentina, `us` para EE.UU.; hoy ambas en infraestructura de EE.UU.), asignada al crear el municipio desde su país; no editable |
+
+### 15.5 Orden de construcción
+
+1. **Base (v1):** `ecosystemId` y población en `Organization`, suscripción con facturación manual, organigrama, conocimiento con versiones y mandatos, permisos por ente.
+2. **Canales (v1):** conexión de Meta y TikTok por ente sobre chatia, y asistente con citas de fuente.
+3. **Calidad (v1):** preguntas de prueba, corrida de calidad y huecos de información.
+4. **v2:** perfiles y claves de API, tablero de métricas con exportación, widget, rol auditor, importación desde el sitio.
+5. **v3:** voz por WhatsApp (Meta).
+
+### 15.6 Decisiones que faltan para empezar
+
+- Validación legal de los datos en EE.UU. para municipios argentinos y redacción del contrato de transferencia internacional (ADR-031).
+- Tabla de políticas por país (retención, consentimiento, borrado, exportación): Welver es su primer consumidor.
+
+- Confirmar el back propio contra un módulo dentro de `sass-back`.
+- Dónde guardar los datos de conocimiento: la fuente es el back nuevo y chatia recibe una copia indexada (a definir).
+- Cómo se reparten los entes y las cuentas de Meta cuando el WhatsApp de ADR-025 es único por organización.

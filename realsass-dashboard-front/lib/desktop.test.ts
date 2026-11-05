@@ -184,3 +184,18 @@ describe('consentimiento y sistema operativo (DT-DESK-13)', () => {
     expect(detectOs(null)).toBe('unknown')
   })
 })
+
+describe('descarga de la app', () => {
+  it('safeDownloadUrl solo acepta http(s)', async () => {
+    const { safeDownloadUrl } = await import('./desktop')
+    expect(safeDownloadUrl('https://github.com/x/y/releases/latest')).toBe('https://github.com/x/y/releases/latest')
+    expect(safeDownloadUrl('javascript:alert(1)')).toBeNull()
+    expect(safeDownloadUrl('no es url')).toBeNull()
+    expect(safeDownloadUrl(null)).toBeNull()
+  })
+  it('isDesktopOsSupported: hoy solo Windows', async () => {
+    const { isDesktopOsSupported } = await import('./desktop')
+    expect(isDesktopOsSupported('windows')).toBe(true)
+    expect(isDesktopOsSupported('macos')).toBe(false)
+  })
+})

@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { z } from 'zod';
 import type { Prisma } from '@/generated/prisma';
+import { regionDe } from '@/regions/data-region';
 import type { IOrganizationsRepository } from '@/organizations/repository/organizations.repository.interface';
 import {
   toPublicStoreInfo,
@@ -136,6 +137,8 @@ export class PrismaOrganizationsRepository implements IOrganizationsRepository {
         slug: input.slug ?? `org-${randomBytes(4).toString('hex')}`,
         ...(input.name ? { name: input.name } : {}),
         ...(input.countryCode ? { countryCode: input.countryCode } : {}),
+        // ADR-031: la región de datos se fija al crear y no cambia sin un proceso de migración.
+        dataRegion: regionDe(input.countryCode),
         enabledProducts: {},
       },
     });

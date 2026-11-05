@@ -28,3 +28,9 @@ o actualizarla.
 ## Estado actual
 
 ✅ Funcionando. El slug de la tienda y enabledProducts están en el schema.
+
+## Región de datos (ADR-031)
+
+`Organization.dataRegion` (`ar` | `us`, default `us`) dice en qué región lógica viven los datos de la organización (hoy ambas se sirven desde la misma infraestructura). Se asigna al crear con
+`regionDe(countryCode)` (`src/regions/data-region.ts`), no se edita por tRPC y no se expone en el storefront. No confundir con
+`countryCode` (qué ley aplica) ni con `Market` (a qué países vende). Migración `20261105120000_organization_data_region` sin aplicar.

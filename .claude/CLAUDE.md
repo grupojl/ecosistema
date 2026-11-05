@@ -246,6 +246,19 @@ Ver `domain/region/README.md` y `decisions/ADR-026-region-catalogo-de-paises.md`
 
 ---
 
+## Región de datos — dónde viven los datos de una organización (ADR-031) — implementado, migración sin aplicar
+
+Tres conceptos que no se mezclan: `Organization.countryCode` (de qué país es → **qué ley aplica**), `Market` (a qué países vende, ADR-014) y
+`Organization.dataRegion` (**dónde viven sus datos**). Hoy hay dos regiones lógicas, `ar` (Argentina) y `us` (Estados Unidos), servidas desde la misma infraestructura (sin servidor propio en Argentina:
+`ar` no promete residencia física); la región se deriva del país con
+`regionDe(countryCode)` (`realsass-sass-back/src/regions/data-region.ts`, único lugar que decide), se fija al crear y no cambia sin migración
+de datos, y no se expone en endpoints públicos. La etiqueta sola no cumple ninguna ley: las reglas por país (retención, consentimiento,
+borrado, transferencia internacional) viven en una tabla de políticas por `countryCode`, pendiente hasta su primer consumidor, con validación
+legal por un abogado local. Más regiones físicas o bases por región se deciden en un ADR propio cuando un cliente lo exija.
+Ver `decisions/ADR-031-region-de-datos.md`.
+
+---
+
 ## Dependencias — política única (ADR-018)
 
 ### El norte

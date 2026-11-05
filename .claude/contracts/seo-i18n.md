@@ -57,7 +57,7 @@ interface StoreInfo {
 - Cambio **aditivo**. ecommerce-back es *tolerant reader*: `countryCode`
   ausente o inválido → `'AR'` (valor default de `Organization.countryCode`).
 - `GET /api/v1/organizations/public/by-slug/:slug` (sass-back, REST por ADR-005)
-  **no** expone `userId`, `enabledProducts` ni `plan`.
+  **no** expone `userId`, `enabledProducts`, `plan` ni `dataRegion` (ADR-031).
 
 ## 4. Errores de `customer.resolveStore` / `customer.getProduct`
 

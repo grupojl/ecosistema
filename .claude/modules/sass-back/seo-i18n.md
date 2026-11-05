@@ -8,7 +8,7 @@ indexable de cada tienda. Contrato: `.claude/contracts/seo-i18n.md` §3.
 - Sin `slug` no hay tienda pública → `null`.
 - `ecommerceEnabled` depende **solo** de `storeStatus === 'ACTIVE'` (ADR-013).
 - `countryCode` siempre ISO alpha-2 válido: dato corrupto → `'AR'`, nunca 500.
-- El endpoint público nunca expone `userId`, `enabledProducts` ni `plan`.
+- El endpoint público nunca expone `userId`, `enabledProducts`, `plan` ni `dataRegion` (ADR-031).
 
 ## Checklist
 

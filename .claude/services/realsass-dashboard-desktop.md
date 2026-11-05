@@ -53,3 +53,7 @@ Rust estable, MSVC Build Tools (Windows), WebView2, `cargo install tauri-cli --v
 ## Archivos
 
 `src-tauri/{Cargo.toml,build.rs,tauri.conf.json,tauri.updater.conf.json,capabilities/default.json,icons/,src/main.rs}` · `.github/workflows/desktop-release.yml` · `.github/workflows/ci-desktop.yml` · `src-tauri/deny.toml` · `ui/index.html` · `README.md` · `app-icon.png`.
+
+## Descarga desde el panel (2026-11-05)
+
+El dashboard ofrece la descarga en `/configuracion/escritorio` (pestaña «App de escritorio» y entrada del menú). La página lee `desktop.policy` por tRPC y usa `downloadUrl`, que sale de `DESKTOP_DOWNLOAD_URL` en sass-back (ej. `https://github.com/grupojl/ecosistema/releases/latest`). Estados: cargando, error con reintento, «aún no disponible» (sin URL), «ya usás la app» (dentro de Tauri) y botón. `safeDownloadUrl` solo acepta http(s). Hoy solo hay instalador de Windows (`DESKTOP_SUPPORTED_OS`). **Pendiente:** publicar un release (el workflow lo deja en borrador) y, si el repo es privado, alojar el instalador en un lugar público.

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Store, Palette, ToggleLeft, Webhook, ChartColumnBig, Settings2 } from 'lucide-react';
+import { Building2, Store, Palette, ToggleLeft, Webhook, ChartColumnBig, MonitorDown, Settings2 } from 'lucide-react';
 import { PageContainer, PageHeader, SectionTabs } from '@real/ui';
 
 const CONFIG_TABS = [
@@ -12,6 +12,7 @@ const CONFIG_TABS = [
   { label: 'Feature Flags', href: '/configuracion/flags',    icon: <ToggleLeft /> },
   { label: 'Webhooks',      href: '/configuracion/webhooks', icon: <Webhook /> },
   { label: 'Quotas',        href: '/configuracion/quotas',   icon: <ChartColumnBig /> },
+  { label: 'App de escritorio', href: '/configuracion/escritorio', icon: <MonitorDown /> },
 ];
 
 export default function ConfiguracionLayout({ children }: { children: React.ReactNode }) {

@@ -23,6 +23,9 @@ está el soporte de este país?"**. No define reglas de negocio nuevas: las que 
 
 Solo hay tres regiones por ahora. Para sumar otra (por ejemplo África u Oceanía) se crea su carpeta con su `README.md` de índice y una ficha por país.
 AR, BR, CO y MX tienen la ficha **completa** (con datos del proyecto); el resto se generó desde la plantilla y está marcado **a validar**.
+> **No confundir con la región de datos (ADR-031).** "Región" en esta carpeta es el agrupamiento geográfico del catálogo (América, Asia, Europa).
+> La región de datos (`Organization.dataRegion`: `ar` o `us`) es la región donde viven los datos de una organización: es infraestructura, no catálogo.
+
 ## El norte
 
 *Un país nuevo es una ficha y una fila, no un proyecto.* La plataforma tiene que poder decir, para cualquier país del mundo, qué
